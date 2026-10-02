@@ -24,7 +24,7 @@ data class ProjectComparison(
     val incomingExportedEpochMs: Long,
     val incomingUpdatedEpochMs: Long,
     val summary: String,
-    val warningMessage: String? = null
+    val warningMessage: String? = null,
 )
 
 object ProjectComparisonEvaluator {
@@ -32,10 +32,9 @@ object ProjectComparisonEvaluator {
     fun evaluate(
         currentProject: Project?,
         currentManifest: PackageManifest? = null,
-        incomingPackage: ProjectPackage
+        incomingPackage: ProjectPackage,
     ): ProjectComparison {
-        val incomingProj = incomingPackage.project
-        val incomingManifest = incomingPackage.manifest
+        val (incomingManifest, incomingProj) = incomingPackage
 
         if (currentProject == null) {
             return ProjectComparison(
@@ -48,7 +47,7 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "Nuovo progetto locale"
+                summary = "Nuovo progetto locale",
             )
         }
 
@@ -64,7 +63,7 @@ object ProjectComparisonEvaluator {
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
                 summary = "Progetto con identificatore differente rispetto a quello aperto",
-                warningMessage = "Attenzione: Stai importando un progetto differente (${incomingProj.name}) che affiancherà o sostituirà la selezione attuale."
+                warningMessage = "Attenzione: Stai importando un progetto differente (${incomingProj.name}) che affiancherà o sostituirà la selezione attuale.",
             )
         }
 
@@ -72,7 +71,7 @@ object ProjectComparisonEvaluator {
         val isIdenticalContent = (currentProject == incomingProj)
         val currentExportEpoch = currentManifest?.exportedEpochMs ?: currentProject.updatedEpochMs
 
-        if (isIdenticalContent && (currentManifest == null || currentManifest.exportId == incomingManifest.exportId)) {
+        if (isIdenticalContent && ((currentManifest == null) || (currentManifest.exportId == incomingManifest.exportId))) {
             return ProjectComparison(
                 status = ComparisonStatus.IDENTICAL,
                 currentProjectId = currentProject.id,
@@ -83,11 +82,11 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "La copia importata è identica a quella locale"
+                summary = "La copia importata è identica a quella locale",
             )
         }
 
-        if (incomingManifest.exportedEpochMs > currentExportEpoch && incomingProj.updatedEpochMs >= currentProject.updatedEpochMs) {
+        if ((incomingManifest.exportedEpochMs > currentExportEpoch) && (incomingProj.updatedEpochMs >= currentProject.updatedEpochMs)) {
             return ProjectComparison(
                 status = ComparisonStatus.NEWER_REVISION,
                 currentProjectId = currentProject.id,
@@ -98,11 +97,11 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "La copia importata è una revisione più recente"
+                summary = "La copia importata è una revisione più recente",
             )
         }
 
-        if (incomingManifest.exportedEpochMs < currentExportEpoch || incomingProj.updatedEpochMs < currentProject.updatedEpochMs) {
+        if ((incomingManifest.exportedEpochMs < currentExportEpoch) || (incomingProj.updatedEpochMs < currentProject.updatedEpochMs)) {
             val formattedLocal = formatDate(currentExportEpoch)
             val formattedIncoming = formatDate(incomingManifest.exportedEpochMs)
             return ProjectComparison(
@@ -116,7 +115,7 @@ object ProjectComparisonEvaluator {
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
                 summary = "La copia importata è antecedente a quella locale",
-                warningMessage = "AVVISO: La copia importata ($formattedIncoming) è antecedente alla versione locale corrente ($formattedLocal). Continuare sovrascriverà le modifiche locali più recenti."
+                warningMessage = "AVVISO: La copia importata ($formattedIncoming) è antecedente alla versione locale corrente ($formattedLocal). Continuare sovrascriverà le modifiche locali più recenti.",
             )
         }
 
@@ -131,7 +130,7 @@ object ProjectComparisonEvaluator {
             incomingExportedEpochMs = incomingManifest.exportedEpochMs,
             incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
             summary = "Le due copie sono divergenti",
-            warningMessage = "AVVISO: Le modifiche nella copia importata divergono dallo stato locale. Procedendo verranno applicati i dati del pacchetto importato."
+            warningMessage = "AVVISO: Le modifiche nella copia importata divergono dallo stato locale. Procedendo verranno applicati i dati del pacchetto importato.",
         )
     }
 

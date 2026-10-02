@@ -1,15 +1,17 @@
-# Decisions: Toolchain e Dipendenze (Step A00)
+# Decisions: Toolchain e Dipendenze
 
-Data: 2 ottobre 2026
+Data aggiornamento: 2 ottobre 2026
 
 ## Versioni e componenti selezionati
 
-- **JDK Daemon Gradle:** JetBrains Runtime JDK 21 (`C:/Users/Utente/.gradle/jdks/jetbrains_s_r_o_-21-amd64-windows.2`) configurato tramite `org.gradle.java.home` e `.idea/gradle.xml` per compatibilità con Gradle 9.0.0 e Android Studio.
-- **Gradle:** 9.0.0
-- **Android Gradle Plugin (AGP):** 8.8.2
+- **JDK Daemon Gradle:** JetBrains Runtime JDK 21 (`C:/Users/Utente/.gradle/jdks/jetbrains_s_r_o_-21-amd64-windows.2`) configurato tramite `org.gradle.java.home` e `.idea/gradle.xml` per compatibilità con Gradle 8.13 e Android Studio.
+- **Gradle:** 8.13
+- **Android Gradle Plugin (AGP):** 8.13.2
 - **Kotlin:** 2.1.10
 - **Kotlin Compose Plugin:** `org.jetbrains.kotlin.plugin.compose` 2.1.10
 - **KSP:** 2.1.10-1.0.29
+- **Robolectric:** 4.17 (aggiornato per supporto alla strumentazione bytecode Java 21)
+- **Room:** 2.6.1
 - **Min SDK:** 34 (Android 14)
 - **Compile SDK / Target SDK:** 35
 - **AndroidX Core KTX:** 1.15.0
