@@ -1,27 +1,21 @@
 # OnlyFieldAssetManager
 
-## Avvio dello sviluppo
+Editor offline per censimento e documentazione di infrastrutture di networking e telecomunicazioni.
 
-1. Leggere [regole del repository](AGENTS.md) e [piano operativo](plan.md).
-2. Aprire la cartella del repository in Android Studio, verificare Gemini ed eseguire soltanto A00 del piano.
-3. In A00 generare il progetto Gradle e le cartelle separate mobile/ e pc/, con i moduli comuni in shared/. Continuare A01–A13 uno step alla volta.
-4. Registrare comandi, risultati e limiti in [roadmap.md](roadmap.md).
-5. Dopo l'APK Android verificato di A13, eseguire W00–W05 in un IDE desktop con altri strumenti AI.
+## Piattaforme e Moduli
+- **Android 14+ (`:mobile:app`)**: App mobile Compose con persistenza Room, acquisizione fotocamera/mappe, export e stampa.
+- **Windows 11 x64 (`:pc:app`)**: Editor portatile Compose Desktop con gestione storage locale atomica.
+- **Moduli Comuni (`:shared:core`, `:shared:exchange`)**: Modello dati pure JVM, motore di validazione, serializzazione pacchetti ZIP `.ofam` v1.7, cifratura AES-256-GCM / PBKDF2 ed esportazione OpenXML XLSX / Markdown.
 
-## Contesto da fornire all'agente
+## Documentazione di Dominio
+- [01-architecture.md](docs/01-architecture.md) — Architettura del sistema, moduli e toolchain
+- [02-domain-data-contract.md](docs/02-domain-data-contract.md) — Modello dati, formato pacchetto `.ofam` v1.7, cifratura e validazione
+- [03-export-and-documents.md](docs/03-export-and-documents.md) — Esportazione XLSX, Markdown, PDF composti, Stampa e privacy
+- [04-desktop-storage-interop.md](docs/04-desktop-storage-interop.md) — Storage Desktop, salvataggio atomico e interoperabilità Android ↔ PC
+- [05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md) — Suite di test (73 unit test) e benchmark di carico pilota
+- [06-release-and-delivery.md](docs/06-release-and-delivery.md) — Comandi di build e artefatti di rilascio
 
-Editor offline per documentazione di infrastrutture networking. Android 14+ su smartphone/tablet prima; Windows 11 x64 portable dopo. Gli editor scambiano un pacchetto completo documentato e condividono modello/regole dove possibile. Password del progetto opzionale; uscite documentali senza campi segreti. Il piano specifica domini, integrità, protezione, formati e criteri di verifica.
-
-Usare il prompt di plan.md §3 per lo step selezionato. Istruzioni operative in italiano; codice, identificatori e commenti in inglese. Usare soltanto dati sintetici nelle prove e nelle conversazioni AI.
-
-## Struttura da generare
-
-| Cartella | Responsabilità |
-| :--- | :--- |
-| mobile/ | App Android e test specifici |
-| pc/ | App Windows e test specifici; implementazione da W00 |
-| shared/ | Modello, regole e scambio senza API Android |
-| docs/ | Contratto, decisioni tecniche, verifiche e rilascio |
-| fixtures/ | Campioni sintetici comuni e risultati attesi |
-
-La struttura del progetto e lo step A00 sono stati completati e verificati: generato il wrapper Gradle, la struttura dei moduli (`mobile/app`, `shared/core`, `shared/exchange`, `pc/` riservato), la documentazione tecnica e l'APK debug compilato. Consultare [roadmap.md](roadmap.md) per lo stato di avanzamento corrente.
+## Stato del Progetto
+- **Fase Android (A00–A13)**: Completata al 100% (14 step su 14) con validazione Room DB v9, export e stampa.
+- **Fase Windows (W00–W05)**: Completata al 100% (6 step su 6) con Compose Desktop, storage atomico, interoperabilità bidirezionale e pacchetto portable x64.
+- **Stato Complessivo**: 100% Completato (20/20 step, 73/73 unit test passati).

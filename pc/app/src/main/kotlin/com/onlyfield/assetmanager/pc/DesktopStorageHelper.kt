@@ -6,9 +6,24 @@ import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
 /**
- * Helper class for Windows Desktop storage, file picking, and printing integration.
+ * Helper class for Windows Desktop storage, directory picking, file picking, and printing integration.
  */
 object DesktopStorageHelper {
+
+    fun pickDirectory(
+        title: String = "Seleziona cartella dati",
+        currentDir: File? = null
+    ): File? {
+        val chooser = JFileChooser().apply {
+            dialogTitle = title
+            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
+            if (currentDir != null && currentDir.exists()) {
+                currentDirectory = currentDir
+            }
+        }
+        val result = chooser.showOpenDialog(null)
+        return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
+    }
 
     fun pickOpenFile(
         title: String = "Apri pacchetto .ofam",

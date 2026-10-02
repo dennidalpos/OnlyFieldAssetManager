@@ -9,8 +9,10 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -286,6 +288,7 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(16.dp)
+                .verticalScroll(rememberScrollState())
         ) {
             // Save state banner
             Row(
@@ -344,8 +347,8 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
 
                 Spacer(modifier = Modifier.height(16.dp))
 
-                LazyColumn {
-                    items(projects) { (id, name, _, _, _, isPasswordProtected) ->
+                Column {
+                    projects.forEach { (id, name, _, _, _, isPasswordProtected) ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -393,19 +396,23 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                             }
                         }
                     }
-                    Button(
-                        onClick = { showDocumentExportDialog = true },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Button(onClick = { showDocumentExportDialog = true }) {
                         Text("Documenti & Stampa")
                     }
-                    Button(
-                        onClick = {
-                            val fileName = "${proj.name.lowercase().replace(" ", "_")}.ofam"
-                            exportLauncher.launch(fileName)
-                        },
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
+                    Button(onClick = {
+                        val fileName = "${proj.name.lowercase().replace(" ", "_")}.ofam"
+                        exportLauncher.launch(fileName)
+                    }) {
                         Text("Esporta (.ofam)")
                     }
                     OutlinedButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) {
@@ -415,77 +422,87 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     OutlinedButton(onClick = { showPasswordManageDialog = true }) {
                         Text(if (proj.isPasswordProtected) "Password" else "Imposta Password")
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
                     OutlinedButton(onClick = { showAddCredentialDialog = true }) {
                         Text("Credenziale")
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
                     OutlinedButton(onClick = { showAddRackDialog = true }) {
                         Text("+ Rack")
                     }
-                    Spacer(modifier = Modifier.width(6.dp))
                     OutlinedButton(onClick = { showAddModelDialog = true }) {
                         Text("+ Modello")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     OutlinedButton(onClick = { showAttachmentsDialog = true }) {
                         Text("Allegati (${proj.attachments.size})")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(onClick = { showFloorplanDialog = true }) {
                         Text("Planimetria Area")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(onClick = { showPathsDialog = true }) {
                         Text("Percorsi (${proj.sharedPathSegments.size})")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(onClick = { showCablingDialog = true }) {
                         Text("Cablaggio (${proj.cables.size})")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     OutlinedButton(onClick = { showLogicNetworkDialog = true }) {
                         Text("Rete Logica (${proj.vlans.size})")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(onClick = { showServicesDialog = true }) {
                         Text("Conf/WAN (${proj.deviceConfigurations.size + proj.wanVpnConnections.size})")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(onClick = { showPowerAndBadgesDialog = true }) {
                         Text("Alimentazione (${proj.powerFeeds.size})")
                     }
                 }
 
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(6.dp))
 
-                Row(modifier = Modifier.fillMaxWidth()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
                     OutlinedButton(onClick = {
                         viewModel.refreshTrashItems(proj.id)
                         showTrashDialog = true
                     }) {
                         Text("Cestino (${trashItems.size})")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(
                         onClick = { viewModel.undoLastAction(proj.id) },
                         enabled = canUndoState
                     ) {
                         Text("Annulla")
                     }
-                    Spacer(modifier = Modifier.width(4.dp))
                     OutlinedButton(onClick = { showMergeAndBatchDialog = true }) {
                         Text("Sostituzione/Fusione")
                     }
@@ -512,8 +529,8 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                     )
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    LazyColumn {
-                        items(searchResults) { result ->
+                    Column {
+                        searchResults.forEach { result ->
                             Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -546,8 +563,8 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                     if (proj.racks.isEmpty()) {
                         Text(text = "Nessun rack censito. Clicca su '+ Rack' per aggiungerne uno.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     } else {
-                        LazyColumn(modifier = Modifier.height(120.dp)) {
-                            items(proj.racks) { rack ->
+                        Column {
+                            proj.racks.forEach { rack ->
                                 Card(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -584,8 +601,8 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                     if (proj.deviceModels.isEmpty()) {
                         Text(text = "Nessun modello di apparato censito.", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                     } else {
-                        LazyColumn(modifier = Modifier.height(80.dp)) {
-                            items(proj.deviceModels) { model ->
+                        Column {
+                            proj.deviceModels.forEach { model ->
                                 Text(
                                     text = "• ${model.name} (${model.brand ?: "-"} ${model.modelNumber ?: ""}) - ${model.category} [${model.defaultHeightU}U]",
                                     style = MaterialTheme.typography.bodySmall
@@ -599,8 +616,8 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                     Text(text = "Struttura Inventario", style = MaterialTheme.typography.titleSmall)
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    LazyColumn {
-                        items(proj.businessUnits) { bu ->
+                    Column {
+                        proj.businessUnits.forEach { bu ->
                             Column(modifier = Modifier.padding(vertical = 4.dp)) {
                                 Text(text = "• BU: ${bu.name}", style = MaterialTheme.typography.titleSmall)
                                 bu.devices.forEach { dev ->

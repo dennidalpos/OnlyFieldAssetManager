@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Outer Rack Cabinet Frame -->
+    <path
+        android:fillColor="#1E293B"
+        android:strokeColor="#38BDF8"
+        android:strokeWidth="2.5"
+        android:pathData="M38,24 h32 a6,6 0 0,1 6,6 v48 a6,6 0 0,1 -6,6 h-32 a6,6 0 0,1 -6,-6 v-48 a6,6 0 0,1 6,-6 z" />
+
+    <!-- Cabinet Header -->
+    <path
+        android:fillColor="#0F172A"
+        android:pathData="M38,26 h32 a4,4 0 0,1 4,4 v4 h-40 v-4 a4,4 0 0,1 4,-4 z" />
+    <path
+        android:fillColor="#38BDF8"
+        android:pathData="M42,29 h10 v1.5 h-10 z" />
+
+    <!-- Rack Unit 1 (Server 1) -->
+    <path
+        android:fillColor="#0F172A"
+        android:strokeColor="#475569"
+        android:strokeWidth="1"
+        android:pathData="M36,36 h36 v10 h-36 z" />
+    <!-- RJ45 Ports -->
+    <path android:fillColor="#38BDF8" android:pathData="M40,39 h3 v4 h-3 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M45,39 h3 v4 h-3 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M50,39 h3 v4 h-3 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M55,39 h3 v4 h-3 z" />
+    <!-- LEDs -->
+    <path android:fillColor="#34D399" android:pathData="M64,41 a1.5,1.5 0 1,0 0,0.01 z" />
+    <path android:fillColor="#F59E0B" android:pathData="M68,41 a1.5,1.5 0 1,0 0,0.01 z" />
+
+    <!-- Rack Unit 2 (Server 2) -->
+    <path
+        android:fillColor="#0F172A"
+        android:strokeColor="#475569"
+        android:strokeWidth="1"
+        android:pathData="M36,49 h36 v10 h-36 z" />
+    <!-- RJ45 Ports -->
+    <path android:fillColor="#38BDF8" android:pathData="M40,52 h3 v4 h-3 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M45,52 h3 v4 h-3 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M50,52 h3 v4 h-3 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M55,52 h3 v4 h-3 z" />
+    <!-- LEDs -->
+    <path android:fillColor="#34D399" android:pathData="M64,54 a1.5,1.5 0 1,0 0,0.01 z" />
+    <path android:fillColor="#34D399" android:pathData="M68,54 a1.5,1.5 0 1,0 0,0.01 z" />
+
+    <!-- Rack Unit 3 (Switch / Patch Panel) -->
+    <path
+        android:fillColor="#0F172A"
+        android:strokeColor="#475569"
+        android:strokeWidth="1"
+        android:pathData="M36,62 h36 v10 h-36 z" />
+    <!-- Ports -->
+    <path android:fillColor="#38BDF8" android:pathData="M40,65 h2.5 v4 h-2.5 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M44,65 h2.5 v4 h-2.5 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M48,65 h2.5 v4 h-2.5 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M52,65 h2.5 v4 h-2.5 z" />
+    <path android:fillColor="#38BDF8" android:pathData="M56,65 h2.5 v4 h-2.5 z" />
+    <!-- LEDs -->
+    <path android:fillColor="#34D399" android:pathData="M66,67 a1.5,1.5 0 1,0 0,0.01 z" />
+
+    <!-- Field Location Pin Badge Accent -->
+    <!-- Badge Circle Outer -->
+    <path
+        android:fillColor="#0284C7"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2"
+        android:pathData="M70,68 a12,12 0 1,0 0,0.01 z" />
+    <!-- Location Pin Shape -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M70,60 C66.7,60 64,62.7 64,66 C64,70.5 70,76 70,76 C70,76 76,70.5 76,66 C76,62.7 73.3,60 70,60 Z M70,68 C68.9,68 68,67.1 68,66 C68,64.9 68.9,64 70,64 C71.1,64 72,64.9 72,66 C72,67.1 71.1,68 70,68 Z" />
+
+</vector>

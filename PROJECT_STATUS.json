@@ -1,0 +1,28 @@
+{
+  "projectName": "OnlyFieldAssetManager",
+  "lastUpdated": "2026-10-02",
+  "currentPhase": "Progetto Completato (A00-A13, W00-W05)",
+  "activeTask": "COMPLETED",
+  "summary": {
+    "totalTasks": 20,
+    "completedTasks": 20,
+    "pendingTasks": 0,
+    "progressPercentage": 100.0,
+    "totalPassedTests": 73
+  },
+  "remainingTasks": [],
+  "residuals": [
+    {
+      "id": "RES-01",
+      "title": "Integrazione CI/CD Automation",
+      "status": "FUTURE_ENHANCEMENT",
+      "description": "Workflow GitHub Actions per pubblicazione automatizzata artefatti APK e zip portable Windows x64."
+    },
+    {
+      "id": "RES-02",
+      "title": "Localizzazione Multi-lingua",
+      "status": "FUTURE_ENHANCEMENT",
+      "description": "Estensione localizzazione stringhe UI a Inglese e Spagnolo."
+    }
+  ]
+}
