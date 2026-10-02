@@ -1,11 +1,12 @@
 # OnlyFieldAssetManager — Stato di Avanzamento e Registro Evidenze
 
-Data aggiornamento: 2 ottobre 2026
+Data aggiornamento: 3 ottobre 2026
 
 ## Stato Globale del Progetto
 
 - **Fase Android (A00–A13)**: 100% Completata (14 step completati su 14).
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
+- **Toolchain**: Gradle 9.7.1, AGP 9.4.1, API 35 (compileSdk 35, targetSdk 35, minSdk 34).
 - **Stato Complessivo**: 100% Completato (20 step su 20).
 - **Test Unitari Totali Passati**: 73 test su 73 (20 mobile/app, 12 shared/core, 12 shared/exchange, 29 pc/app).
 

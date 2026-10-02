@@ -1152,12 +1152,9 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
         val firstArea = proj.businessUnits.flatMap { it.sites.flatMap { s -> s.areas } + it.areas }.firstOrNull()
 
         var selectedAreaId by remember { mutableStateOf(firstArea?.id ?: "") }
-        var placementLabelInput by remember { mutableStateOf("") }
         var annotationLabelInput by remember { mutableStateOf("") }
         var xRatioInput by remember { mutableStateOf("0.5") }
         var yRatioInput by remember { mutableStateOf("0.5") }
-
-        val context = androidx.compose.ui.platform.LocalContext.current
 
         AlertDialog(
             onDismissRequest = { showFloorplanDialog = false },
@@ -1180,7 +1177,7 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                         )
                         if (!fpAttachment?.attributionText.isNullOrBlank()) {
                             Text(
-                                text = "© Attribuzione Mappa: ${fpAttachment!!.attributionText}",
+                                text = "© Attribuzione Mappa: ${fpAttachment.attributionText}",
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF1565C0)
                             )

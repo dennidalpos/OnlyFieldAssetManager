@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.onlyfield.assetmanager"
-    compileSdk = 37
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "com.onlyfield.assetmanager"
@@ -36,6 +36,7 @@ android {
     buildFeatures {
         compose = true
     }
+
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach {

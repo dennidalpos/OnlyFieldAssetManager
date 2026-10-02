@@ -41,9 +41,9 @@ OnlyFieldAssetManager/
 ## Toolchain e Dipendenze
 
 - **JDK Daemon Gradle:** JetBrains Runtime JDK 21
-- **Gradle:** 8.13
-- **Android Gradle Plugin (AGP):** 8.13.2
-- **Kotlin / Compose Plugin:** 2.1.10
-- **Room:** 2.6.1
-- **Compose Multiplatform (Desktop):** 1.7.3
-- **Min SDK / Compile SDK (Android):** 34 / 35
+- **Gradle:** 9.7.1
+- **Android Gradle Plugin (AGP):** 9.4.1
+- **Kotlin / Compose Plugin:** 2.4.20
+- **Room:** 2.8.5
+- **Compose Multiplatform (Desktop):** 1.12.1
+- **Min SDK / Target SDK / Compile SDK (Android):** 34 / 35 / 35

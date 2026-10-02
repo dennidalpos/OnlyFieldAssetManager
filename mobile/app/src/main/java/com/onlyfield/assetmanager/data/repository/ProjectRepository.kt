@@ -849,12 +849,11 @@ class ProjectRepository(
 
     suspend fun moveToTrash(projectId: String, itemType: String, itemId: String): com.onlyfield.assetmanager.core.model.TrashItem? {
         val project = getProjectById(projectId) ?: return null
-        var trashItem: com.onlyfield.assetmanager.core.model.TrashItem? = null
 
-        db.withTransaction {
+        val trashItem = db.withTransaction {
             when (itemType.uppercase()) {
                 "DEVICE" -> {
-                    val device = project.businessUnits.flatMap { it.devices }.find { it.id == itemId } ?: return@withTransaction
+                    val device = project.businessUnits.flatMap { it.devices }.find { it.id == itemId } ?: return@withTransaction null
                     val jsonStr = jsonSerializer.encodeToString(com.onlyfield.assetmanager.core.model.Device.serializer(), device)
                     val affectedPorts = device.ports.map { it.id }
 
@@ -878,7 +877,7 @@ class ProjectRepository(
                     }
 
                     val summary = "Porte: ${device.ports.size}, Cavi scollegati: ${updatedCables.size}"
-                    trashItem = com.onlyfield.assetmanager.core.model.TrashItem(
+                    val item = com.onlyfield.assetmanager.core.model.TrashItem(
                         projectId = projectId,
                         itemType = "DEVICE",
                         itemId = itemId,
@@ -886,12 +885,13 @@ class ProjectRepository(
                         serializedJson = jsonStr,
                         affectedReferencesSummary = summary
                     )
-                    inventoryDao.insertTrashItems(listOf(EntityMappers.toTrashItemEntity(trashItem!!)))
+                    inventoryDao.insertTrashItems(listOf(EntityMappers.toTrashItemEntity(item)))
                     inventoryDao.deletePortsByDeviceId(itemId)
                     inventoryDao.deleteDeviceById(itemId)
+                    item
                 }
                 "RACK" -> {
-                    val rack = project.racks.find { it.id == itemId } ?: return@withTransaction
+                    val rack = project.racks.find { it.id == itemId } ?: return@withTransaction null
                     val jsonStr = jsonSerializer.encodeToString(com.onlyfield.assetmanager.core.model.Rack.serializer(), rack)
                     val devicesInRack = project.businessUnits.flatMap { it.devices }.filter { it.rackId == itemId }
 
@@ -904,7 +904,7 @@ class ProjectRepository(
                     }
 
                     val summary = "Apparati dislocati dal rack: ${devicesInRack.size}"
-                    trashItem = com.onlyfield.assetmanager.core.model.TrashItem(
+                    val item = com.onlyfield.assetmanager.core.model.TrashItem(
                         projectId = projectId,
                         itemType = "RACK",
                         itemId = itemId,
@@ -912,13 +912,14 @@ class ProjectRepository(
                         serializedJson = jsonStr,
                         affectedReferencesSummary = summary
                     )
-                    inventoryDao.insertTrashItems(listOf(EntityMappers.toTrashItemEntity(trashItem!!)))
+                    inventoryDao.insertTrashItems(listOf(EntityMappers.toTrashItemEntity(item)))
                     inventoryDao.deleteRackById(itemId)
+                    item
                 }
                 "CREDENTIAL" -> {
-                    val cred = project.credentials.find { it.id == itemId } ?: return@withTransaction
+                    val cred = project.credentials.find { it.id == itemId } ?: return@withTransaction null
                     val jsonStr = jsonSerializer.encodeToString(com.onlyfield.assetmanager.core.model.Credential.serializer(), cred)
-                    trashItem = com.onlyfield.assetmanager.core.model.TrashItem(
+                    val item = com.onlyfield.assetmanager.core.model.TrashItem(
                         projectId = projectId,
                         itemType = "CREDENTIAL",
                         itemId = itemId,
@@ -926,15 +927,17 @@ class ProjectRepository(
                         serializedJson = jsonStr,
                         affectedReferencesSummary = "Credenziale per utente ${cred.username}"
                     )
-                    inventoryDao.insertTrashItems(listOf(EntityMappers.toTrashItemEntity(trashItem!!)))
+                    inventoryDao.insertTrashItems(listOf(EntityMappers.toTrashItemEntity(item)))
                     inventoryDao.deleteCredentialById(itemId)
+                    item
                 }
+                else -> null
             }
         }
 
         if (trashItem != null) {
             sessionUndoStack.add {
-                restoreFromTrash(projectId, trashItem!!.id)
+                restoreFromTrash(projectId, trashItem.id)
             }
         }
         return trashItem

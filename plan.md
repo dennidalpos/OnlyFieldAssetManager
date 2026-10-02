@@ -1,6 +1,6 @@
 # OnlyFieldAssetManager — Piano Operativo e Fasi di Sviluppo
 
-Data aggiornamento: 2 ottobre 2026
+Data aggiornamento: 3 ottobre 2026
 
 ## 1. Contesto Operativo e Moduli
 
