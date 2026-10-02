@@ -36,6 +36,8 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
+import com.onlyfield.assetmanager.core.model.ExportFilterConfig
+import com.onlyfield.assetmanager.core.model.ReportSelection
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,7 +79,16 @@ class MainActivity : ComponentActivity() {
             AppDatabase::class.java,
             "onlyfield_asset_manager.db",
         )
-        .addMigrations(AppDatabase.MIGRATION_1_2, AppDatabase.MIGRATION_2_3, AppDatabase.MIGRATION_3_4)
+        .addMigrations(
+            AppDatabase.MIGRATION_1_2,
+            AppDatabase.MIGRATION_2_3,
+            AppDatabase.MIGRATION_3_4,
+            AppDatabase.MIGRATION_4_5,
+            AppDatabase.MIGRATION_5_6,
+            AppDatabase.MIGRATION_6_7,
+            AppDatabase.MIGRATION_7_8,
+            AppDatabase.MIGRATION_8_9,
+        )
         .build()
 
         repository = ProjectRepository(database)
@@ -120,6 +131,11 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
     var showAddModelDialog by remember { mutableStateOf(value = false) }
     var showAttachmentsDialog by remember { mutableStateOf(value = false) }
     var showFloorplanDialog by remember { mutableStateOf(value = false) }
+    var showCartographyDialog by remember { mutableStateOf(value = false) }
+    var mapSourceSelected by remember { mutableStateOf(com.onlyfield.assetmanager.cartography.CartographicSource.OPEN_TOPO_MAP) }
+    var mapLatInput by remember { mutableStateOf("41.9028") }
+    var mapLonInput by remember { mutableStateOf("12.4964") }
+    var mapZoomInput by remember { mutableStateOf("15") }
     var showPathsDialog by remember { mutableStateOf(value = false) }
     var showCablingDialog by remember { mutableStateOf(value = false) }
     var showLogicNetworkDialog by remember { mutableStateOf(value = false) }
@@ -128,10 +144,83 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
     var showTrashDialog by remember { mutableStateOf(value = false) }
     var showMergeAndBatchDialog by remember { mutableStateOf(value = false) }
 
+    var showDocumentExportDialog by remember { mutableStateOf(value = false) }
+    var docExportFormat by remember { mutableStateOf("COMPOSITE_PDF") } // "COMPOSITE_PDF", "XLSX", "MARKDOWN", "PRINT"
+    var docExportAuthorName by remember { mutableStateOf("Tecnico Operativo") }
+    var docExportTitleOverride by remember { mutableStateOf("") }
+    var docIncludeConfidential by remember { mutableStateOf(false) }
+    var docReviewConfirmed by remember { mutableStateOf(true) }
+
+    var docIncRackCards by remember { mutableStateOf(true) }
+    var docIncInventoryTable by remember { mutableStateOf(true) }
+    var docIncCablingAndPorts by remember { mutableStateOf(true) }
+    var docIncLogicalNetwork by remember { mutableStateOf(true) }
+    var docIncPowerAndBadges by remember { mutableStateOf(true) }
+    var docIncNotesAndAttachments by remember { mutableStateOf(true) }
+
     var selectedRackIdForPdf by remember { mutableStateOf<String?>(null) }
     var pendingExportUri by remember { mutableStateOf<Uri?>(null) }
     var exportPasswordInput by remember { mutableStateOf("") }
     var showExportPasswordDialog by remember { mutableStateOf(value = false) }
+
+    val compositePdfExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/pdf"),
+    ) { uri ->
+        uri?.let {
+            val projId = currentProject?.id ?: return@rememberLauncherForActivityResult
+            val filterConfig = ExportFilterConfig(
+                includeConfidential = docIncludeConfidential,
+                reviewRequiredConfirmed = docReviewConfirmed,
+                authorName = docExportAuthorName,
+                titleOverride = docExportTitleOverride.ifBlank { null }
+            )
+            val selection = ReportSelection(
+                includeRackCards = docIncRackCards,
+                includeInventoryTable = docIncInventoryTable,
+                includeCablingAndPorts = docIncCablingAndPorts,
+                includeLogicalNetwork = docIncLogicalNetwork,
+                includePowerAndBadges = docIncPowerAndBadges,
+                includeNotesAndAttachments = docIncNotesAndAttachments
+            )
+            context.contentResolver.openOutputStream(it)?.use { stream ->
+                viewModel.exportCompositePdf(projId, filterConfig, selection, stream)
+            }
+        }
+    }
+
+    val xlsxExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"),
+    ) { uri ->
+        uri?.let {
+            val projId = currentProject?.id ?: return@rememberLauncherForActivityResult
+            val filterConfig = ExportFilterConfig(
+                includeConfidential = docIncludeConfidential,
+                reviewRequiredConfirmed = docReviewConfirmed,
+                authorName = docExportAuthorName,
+                titleOverride = docExportTitleOverride.ifBlank { null }
+            )
+            context.contentResolver.openOutputStream(it)?.use { stream ->
+                viewModel.exportXlsx(projId, filterConfig, stream)
+            }
+        }
+    }
+
+    val mdExportLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.CreateDocument("text/markdown"),
+    ) { uri ->
+        uri?.let {
+            val projId = currentProject?.id ?: return@rememberLauncherForActivityResult
+            val filterConfig = ExportFilterConfig(
+                includeConfidential = docIncludeConfidential,
+                reviewRequiredConfirmed = docReviewConfirmed,
+                authorName = docExportAuthorName,
+                titleOverride = docExportTitleOverride.ifBlank { null }
+            )
+            context.contentResolver.openOutputStream(it)?.use { stream ->
+                viewModel.exportMarkdown(projId, filterConfig, stream)
+            }
+        }
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("application/zip"),
@@ -303,6 +392,12 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                                 )
                             }
                         }
+                    }
+                    Button(
+                        onClick = { showDocumentExportDialog = true },
+                        modifier = Modifier.padding(end = 8.dp)
+                    ) {
+                        Text("Documenti & Stampa")
                     }
                     Button(
                         onClick = {
@@ -1045,6 +1140,8 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
         var xRatioInput by remember { mutableStateOf("0.5") }
         var yRatioInput by remember { mutableStateOf("0.5") }
 
+        val context = androidx.compose.ui.platform.LocalContext.current
+
         AlertDialog(
             onDismissRequest = { showFloorplanDialog = false },
             title = { Text("Planimetria Area & Annotazioni") },
@@ -1064,8 +1161,19 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.DarkGray
                         )
+                        if (!fpAttachment?.attributionText.isNullOrBlank()) {
+                            Text(
+                                text = "© Attribuzione Mappa: ${fpAttachment!!.attributionText}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = Color(0xFF1565C0)
+                            )
+                        }
 
                         Row(modifier = Modifier.padding(vertical = 4.dp)) {
+                            OutlinedButton(onClick = { showCartographyDialog = true }) {
+                                Text("Acquisisci Sfondo Cartografico", style = MaterialTheme.typography.bodySmall)
+                            }
+                            Spacer(modifier = Modifier.width(4.dp))
                             OutlinedButton(onClick = {
                                 if (proj.attachments.isNotEmpty()) {
                                     val nextAtt = proj.attachments.first()
@@ -1082,7 +1190,7 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
                                     )
                                 }
                             }) {
-                                Text("Sostituisci Sfondo (Preserva Posizioni)", style = MaterialTheme.typography.bodySmall)
+                                Text("Sostituisci Sfondo", style = MaterialTheme.typography.bodySmall)
                             }
                         }
 
@@ -1181,6 +1289,109 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
             confirmButton = {
                 Button(onClick = { showFloorplanDialog = false }) {
                     Text("Chiudi")
+                }
+            }
+        )
+    }
+
+    // Cartography Background Acquisition Dialog
+    if (showCartographyDialog && (currentProject != null)) {
+        val proj = currentProject!!
+        val firstArea = proj.businessUnits.flatMap { it.sites.flatMap { s -> s.areas } + it.areas }.firstOrNull()
+
+        AlertDialog(
+            onDismissRequest = { showCartographyDialog = false },
+            title = { Text("Acquisisci Sfondo Cartografico Offline") },
+            text = {
+                Column {
+                    Text("Seleziona la fonte cartografica (100% gratuita con attribuzione):", style = MaterialTheme.typography.bodySmall)
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    com.onlyfield.assetmanager.cartography.CartographicSource.entries.forEach { source ->
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 2.dp)) {
+                            RadioButton(
+                                selected = (mapSourceSelected == source),
+                                onClick = { mapSourceSelected = source }
+                            )
+                            Text(source.displayName, style = MaterialTheme.typography.bodyMedium)
+                        }
+                    }
+
+                    if (mapSourceSelected.isOnline) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row {
+                            OutlinedTextField(
+                                value = mapLatInput,
+                                onValueChange = { mapLatInput = it },
+                                label = { Text("Latitudine") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            OutlinedTextField(
+                                value = mapLonInput,
+                                onValueChange = { mapLonInput = it },
+                                label = { Text("Longitudine") },
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = mapZoomInput,
+                            onValueChange = { mapZoomInput = it },
+                            label = { Text("Livello Zoom (1..19)") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Attribuzione: ${mapSourceSelected.attributionText}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.DarkGray
+                        )
+                    } else {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Scegliere un file di immagine locale dalla galleria/file picker del dispositivo.", style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(onClick = {
+                    val currentArea = firstArea
+                    if (currentArea != null) {
+                        if (mapSourceSelected.isOnline) {
+                            val lat = mapLatInput.toDoubleOrNull() ?: 41.9028
+                            val lon = mapLonInput.toDoubleOrNull() ?: 12.4964
+                            val zoom = mapZoomInput.toIntOrNull() ?: 15
+                            viewModel.acquireCartographicBackground(
+                                projectId = proj.id,
+                                areaId = currentArea.id,
+                                request = com.onlyfield.assetmanager.cartography.MapSnapshotRequest(
+                                    source = mapSourceSelected,
+                                    centerLatitude = lat,
+                                    centerLongitude = lon,
+                                    zoomLevel = zoom
+                                ),
+                                context = context
+                            )
+                        } else {
+                            viewModel.addAttachmentToProject(
+                                projectId = proj.id,
+                                name = "mappa_locale_${currentArea.name.lowercase().replace(" ", "_")}.png",
+                                fileType = AttachmentType.IMAGE,
+                                mimeType = "image/png",
+                                classification = AttachmentClassification.SHAREABLE,
+                                targetType = AttachmentTargetType.AREA,
+                                targetId = currentArea.id
+                            )
+                        }
+                    }
+                    showCartographyDialog = false
+                }) {
+                    Text("Acquisisci Sfondo")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showCartographyDialog = false }) {
+                    Text("Annulla")
                 }
             }
         )
@@ -2020,6 +2231,148 @@ fun AssetManagerApp(viewModel: ProjectViewModel) {
             confirmButton = {
                 Button(onClick = { showMergeAndBatchDialog = false }) {
                     Text("Chiudi")
+                }
+            }
+        )
+    }
+
+    if (showDocumentExportDialog && currentProject != null) {
+        val proj = currentProject!!
+        val unclassifiedCount = proj.attachments.count { it.classification == AttachmentClassification.REVIEW_REQUIRED }
+
+        AlertDialog(
+            onDismissRequest = { showDocumentExportDialog = false },
+            title = { Text("Esporta Documenti e Stampa Report") },
+            text = {
+                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                    Text("Formato e Destinazione:", style = MaterialTheme.typography.titleSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = docExportFormat == "COMPOSITE_PDF", onClick = { docExportFormat = "COMPOSITE_PDF" })
+                        Text("Report PDF Composto (.pdf)")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = docExportFormat == "XLSX", onClick = { docExportFormat = "XLSX" })
+                        Text("Foglio Excel NATIVO (.xlsx)")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = docExportFormat == "MARKDOWN", onClick = { docExportFormat = "MARKDOWN" })
+                        Text("Documento Markdown (.md)")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RadioButton(selected = docExportFormat == "PRINT", onClick = { docExportFormat = "PRINT" })
+                        Text("Stampa Diretta Android (PrintManager)")
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    OutlinedTextField(
+                        value = docExportAuthorName,
+                        onValueChange = { docExportAuthorName = it },
+                        label = { Text("Nome Compilatore / Autore") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    OutlinedTextField(
+                        value = docExportTitleOverride,
+                        onValueChange = { docExportTitleOverride = it },
+                        label = { Text("Titolo personalizzato (opzionale)") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    if (docExportFormat == "COMPOSITE_PDF" || docExportFormat == "PRINT") {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Sezioni da Includere:", style = MaterialTheme.typography.titleSmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = docIncRackCards, onCheckedChange = { docIncRackCards = it })
+                            Text("Schede e Prospetti Armadi Rack")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = docIncInventoryTable, onCheckedChange = { docIncInventoryTable = it })
+                            Text("Tabella Inventario Apparati")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = docIncCablingAndPorts, onCheckedChange = { docIncCablingAndPorts = it })
+                            Text("Cablaggio e Collegamenti Fisici")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = docIncLogicalNetwork, onCheckedChange = { docIncLogicalNetwork = it })
+                            Text("Rete Logica, Subnet e VLAN")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = docIncPowerAndBadges, onCheckedChange = { docIncPowerAndBadges = it })
+                            Text("Alimentazione e Badge Documentali")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = docIncNotesAndAttachments, onCheckedChange = { docIncNotesAndAttachments = it })
+                            Text("Note, Osservazioni e Allegati")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = docIncludeConfidential, onCheckedChange = { docIncludeConfidential = it })
+                        Text("Includi note/allegati riservati [CONFIDENTIAL]")
+                    }
+
+                    if (unclassifiedCount > 0) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.errorContainer)
+                        ) {
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = "Avviso: $unclassifiedCount elementi classificati 'Da Riesaminare'. Conferma il riesame prima della condivisione.",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onErrorContainer
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(checked = docReviewConfirmed, onCheckedChange = { docReviewConfirmed = it })
+                                    Text("Confermo il riesame eseguito", style = MaterialTheme.typography.labelSmall)
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDocumentExportDialog = false
+                        val cleanName = proj.name.lowercase().replace(" ", "_")
+                        when (docExportFormat) {
+                            "COMPOSITE_PDF" -> compositePdfExportLauncher.launch("report_$cleanName.pdf")
+                            "XLSX" -> xlsxExportLauncher.launch("inventario_$cleanName.xlsx")
+                            "MARKDOWN" -> mdExportLauncher.launch("documentazione_$cleanName.md")
+                            "PRINT" -> {
+                                val filterConfig = ExportFilterConfig(
+                                    includeConfidential = docIncludeConfidential,
+                                    reviewRequiredConfirmed = docReviewConfirmed,
+                                    authorName = docExportAuthorName,
+                                    titleOverride = docExportTitleOverride.ifBlank { null }
+                                )
+                                val selection = ReportSelection(
+                                    includeRackCards = docIncRackCards,
+                                    includeInventoryTable = docIncInventoryTable,
+                                    includeCablingAndPorts = docIncCablingAndPorts,
+                                    includeLogicalNetwork = docIncLogicalNetwork,
+                                    includePowerAndBadges = docIncPowerAndBadges,
+                                    includeNotesAndAttachments = docIncNotesAndAttachments
+                                )
+                                viewModel.printProject(context, proj.id, filterConfig, selection)
+                            }
+                        }
+                    },
+                    enabled = docReviewConfirmed || unclassifiedCount == 0
+                ) {
+                    Text(if (docExportFormat == "PRINT") "Stampa" else "Esporta Documento")
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showDocumentExportDialog = false }) {
+                    Text("Annulla")
                 }
             }
         )

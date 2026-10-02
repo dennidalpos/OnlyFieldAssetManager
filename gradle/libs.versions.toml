@@ -1,6 +1,7 @@
 [versions]
 agp = "9.4.1"
 kotlin = "2.1.0"
+composeMultiplatform = "1.7.3"
 kotlinxSerialization = "1.8.0"
 ksp = "2.1.0-1.0.29"
 room = "2.6.1"
@@ -42,4 +43,5 @@ kotlin-android = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+jetbrainsCompose = { id = "org.jetbrains.compose", version.ref = "composeMultiplatform" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }

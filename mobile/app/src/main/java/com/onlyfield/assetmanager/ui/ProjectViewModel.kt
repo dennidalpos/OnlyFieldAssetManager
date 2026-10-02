@@ -1,13 +1,16 @@
 package com.onlyfield.assetmanager.ui
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.onlyfield.assetmanager.core.model.BusinessUnit
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.DeviceCategory
 import com.onlyfield.assetmanager.core.model.DeviceModel
+import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
+import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.repository.PackageImportEvaluation
 import com.onlyfield.assetmanager.data.repository.ProjectRepository
@@ -270,6 +273,76 @@ class ProjectViewModel(
         }
     }
 
+    fun exportXlsx(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream) {
+        viewModelScope.launch {
+            try {
+                val success = repository.exportXlsxToStream(projectId, filterConfig, outputStream)
+                if (success) {
+                    _exportStatusMessage.value = "Foglio Excel (.xlsx) esportato con successo"
+                } else {
+                    _exportStatusMessage.value = "Errore durante la generazione del foglio Excel"
+                }
+            } catch (e: Exception) {
+                _exportStatusMessage.value = "Errore Excel: ${e.message}"
+            }
+        }
+    }
+
+    fun exportMarkdown(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream) {
+        viewModelScope.launch {
+            try {
+                val success = repository.exportMarkdownToStream(projectId, filterConfig, outputStream)
+                if (success) {
+                    _exportStatusMessage.value = "Documento Markdown (.md) esportato con successo"
+                } else {
+                    _exportStatusMessage.value = "Errore durante la generazione del Markdown"
+                }
+            } catch (e: Exception) {
+                _exportStatusMessage.value = "Errore Markdown: ${e.message}"
+            }
+        }
+    }
+
+    fun exportCompositePdf(
+        projectId: String,
+        filterConfig: ExportFilterConfig,
+        reportSelection: ReportSelection,
+        outputStream: OutputStream
+    ) {
+        viewModelScope.launch {
+            try {
+                val success = repository.exportCompositePdfToStream(projectId, filterConfig, reportSelection, outputStream)
+                if (success) {
+                    _exportStatusMessage.value = "Report PDF Composto esportato con successo"
+                } else {
+                    _exportStatusMessage.value = "Errore durante la generazione del report PDF"
+                }
+            } catch (e: Exception) {
+                _exportStatusMessage.value = "Errore PDF: ${e.message}"
+            }
+        }
+    }
+
+    fun printProject(
+        context: Context,
+        projectId: String,
+        filterConfig: ExportFilterConfig,
+        reportSelection: ReportSelection
+    ) {
+        viewModelScope.launch {
+            try {
+                val success = repository.printProjectDocument(context, projectId, filterConfig, reportSelection)
+                if (success) {
+                    _exportStatusMessage.value = "Avviata la sessione di stampa Android"
+                } else {
+                    _exportStatusMessage.value = "Servizio di stampa non disponibile"
+                }
+            } catch (e: Exception) {
+                _exportStatusMessage.value = "Errore di stampa: ${e.message}"
+            }
+        }
+    }
+
     fun exportDeviceModel(model: DeviceModel, outputStream: OutputStream) {
         viewModelScope.launch {
             try {
@@ -446,6 +519,71 @@ class ProjectViewModel(
                 _saveState.value = "Allegato eliminato"
             } catch (e: Exception) {
                 _saveState.value = "Errore eliminazione: ${e.message}"
+            }
+        }
+    }
+
+    fun acquireCartographicBackground(
+        projectId: String,
+        areaId: String,
+        request: com.onlyfield.assetmanager.cartography.MapSnapshotRequest,
+        context: Context
+    ) {
+        viewModelScope.launch {
+            _saveState.value = "Acquisizione sfondo cartografico in corso..."
+            try {
+                val current = repository.getProjectById(projectId) ?: return@launch
+                val result = com.onlyfield.assetmanager.cartography.CartographicMapManager.acquireMapSnapshot(request)
+
+                val attachmentsDir = java.io.File(context.filesDir, "attachments/$projectId").apply { mkdirs() }
+                val attachmentId = UUID.randomUUID().toString()
+                val filename = "map_snapshot_$attachmentId.png"
+                val file = java.io.File(attachmentsDir, filename)
+                file.writeBytes(result.imageBytes)
+
+                val relativePath = "attachments/$projectId/$filename"
+                val attachment = com.onlyfield.assetmanager.core.model.Attachment(
+                    id = attachmentId,
+                    name = "Sfondo Cartografico (${result.sourceName})",
+                    originalFileName = filename,
+                    fileType = com.onlyfield.assetmanager.core.model.AttachmentType.IMAGE,
+                    mimeType = "image/png",
+                    relativePath = relativePath,
+                    classification = com.onlyfield.assetmanager.core.model.AttachmentClassification.SHAREABLE,
+                    targetType = com.onlyfield.assetmanager.core.model.AttachmentTargetType.AREA,
+                    targetId = areaId,
+                    attributionText = result.attributionText
+                )
+
+                val updatedAtts = current.attachments + attachment
+                val updatedBus = current.businessUnits.map { bu ->
+                    val updatedSites = bu.sites.map { site ->
+                        val updatedAreas = site.areas.map { area ->
+                            if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = 0)
+                            else area
+                        }
+                        site.copy(areas = updatedAreas)
+                    }
+                    val updatedDirectAreas = bu.areas.map { area ->
+                        if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = 0)
+                        else area
+                    }
+                    bu.copy(sites = updatedSites, areas = updatedDirectAreas)
+                }
+
+                val updatedProject = current.copy(
+                    attachments = updatedAtts,
+                    businessUnits = updatedBus,
+                    updatedEpochMs = System.currentTimeMillis()
+                )
+
+                repository.saveProject(updatedProject)
+                _currentProject.value = updatedProject
+                _saveState.value = "Sfondo cartografico acquisito con successo"
+            } catch (e: com.onlyfield.assetmanager.cartography.OfflineMapException) {
+                _saveState.value = e.message ?: "Errore acquisizione mappa offline"
+            } catch (e: Exception) {
+                _saveState.value = "Errore durante l'acquisizione cartografica: ${e.message}"
             }
         }
     }

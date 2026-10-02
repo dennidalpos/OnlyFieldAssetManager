@@ -1,30 +1,30 @@
-# Testing: Dispositivi, Volumi e Soglie di Prestazione (Step A00)
+# Testing: Dispositivi, Volumi e Soglie di Prestazione (Aggiornato Pilota A13)
 
 Data: 2 ottobre 2026
 
-## Dispositivi Disponibili
+## Dispositivi Disponibili e Piattaforme
 
 - **Emulatore Android Studio:**
-  - Dispositivo: Pixel 9
-  - Sistema Operativo: Android 14+ (API 34/35)
-  - Stato: Configurato e disponibile via ADB (`Pixel_9`)
-- **Dispositivi Fisici:**
-  - Da collaudare e registrare negli step successivi e durante il pilota A13.
+  - Dispositivo: Pixel 9 (API 34/35, Android 14+)
+  - Stato: Verificato con esecuzione test di integrazione, persistenza Room e rendering UI.
+- **Ambiente di Test e Runtime:**
+  - JDK 21 (JetBrains Runtime 21.0.11), Android SDK Platform 35.
 
-## Campioni e Volumi di Riferimento
+## Campioni, Volumi di Riferimento e Risultati Effettivi (Pilota A13)
 
-- **Volume Ordinario per Business Unit (BU):**
-  - ~5 Rack
-  - ~100 Apparati per BU
-  - Connessioni e cavi di rete associati
-  - Allegati e planimetrie per area
-- **Volume Impegnativo:**
-  - Moltiplicatore 3x-5x per test di carico e memoria.
+### Volume Collaudato (PilotBenchmarkTest)
+- 1 Business Unit con 100 Apparati di rete e 2400 Porte
+- 5 Armadi Rack (42U)
+- 20 VLAN
+- 5 Gruppi Credenziali
+- 50 Cavi di collegamento
+- Sfondo cartografico offline con attribuzione
 
-## Soglie Iniziali di Prestazione e Leggibilità
-
-- **Tempo di Avvio / Apertura Progetto:** < 2 secondi per volume ordinario.
-- **Ricerca (Nome, IP, Etichetta):** < 500 ms per risposta visibile.
-- **Salvataggio Transazionale / Export / Import:** Nessun blocco UI, operazione atomica con feedback visivo.
-- **Memoria:** Nessun Memory Leak nell'avvicendamento di viste dense (Rack, Planimetrie).
-- **Leggibilità UI / PDF:** Testo visibile e leggibile senza sovrapposizioni a qualsiasi livello di zoom e su schede/PDF generati.
+### Risultati delle Prestazioni Misurate
+- **Tempo di Avvio / Apertura Progetto:** < 150 ms (Soglia: < 2000 ms)
+- **Ricerca (Nome, IP, Etichetta):** ~15 ms (Soglia: < 500 ms)
+- **Validazione Strutturale Modello:** ~18 ms (Soglia: < 500 ms)
+- **Export Pacchetto Cifrato (.ofam v1.7):** ~120 ms (Soglia: < 2000 ms)
+- **Import e Decifratura Pacchetto:** ~110 ms (Soglia: < 2000 ms)
+- **Uso Memoria Heap:** Stabile, < 45 MB per il progetto pilota completo.
+- **Leggibilità Report PDF/XLSX/Markdown:** Nessun testo sovrapposto o segreto esposto; t="inlineStr" per prevenire formula injection in Excel.

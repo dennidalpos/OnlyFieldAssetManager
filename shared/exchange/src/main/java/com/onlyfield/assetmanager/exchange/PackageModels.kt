@@ -17,7 +17,7 @@ data class PackageManifest(
     val checksums: Map<String, String> = emptyMap(), // relativePath -> SHA-256 Hex
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = "1.4"
+        const val CURRENT_FORMAT_VERSION = "1.7"
         const val MANIFEST_FILE_NAME = "manifest.json"
         const val PROJECT_FILE_NAME = "project.json"
         const val PROJECT_ENC_FILE_NAME = "project.json.enc"

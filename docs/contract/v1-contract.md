@@ -1,21 +1,21 @@
 # Contratto v1.0 — Modello dati, Formato Scambio, Protezione e Validazione
 
 Data: 2 ottobre 2026  
-Versione contratto: `1.5` (Aggiornato per Step A10 — Cestino locale, recupero eliminazioni, fusione guidata e modifiche multiple)
+Versione contratto: `1.7` (Aggiornato per Step A12 — Acquisizione cartografica, sfondi autosufficienti, attribuzione OpenTopoMap/CARTO e funzionamento offline)
 
 ## 1. Struttura del Pacchetto di Scambio (`.ofam` / ZIP)
 
 Un pacchetto completo di scambio è un archivio ZIP contenente:
 - `manifest.json`: metadati del pacchetto, versione formato, ID esportazione, timestamp, flag di cifratura e tabella dei checksum SHA-256.
-- `project.json` (se non cifrato) o `project.json.enc` (se cifrato con password): l'intero albero del progetto serializzato in JSON UTF-8 conforme al modello v1.5.
-- `attachments/`: cartella contenente risorse binarie (foto, planimetrie, PDF, schemi rack, configurazioni) indirizzate da `project.json`.
+- `project.json` (se non cifrato) o `project.json.enc` (se cifrato con password): l'intero albero del progetto serializzato in JSON UTF-8 conforme al modello v1.7.
+- `attachments/`: cartella contenente risorse binarie (foto, planimetrie, sfondi cartografici offline, PDF, schemi rack, configurazioni) indirizzate da `project.json`.
 
 *Nota:* Il cestino locale (`trash_items`) è ad uso esclusivo del dispositivo e viene tassativamente escluso dalla serializzazione dei pacchetti di scambio `.ofam`.
 
 ### 1.1 Metadati del Manifesto (`manifest.json`)
 ```json
 {
-  "formatVersion": "1.4",
+  "formatVersion": "1.7",
   "exportId": "<UUID>",
   "exportedEpochMs": 1770000000000,
   "projectId": "<UUID>",
@@ -208,6 +208,27 @@ Mantenuti ed evidenziati all'utente senza bloccare il salvataggio o l'importazio
   - Consente l'aggiornamento simultaneo in transazione atomica di campi ammessi (`siteId`, `areaId`, `category`, `rackId`, `mountingType`, note osservazione).
   - È tassativamente vietata la modifica multipla implicita di identificatori univoci (UUID), indirizzi IP, indirizzi MAC, credenziali o cablaggi.
 
-## 6. Evoluzione del Contratto e Compatibilità Futura
+## 6. Documenti Completi, Report e Stampa (v1.6)
+- **Esportazione XLSX OpenXML Nativa (`.xlsx`):**
+  - Generazione di un archivio ZIP conforme alla specifica ISO/IEC 29500 OpenXML senza dipendenze pesanti esterne.
+  - Generazione di 5 fogli di lavoro dedicati: `Inventario Apparati`, `Porte e Cablaggio`, `Rete Logica e VLAN`, `Alimentazione e Badge`, `Note e Osservazioni`.
+  - Tutte le celle di testo libero vengono formattate come stringhe esplicite con `t="inlineStr"`, evitando l'esecuzione di formule indotte (es. `=SUM`, `=CMD`).
+  - Distinzione tra estremità fuori ambito ("Fuori Ambito") ed estremità ignote/scollegate ("Ignoto / Scollegato").
+  - Esclusione tassativa e garantita di ogni campo segreto/credenziale.
+- **Esportazione Markdown (`.md`):**
+  - Generazione di schede e report in formato Markdown con intestazioni, tabelle e badge.
+  - Supporto per la consultazione ed il versionamento in ambienti di documentazione o Git.
+- **Report PDF Composto Multipagina (`.pdf`):**
+  - Copertina con KPI sintetici dell'infrastruttura (apparati, rack, cavi, VLAN, avvisi/questioni aperte).
+  - Sezioni selezionabili dall'utente (`ReportSelection`): Prospetti Rack, Inventario, Cablaggio, Rete Logica, Alimentazione, Note ed Allegati.
+  - Rispetto dei filtri di selezione per BU/Sede/Area e categoria.
+- **Stampa Android e Anteprima Nativa:**
+  - Integrazione con `PrintManager` tramite `ProjectPrintDocumentAdapter` per l'invio diretto alle stampanti di sistema Android o il salvataggio in PDF tramite la schermata di stampa di sistema.
+- **Protezione e Riesame della Condivisione:**
+  - Esclusione totale delle credenziali (username, segreti, password SSH/SNMP).
+  - Filtro sui contenuti riservati (`CONFIDENTIAL`) selezionabile dall'utente.
+  - Rilevamento automatico di elementi non classificati (`REVIEW_REQUIRED`) con richiesta di conferma esplicita del riesame prima dell'esportazione.
+
+## 7. Evoluzione del Contratto e Compatibilità Futura
 - Le librerie di scambio e storage ignorano le chiavi sconosciute (`ignoreUnknownKeys = true`).
 - I campi obbligatori di nuova introduzione negli step futuri forniranno un valore predefinito retrocompatibile.

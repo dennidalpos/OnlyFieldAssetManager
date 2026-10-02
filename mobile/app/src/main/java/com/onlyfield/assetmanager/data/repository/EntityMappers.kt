@@ -171,6 +171,7 @@ object EntityMappers {
             pageCount = att.pageCount,
             targetType = att.targetType?.name,
             targetId = att.targetId,
+            attributionText = att.attributionText,
             createdAtEpochMs = att.createdAtEpochMs
         )
     }
@@ -188,6 +189,7 @@ object EntityMappers {
             pageCount = entity.pageCount,
             targetType = entity.targetType?.let { try { com.onlyfield.assetmanager.core.model.AttachmentTargetType.valueOf(it) } catch (_: Exception) { null } },
             targetId = entity.targetId,
+            attributionText = entity.attributionText,
             createdAtEpochMs = entity.createdAtEpochMs
         )
     }

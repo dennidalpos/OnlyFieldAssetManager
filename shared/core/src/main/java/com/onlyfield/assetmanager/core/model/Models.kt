@@ -168,6 +168,7 @@ data class Attachment(
     val pageCount: Int = 1,
     val targetType: AttachmentTargetType? = null,
     val targetId: String? = null,
+    val attributionText: String? = null,
     val createdAtEpochMs: Long = System.currentTimeMillis()
 )
 
@@ -593,6 +594,28 @@ data class BatchEditPreview(
     val affectedDeviceNames: List<String>,
     val changesSummary: List<String>,
     val isProhibitedFieldAttempted: Boolean = false
+)
+
+@Serializable
+data class ExportFilterConfig(
+    val selectedBusinessUnitId: String? = null,
+    val selectedSiteId: String? = null,
+    val selectedAreaId: String? = null,
+    val selectedCategory: DeviceCategory? = null,
+    val includeConfidential: Boolean = false,
+    val reviewRequiredConfirmed: Boolean = true,
+    val authorName: String = "Tecnico Operativo",
+    val titleOverride: String? = null
+)
+
+@Serializable
+data class ReportSelection(
+    val includeRackCards: Boolean = true,
+    val includeInventoryTable: Boolean = true,
+    val includeCablingAndPorts: Boolean = true,
+    val includeLogicalNetwork: Boolean = true,
+    val includePowerAndBadges: Boolean = true,
+    val includeNotesAndAttachments: Boolean = true
 )
 
 @Serializable

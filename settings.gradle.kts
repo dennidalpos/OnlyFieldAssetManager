@@ -28,4 +28,4 @@ rootProject.name = "OnlyFieldAssetManager"
 include(":mobile:app")
 include(":shared:core")
 include(":shared:exchange")
-// Note: :pc:app is reserved and will be added in step W00
+include(":pc:app")

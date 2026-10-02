@@ -172,6 +172,7 @@ data class AttachmentEntity(
     val pageCount: Int,
     val targetType: String?,
     val targetId: String?,
+    val attributionText: String? = null,
     val createdAtEpochMs: Long
 )
 

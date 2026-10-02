@@ -311,7 +311,7 @@ class PackageSerializerTest {
 
         assertTrue(importResult.validationResult.isValid)
         val imported = importResult.pkg!!.project
-        assertEquals("1.4", importResult.pkg!!.manifest.formatVersion)
+        assertEquals(PackageManifest.CURRENT_FORMAT_VERSION, importResult.pkg!!.manifest.formatVersion)
         assertEquals(1, imported.powerFeeds.size)
         assertEquals("Feed A", imported.powerFeeds[0].feedName)
         assertEquals(500.0, imported.powerFeeds[0].loadVa)

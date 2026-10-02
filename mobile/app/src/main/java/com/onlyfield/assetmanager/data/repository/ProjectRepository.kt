@@ -12,16 +12,23 @@ import com.onlyfield.assetmanager.data.local.CredentialEntity
 import com.onlyfield.assetmanager.data.local.DeviceEntity
 import com.onlyfield.assetmanager.data.local.DeviceModelEntity
 import com.onlyfield.assetmanager.data.local.PortEntity
+import android.content.Context
+import android.print.PrintManager
+import com.onlyfield.assetmanager.core.model.ExportFilterConfig
+import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.local.RackEntity
 import com.onlyfield.assetmanager.data.local.SiteEntity
 import com.onlyfield.assetmanager.exchange.DeviceModelSerializer
+import com.onlyfield.assetmanager.exchange.MarkdownExportManager
 import com.onlyfield.assetmanager.exchange.PackageImportResult
 import com.onlyfield.assetmanager.exchange.PackageSerializer
 import com.onlyfield.assetmanager.exchange.ProjectComparison
 import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
 import com.onlyfield.assetmanager.exchange.ProjectPackage
+import com.onlyfield.assetmanager.exchange.XlsxExportManager
 import com.onlyfield.assetmanager.export.PdfExportManager
+import com.onlyfield.assetmanager.export.ProjectPrintDocumentAdapter
 import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 import java.io.OutputStream
@@ -338,6 +345,43 @@ class ProjectRepository(
             unmountedDevices = unmountedDevices,
             outputStream = outputStream
         )
+        return true
+    }
+
+    suspend fun exportXlsxToStream(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream): Boolean {
+        val project = getProjectById(projectId) ?: return false
+        XlsxExportManager.exportXlsxToStream(project, filterConfig, outputStream)
+        return true
+    }
+
+    suspend fun exportMarkdownToStream(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream): Boolean {
+        val project = getProjectById(projectId) ?: return false
+        MarkdownExportManager.exportMarkdownToStream(project, filterConfig, outputStream)
+        return true
+    }
+
+    suspend fun exportCompositePdfToStream(
+        projectId: String,
+        filterConfig: ExportFilterConfig,
+        selection: ReportSelection,
+        outputStream: OutputStream
+    ): Boolean {
+        val project = getProjectById(projectId) ?: return false
+        PdfExportManager.exportCompositeReportPdfToStream(project, filterConfig, selection, outputStream)
+        return true
+    }
+
+    suspend fun printProjectDocument(
+        context: android.content.Context,
+        projectId: String,
+        filterConfig: ExportFilterConfig,
+        selection: ReportSelection
+    ): Boolean {
+        val project = getProjectById(projectId) ?: return false
+        val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as? android.print.PrintManager ?: return false
+        val jobName = "Report_${project.name}"
+        val adapter = ProjectPrintDocumentAdapter(project, filterConfig, selection)
+        printManager.print(jobName, adapter, null)
         return true
     }
 

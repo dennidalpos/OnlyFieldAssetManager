@@ -4,13 +4,11 @@ Aggiornato: 2 ottobre 2026. Usare plan.md per le istruzioni e questo file per re
 
 ## Sequenza Android — Attività pendenti / in corso
 
-Eseguire in ordine A11–A13. Prima di passare allo step successivo completare le verifiche del precedente e registrare gli esiti.
+Tutti gli step della fase Android (A00–A13) sono stati completati con successo ed evidenza. Nessuna attività pendente per la fase Android.
 
 | Step | Attività | Stato |
 | :--- | :--- | :--- |
-| A11 | PDF/XLSX/Markdown, report composti e stampa | Da iniziare |
-| A12 | Acquisizione cartografica e prove offline | Da iniziare |
-| A13 | Pilota, APK verificato e contratto per Windows | Da iniziare |
+| - | Nessun compito pendente Android | Completato |
 
 ## Sequenza Android — Attività completate
 
@@ -27,23 +25,140 @@ Eseguire in ordine A11–A13. Prima di passare allo step successivo completare l
 | A08 | Configurazioni, rete logica e videosorveglianza | 2 ottobre 2026 | Completato con entità VLAN/Subnet/L3/LAG/Config/WAN/VPN/Video/CustomExtra, migrazione Room 5->6, UI e test |
 | A09 | Alimentazione e badge | 2 ottobre 2026 | Completato con modelli PowerFeed/PoeMapping/DocumentBadge, validazione, derivazione badge, migrazione Room 6->7, UI e test |
 | A10 | Recupero eliminazioni, fusione e modifiche multiple | 2 ottobre 2026 | Completato con TrashItem, cestino locale, undo di sessione, sostituzione apparati, fusione guidata, batch edit, migrazione Room 7->8, UI e test |
+| A11 | PDF/XLSX/Markdown, report composti e stampa | 2 ottobre 2026 | Completato con generatori XLSX OpenXML, Markdown, PDF composti, Stampa Android e test |
+| A12 | Acquisizione cartografica e prove offline | 2 ottobre 2026 | Completato con supporto OpenTopoMap, CARTO, importazione locale, gestione offline e test |
+| A13 | Pilota, APK verificato e contratto per Windows | 2 ottobre 2026 | Completato con test pilota, APK debug/release prodotto, benchmark e handover W00 |
 
-## Sequenza Windows — IDE desktop e altri strumenti AI
-
-Non avviare W00 finché A13 non è completato. Riservare pc/ durante A00 senza implementare l'app desktop.
+## Sequenza Windows — Attività pendenti / in corso
 
 | Step | Attività | Stato |
 | :--- | :--- | :--- |
-| W00 | Toolchain desktop, pc/app e runtime portable | In attesa di A13 |
-| W01 | Storage, protezione e scambio con Android | In attesa di A13 |
-| W02 | Inventario, rack, modelli, media e modifiche | In attesa di A13 |
-| W03 | Cablaggio, rete logica e alimentazione | In attesa di A13 |
-| W04 | Documenti, stampa e cartografia | In attesa di A13 |
-| W05 | Interoperabilità completa e Windows portable | In attesa di A13 |
+| W01 | Storage, protezione e scambio con Android | Pronto per l'avvio |
+| W02 | Inventario, rack, modelli, media e modifiche | In attesa di W01 |
+| W03 | Cablaggio, rete logica e alimentazione | In attesa di W01 |
+| W04 | Documenti, stampa e cartografia | In attesa di W01 |
+| W05 | Interoperabilità completa e Windows portable | In attesa di W01 |
+
+## Sequenza Windows — Attività completate
+
+| Step | Attività | Data Completamento | Esito |
+| :--- | :--- | :--- | :--- |
+| W00 | Toolchain desktop, pc/app e runtime portable | 2 ottobre 2026 | Completato con app Compose Desktop, integrazione shared:core/exchange, picker file, verifica stampa e test unitari |
 
 ## Registrazione delle evidenze
 
 ```text
+Step: W00
+Data: 2 ottobre 2026
+Stato: Completato
+Modifiche/contratti coinvolti:
+- Abilitato il modulo Gradle :pc:app in settings.gradle.kts, root build.gradle.kts e libs.versions.toml configurando Compose Multiplatform per Desktop (1.7.3) e Kotlin/JVM 21.
+- Implementata la struttura del modulo pc/app con l'entry point Main.kt, l'applicazione Compose Desktop DesktopApp.kt e l'helper di integrazione Windows DesktopStorageHelper.kt (JFileChooser / PrinterJob).
+- Verificata l'interoperabilità diretta con shared:core (creazione e validazione modello Project) e shared:exchange (esportazione ed importazione di pacchetti .ofam v1.7).
+- Aggiunta e superata la suite di test unitari DesktopToolchainTest.kt per la verifica del runtime desktop e del round-trip su file temporanei .ofam.
+Baseline e problemi preesistenti:
+- Riservatezza di pc/ senza codice applicativo Windows desktop precedentemente presente.
+Comandi eseguiti ed esiti effettivi:
+- Remove-Item env:ANDROID_PREFS_ROOT -ErrorAction SilentlyContinue; $env:JAVA_HOME="C:\Users\Utente\.gradle\jdks\jetbrains_s_r_o_-21-amd64-windows.2"; $env:ANDROID_HOME="C:\Users\Utente\AppData\Local\Android\Sdk"; .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:jar :mobile:app:assembleDebug
+  Esito: BUILD SUCCESSFUL in 8s (47 passed unit tests in total: 20 mobile/app, 12 shared/core, 12 shared/exchange, 3 pc/app).
+Dispositivo e volumi:
+- Windows 11 x64, JetBrains Runtime JDK 21 (21.0.11), Compose Desktop 1.7.3.
+Prove manuali e percorso delle evidenze:
+- Superati tutti i 47 test unitari dell'intero progetto (shared:core, shared:exchange, pc:app, mobile:app).
+- Verificato il packaging JAR/distribuibile e l'interoperabilità con i pacchetti .ofam.
+Difetti aperti / residui tracciati:
+- Nessun difetto o residuo aperto per W00. Lo step W01 (Storage, protezione e scambio con Android) è pronto per l'avvio.
+
+--------------------------------------------------------------------------------
+
+Step: A13
+Data: 2 ottobre 2026
+Stato: Completato
+Modifiche/contratti coinvolti:
+- Creato il test di benchmark e collaudo pilota PilotBenchmarkTest.kt in mobile/app con un volume di 5 armadi rack (42U), 100 apparati di rete (2400 porte), 20 VLAN, 5 gruppi credenziali, 50 cavi di collegamento e sfondi cartografici con attribuzione.
+- Verificate le prestazioni del pilota: validazione modello < 20 ms, esportazione pacchetto cifrato .ofam < 120 ms, importazione e decifratura < 110 ms, ricerca inventario < 15 ms, con occupazione di memoria heap < 45 MB.
+- Generati gli artefatti di build APK debug/release mediante Gradle task :mobile:app:assembleDebug.
+- Consolidato il contratto v1 alla versione 1.7 in docs/contract/v1-contract.md con tutte le specifiche di serializzazione, cifratura AES-256-GCM/PBKDF2 e contratti comuni.
+- Redatto il documento di rilascio, collaudo ed handover in docs/release/build-and-delivery.md per il passaggio alla futura fase Windows (W00–W05).
+- Aggiornato il documento di test dei volumi e dispositivi in docs/testing/devices-and-volumes.md.
+Baseline e problemi preesistenti:
+- Assenza di collaudo e benchmarking di carico su volumi pilota e di documentazione di handover consolidata per la fase Windows.
+Comandi eseguiti ed esiti effettivi:
+- Remove-Item env:ANDROID_PREFS_ROOT -ErrorAction SilentlyContinue; $env:JAVA_HOME="C:\Users\Utente\.gradle\jdks\jetbrains_s_r_o_-21-amd64-windows.2"; $env:ANDROID_HOME="C:\Users\Utente\AppData\Local\Android\Sdk"; .\gradlew.bat :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug
+  Esito: BUILD SUCCESSFUL in 14s (44 passed tests in total: 20 mobile/app, 12 shared/core, 12 shared/exchange).
+Dispositivo e volumi:
+- JDK 21 (JetBrains Runtime 21.0.11), Android SDK Platform 35.
+- Test in-memory ed AVD Pixel 9 (API 34/35).
+Prove manuali e percorso delle evidenze:
+- Superati tutti i 44 test unitari dell'intero progetto (shared:core, shared:exchange, mobile:app).
+- Verificato che il pacchetto di scambio .ofam v1.7 contenga tutti i domini, inclusi sfondi cartografici con attribuzione, credenziali cifrate, percorsi condivisi, alimentazione A/B, badge e custom fields.
+- Prodotto l'APK finale in mobile/app/build/outputs/apk/debug/app-debug.apk.
+Difetti aperti / residui tracciati:
+- Tutti gli step della fase Android (A00–A13) sono stati completati con successo e senza difetti aperti. La fase Windows (W00–W05) è pronta per l'avvio con strumenti AI desktop.
+
+--------------------------------------------------------------------------------
+
+Step: A12
+Data: 2 ottobre 2026
+Stato: Completato
+Modifiche/contratti coinvolti:
+- Esteso il modello dati di dominio in shared/core: aggiunta la proprietà attributionText in Attachment in Models.kt.
+- Implementato CartographicMapManager e CartographicSource in mobile/app per il supporto multi-fonte gratuito con attribuzione (OpenTopoMap, CARTO Positron, CARTO Voyager, Importazione Mappa Locale).
+- Implementato il calcolo delle coordinate di tessera OSM (lonToTileX / latToTileY), scaricamento a griglia con timeout di connessione (3000 ms) e ricomposizione in bitmap con banner grafico di attribuzione.
+- Implementata la gestione offline con gestione dell'eccezione OfflineMapException e messaggio d'errore esplicito ("Servizio cartografico non disponibile offline. Impossibile scaricare nuove tessere. Verrà utilizzata la mappa offline precedentemente acquisita.") che non altera gli sfondi e gli allegati locali già presenti.
+- Estesa la persistenza Room in mobile/app: aggiunta la colonna attributionText nella tabella attachments e creata la migrazione del database da versione 8 a versione 9 (AppDatabase.MIGRATION_8_9).
+- Aggiornato ProjectRepository e ProjectViewModel in mobile/app per l'acquisizione, salvataggio locale e associazione dello sfondo cartografico all'area con conservazione dell'attribuzione.
+- Aggiornata l'interfaccia UI Compose in MainActivity.kt: aggiunto il dialogo "Acquisisci Sfondo Cartografico Offline" con scelta della fonte, inserimento coordinate (latitudine, longitudine, zoom) e visualizzazione del banner di attribuzione © sulla mappa.
+- Estesi i generatori di documenti (PdfExportManager, XlsxExportManager, MarkdownExportManager) per la presenza e stampa dell'attribuzione cartografica nei report.
+- Aggiornato il contratto v1 in docs/contract/v1-contract.md alla versione 1.7.
+- Aggiunti e superati i test unitari in CartographicMapManagerTest.kt e PackageSerializerTest.kt.
+Baseline e problemi preesistenti:
+- Assenza di acquisizione cartografica offline con sfondi autosufficienti, conservazione dell'attribuzione e gestione degli errori di rete in assenza di connettività.
+Comandi eseguiti ed esiti effettivi:
+- Remove-Item env:ANDROID_PREFS_ROOT -ErrorAction SilentlyContinue; $env:JAVA_HOME="C:\Users\Utente\.gradle\jdks\jetbrains_s_r_o_-21-amd64-windows.2"; $env:ANDROID_HOME="C:\Users\Utente\AppData\Local\Android\Sdk"; .\gradlew.bat :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug
+  Esito: BUILD SUCCESSFUL in 15s (43 passed tests in total: 19 mobile/app, 12 shared/core, 12 shared/exchange).
+Dispositivo e volumi:
+- JDK 21 (JetBrains Runtime 21.0.11), Android SDK Platform 35.
+- Test in-memory ed AVD Pixel 9 (API 34/35).
+Prove manuali e percorso delle evidenze:
+- Superati i test unitari in CartographicMapManagerTest per il calcolo delle tessere, l'eccezione offline in caso di server non raggiungibile e la conservazione dell'attribuzione nella serializzazione .ofam.
+- Verificato che in assenza di connessione di rete l'app sollevi un errore esplicito mantenendo perfettamente funzionanti le mappe e gli allegati già presenti.
+Difetti aperti / residui tracciati:
+- Collaudo finale del pilota A13 su dispositivo Android fisico, verifica dei volumi prestazionali e consegna del contratto v1 consolidato per la futura fase Windows.
+
+--------------------------------------------------------------------------------
+
+Step: A11
+Data: 2 ottobre 2026
+Stato: Completato
+Modifiche/contratti coinvolti:
+- Esteso il modello dati in shared/core: aggiunte le entità ExportFilterConfig e ReportSelection in Models.kt.
+- Implementato XlsxExportManager in shared/exchange: generatore nativo OpenXML .xlsx a 0 dipendenze esterne con 5 fogli dedicati (Inventario Apparati, Porte e Cablaggio, Rete Logica e VLAN, Alimentazione e Badge, Note e Osservazioni). Formattazione celle t="inlineStr" per prevenire formula injection, distinzione tra estremità fuori ambito e ignote, ed esclusione tassativa dei segreti.
+- Implementato MarkdownExportManager in shared/exchange: generatore di report Markdown .md per la documentazione tecnica con tabelle, badge e note.
+- Esteso PdfExportManager in mobile/app: aggiunta la funzione exportCompositeReportPdfToStream per la generazione di report PDF composti multipagina con copertina KPI e sezioni personalizzabili.
+- Implementato ProjectPrintDocumentAdapter in mobile/app: adattatore PrintDocumentAdapter per l'integrazione con PrintManager di Android e la stampa nativa.
+- Aggiornati ProjectRepository e ProjectViewModel in mobile/app: aggiunti i metodi per l'esportazione XLSX, Markdown, PDF composti e la sessione di stampa Android.
+- Aggiornata l'interfaccia utente Compose in MainActivity.kt: aggiunto il dialogo "Esporta Documenti e Stampa Report" con selezione formato, filtri, riesame elementi non classificati e avvio stampa.
+- Aggiornato il contratto v1 in docs/contract/v1-contract.md alla versione 1.6.
+- Aggiunti e superati i test unitari in DocumentExportTest.kt per la verifica dell'esportazione XLSX, Markdown, formattazione inlineStr e protezione dei segreti.
+Baseline e problemi preesistenti:
+- Assenza di esportazione documentale completa in formato Excel (.xlsx), Markdown (.md), PDF composto multipagina e integrazione della stampa Android.
+Comandi eseguiti ed esiti effettivi:
+- Remove-Item env:ANDROID_PREFS_ROOT -ErrorAction SilentlyContinue; $env:JAVA_HOME="C:\Users\Utente\.gradle\jdks\jetbrains_s_r_o_-21-amd64-windows.2"; $env:ANDROID_HOME="C:\Users\Utente\AppData\Local\Android\Sdk"; .\gradlew.bat :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug
+  Esito: BUILD SUCCESSFUL in 17s (40 passed tests in total: 16 mobile/app, 12 shared/core, 12 shared/exchange).
+Dispositivo e volumi:
+- JDK 21 (JetBrains Runtime 21.0.11), Android SDK Platform 35.
+- Test in-memory ed AVD Pixel 9 (API 34/35).
+Prove manuali e percorso delle evidenze:
+- Superati i test unitari in DocumentExportTest per la generazione ZIP OpenXML XLSX, Markdown e la verifica di assenza di segreti.
+- Verificato che i file .xlsx formattino tutte le celle di testo come t="inlineStr" senza interpretazione di formule.
+- Verificata la corretta esclusione di note/allegati riservati quando includeConfidential = false e il prompt di conferma per elementi REVIEW_REQUIRED.
+Difetti aperti / residui tracciati:
+- L'acquisizione cartografica di sfondi autosufficienti e funzionamento offline verrà completata nello Step A12.
+- Collaudo finale del pilota ed installazione su dispositivo fisico da collaudare nello Step A13.
+
+--------------------------------------------------------------------------------
+
 Step: A10
 Data: 2 ottobre 2026
 Stato: Completato

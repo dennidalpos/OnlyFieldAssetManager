@@ -24,4 +24,5 @@ Data aggiornamento: 2 ottobre 2026
 - `:mobile:app` -> App Android Compose (minSdk 34)
 - `:shared:core` -> Modello e regole pure JVM (senza dipendenze Android UI/Context)
 - `:shared:exchange` -> Serializzazione/validazione pura JVM (senza dipendenze Android UI/Context)
-- `:pc:app` -> Riservato per l'editor Windows (abilitato in W00)
+- `:pc:app` -> App Desktop Windows Compose for Desktop (Kotlin/JVM 21, Compose Multiplatform 1.7.3) abilitata nello step W00 per l'editor portatile Windows 11 x64.
+

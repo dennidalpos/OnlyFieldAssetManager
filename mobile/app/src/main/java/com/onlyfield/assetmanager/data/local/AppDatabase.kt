@@ -36,7 +36,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         DocumentBadgeEntity::class,
         TrashItemEntity::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -536,6 +536,12 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_trash_items_projectId` ON `trash_items` (`projectId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_trash_items_itemId` ON `trash_items` (`itemId`)")
+            }
+        }
+
+        val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE attachments ADD COLUMN attributionText TEXT DEFAULT NULL")
             }
         }
     }
