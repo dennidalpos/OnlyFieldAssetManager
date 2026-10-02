@@ -6,14 +6,15 @@ Data: 2 ottobre 2026
 
 - **JDK Daemon Gradle:** JetBrains Runtime JDK 21 (`C:/Users/Utente/.gradle/jdks/jetbrains_s_r_o_-21-amd64-windows.2`) configurato tramite `org.gradle.java.home` e `.idea/gradle.xml` per compatibilità con Gradle 9.0.0 e Android Studio.
 - **Gradle:** 9.0.0
-- **Android Gradle Plugin (AGP):** 8.8.0
-- **Kotlin:** 2.1.0
-- **Kotlin Compose Plugin:** `org.jetbrains.kotlin.plugin.compose` 2.1.0
+- **Android Gradle Plugin (AGP):** 8.8.2
+- **Kotlin:** 2.1.10
+- **Kotlin Compose Plugin:** `org.jetbrains.kotlin.plugin.compose` 2.1.10
+- **KSP:** 2.1.10-1.0.29
 - **Min SDK:** 34 (Android 14)
 - **Compile SDK / Target SDK:** 35
 - **AndroidX Core KTX:** 1.15.0
 - **AndroidX Activity Compose:** 1.10.0
-- **Compose BOM:** 2025.01.00
+- **Compose BOM:** 2025.02.00
 - **Material 3:** Compose Material3 via Compose BOM
 
 ## Configurazione Moduli
