@@ -1,0 +1,30 @@
+{
+  "isValid": true,
+  "hasWarnings": true,
+  "issues": [
+    {
+      "code": "DUPLICATE_IP_IN_BU",
+      "message": "Duplicate IP address '10.10.1.5' in Business Unit 22222222-2222-2222-2222-222222222222",
+      "severity": "DOCUMENTARY_WARNING",
+      "targetEntityId": "55555555-5555-5555-5555-555555555552"
+    },
+    {
+      "code": "DETACHED_PORT_ENDPOINT",
+      "message": "Port 'te0/0/2' on device 'sw-core-01' marked detached for verification",
+      "severity": "DOCUMENTARY_WARNING",
+      "targetEntityId": "66666666-6666-6666-6666-666666666663"
+    },
+    {
+      "code": "UNPOSITIONED_DEVICE",
+      "message": "Device 'sw-access-01' has no site or area assigned",
+      "severity": "DOCUMENTARY_WARNING",
+      "targetEntityId": "88888888-8888-8888-8888-888888888881"
+    },
+    {
+      "code": "UNVERIFIED_DEVICE_OBSERVATION",
+      "message": "Device 'sw-access-01' observation status is TO_VERIFY",
+      "severity": "DOCUMENTARY_WARNING",
+      "targetEntityId": "88888888-8888-8888-8888-888888888881"
+    }
+  ]
+}
