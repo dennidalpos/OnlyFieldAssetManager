@@ -29,6 +29,9 @@ import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.cartography.CartographicSource
+import com.onlyfield.assetmanager.cartography.MapSnapshotRequest
+import com.onlyfield.assetmanager.core.forms.FieldValidators
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.components.*
 
@@ -41,9 +44,11 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     var floorplanFor by remember { mutableStateOf<Attachment?>(null) }
     var classifying by remember { mutableStateOf<Attachment?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> picked = uri }
+    var mapping by remember { mutableStateOf(false) }
 
     AppScaffold(
         "Allegati", onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
+        actions = { TextButton(onClick = { mapping = true }) { Text("Mappa…") } },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { picker.launch(arrayOf("image/*", "application/pdf", "*/*")) },
                 icon = { Icon(Icons.Default.Add, null) }, text = { Text("Allegato") })
@@ -104,6 +109,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
             Text("Gli allegati riservati sono esclusi dai documenti, salvo scelta esplicita in fase di esportazione.", style = MaterialTheme.typography.bodySmall)
         }
     }
+    if (mapping) MapDownloadEditor(vm) { mapping = false }
 }
 
 @Composable
@@ -288,5 +294,38 @@ fun TrashScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
                 )
             }
         }
+    }
+}
+
+/** Map download form (F05): the only feature that uses the network, and only when asked. */
+@Composable
+private fun MapDownloadEditor(vm: ProjectViewModel, onClose: () -> Unit) {
+    var source by remember { mutableStateOf(CartographicSource.OPEN_TOPO_MAP) }
+    var lat by remember { mutableStateOf("") }
+    var lon by remember { mutableStateOf("") }
+    var zoom by remember { mutableStateOf("17") }
+    var name by remember { mutableStateOf("") }
+    val latValue = FieldValidators.parseDecimal(lat)
+    val lonValue = FieldValidators.parseDecimal(lon)
+    val errors = buildMap {
+        FieldValidators.decimal(lat, -85.0, 85.0)?.let { put("lat", it) } ?: if (lat.isBlank()) put("lat", "Latitudine obbligatoria") else Unit
+        FieldValidators.decimal(lon, -180.0, 180.0)?.let { put("lon", it) } ?: if (lon.isBlank()) put("lon", "Longitudine obbligatoria") else Unit
+        FieldValidators.int(zoom, 1, 19, required = true)?.let { put("zoom", it) }
+    }
+    EditScreen("Mappa dal web", onClose, {
+        onClose()
+        vm.downloadMap(MapSnapshotRequest(source, latValue!!, lonValue!!, FieldValidators.parseInt(zoom)!!), name)
+    }, confirmEnabled = errors.isEmpty(), confirmLabel = "Scarica") {
+        Text(
+            "Scarica una mappa (3 × 3 tessere) attorno al punto e la salva tra gli allegati con l'attribuzione. " +
+                "Serve la connessione solo per questo download: il resto dell'app funziona offline.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        EnumPicker("Fonte", CartographicSource.entries.filter { it.isOnline }, source, { it.displayName }, { source = it })
+        FormField(lat, { lat = it }, "Latitudine *", error = errors["lat"], hint = "Es. 45,4642", kind = FieldKind.DECIMAL)
+        FormField(lon, { lon = it }, "Longitudine *", error = errors["lon"], hint = "Es. 9,1900", kind = FieldKind.DECIMAL)
+        FormField(zoom, { zoom = it }, "Zoom (1-19)", error = errors["zoom"], kind = FieldKind.NUMBER, hint = "17 = isolato, 15 = quartiere")
+        FormField(name, { name = it }, "Nome", hint = "Vuoto = coordinate")
+        Text(source.attributionText, style = MaterialTheme.typography.bodySmall)
     }
 }

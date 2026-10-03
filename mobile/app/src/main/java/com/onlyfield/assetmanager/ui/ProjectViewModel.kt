@@ -12,6 +12,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.cartography.CartographicMapManager
+import com.onlyfield.assetmanager.cartography.MapSnapshotRequest
+import com.onlyfield.assetmanager.cartography.OfflineMapException
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.scan.CodeLookup
@@ -575,6 +578,38 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             is CodeMatch.RackMatch -> { navigate(Screen.RackDetail(match.rack.id)); null }
             is CodeMatch.OtherProject -> { fail("L'etichetta appartiene a un altro progetto."); null }
             is CodeMatch.NotFound -> match.code
+        }
+    }
+
+
+    // --- Maps (F05) -----------------------------------------------------------------------------
+
+    /** Downloads a 3x3-tile map around the point on explicit request and stores it as an image attachment. */
+    fun downloadMap(request: MapSnapshotRequest, name: String) {
+        val p = _project.value ?: return
+        viewModelScope.launch {
+            busy = "Download della mappa…"
+            try {
+                val snapshot = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { CartographicMapManager.acquireMapSnapshot(request) }
+                val attachment = Attachment(
+                    name = name.trim().ifBlank { "Mappa ${request.centerLatitude}, ${request.centerLongitude}" },
+                    originalFileName = "mappa_z${request.zoomLevel}.png",
+                    fileType = AttachmentType.IMAGE,
+                    mimeType = snapshot.mimeType,
+                    relativePath = "",
+                    attributionText = snapshot.attributionText,
+                )
+                val root = repository.attachmentsRoot() ?: error("archivio allegati non disponibile")
+                AttachmentFiles.localFile(root, p.id, attachment).apply { parentFile?.mkdirs() }.writeBytes(snapshot.imageBytes)
+                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
+                edit("Mappa «${saved.name}» aggiunta agli allegati.") { ProjectEdits.addAttachment(it, saved) }
+            } catch (e: OfflineMapException) {
+                fail(e.message ?: CartographicMapManager.NO_NETWORK_MESSAGE)
+            } catch (e: Exception) {
+                fail("Mappa non scaricata", e)
+            } finally {
+                busy = null
+            }
         }
     }
 

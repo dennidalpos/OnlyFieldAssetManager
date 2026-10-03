@@ -31,7 +31,7 @@ class CartographicMapManagerTest {
         assertTrue(urlOpenTopo.contains("opentopomap.org/15/$x/$y.png"))
 
         val urlCarto = CartographicMapManager.buildTileUrl(CartographicSource.CARTO_POSITRON, x, y, 15)
-        assertTrue(urlCarto.contains("cartocdn.com/rastertiles/voyager/15/$x/$y.png"))
+        assertTrue(urlCarto.contains("cartocdn.com/light_all/15/$x/$y.png"))
     }
 
     @Test
@@ -41,7 +41,7 @@ class CartographicMapManagerTest {
             CartographicMapManager.fetchTileBytes("http://127.0.0.1:65534/nonexistent_tile.png", timeoutMs = 500)
             fail("Dovrebbe sollevare OfflineMapException")
         } catch (e: OfflineMapException) {
-            assertTrue(e.message!!.contains("Servizio cartografico non disponibile offline"))
+            assertEquals(CartographicMapManager.NO_NETWORK_MESSAGE, e.message)
         }
     }
 

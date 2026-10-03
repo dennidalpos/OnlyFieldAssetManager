@@ -1,13 +1,13 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (13/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "F05",
+  "currentPhase": "Fase v1.1 in corso (14/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": null,
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 35,
-    "pendingTasks": 1,
-    "progressPercentage": 97.2,
+    "completedTasks": 36,
+    "pendingTasks": 0,
+    "progressPercentage": 100.0,
     "totalPassedTests": 117,
     "testsByModule": {
       "mobile/app": 24,
@@ -106,23 +106,21 @@
       "title": "Fusione all'import con scelta per elemento",
       "date": "2026-10-03",
       "evidence": "ProjectMerger (fusione a tre vie per elemento, conflitti tieni mio/importato, senza base ogni differenza è conflitto) con base salvata a ogni export/import (Android sync_snapshots DB v11, Windows data/sync cifrato); UI uno-per-uno su entrambe le app; ProjectMergerTest (5 casi) + test Windows; migrazione verificata su emulatore"
-    }
-  ],
-  "remainingTasks": [
+    },
     {
       "id": "F05",
-      "area": "Funzioni",
       "title": "Mappe su Android (chiude RES-07)",
-      "description": "Permesso INTERNET usato solo per scaricare le mappe su richiesta esplicita; riattivare la UI di CartographicMapManager con messaggio chiaro senza rete; documentare che l'app resta offline-first.",
-      "acceptance": "Download delle mappe funzionante con rete; senza rete l'app funziona e spiega perché la mappa non si scarica."
+      "date": "2026-10-03",
+      "evidence": "Permesso INTERNET solo per «Allegati › Mappa…» (3×3 tessere con attribuzione salvate come allegato), messaggio chiaro senza rete e per fonti che rifiutano (401/403), URL CARTO Positron corretto; verificato su emulatore con e senza rete; chiude RES-07, apre RES-09"
     }
   ],
+  "remainingTasks": [],
   "nextSessionNotes": [
     "Audit e interventi: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F05."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: None."
   ],
   "residuals": [
     {
@@ -164,14 +162,20 @@
     {
       "id": "RES-07",
       "title": "Acquisizione mappe su Android",
-      "status": "SCHEDULED",
-      "description": "Decisa il 2026-10-03: permesso INTERNET solo per il download delle mappe su richiesta. Pianificata come F05."
+      "status": "RESOLVED",
+      "description": "Risolto con F05 (2026-10-03): permesso INTERNET solo per il download delle mappe su richiesta; senza rete messaggio chiaro, app offline-first."
     },
     {
       "id": "RES-08",
       "title": "Cambio elemento con editor Windows modificato",
       "status": "OPEN",
       "description": "Nel pannello laterale (R02), scegliere un altro elemento nella lista mentre il form ha modifiche non salvate apre il nuovo elemento senza chiedere conferma; la conferma c'è solo per Annulla/Esc/chiusura. Richiede di instradare la selezione delle sezioni attraverso il pannello."
+    },
+    {
+      "id": "RES-09",
+      "title": "Chiave API per le mappe CARTO",
+      "status": "OPEN",
+      "description": "La documentazione CARTO (CartoDB/basemap-styles) indica che i basemap richiedono una chiave API. Le fonti CARTO restano selezionabili; in caso di rifiuto (401/403) l'app suggerisce OpenTopoMap, che è la fonte predefinita. Da decidere se procurare una chiave o rimuovere CARTO."
     }
   ]
 }

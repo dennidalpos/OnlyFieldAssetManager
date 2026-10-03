@@ -3,6 +3,8 @@
 
     <!-- Code scanning (F02); photos (F01) use the system camera app, which then also needs it granted. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Used only to download a map on explicit request (F05); everything else works offline. -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
 
     <application

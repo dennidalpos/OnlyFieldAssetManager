@@ -12,7 +12,7 @@ enum class DesktopMapSource(val displayName: String, val attribution: String, va
         urlTemplate = "https://a.tile.opentopomap.org/{z}/{x}/{y}.png"
     ),
     CARTO_DB(
-        displayName = "CARTO Positron (Vettoriale)",
+        displayName = "CARTO Voyager (Mista)",
         attribution = "© CARTO, © OpenStreetMap contributors",
         urlTemplate = "https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png"
     )

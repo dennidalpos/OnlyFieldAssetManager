@@ -30,7 +30,7 @@ enum class CartographicSource(
     CARTO_POSITRON(
         id = "CARTO_POSITRON",
         displayName = "CARTO Positron (Chiara)",
-        tileUrlTemplate = "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
+        tileUrlTemplate = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
         attributionText = "© OpenStreetMap contributors, © CARTO",
         isOnline = true
     ),
@@ -98,6 +98,9 @@ data class MapSnapshotResult(
 
 object CartographicMapManager {
 
+    const val NO_NETWORK_MESSAGE =
+        "Mappa non scaricata: nessuna connessione o servizio cartografico non raggiungibile. L'app continua a funzionare offline; riprova quando sei connesso."
+
     fun lonToTileX(lon: Double, zoom: Int): Int {
         val n = 1 shl zoom
         return floor((lon + 180.0) / 360.0 * n).toInt().coerceIn(0, n - 1)
@@ -126,19 +129,17 @@ object CartographicMapManager {
                 requestMethod = "GET"
                 setRequestProperty("User-Agent", "OnlyFieldAssetManager/1.0 (Android Offline App)")
             }
-            if (connection.responseCode != HttpURLConnection.HTTP_OK) {
-                throw OfflineMapException(
-                    "Servizio cartografico non disponibile offline. Impossibile scaricare nuove tessere. Verrà utilizzata la mappa offline precedentemente acquisita."
-                )
+            when (val code = connection.responseCode) {
+                HttpURLConnection.HTTP_OK -> connection.inputStream.use { it.readBytes() }
+                // CARTO now asks for an API key: say so instead of blaming the network.
+                HttpURLConnection.HTTP_UNAUTHORIZED, HttpURLConnection.HTTP_FORBIDDEN ->
+                    throw OfflineMapException("Il servizio cartografico ha rifiutato la richiesta (codice $code): questa fonte richiede una chiave di accesso. Usa OpenTopoMap.")
+                else -> throw OfflineMapException("Il servizio cartografico ha risposto con un errore (codice $code). Riprova più tardi.")
             }
-            connection.inputStream.use { it.readBytes() }
         } catch (e: OfflineMapException) {
             throw e
         } catch (e: Exception) {
-            throw OfflineMapException(
-                "Servizio cartografico non disponibile offline. Impossibile scaricare nuove tessere. Verrà utilizzata la mappa offline precedentemente acquisita.",
-                e
-            )
+            throw OfflineMapException(NO_NETWORK_MESSAGE, e)
         }
     }
 

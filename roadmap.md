@@ -8,8 +8,8 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (13 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 35 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Fase v1.1 (S/O/R/F)**: In corso (14 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 36 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
 - **Test Unitari Totali Passati**: 117 test su 117 (24 mobile/app, 30 shared/core, 24 shared/exchange, 39 pc/app).
 
 ## Tabella Riassuntiva degli Step
@@ -51,7 +51,7 @@ Data aggiornamento: 3 ottobre 2026
 | **F02** | Funzioni | Scansione QR/barcode | Completato | 03/10/2026 | Scanner CameraX + ML Kit incluso (offline), CodeLookup condiviso (seriale, etichetta, alias, cavi, porte), nuovo serialNumber (contratto 1.8, DB v10) con pacchetti 1.7 importabili (ContractVersionTest), lettore USB su Windows con Invio; permesso, anteprima e migrazione verificati su emulatore |
 | **F03** | Funzioni | Etichette QR proprie | Completato | 03/10/2026 | LabelCode ofam://<progetto>/<tipo>/<id> riconosciuto da CodeLookup (apparati, rack, cavi; altro progetto segnalato), foglio A4 condiviso LabelSheetPdf (ZXing 3.5.4) su Android e Windows; orientamento dei QR verificato sul PDF generato |
 | **F04** | Funzioni | Fusione all'import con scelta per elemento | Completato | 03/10/2026 | ProjectMerger (fusione a tre vie per elemento, conflitti tieni mio/importato, senza base ogni differenza è conflitto) con base salvata a ogni export/import (Android sync_snapshots DB v11, Windows data/sync cifrato); UI uno-per-uno su entrambe le app; ProjectMergerTest (5 casi) + test Windows; migrazione verificata su emulatore |
-| **F05** | Funzioni | Mappe su Android (chiude RES-07) | Da fare | — | — |
+| **F05** | Funzioni | Mappe su Android (chiude RES-07) | Completato | 03/10/2026 | Permesso INTERNET solo per «Allegati › Mappa…» (3×3 tessere con attribuzione salvate come allegato), messaggio chiaro senza rete e per fonti che rifiutano (401/403), URL CARTO Positron corretto; verificato su emulatore con e senza rete; chiude RES-07, apre RES-09 |
 
 ## Registro del Collaudo e della Build Finale
 
@@ -70,11 +70,12 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 - ~~RES-04 (Allegati nei pacchetti)~~: risolto il 03/10/2026 — i file viaggiano nel `.ofam` (`AttachmentFiles`), cifrati nei progetti protetti.
 - ~~RES-05 (Cestino Windows)~~: risolto il 03/10/2026 — cestino salvato su disco (progetti senza password) e «Annulla» (Ctrl+Z, 50 passi) per ogni modifica.
 - ~~RES-06 (Messaggi di validazione)~~: risolto il 03/10/2026 — messaggi di validazione e di importazione in italiano.
-- **RES-07 (Mappe Android)**: decisa il 03/10/2026 — permesso di rete solo per il download delle mappe; pianificata come F05.
+- ~~RES-07 (Mappe Android)~~: risolto il 03/10/2026 con F05 — permesso di rete solo per il download delle mappe su richiesta.
 - **RES-08 (Editor Windows)**: con un form modificato nel pannello laterale, la scelta di un altro elemento nella lista non chiede conferma (solo Annulla/Esc la chiedono).
+- **RES-09 (Mappe CARTO)**: CARTO dichiara che i basemap richiedono una chiave API; OpenTopoMap resta la fonte predefinita e, se CARTO rifiuta la richiesta, l'app lo spiega. Da decidere se procurare una chiave o togliere CARTO.
 
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: F05.
+- Nessuna decisione aperta. Prossimo task: None.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.

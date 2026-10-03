@@ -42,7 +42,7 @@ OnlyFieldAssetManager/
    - Database cifrato con SQLCipher (`EncryptedDatabase`): chiave casuale da 256 bit, conservata in `no_backup/db_key.bin` cifrata con una chiave AES-GCM del Keystore Android; il DB in chiaro delle versioni precedenti viene convertito una sola volta all'avvio (`sqlcipher_export`).
    - Backup automatico e trasferimento tra dispositivi disattivati (`allowBackup="false"`, `data_extraction_rules.xml`): i progetti escono dal telefono solo con l'export `.ofam`.
    - Scansione QR/barcode (`BarcodeScanner`): CameraX `LifecycleCameraController` + `MlKitAnalyzer` con il modello ML Kit incluso nell'APK (funziona offline); foto con l'app fotocamera di sistema e `FileProvider`.
-   - Acquisizione cartografica offline con attribuzione (`CartographicMapManager`).
+   - Mappe su richiesta (`CartographicMapManager`, «Allegati › Mappa…»): unico uso della rete, con il permesso `INTERNET` dichiarato solo per questo; scarica 3 × 3 tessere attorno a un punto e le salva come allegato immagine con attribuzione. Senza rete l'app spiega che la mappa non si scarica e continua a funzionare offline. Fonti: OpenTopoMap (predefinita), CARTO Positron/Voyager.
    - Generazione report PDF composti e adattatore per la stampa Android (`ProjectPrintDocumentAdapter`).
 
 4. **`:pc:app`**:
