@@ -185,3 +185,11 @@ Verifica finale: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:
 Scenari coperti: 24 rame + 4 SFP, clic/destinazione/ritorno/salvataggio, catena due pannelli+cavallotto, disponibilità/ignoti/cicli/combo/conflitti, modelli senza dati privati, aggiornamento esplicito e personalizzazioni, migrazione 13→14, round-trip normale/cifrato, fusione ed export. `ConfiguratorUndoTest` salva e riapre una configurazione composta rack+due switch+cavo e la annulla con un unico comando.
 
 Nessuna prova manuale su hardware reale né esecuzione del runner Android in questa sessione: RES-13 e RES-17 restano aperti. Nessun commit/push eseguito; residui preesistenti conservati. [Descrizione e fonti](docs/10-object-configurator.md).
+
+## Passaggio di sessione — salvataggio Git completato (3 ottobre 2026)
+
+Su richiesta dell’utente, configuratore e manutenzione precedente salvati nel commit `8ba2f0094a67a394bbbf515fb45a87a4ec5faa23` e pubblicati con `git push origin main`. `git ls-remote origin refs/heads/main` conferma lo stesso SHA; working tree pulito dopo il push. RES-19 chiuso: rimosso soltanto `.git/index.lock`, verificato vuoto e senza processi Git attivi, dopo aver controllato il percorso assoluto.
+
+Il controllo dello staging ha rilevato spazi finali nei tre nuovi cataloghi: codificati come escape Unicode, preservando i valori secondo il formato [Java Properties](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Properties.html#load(java.io.Reader)). `git diff --cached --check`: OK. Ripetuto il comando Gradle completo indicato in CFG01: BUILD SUCCESSFUL, verifiche incrementali aggiornate; report confermati con 206 test, zero fallimenti/errori/casi saltati. Artefatti e scratch ignorati esclusi dai 147 file committati.
+
+Tracker aggiornato per la prossima sessione: nessuna attività in corso; restano RES-01 (verifica CI reale su tag), RES-13 (collaudo hardware rinviato), RES-17 (Espresso/API 37) e RES-18 (scratch precedenti). Prossima ripresa suggerita da RES-17 e RES-18. Evidenze tecniche e stato del configuratore in [documentazione](docs/10-object-configurator.md); APK aggiornati in `mobile/app/build/outputs/apk`, portable in `dist/`. Il salvataggio su main non crea tag né pubblica una release.
