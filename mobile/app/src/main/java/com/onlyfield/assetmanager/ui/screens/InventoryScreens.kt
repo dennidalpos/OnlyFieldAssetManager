@@ -234,7 +234,7 @@ private fun InfoRow(label: String, value: String?) {
 }
 
 @Composable
-private fun DeviceDialog(vm: ProjectViewModel, project: Project, index: ProjectIndex, device: Device?, onClose: () -> Unit) {
+internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: ProjectIndex, device: Device?, onClose: () -> Unit) {
     val initialBu = device?.let { index.businessUnitOf(it.id)?.id } ?: project.businessUnits.firstOrNull()?.id
     var form by remember(device) { mutableStateOf(DeviceForm.from(device, initialBu)) }
     val rack = index.rack(form.rackId)

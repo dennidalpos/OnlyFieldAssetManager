@@ -37,6 +37,12 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
     var askExportPassword by remember { mutableStateOf(false) }
     var exportPassword by remember { mutableStateOf<String?>(null) }
     var managingPassword by remember { mutableStateOf(false) }
+    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
+    var addingDevice by remember { mutableStateOf(false) }
+    // Same fields as the Inventory search
+    val found = if (query.isBlank()) emptyList() else index.devices.filter {
+        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress)
+    }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
         uri?.let { vm.exportPackage(context.contentResolver, it, exportPassword) }
@@ -91,6 +97,27 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             item(span = { GridItemSpan(maxLineSpan) }) {
+                SearchField(query, { query = it }, "Cerca apparato: nome, IP, etichetta, alias…")
+            }
+            if (query.isNotBlank()) {
+                if (found.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
+                    Text("Nessun apparato trovato.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                items(found, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { d ->
+                    ItemCard(
+                        title = d.technicalName + (d.alias?.let { " ($it)" } ?: ""),
+                        details = listOf(listOfNotNull(d.ipAddress, d.physicalLabel, d.areaId?.let { index.areaName(it) }).joinToString(" · ")).filter { it.isNotBlank() },
+                        onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }
+                    )
+                }
+                return@LazyVerticalGrid
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { addingDevice = true }) { Text("+ Aggiungi apparato") }
+                }
+            }
+            item(span = { GridItemSpan(maxLineSpan) }) {
                 Card(
                     modifier = Modifier.fillMaxWidth().clickable(enabled = issues.isNotEmpty()) { vm.navigate(Screen.Issues) },
                     colors = CardDefaults.cardColors(
@@ -144,6 +171,7 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
     }
 
     if (managingPassword) PasswordDialog(vm, project) { managingPassword = false }
+    if (addingDevice) DeviceDialog(vm, project, index, null) { addingDevice = false }
 }
 
 @Composable
