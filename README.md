@@ -20,4 +20,4 @@ Editor offline per censimento e documentazione di infrastrutture di networking e
 - **Fase Android (A00–A13)**: Completata al 100% (14 step su 14) con validazione Room DB v9, export e stampa.
 - **Fase Windows (W00–W05)**: Completata al 100% (6 step su 6) con Compose Desktop, storage atomico, interoperabilità bidirezionale e pacchetto portable x64.
 - **Rework UX (U01–U02)**: Audit critico e rework dell'interfaccia di entrambe le app (navigazione, selettori al posto degli ID, conferme, eseguibile portable).
-- **Stato Complessivo**: 20/20 step funzionali completati; 94/94 unit test passati.
+- **Stato Complessivo**: 22/22 step completati; 94/94 unit test passati. Fase v1.1 pianificata (14 task), vedi `roadmap.md`.

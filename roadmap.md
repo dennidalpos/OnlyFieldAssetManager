@@ -8,7 +8,8 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, API 35 (compileSdk 35, targetSdk 35, minSdk 34).
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Stato Complessivo**: 100% Completato (20 step su 20 + rework UX).
+- **Fase v1.1 (S/O/R/F)**: Pianificata (0 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 22 step completati su 36 (v1.0 chiusa, fase v1.1 pianificata).
 - **Test Unitari Totali Passati**: 94 test su 94 (20 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app).
 
 ## Tabella Riassuntiva degli Step
@@ -37,6 +38,20 @@ Data aggiornamento: 3 ottobre 2026
 | **W05** | Windows | Interoperabilità bidirezionale e pacchetto portable x64 | Completato | 02/10/2026 | BidirectionalInteropTest, createDistributable / AppImage portable x64, 29 test pc:app |
 | **U01** | Windows | Rework UX editor e programma portable con .exe in radice | Completato | 03/10/2026 | `packagePortable` → `dist/`, dati portable, navigazione laterale, menu e scorciatoie, selettori, conferme, form che preservano i campi |
 | **U02** | Android | Rework UX app: navigazione, schermate dedicate, selettori | Completato | 03/10/2026 | Back stack nel ViewModel, Back di sistema, rotazione, CRUD apparati/porte/aree/credenziali, snackbar con Annulla, export su stream corretto |
+| **S01** | Sicurezza | Database Android cifrato | Da fare | — | — |
+| **S02** | Sicurezza | Password del progetto con PBKDF2 e salt | Da fare | — | — |
+| **O01** | Avvio | Procedura guidata "Nuovo sito" condivisa | Da fare | — | — |
+| **O02** | Avvio | Schermata iniziale chiara | Da fare | — | — |
+| **O03** | Avvio | Home progetto Android: ricerca e azioni rapide | Da fare | — | — |
+| **R01** | Refactor UI | Android: modifiche a pagina intera | Da fare | — | — |
+| **R02** | Refactor UI | Windows: pannello laterale (master-detail) | Da fare | — | — |
+| **R03** | Refactor UI | Icone Material e tema scuro | Da fare | — | — |
+| **R04** | Refactor UI | Refactor repository Android | Da fare | — | — |
+| **F01** | Funzioni | Foto dalla fotocamera | Da fare | — | — |
+| **F02** | Funzioni | Scansione QR/barcode | Da fare | — | — |
+| **F03** | Funzioni | Etichette QR proprie | Da fare | — | — |
+| **F04** | Funzioni | Fusione all'import con scelta per elemento | Da fare | — | — |
+| **F05** | Funzioni | Mappe su Android (chiude RES-07) | Da fare | — | — |
 
 ## Registro del Collaudo e della Build Finale
 
@@ -55,10 +70,10 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 - ~~RES-04 (Allegati nei pacchetti)~~: risolto il 03/10/2026 — i file viaggiano nel `.ofam` (`AttachmentFiles`), cifrati nei progetti protetti.
 - ~~RES-05 (Cestino Windows)~~: risolto il 03/10/2026 — cestino salvato su disco (progetti senza password) e «Annulla» (Ctrl+Z, 50 passi) per ogni modifica.
 - ~~RES-06 (Messaggi di validazione)~~: risolto il 03/10/2026 — messaggi di validazione e di importazione in italiano.
-- **RES-07 (Mappe Android, in attesa di decisione)**: l'acquisizione cartografica richiede rete ma il manifest non dichiara `INTERNET`; la funzione è stata rimossa dalla UI.
+- **RES-07 (Mappe Android)**: decisa il 03/10/2026 — permesso di rete solo per il download delle mappe; pianificata come F05.
 
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Unica decisione aperta: RES-07 (permesso di rete per le mappe su Android oppure rimozione definitiva).
+- Nessuna decisione aperta. Prossimo task: S01 (database Android cifrato).
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.

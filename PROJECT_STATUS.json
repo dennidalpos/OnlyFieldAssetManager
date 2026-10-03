@@ -1,13 +1,13 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Rework UX completato (A00-A13, W00-W05, U01-U02) e residui RES-03..RES-06 chiusi",
-  "activeTask": "IN_ATTESA_DECISIONE_RES-07",
+  "currentPhase": "Fase v1.1 pianificata (S/O/R/F); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "S01",
   "summary": {
-    "totalTasks": 22,
+    "totalTasks": 36,
     "completedTasks": 22,
-    "pendingTasks": 0,
-    "progressPercentage": 100.0,
+    "pendingTasks": 14,
+    "progressPercentage": 61.1,
     "totalPassedTests": 94,
     "testsByModule": {
       "mobile/app": 20,
@@ -30,12 +30,112 @@
       "evidence": "Schermate dedicate con back stack nel ViewModel, Back di sistema e rotazione, CRUD apparati/porte/aree/credenziali, selettori al posto del 'primo elemento', snackbar con Annulla"
     }
   ],
-  "remainingTasks": [],
+  "remainingTasks": [
+    {
+      "id": "S01",
+      "area": "Sicurezza",
+      "title": "Database Android cifrato",
+      "description": "Room con SQLCipher (SupportOpenHelperFactory), chiave casuale protetta dal Keystore Android; migrazione una tantum del DB in chiaro v9; allowBackup=\"false\" e dataExtractionRules che escludono database e allegati.",
+      "acceptance": "Il file del database non è leggibile senza chiave; i progetti esistenti si aprono dopo l'aggiornamento."
+    },
+    {
+      "id": "S02",
+      "area": "Sicurezza",
+      "title": "Password del progetto con PBKDF2 e salt",
+      "description": "Sostituire hashPassword SHA-256 (ProjectRepository) con la derivazione PBKDF2 di :shared:exchange; gli hash vecchi vengono ricalcolati al primo sblocco riuscito.",
+      "acceptance": "Test su verifica password, migrazione degli hash e password errata."
+    },
+    {
+      "id": "O01",
+      "area": "Avvio",
+      "title": "Procedura guidata \"Nuovo sito\" condivisa",
+      "description": "Passi e stato in :shared:core (core.onboarding, creazione via ProjectEdits): progetto/cliente → sede (BU) → prima area → primo apparato (saltabile) → password (facoltativa). Sostituisce il dialog Nuovo progetto su Android e AppDialog.NewProject su Windows.",
+      "acceptance": "Stessa procedura su entrambe le app; alla fine si apre la home del progetto."
+    },
+    {
+      "id": "O02",
+      "area": "Avvio",
+      "title": "Schermata iniziale chiara",
+      "description": "Senza progetti: due azioni grandi \"Inizia un nuovo sito\" e \"Apri un pacchetto ricevuto (.ofam)\" con una riga di spiegazione; con progetti: \"Continua: «ultimo progetto»\" in cima. Android ProjectsScreen, Windows WelcomeCard.",
+      "acceptance": "Al primo avvio un utente nuovo arriva in un progetto in pochi tocchi, senza istruzioni esterne."
+    },
+    {
+      "id": "O03",
+      "area": "Avvio",
+      "title": "Home progetto Android: ricerca e azioni rapide",
+      "description": "Barra di ricerca in alto (nome, IP, etichetta, alias; InventoryDao.searchDevices), azioni rapide Aggiungi apparato / Foto (F01) / Scansiona (F02); sotto scheda di controllo e griglia sezioni.",
+      "acceptance": "Un apparato si trova dalla home senza entrare in Inventario."
+    },
+    {
+      "id": "R01",
+      "area": "Refactor UI",
+      "title": "Android: modifiche a pagina intera",
+      "description": "Componente EditScreen (barra Annulla/Salva, imePadding, rememberSaveable, conferma su modifiche non salvate) e route per entità in Screen; conversione per area: Inventario, Sedi/Rack, Cablaggio, Rete/Alimentazione, Media. Dialog solo per conferme, password e scelte brevi.",
+      "acceptance": "Nessun FormDialog per gli editor di entità; rotazione e Indietro non perdono i dati inseriti."
+    },
+    {
+      "id": "R02",
+      "area": "Refactor UI",
+      "title": "Windows: pannello laterale (master-detail)",
+      "description": "Componente MasterDetail: lista con ricerca a sinistra, editor a destra con core.forms, Ctrl+S / Esc, avviso su modifiche non salvate. Restano dialog: documenti, password, validazione, confronto import.",
+      "acceptance": "Nessun FormDialog nelle sezioni; i form continuano a preservare i campi nascosti."
+    },
+    {
+      "id": "R03",
+      "area": "Refactor UI",
+      "title": "Icone Material e tema scuro",
+      "description": "Icone Material al posto delle emoji (SectionTile Android, AppSection Windows); schemi Material3 chiaro e scuro (Android segue il sistema, Windows opzione nel menu); eliminati i colori fissi.",
+      "acceptance": "Entrambe le app leggibili in tema chiaro e scuro, senza emoji nella navigazione."
+    },
+    {
+      "id": "R04",
+      "area": "Refactor UI",
+      "title": "Refactor repository Android",
+      "description": "Dividere ProjectRepository (~1.100 righe) ed EntityMappers (~950) per area funzionale, senza cambiare comportamento.",
+      "acceptance": "Tutti i test esistenti passano invariati."
+    },
+    {
+      "id": "F01",
+      "area": "Funzioni",
+      "title": "Foto dalla fotocamera",
+      "description": "Scatto con ActivityResultContracts.TakePicture e FileProvider nella cartella allegati del progetto; collegamento automatico all'apparato, rack o area aperti; le foto viaggiano nel .ofam.",
+      "acceptance": "Una foto scattata dalla scheda di un apparato compare tra i suoi allegati e arriva sul PC."
+    },
+    {
+      "id": "F02",
+      "area": "Funzioni",
+      "title": "Scansione QR/barcode",
+      "description": "CameraX + ML Kit barcode con modello incluso (offline). Il codice cerca tra seriali, etichette, alias, etichette di cavi e porte, oppure compila il numero di serie. Nuovo campo serialNumber (ed etichette cavi/porte se mancano): contratto .ofam v1.8 con default nulli, pacchetti 1.7 leggibili. Windows: lettore USB come tastiera nel campo di ricerca.",
+      "acceptance": "La scansione di un seriale noto apre l'apparato; i pacchetti 1.7 si importano senza errori."
+    },
+    {
+      "id": "F03",
+      "area": "Funzioni",
+      "title": "Etichette QR proprie",
+      "description": "QR con contenuto ofam://<progetto>/<tipo>/<id> e foglio etichette PDF (PdfExportManager Android, SimplePdfWriter Windows); la scansione apre la scheda.",
+      "acceptance": "Un'etichetta stampata e scansionata apre l'entità corretta."
+    },
+    {
+      "id": "F04",
+      "area": "Funzioni",
+      "title": "Fusione all'import con scelta per elemento",
+      "description": "Fusione a tre vie in :shared:exchange estendendo ProjectComparisonEvaluator (caso DIVERGENT), con base = ultima istantanea sincronizzata salvata a ogni export/import. Modifiche senza conflitto applicate da sole; per ogni conflitto \"tieni mio\" / \"tieni importato\"; senza base ogni differenza è un conflitto. UI su entrambe le app.",
+      "acceptance": "Due copie modificate in parti diverse si fondono senza perdite; i conflitti sono mostrati uno per uno."
+    },
+    {
+      "id": "F05",
+      "area": "Funzioni",
+      "title": "Mappe su Android (chiude RES-07)",
+      "description": "Permesso INTERNET usato solo per scaricare le mappe su richiesta esplicita; riattivare la UI di CartographicMapManager con messaggio chiaro senza rete; documentare che l'app resta offline-first.",
+      "acceptance": "Download delle mappe funzionante con rete; senza rete l'app funziona e spiega perché la mappa non si scarica."
+    }
+  ],
   "nextSessionNotes": [
     "Audit e interventi: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
-    "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main."
+    "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
+    "Fase v1.1: 14 task in plan.md e roadmap.md; ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: S01."
   ],
   "residuals": [
     {
@@ -77,8 +177,8 @@
     {
       "id": "RES-07",
       "title": "Acquisizione mappe su Android",
-      "status": "AWAITING_DECISION",
-      "description": "Richiede rete ma il manifest non dichiara INTERNET; funzione rimossa dalla UI. Decidere: permesso di rete solo per questa funzione, oppure eliminarla e usare un'immagine come planimetria."
+      "status": "SCHEDULED",
+      "description": "Decisa il 2026-10-03: permesso INTERNET solo per il download delle mappe su richiesta. Pianificata come F05."
     }
   ]
 }
