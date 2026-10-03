@@ -104,6 +104,7 @@
   ],
   "remainingTasks": [],
   "nextSessionNotes": [
+    "Passaggio di sessione 2026-10-03: fase v1.1 completata e pubblicata su origin/main; build completa verde (117 test, exe portable, APK debug). Prima decisione da prendere: RES-09.",
     "Nessun task pianificato: la fase v1.1 e' chiusa. Residui aperti: RES-01, RES-02 (futuri), RES-08, RES-09.",
     "Audit e interventi UX per fase: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
     "Condivisi in :shared:core: core.edit.ProjectEdits, core.forms, core.display, core.onboarding, core.scan (CodeLookup, LabelCode).",

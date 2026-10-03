@@ -76,6 +76,7 @@ Segnalazioni per future iterazioni (non bloccanti):
 
 ## Note per la prossima sessione
 
+- Passaggio di sessione del 03/10/2026: fase v1.1 completata e pubblicata su `origin/main`; build completa verde (117 test, exe portable, APK debug).
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
 - Nessun task pianificato. Decisione aperta: RES-09 (chiave API CARTO o rimozione della fonte).
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
