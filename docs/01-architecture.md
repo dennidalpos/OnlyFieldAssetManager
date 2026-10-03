@@ -20,6 +20,7 @@ OnlyFieldAssetManager/
 1. **`:shared:core`**:
    - Pura libreria Kotlin/JVM a zero dipendenze UI o Android.
    - Definizione di tutte le entità di dominio (`Project`, `Device`, `Rack`, `Cable`, `Vlan`, ecc.).
+   - Etichette QR proprie (`core.scan.LabelCode`, contenuto `ofam://<progetto>/<tipo>/<id>`) riconosciute da `CodeLookup`.
    - Ricerca di un codice scansionato (`core.scan.CodeLookup`): numero di serie, etichetta, alias e nome degli apparati, codice dei cavi, etichetta delle porte (corrispondenza esatta, senza maiuscole/minuscole).
    - Motore di validazione del modello (`ModelValidator`), separazione tra errori strutturali e avvisi documentali.
    - Procedura guidata «Nuovo sito» (`core.onboarding.NewSiteWizard`): passi progetto/cliente → sede → prima area → primo apparato (saltabile) → password (facoltativa), con validazione e creazione via `ProjectEdits`. Android la mostra come schermata (`NewSiteScreen`), Windows come finestra a passi; la password viene applicata da ciascuna app con il proprio meccanismo.
@@ -29,6 +30,7 @@ OnlyFieldAssetManager/
    - Serializzazione e deserializzazione del pacchetto ZIP `.ofam` v1.8 (`PackageSerializer`); i pacchetti 1.7 restano leggibili.
    - Cifratura simmetrica AES-256-GCM / PBKDF2.
    - Verifica della password di progetto (`PasswordHasher`): PBKDF2-HMAC-SHA256 con salt casuale da 16 byte e 600.000 iterazioni (OWASP Password Storage Cheat Sheet), formato `pbkdf2-sha256$<iterazioni>$<salt>$<hash>`; gli hash SHA-256 senza salt delle versioni precedenti sono accettati e ricalcolati al primo sblocco riuscito.
+   - Foglio etichette QR A4 (`LabelSheetPdf`, ZXing core) condiviso da Android e Windows.
    - Generatori di documentazione espostabile: OpenXML XLSX (`XlsxExportManager`), Markdown (`MarkdownExportManager`), confronto semantico (`ProjectComparison`).
 
 3. **`:mobile:app`**:

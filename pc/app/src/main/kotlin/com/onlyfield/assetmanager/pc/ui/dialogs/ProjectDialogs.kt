@@ -5,6 +5,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,6 +18,7 @@ import com.onlyfield.assetmanager.core.onboarding.NewSiteStep
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
+import com.onlyfield.assetmanager.exchange.LabelSheetPdf
 import com.onlyfield.assetmanager.pc.AppDialog
 import com.onlyfield.assetmanager.pc.DesktopAppState
 import com.onlyfield.assetmanager.pc.DesktopDocumentManager
@@ -232,6 +234,19 @@ private fun DocumentsDialog(state: DesktopAppState) {
         onConfirm = ::generate,
         confirmLabel = if (format == DocFormat.PRINT) "Stampa…" else "Genera…"
     ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("Etichette QR per apparati, rack e cavi con codice (A4, 21 per foglio).", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+            OutlinedButton(onClick = {
+                state.dialog = null
+                DesktopStorageHelper.pickSaveFile("Foglio etichette QR", "${DesktopAppState.safeFileName(project.name)}_etichette.pdf", "Documento PDF (*.pdf)", "pdf")
+                    ?.let { f ->
+                        runCatching { f.outputStream().use { LabelSheetPdf.write(LabelSheetPdf.labelsFor(project), it) } }
+                            .onSuccess { state.notify("Etichette salvate in ${f.absolutePath}") }
+                            .onFailure { state.error = "Etichette non salvate: ${it.message}" }
+                    }
+            }) { Text("Foglio etichette…") }
+        }
+        HorizontalDivider()
         Text("Formato", fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             DocFormat.entries.forEach { f ->

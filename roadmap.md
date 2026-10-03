@@ -8,9 +8,9 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (11 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 33 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
-- **Test Unitari Totali Passati**: 108 test su 108 (23 mobile/app, 29 shared/core, 18 shared/exchange, 38 pc/app).
+- **Fase v1.1 (S/O/R/F)**: In corso (12 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 34 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Test Unitari Totali Passati**: 110 test su 110 (23 mobile/app, 30 shared/core, 19 shared/exchange, 38 pc/app).
 
 ## Tabella Riassuntiva degli Step
 
@@ -49,7 +49,7 @@ Data aggiornamento: 3 ottobre 2026
 | **R04** | Refactor UI | Refactor repository Android | Completato | 03/10/2026 | ProjectRepository (1.141 righe) diviso in facciata + 6 classi per area, EntityMappers (945) in 5 file di mapper; rimossi 20 metodi senza chiamanti e lo stack di undo mai letto; 22 test Android invariati e verdi |
 | **F01** | Funzioni | Foto dalla fotocamera | Completato | 03/10/2026 | TakePicture + FileProvider nella cartella allegati, collegamento automatico ad apparato/rack/area/progetto, elenco nella scheda apparato e indicazione del collegamento su Android e Windows; scatto verificato su emulatore |
 | **F02** | Funzioni | Scansione QR/barcode | Completato | 03/10/2026 | Scanner CameraX + ML Kit incluso (offline), CodeLookup condiviso (seriale, etichetta, alias, cavi, porte), nuovo serialNumber (contratto 1.8, DB v10) con pacchetti 1.7 importabili (ContractVersionTest), lettore USB su Windows con Invio; permesso, anteprima e migrazione verificati su emulatore |
-| **F03** | Funzioni | Etichette QR proprie | Da fare | — | — |
+| **F03** | Funzioni | Etichette QR proprie | Completato | 03/10/2026 | LabelCode ofam://<progetto>/<tipo>/<id> riconosciuto da CodeLookup (apparati, rack, cavi; altro progetto segnalato), foglio A4 condiviso LabelSheetPdf (ZXing 3.5.4) su Android e Windows; orientamento dei QR verificato sul PDF generato |
 | **F04** | Funzioni | Fusione all'import con scelta per elemento | Da fare | — | — |
 | **F05** | Funzioni | Mappe su Android (chiude RES-07) | Da fare | — | — |
 
@@ -57,7 +57,7 @@ Data aggiornamento: 3 ottobre 2026
 
 ```powershell
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:packagePortable :mobile:app:assembleDebug
-# Esito: BUILD SUCCESSFUL (108 passed unit tests: 23 mobile/app, 29 shared/core, 18 shared/exchange, 38 pc/app)
+# Esito: BUILD SUCCESSFUL (110 passed unit tests: 23 mobile/app, 30 shared/core, 19 shared/exchange, 38 pc/app)
 ```
 
 ## Registro Residui e Note di Monitoraggio
@@ -76,5 +76,5 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: F03.
+- Nessuna decisione aperta. Prossimo task: F04.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.

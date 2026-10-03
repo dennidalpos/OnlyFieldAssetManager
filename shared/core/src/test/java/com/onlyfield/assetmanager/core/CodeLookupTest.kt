@@ -4,6 +4,7 @@ import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.scan.CodeLookup
 import com.onlyfield.assetmanager.core.scan.CodeMatch
+import com.onlyfield.assetmanager.core.scan.LabelCode
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -33,5 +34,16 @@ class CodeLookupTest {
         assertEquals("c1", (CodeLookup.find(index, "CV-0042") as CodeMatch.CableMatch).cable.id)
         assertEquals("p1", (CodeLookup.find(index, "PP-A-01") as CodeMatch.PortMatch).port.port.id)
         assertTrue(CodeLookup.find(index, "SCONOSCIUTO") is CodeMatch.NotFound)
+    }
+
+    @Test
+    fun resolvesOwnQrLabels() {
+        val pid = index.project.id
+        assertEquals(LabelCode(pid, LabelCode.Type.DEVICE, "d1"), LabelCode.parse("ofam://$pid/device/d1"))
+        assertEquals(null, LabelCode.parse("ofam://solo/due"))
+        assertEquals("d1", (CodeLookup.find(index, LabelCode(pid, LabelCode.Type.DEVICE, "d1").toString()) as CodeMatch.DeviceMatch).device.id)
+        assertEquals("c1", (CodeLookup.find(index, "OFAM://$pid/CABLE/c1") as CodeMatch.CableMatch).cable.id)
+        assertTrue(CodeLookup.find(index, "ofam://altro/device/d1") is CodeMatch.OtherProject)
+        assertTrue(CodeLookup.find(index, "ofam://$pid/device/sparito") is CodeMatch.NotFound)
     }
 }

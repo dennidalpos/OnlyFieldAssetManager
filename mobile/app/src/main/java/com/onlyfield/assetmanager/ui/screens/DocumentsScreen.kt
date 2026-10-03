@@ -41,6 +41,7 @@ fun DocumentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val xlsx = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")) {
         it?.let { u -> vm.exportXlsx(context.contentResolver, u, filter()) }
     }
+    val labels = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { it?.let { u -> vm.exportLabels(context.contentResolver, u) } }
     val md = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { it?.let { u -> vm.exportMarkdown(context.contentResolver, u, filter()) } }
 
     AppScaffold("Documenti", onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy) { padding ->
@@ -83,6 +84,9 @@ fun DocumentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     }
                 }
             ) { Text(if (format == DocFormat.PRINT) "Stampa" else "Genera e salva…") }
+            SectionTitle("Etichette QR")
+            Text("Un'etichetta per ogni apparato, rack e cavo con codice: la scansione con «Scansiona» apre la scheda.", style = MaterialTheme.typography.bodySmall)
+            OutlinedButton(onClick = { labels.launch("${baseName}_etichette.pdf") }, modifier = Modifier.fillMaxWidth()) { Text("Foglio etichette (PDF)…") }
         }
     }
 }

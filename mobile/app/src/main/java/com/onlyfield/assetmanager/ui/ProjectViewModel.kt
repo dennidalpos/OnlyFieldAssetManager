@@ -22,6 +22,7 @@ import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.repository.PackageImportEvaluation
 import com.onlyfield.assetmanager.data.repository.ProjectRepository
 import com.onlyfield.assetmanager.exchange.AttachmentFiles
+import com.onlyfield.assetmanager.exchange.LabelSheetPdf
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -411,6 +412,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun exportMarkdown(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig) =
         writeDocument(resolver, uri, "documento Markdown") { id, out -> repository.exportMarkdownToStream(id, filter, out) }
 
+    /** QR labels of every device, rack and labelled cable (F03). */
+    fun exportLabels(resolver: ContentResolver, uri: Uri) =
+        writeDocument(resolver, uri, "foglio etichette") { _, out ->
+            _project.value?.let { LabelSheetPdf.write(LabelSheetPdf.labelsFor(it), out); true } ?: false
+        }
+
     fun exportRackPdf(resolver: ContentResolver, uri: Uri, rackId: String) =
         writeDocument(resolver, uri, "scheda rack") { id, out -> repository.exportRackPdfToStream(id, rackId, out) }
 
@@ -518,6 +525,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             is CodeMatch.DeviceMatch -> { navigate(Screen.DeviceDetail(match.device.id)); notify("Trovato per ${match.field.lowercase()}: ${match.device.technicalName}"); null }
             is CodeMatch.PortMatch -> { navigate(Screen.DeviceDetail(match.port.device.id)); notify("Porta ${match.port.port.name} di ${match.port.device.technicalName}"); null }
             is CodeMatch.CableMatch -> { navigate(Screen.Cabling); notify("Cavo ${match.cable.codeOrLabel}"); null }
+            is CodeMatch.RackMatch -> { navigate(Screen.RackDetail(match.rack.id)); null }
+            is CodeMatch.OtherProject -> { fail("L'etichetta appartiene a un altro progetto."); null }
             is CodeMatch.NotFound -> match.code
         }
     }

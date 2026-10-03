@@ -17,6 +17,8 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
 dependencies {
     implementation(project(":shared:core"))
     implementation(libs.kotlinx.serialization.json)
+    // QR matrices for the label sheet (pure Java)
+    implementation(libs.zxing.core)
     testImplementation(libs.junit)
 }
 
