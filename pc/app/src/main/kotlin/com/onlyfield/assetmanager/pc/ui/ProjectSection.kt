@@ -87,8 +87,8 @@ private fun ProjectInfoCard(project: Project, state: DesktopAppState) {
         }
     }
     if (editing) {
-        var name by remember { mutableStateOf(project.name) }
-        var description by remember { mutableStateOf(project.description.orEmpty()) }
+        var name by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(project.name) }
+        var description by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(project.description.orEmpty()) }
         EditPanel(
             title = "Modifica progetto",
             onDismiss = { editing = false },
@@ -108,6 +108,7 @@ private fun ProjectInfoCard(project: Project, state: DesktopAppState) {
 @Composable
 private fun StructureCard(project: Project, state: DesktopAppState, modifier: Modifier) {
     var editBu by remember { mutableStateOf<BusinessUnit?>(null) }
+    val changeDetail = LocalDetailChange.current
     var newBu by remember { mutableStateOf(false) }
     var areaTarget by remember { mutableStateOf<Pair<BusinessUnit, Area?>?>(null) }
 
@@ -117,7 +118,7 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
                 "Struttura",
                 subtitle = "Business unit e aree in cui si trovano apparati e rack"
             ) {
-                OutlinedButton(onClick = { newBu = true }) { Text("+ Business unit") }
+                OutlinedButton(onClick = { changeDetail { newBu = true } }) { Text("+ Business unit") }
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(project.businessUnits, key = { it.id }) { bu ->
@@ -127,7 +128,7 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
                             title = bu.name,
                             details = listOf("${bu.devices.size} apparati · ${buAreas.size} aree")
                         ) {
-                            TextButton(onClick = { areaTarget = bu to null }) { Text("+ Area") }
+                            TextButton(onClick = { changeDetail { areaTarget = bu to null } }) { Text("+ Area") }
                             EditButton { editBu = bu }
                             DeleteButton(bu.name, onDelete = {
                                 val updated = ProjectEdits.deleteBusinessUnit(project, bu.id)
@@ -157,7 +158,7 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
 
     if (newBu || editBu != null) {
         val bu = editBu
-        var name by remember(bu) { mutableStateOf(bu?.name.orEmpty()) }
+        var name by remember(LocalDetailSlot.current?.editorVersion, bu) { mutableStateOf(bu?.name.orEmpty()) }
         EditPanel(
             title = if (bu == null) "Nuova business unit" else "Rinomina business unit",
             onDismiss = { newBu = false; editBu = null },
@@ -175,9 +176,9 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
     }
 
     areaTarget?.let { (bu, area) ->
-        var name by remember(area) { mutableStateOf(area?.name.orEmpty()) }
-        var floor by remember(area) { mutableStateOf(area?.floor.orEmpty()) }
-        var description by remember(area) { mutableStateOf(area?.description.orEmpty()) }
+        var name by remember(LocalDetailSlot.current?.editorVersion, area) { mutableStateOf(area?.name.orEmpty()) }
+        var floor by remember(LocalDetailSlot.current?.editorVersion, area) { mutableStateOf(area?.floor.orEmpty()) }
+        var description by remember(LocalDetailSlot.current?.editorVersion, area) { mutableStateOf(area?.description.orEmpty()) }
         EditPanel(
             title = if (area == null) "Nuova area in «${bu.name}»" else "Modifica area",
             onDismiss = { areaTarget = null },

@@ -21,6 +21,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
     val index = remember(project) { ProjectIndex(project) }
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<DeviceModel?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     var applying by remember { mutableStateOf<DeviceModel?>(null) }
     val models = project.deviceModels.filter { matchesQuery(query, it.name, it.brand, it.modelNumber) }
@@ -33,7 +34,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
             onSearchChange = { query = it },
             searchPlaceholder = "Cerca modello, marca, codice…"
         ) {
-            Button(onClick = { creating = true }) { Text("+ Nuovo modello") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo modello") }
         }
         if (models.isEmpty()) {
             EmptyState(if (project.deviceModels.isEmpty()) "Nessun modello definito." else "Nessun modello corrisponde alla ricerca.",
@@ -50,7 +51,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
                         "Usato da $usage apparati"
                     )
                 ) {
-                    TextButton(onClick = { applying = m }, enabled = index.devices.isNotEmpty()) { Text("Applica…") }
+                    TextButton(onClick = { changeDetail { applying = m } }, enabled = index.devices.isNotEmpty()) { Text("Applica…") }
                     EditButton { editing = m }
                     DeleteButton(m.name, onDelete = { onProjectUpdated(ProjectEdits.deleteDeviceModel(project, m.id), "Modello «${m.name}» eliminato.") },
                         message = if (usage > 0) "$usage apparati fanno riferimento a questo modello; manterranno i propri dati." else null)
@@ -67,7 +68,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
     }
 
     applying?.let { model ->
-        var deviceId by remember(model) { mutableStateOf<String?>(null) }
+        var deviceId by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf<String?>(null) }
         val device = index.device(deviceId)
         EditPanel(
             title = "Applica «${model.name}»",
@@ -95,17 +96,17 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
 
 @Composable
 private fun ModelDialog(model: DeviceModel?, onDismiss: () -> Unit, onSave: (DeviceModel, Boolean) -> Unit) {
-    var name by remember { mutableStateOf(model?.name.orEmpty()) }
-    var brand by remember { mutableStateOf(model?.brand.orEmpty()) }
-    var modelNumber by remember { mutableStateOf(model?.modelNumber.orEmpty()) }
-    var category by remember { mutableStateOf(model?.category ?: DeviceCategory.NETWORK_SWITCH) }
-    var height by remember { mutableStateOf(model?.defaultHeightU?.toString() ?: "1") }
-    var templates by remember { mutableStateOf(model?.portTemplates.orEmpty()) }
+    var name by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model?.name.orEmpty()) }
+    var brand by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model?.brand.orEmpty()) }
+    var modelNumber by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model?.modelNumber.orEmpty()) }
+    var category by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model?.category ?: DeviceCategory.NETWORK_SWITCH) }
+    var height by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model?.defaultHeightU?.toString() ?: "1") }
+    var templates by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model?.portTemplates.orEmpty()) }
 
-    var prefix by remember { mutableStateOf("") }
-    var start by remember { mutableStateOf("1") }
-    var count by remember { mutableStateOf("") }
-    var side by remember { mutableStateOf(PortSide.FRONT) }
+    var prefix by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf("") }
+    var start by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf("1") }
+    var count by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf("") }
+    var side by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(PortSide.FRONT) }
 
     val heightError = FieldValidators.int(height, 1, 60, required = true)
     val countError = FieldValidators.int(count, 1, 512)
@@ -139,12 +140,13 @@ private fun ModelDialog(model: DeviceModel?, onDismiss: () -> Unit, onSave: (Dev
         }
 
         Text("Porte generate", fontWeight = FontWeight.SemiBold)
+        val markDirty = LocalMarkDirty.current
         templates.forEachIndexed { i, t ->
             ItemCard(
                 title = "${t.portCount} porte: ${t.namePrefix}${t.startNumber} … ${t.namePrefix}${t.startNumber + t.portCount - 1}",
                 details = listOf(t.side.toDisplayString())
             ) {
-                TextButton(onClick = { templates = templates.filterIndexed { j, _ -> j != i } }) { Text("Rimuovi") }
+                TextButton(onClick = { markDirty(); templates = templates.filterIndexed { j, _ -> j != i } }) { Text("Rimuovi") }
             }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
@@ -156,6 +158,7 @@ private fun ModelDialog(model: DeviceModel?, onDismiss: () -> Unit, onSave: (Dev
                 enabled = prefix.isNotBlank() && count.isNotBlank() && countError == null && startError == null,
                 modifier = Modifier.padding(top = 8.dp),
                 onClick = {
+                    markDirty()
                     templates = templates + PortTemplate(namePrefix = prefix.trim(), startNumber = start.trim().toInt(), portCount = count.trim().toInt(), side = side)
                     prefix = ""; count = ""; start = "1"
                 }

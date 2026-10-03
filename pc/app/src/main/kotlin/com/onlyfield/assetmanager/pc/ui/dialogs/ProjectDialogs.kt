@@ -1,6 +1,8 @@
 package com.onlyfield.assetmanager.pc.ui.dialogs
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -55,7 +57,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
         modifier = Modifier.width(560.dp),
         title = { Text("Nuovo sito · passo ${w.stepNumber} di ${w.stepCount}") },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 LinearProgressIndicator(progress = { w.stepNumber / w.stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
                 Text(w.step.title, style = MaterialTheme.typography.titleMedium)
                 Text(w.step.hint, style = MaterialTheme.typography.bodySmall)
@@ -70,14 +72,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
                             FormField(d.projectName, { v -> set { it.copy(projectName = v) } }, "Nome progetto *", error = errors["projectName"])
                             FormField(d.customer, { v -> set { it.copy(customer = v) } }, "Cliente", hint = "Facoltativo")
                         }
-                        NewSiteStep.BUSINESS_UNIT ->
-                            FormField(d.businessUnit, { v -> set { it.copy(businessUnit = v) } }, "Nome sede *", error = errors["businessUnit"])
-                        NewSiteStep.AREA ->
-                            FormField(d.area, { v -> set { it.copy(area = v) } }, "Nome area *", error = errors["area"], hint = "Es. Sala server, Piano 1")
-                        NewSiteStep.DEVICE -> {
-                            FormField(d.deviceName, { v -> set { it.copy(deviceName = v) } }, "Nome apparato", error = errors["deviceName"], hint = "Es. SW-CORE-01")
-                            FormField(d.deviceIp, { v -> set { it.copy(deviceIp = v) } }, "Indirizzo IP", error = errors["deviceIp"])
-                        }
+                        NewSiteStep.BUSINESS_UNIT, NewSiteStep.AREA -> WizardLists(w) { w = it }
                         NewSiteStep.PASSWORD -> {
                             WizardPassword(d.password, { v -> set { it.copy(password = v) } }, "Password", null)
                             WizardPassword(d.passwordConfirm, { v -> set { it.copy(passwordConfirm = v) } }, "Conferma password", errors["passwordConfirm"])

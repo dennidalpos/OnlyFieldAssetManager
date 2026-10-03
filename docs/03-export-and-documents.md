@@ -30,8 +30,14 @@ L'applicazione include motori nativi per l'esportazione documentale sia su Andro
 - Integrazione diretta con `PrintManager` di sistema Android per l'invio alle stampanti o il salvataggio in PDF tramite anteprima nativa.
 
 ### 5. Cartografia e Mappe Raster Desktop (`DesktopCartographyManager`)
-- **Sorgenti Mappa:** Supporto per OpenTopoMap ("© OpenTopoMap contributors") e CARTO Positron ("© CARTO, © OpenStreetMap contributors").
-- **Proiezione e Caching:** Conversione Mercatore latitudine/longitudine -> coordinate tile (z/x/y), caching locale e banner di attribuzione d'uso obbligatorio.
+- **Fonte:** OpenTopoMap, senza chiave API. CARTO rimosso il 3 ottobre 2026; gli allegati già acquisiti conservano immagini e attribuzioni originali.
+- **Acquisizione:** «Strumenti › Allegati e cartografia › Cartografia»: latitudine, longitudine, zoom 1–17 e nome; «Scarica e salva mappa» scarica 3 × 3 tessere, mostra avanzamento e anteprima, quindi salva il PNG come allegato del progetto. Gli errori HTTP e l'assenza di rete sono espliciti; nessun download automatico.
+- **Uso offline:** l'allegato può diventare lo sfondo di un'area da «Allegati › Usa come planimetria…». I byte e l'attribuzione viaggiano nel `.ofam`, anche cifrato; i documenti conservano l'attribuzione.
+- **Attribuzione:** «© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)» visibile nel PNG e nei metadati. Condizioni verificate il 3 ottobre 2026 nelle [istruzioni ufficiali OpenTopoMap](https://opentopomap.org/about#verwendung): uso anche commerciale con attribuzione e condivisione della mappa alle stesse condizioni; evitare download massivi. L'app acquisisce nove tessere per richiesta.
+
+## Mappa del piano e pacchetto 1.9
+
+La mappa operativa è descritta in [08-floor-map.md](08-floor-map.md). Tipologie, geometrie e foto viaggiano nel `.ofam` anche cifrato; importare/rimuovere uno sfondo conserva le posizioni. I report documentali mantengono le sezioni e i filtri esistenti; il canvas interattivo non costituisce un nuovo formato di report.
 
 ## Regole di Sicurezza, Riservatezza e Privacy
 

@@ -20,6 +20,7 @@ dependencies {
     implementation(project(":shared:core"))
     implementation(project(":shared:exchange"))
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.pdfbox)
 
     implementation(compose.desktop.currentOs)
     implementation(compose.material3)

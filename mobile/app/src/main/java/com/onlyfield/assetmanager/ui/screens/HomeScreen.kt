@@ -3,55 +3,30 @@ package com.onlyfield.assetmanager.ui.screens
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.annotation.DrawableRes
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.painterResource
-import com.onlyfield.assetmanager.R
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
-import com.onlyfield.assetmanager.core.model.AttachmentTargetType
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.Screen
 import com.onlyfield.assetmanager.ui.components.*
 
-private data class SectionTile(@DrawableRes val icon: Int, val title: String, val count: String, val screen: Screen)
-
 @Composable
-fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
     val context = LocalContext.current
     val issues by vm.issues.collectAsState()
-    val trash by vm.trash.collectAsState()
-    val index = remember(project) { ProjectIndex(project) }
     var askExportPassword by remember { mutableStateOf(false) }
     var exportPassword by remember { mutableStateOf<String?>(null) }
     var managingPassword by remember { mutableStateOf(false) }
-    var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
-    var addingDevice by remember { mutableStateOf(false) }
-    val takePhoto = rememberPhotoCapture(vm)
-    var scanning by remember { mutableStateOf(false) }
-    var unknownCode by remember { mutableStateOf<String?>(null) }
-    var newWithSerial by remember { mutableStateOf<String?>(null) }
-    // Same fields as the Inventory search
-    val found = if (query.isBlank()) emptyList() else index.devices.filter {
-        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber)
-    }
-
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
         uri?.let { vm.exportPackage(context.contentResolver, it, exportPassword) }
         exportPassword = null
@@ -65,20 +40,7 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
 
     val errors = issues.count { it.severity == ValidationSeverity.STRUCTURAL_ERROR }
     val warnings = issues.size - errors
-    val tiles = listOf(
-        SectionTile(R.drawable.ic_inventory_2, "Inventario", "${index.devices.size} apparati", Screen.Inventory),
-        SectionTile(R.drawable.ic_dns, "Rack", "${project.racks.size}", Screen.Racks),
-        SectionTile(R.drawable.ic_cable, "Cablaggio", "${project.cables.size} cavi", Screen.Cabling),
-        SectionTile(R.drawable.ic_lan, "Rete", "${project.vlans.size} VLAN", Screen.Network),
-        SectionTile(R.drawable.ic_bolt, "Alimentazione", "${project.powerFeeds.size} linee", Screen.Power),
-        SectionTile(R.drawable.ic_map, "Planimetrie", "${project.floorplanPlacements.size} elementi", Screen.Floorplan),
-        SectionTile(R.drawable.ic_attach_file, "Allegati", "${project.attachments.size}", Screen.Attachments),
-        SectionTile(R.drawable.ic_key, "Credenziali", "${project.credentials.size}", Screen.Credentials),
-        SectionTile(R.drawable.ic_category, "Modelli", "${project.deviceModels.size}", Screen.Models),
-        SectionTile(R.drawable.ic_apartment, "Sedi e aree", "${index.areas.size} aree", Screen.Structure),
-        SectionTile(R.drawable.ic_delete, "Cestino", "${trash.size}", Screen.Trash),
-        SectionTile(R.drawable.ic_description, "Documenti", "PDF, Excel, stampa", Screen.Documents),
-    )
+
 
     AppScaffold(
         title = project.name,
@@ -97,63 +59,16 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
             )
         }
     ) { padding ->
-        LazyVerticalGrid(
-            columns = GridCells.Adaptive(160.dp),
-            modifier = Modifier.padding(padding),
-            contentPadding = PaddingValues(16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                SearchField(query, { query = it }, "Cerca apparato: nome, IP, etichetta, alias…")
+        LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            item {
+                Text(project.description?.ifBlank { null } ?: "Strumenti del progetto", style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { vm.navigate(Screen.Issues) }, enabled = issues.isNotEmpty()) { Text("Controllo: $errors errori · $warnings avvisi") }
             }
-            if (query.isNotBlank()) {
-                if (found.isEmpty()) item(span = { GridItemSpan(maxLineSpan) }) {
-                    Text("Nessun apparato trovato.", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                items(found, key = { it.id }, span = { GridItemSpan(maxLineSpan) }) { d ->
-                    ItemCard(
-                        title = d.technicalName + (d.alias?.let { " ($it)" } ?: ""),
-                        details = listOf(listOfNotNull(d.ipAddress, d.physicalLabel, d.areaId?.let { index.areaName(it) }).joinToString(" · ")).filter { it.isNotBlank() },
-                        onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }
-                    )
-                }
-                return@LazyVerticalGrid
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { addingDevice = true }) { Text("+ Aggiungi apparato") }
-                    OutlinedButton(onClick = { takePhoto(AttachmentTargetType.PROJECT, null) }) { Text("Foto") }
-                    OutlinedButton(onClick = { scanning = true }) { Text("Scansiona") }
-                }
-            }
-            item(span = { GridItemSpan(maxLineSpan) }) {
-                Card(
-                    modifier = Modifier.fillMaxWidth().clickable(enabled = issues.isNotEmpty()) { vm.navigate(Screen.Issues) },
-                    colors = CardDefaults.cardColors(
-                        containerColor = if (errors > 0) MaterialTheme.colorScheme.errorContainer else MaterialTheme.colorScheme.primaryContainer
-                    )
-                ) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(project.description?.ifBlank { null } ?: "Nessuna descrizione", style = MaterialTheme.typography.bodyMedium)
-                        Text(
-                            when {
-                                issues.isEmpty() -> "✓ Nessun problema rilevato"
-                                else -> "$errors errori strutturali · $warnings avvisi documentali — tocca per i dettagli"
-                            },
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            }
-            items(tiles) { tile ->
-                Card(modifier = Modifier.fillMaxWidth().clickable { vm.navigate(tile.screen) }) {
-                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Icon(painterResource(tile.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                        Text(tile.title, fontWeight = FontWeight.SemiBold)
-                        Text(tile.count, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    }
-                }
+            items(listOf("Inventario" to Screen.Inventory, "Rack" to Screen.Racks, "Cablaggio" to Screen.Cabling,
+                "Rete" to Screen.Network, "Alimentazione" to Screen.Power, "Allegati" to Screen.Attachments,
+                "Credenziali" to Screen.Credentials, "Modelli" to Screen.Models, "BU e piani" to Screen.Structure,
+                "Cestino" to Screen.Trash, "Documenti" to Screen.Documents)) { (label, screen) ->
+                TextButton(onClick = { vm.navigate(screen) }, modifier = Modifier.fillMaxWidth()) { Text(label) }
             }
         }
     }
@@ -181,18 +96,6 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
     }
 
     if (managingPassword) PasswordDialog(vm, project) { managingPassword = false }
-    if (addingDevice) DeviceDialog(vm, project, index, null) { addingDevice = false }
-    unknownCode?.let { code ->
-        AlertDialog(
-            onDismissRequest = { unknownCode = null },
-            title = { Text("Codice non trovato") },
-            text = { Text("«$code» non corrisponde a nessun apparato, cavo o porta. Vuoi creare un apparato con questo numero di serie?") },
-            confirmButton = { TextButton(onClick = { unknownCode = null; newWithSerial = code }) { Text("Nuovo apparato") } },
-            dismissButton = { TextButton(onClick = { unknownCode = null }) { Text("Chiudi") } }
-        )
-    }
-    newWithSerial?.let { serial -> DeviceDialog(vm, project, index, null, initialSerial = serial) { newWithSerial = null } }
-    if (scanning) BarcodeScanner(onCode = { code -> scanning = false; unknownCode = vm.openScannedCode(code) }, onClose = { scanning = false })
 }
 
 @Composable
@@ -230,8 +133,8 @@ private fun PasswordDialog(vm: ProjectViewModel, project: Project, onClose: () -
 
 @Composable
 fun IssuesScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
-    val issues by vm.issues.collectAsState()
     val index = remember(project) { ProjectIndex(project) }
+    val issues by vm.issues.collectAsState()
     AppScaffold("Controllo del progetto", onBack = { vm.back() }, snackbarHost = snackbar) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {

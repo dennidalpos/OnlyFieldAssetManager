@@ -43,14 +43,7 @@ fun NewSiteScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
                         FormField(d.projectName, { v -> set { it.copy(projectName = v) } }, "Nome progetto *", error = errors["projectName"])
                         FormField(d.customer, { v -> set { it.copy(customer = v) } }, "Cliente", hint = "Facoltativo")
                     }
-                    NewSiteStep.BUSINESS_UNIT ->
-                        FormField(d.businessUnit, { v -> set { it.copy(businessUnit = v) } }, "Nome sede *", error = errors["businessUnit"])
-                    NewSiteStep.AREA ->
-                        FormField(d.area, { v -> set { it.copy(area = v) } }, "Nome area *", error = errors["area"], hint = "Es. Sala server, Piano 1")
-                    NewSiteStep.DEVICE -> {
-                        FormField(d.deviceName, { v -> set { it.copy(deviceName = v) } }, "Nome apparato", error = errors["deviceName"], hint = "Es. SW-CORE-01")
-                        FormField(d.deviceIp, { v -> set { it.copy(deviceIp = v) } }, "Indirizzo IP", error = errors["deviceIp"], kind = FieldKind.IP)
-                    }
+                    NewSiteStep.BUSINESS_UNIT, NewSiteStep.AREA -> WizardLists(w) { vm.newSite = it }
                     NewSiteStep.PASSWORD -> {
                         PasswordInput(d.password, { v -> set { it.copy(password = v) } }, "Password", null)
                         PasswordInput(d.passwordConfirm, { v -> set { it.copy(passwordConfirm = v) } }, "Conferma password", errors["passwordConfirm"])

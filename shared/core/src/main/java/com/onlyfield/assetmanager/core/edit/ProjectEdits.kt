@@ -51,7 +51,7 @@ object ProjectEdits {
     fun deleteArea(project: Project, areaId: String): Project? {
         val inUse = project.businessUnits.any { bu -> bu.devices.any { it.areaId == areaId } } ||
             project.racks.any { it.areaId == areaId } ||
-            project.floorplanPlacements.any { it.areaId == areaId }
+            project.floorplanPlacements.any { it.areaId == areaId } || project.cableRoutes.any { it.areaId == areaId }
         if (inUse) return null
         return project.copy(
             businessUnits = project.businessUnits.map { bu ->
@@ -107,9 +107,11 @@ object ProjectEdits {
         // Disconnect cables attached to deleted device ports
         var updatedCablesCount = 0
         val updatedCables = project.cables.map { cable ->
-            if (affectedPortIds.contains(cable.portAId) || affectedPortIds.contains(cable.portBId)) {
+            if (affectedPortIds.contains(cable.portAId) || affectedPortIds.contains(cable.portBId) || cable.deviceAId == deviceId || cable.deviceBId == deviceId) {
                 updatedCablesCount++
                 cable.copy(
+                    deviceAId = cable.deviceAId?.takeUnless { it == deviceId },
+                    deviceBId = cable.deviceBId?.takeUnless { it == deviceId },
                     portAId = if (affectedPortIds.contains(cable.portAId)) null else cable.portAId,
                     portBId = if (affectedPortIds.contains(cable.portBId)) null else cable.portBId,
                     observation = Observation(
@@ -144,6 +146,10 @@ object ProjectEdits {
         val updatedProject = project.copy(
             businessUnits = updatedBus,
             cables = updatedCables,
+            cableRoutes = project.businessUnits.flatMap { ObjectMap.areas(it) }.flatMap { ObjectMap.routes(project, it.id) }.map { route ->
+                route.copy(points = ObjectMap.routePoints(project, route, ObjectMap.nodes(project, route.areaId)))
+            },
+            floorplanPlacements = project.floorplanPlacements.filterNot { it.targetType == PlacementTargetType.DEVICE && it.targetId == deviceId },
             updatedEpochMs = System.currentTimeMillis()
         )
 
@@ -304,6 +310,8 @@ object ProjectEdits {
         val updatedCables = project.cables.map { cable ->
             if (cable.portAId == portId || cable.portBId == portId) {
                 cable.copy(
+                    deviceAId = if (cable.portAId == portId) deviceId else cable.deviceAId,
+                    deviceBId = if (cable.portBId == portId) deviceId else cable.deviceBId,
                     portAId = if (cable.portAId == portId) null else cable.portAId,
                     portBId = if (cable.portBId == portId) null else cable.portBId
                 )
@@ -344,7 +352,7 @@ object ProjectEdits {
         val updatedBus = project.businessUnits.map { bu ->
             val updatedDevs = bu.devices.map { dev ->
                 if (dev.rackId == rackId) {
-                    dev.copy(rackId = null, positionU = null)
+                    dev.copy(rackId = null, positionU = null, areaId = dev.areaId ?: rack.areaId)
                 } else {
                     dev
                 }
@@ -364,6 +372,7 @@ object ProjectEdits {
         val updatedProject = project.copy(
             businessUnits = updatedBus,
             racks = project.racks.filterNot { it.id == rackId },
+            floorplanPlacements = project.floorplanPlacements.filterNot { it.targetType == PlacementTargetType.RACK && it.targetId == rackId },
             updatedEpochMs = System.currentTimeMillis()
         )
 
@@ -453,12 +462,12 @@ object ProjectEdits {
         val updatedBus = project.businessUnits.map { bu ->
             val updatedSites = bu.sites.map { site ->
                 val updatedAreas = site.areas.map { area ->
-                    if (area.floorplanAttachmentId == attachmentId) area.copy(floorplanAttachmentId = null) else area
+                    if (area.floorplanAttachmentId == attachmentId) area.copy(floorplanAttachmentId = null, floorplanPageIndex = 0) else area
                 }
                 site.copy(areas = updatedAreas)
             }
             val updatedAreas = bu.areas.map { area ->
-                if (area.floorplanAttachmentId == attachmentId) area.copy(floorplanAttachmentId = null) else area
+                if (area.floorplanAttachmentId == attachmentId) area.copy(floorplanAttachmentId = null, floorplanPageIndex = 0) else area
             }
             bu.copy(sites = updatedSites, areas = updatedAreas)
         }
@@ -470,22 +479,32 @@ object ProjectEdits {
         )
     }
 
-    fun setAreaFloorplan(project: Project, areaId: String, attachmentId: String?): Project {
+    fun setAreaFloorplan(project: Project, areaId: String, attachmentId: String?, pageIndex: Int = 0, pageCount: Int? = null): Project {
+        require(pageIndex >= 0)
+        require(pageCount == null || attachmentId == null || pageIndex < pageCount)
+        require(project.businessUnits.any { ObjectMap.areas(it).any { a -> a.id == areaId } })
+        if (attachmentId != null) {
+            val attachment = project.attachments.first { it.id == attachmentId }
+            require(attachment.fileType == AttachmentType.IMAGE || attachment.fileType == AttachmentType.PDF)
+            // Legacy imports may have pageCount=1; the picker refreshes it from the actual file.
+            require(attachment.fileType != AttachmentType.IMAGE || pageIndex == 0)
+        }
         val updatedBus = project.businessUnits.map { bu ->
             val updatedSites = bu.sites.map { site ->
                 val updatedAreas = site.areas.map { area ->
-                    if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId) else area
+                    if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = pageIndex) else area
                 }
                 site.copy(areas = updatedAreas)
             }
             val updatedAreas = bu.areas.map { area ->
-                if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId) else area
+                if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = pageIndex) else area
             }
             bu.copy(sites = updatedSites, areas = updatedAreas)
         }
 
         return project.copy(
             businessUnits = updatedBus,
+            attachments = project.attachments.map { if (it.id == attachmentId && pageCount != null) it.copy(pageCount = pageCount) else it },
             updatedEpochMs = System.currentTimeMillis()
         )
     }
@@ -562,6 +581,8 @@ object ProjectEdits {
     fun deleteCable(project: Project, cableId: String): Project {
         return project.copy(
             cables = project.cables.filterNot { it.id == cableId },
+            cableRoutes = project.cableRoutes.filterNot { it.cableId == cableId },
+            attachments = project.attachments.filterNot { it.targetType == AttachmentTargetType.CABLE && it.targetId == cableId },
             updatedEpochMs = System.currentTimeMillis()
         )
     }

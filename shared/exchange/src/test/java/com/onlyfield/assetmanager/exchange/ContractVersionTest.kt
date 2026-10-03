@@ -20,9 +20,9 @@ class ContractVersionTest {
     )
 
     @Test
-    fun serialNumberRoundTripsInVersion18() {
+    fun serialNumberRoundTripsInVersion19() {
         val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(project))
-        assertEquals("1.8", result.pkg!!.manifest.formatVersion)
+        assertEquals("1.9", result.pkg!!.manifest.formatVersion)
         assertEquals("FOC123", result.pkg!!.project.businessUnits.single().devices.single().serialNumber)
     }
 
@@ -44,6 +44,18 @@ class ContractVersionTest {
         val result = PackageSerializer.importPackage(zip(entries))
         assertTrue(result.validationResult.isValid)
         assertNull(result.pkg!!.project.businessUnits.single().devices.single().serialNumber)
+    }
+
+    @Test
+    fun version18PackageStillImportsSerialAndDefaultsNewMapData() {
+        val entries = unzip(PackageSerializer.exportPackage(project)).toMutableMap()
+        val manifest = PackageSerializer.jsonConfig.decodeFromString(PackageManifest.serializer(), entries.getValue("manifest.json").toString(Charsets.UTF_8))
+        entries["manifest.json"] = PackageSerializer.jsonConfig.encodeToString(PackageManifest.serializer(), manifest.copy(formatVersion = "1.8")).toByteArray(Charsets.UTF_8)
+        val imported = PackageSerializer.importPackage(zip(entries))
+        assertTrue(imported.validationResult.isValid)
+        assertEquals(project, imported.pkg!!.project)
+        assertTrue(imported.pkg!!.project.objectTypes.isEmpty())
+        assertTrue(imported.pkg!!.project.cableRoutes.isEmpty())
     }
 
     private fun unzip(bytes: ByteArray): Map<String, ByteArray> = buildMap {

@@ -273,7 +273,7 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: Project
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FormField(form.serialNumber, { form = form.copy(serialNumber = it) }, "Numero di serie", Modifier.weight(1f))
             val markDirty = LocalMarkDirty.current
-            OutlinedButton(onClick = { markDirty(); scanningSerial = true }) { Text("Scansiona") }
+            OutlinedButton(onClick = { markDirty(); scanningSerial = true }) { Text("QR") }
         }
         SectionTitle("Posizione")
         if (project.businessUnits.size > 1 || device == null) {

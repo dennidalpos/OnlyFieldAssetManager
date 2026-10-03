@@ -93,9 +93,8 @@ class DesktopDocumentAndCartographyTest {
         assertEquals("Zoom level should be 15", 15, tile.zoom)
 
         val topoUrl = DesktopCartographyManager.getTileUrl(DesktopMapSource.OPEN_TOPO_MAP, tile)
-        val cartoUrl = DesktopCartographyManager.getTileUrl(DesktopMapSource.CARTO_DB, tile)
 
         assertTrue("OpenTopoMap URL should contain zoom 15", topoUrl.contains("/15/"))
-        assertTrue("CARTO URL should contain zoom 15", cartoUrl.contains("/15/"))
+        assertEquals(listOf(DesktopMapSource.OPEN_TOPO_MAP), DesktopMapSource.entries.toList())
     }
 }

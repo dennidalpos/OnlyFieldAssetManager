@@ -30,8 +30,7 @@ class CartographicMapManagerTest {
         val urlOpenTopo = CartographicMapManager.buildTileUrl(CartographicSource.OPEN_TOPO_MAP, x, y, 15)
         assertTrue(urlOpenTopo.contains("opentopomap.org/15/$x/$y.png"))
 
-        val urlCarto = CartographicMapManager.buildTileUrl(CartographicSource.CARTO_POSITRON, x, y, 15)
-        assertTrue(urlCarto.contains("cartocdn.com/light_all/15/$x/$y.png"))
+        assertEquals(listOf(CartographicSource.OPEN_TOPO_MAP), CartographicSource.entries.filter { it.isOnline })
     }
 
     @Test

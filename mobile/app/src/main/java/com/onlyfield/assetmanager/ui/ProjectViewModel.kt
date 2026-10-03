@@ -81,6 +81,9 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private val _importState = MutableStateFlow<ImportState?>(null)
     val importState: StateFlow<ImportState?> = _importState.asStateFlow()
 
+    var selectedBuId by mutableStateOf<String?>(null)
+    var selectedAreaId by mutableStateOf<String?>(null)
+
     var busy by mutableStateOf<String?>(null)
         private set
 
@@ -126,6 +129,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 fail("Progetto non trovato.")
                 return@launch
             }
+            selectedBuId = null
+            selectedAreaId = null
             setProject(p)
             refreshTrash()
             backStack.clear()
@@ -196,6 +201,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     // --- Editing -------------------------------------------------------------------------------
 
     /** Applies [transform] to the open project, saves it and shows [message] with an undo action. */
+    fun editMap(updated: Project, message: String) = edit(message) { current ->
+        require(current.id == updated.id)
+        updated
+    }
+
     fun edit(message: String, transform: (Project) -> Project) {
         val before = _project.value ?: return
         val after = try {
@@ -485,6 +495,56 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun attachmentFile(attachment: Attachment): File? = _project.value?.let { repository.attachmentFile(it.id, attachment) }
 
+    fun saveMapObject(context: Context, draft: com.onlyfield.assetmanager.core.forms.MapObjectDraft, photos: List<Uri>, removed: Set<String>, onSaved: () -> Unit) {
+        saveMediaEdit(context, photos, draft.targetType, draft.id, AttachmentClassification.SHAREABLE, { p -> draft.apply(p).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } }) { onSaved() }
+    }
+
+    fun importFloorplan(context: Context, uri: Uri, areaId: String, onSaved: (Attachment) -> Unit) {
+        saveMediaEdit(context, listOf(uri), AttachmentTargetType.AREA, areaId, AttachmentClassification.SHAREABLE, { it }) { attachments -> onSaved(attachments.single()) }
+    }
+
+    private fun saveMediaEdit(context: Context, sources: List<Uri>, type: AttachmentTargetType?, targetId: String?, classification: AttachmentClassification,
+        transform: (Project) -> Project, onSaved: (List<Attachment>) -> Unit) {
+        if (busy != null) return
+        val initial = _project.value ?: return
+        viewModelScope.launch {
+            busy = "Salvataggio…"
+            val created = mutableListOf<File>()
+            var committed = false
+            try {
+                val attachments = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    sources.map { uri ->
+                        val resolver = context.contentResolver
+                        val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "foto.jpg"
+                        val mime = resolver.getType(uri) ?: "image/jpeg"
+                        require(mime.startsWith("image/") || mime == "application/pdf") { "Scegli un'immagine o un PDF" }
+                        val att = Attachment(name = name.substringBeforeLast('.'), originalFileName = name, relativePath = "", mimeType = mime,
+                            fileType = if (mime == "application/pdf") AttachmentType.PDF else AttachmentType.IMAGE, classification = classification, targetType = type, targetId = targetId)
+                        val root = repository.attachmentsRoot() ?: error("Archivio allegati non disponibile")
+                        val file = AttachmentFiles.localFile(root, initial.id, att)
+                        file.parentFile?.mkdirs(); created += file
+                        resolver.openInputStream(uri)?.use { input -> file.outputStream().use { input.copyTo(it) } } ?: error("File non leggibile")
+                        val pages = if (att.fileType == AttachmentType.PDF) PlanMedia.pageCount(file) else { PlanMedia.image(file, false, 0, 256); 1 }
+                        require(pages > 0) { "PDF senza pagine" }
+                        att.copy(relativePath = AttachmentFiles.entryName(att), pageCount = pages)
+                    }
+                }
+                val before = _project.value?.takeIf { it.id == initial.id } ?: error("Progetto chiuso durante il salvataggio")
+                val edited = transform(before)
+                val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
+                repository.saveProject(saved)
+                committed = true
+                setProject(saved)
+                notify("Salvato.", undo = { restoreSnapshot(before) })
+                onSaved(attachments)
+            } catch (e: Exception) {
+                if (!committed) created.forEach { it.delete() }
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                fail("Salvataggio non riuscito", e)
+            } finally { busy = null }
+        }
+    }
+
     // --- Attachments -----------------------------------------------------------------------------
 
     /** Copies the picked file into app storage and registers it as an attachment. */
@@ -516,7 +576,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 target.parentFile?.mkdirs()
                 resolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it) } }
                     ?: error("file non leggibile")
-                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
+                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment), pageCount = if (attachment.fileType == AttachmentType.PDF) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PlanMedia.pageCount(target) } else 1)
                 edit("Allegato «${saved.name}» aggiunto.") { ProjectEdits.addAttachment(it, saved) }
             } catch (e: Exception) {
                 fail("Impossibile aggiungere l'allegato", e)

@@ -24,21 +24,7 @@ enum class CartographicSource(
         id = "OPEN_TOPO_MAP",
         displayName = "OpenTopoMap (Topografica)",
         tileUrlTemplate = "https://a.tile.opentopomap.org/{z}/{x}/{y}.png",
-        attributionText = "© OpenTopoMap (CC-BY-SA), © OpenStreetMap contributors",
-        isOnline = true
-    ),
-    CARTO_POSITRON(
-        id = "CARTO_POSITRON",
-        displayName = "CARTO Positron (Chiara)",
-        tileUrlTemplate = "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
-        attributionText = "© OpenStreetMap contributors, © CARTO",
-        isOnline = true
-    ),
-    CARTO_VOYAGER(
-        id = "CARTO_VOYAGER",
-        displayName = "CARTO Voyager (Mista)",
-        tileUrlTemplate = "https://a.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png",
-        attributionText = "© OpenStreetMap contributors, © CARTO",
+        attributionText = "© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)",
         isOnline = true
     ),
     LOCAL_IMPORT(
@@ -131,9 +117,8 @@ object CartographicMapManager {
             }
             when (val code = connection.responseCode) {
                 HttpURLConnection.HTTP_OK -> connection.inputStream.use { it.readBytes() }
-                // CARTO now asks for an API key: say so instead of blaming the network.
                 HttpURLConnection.HTTP_UNAUTHORIZED, HttpURLConnection.HTTP_FORBIDDEN ->
-                    throw OfflineMapException("Il servizio cartografico ha rifiutato la richiesta (codice $code): questa fonte richiede una chiave di accesso. Usa OpenTopoMap.")
+                    throw OfflineMapException("Il servizio cartografico ha rifiutato la richiesta (codice $code). Riprova più tardi o importa una mappa locale.")
                 else -> throw OfflineMapException("Il servizio cartografico ha risposto con un errore (codice $code). Riprova più tardi.")
             }
         } catch (e: OfflineMapException) {
@@ -148,7 +133,7 @@ object CartographicMapManager {
             throw IllegalArgumentException("Usa la funzione di importazione file locale per la fonte ${request.source.displayName}")
         }
 
-        val zoom = request.zoomLevel.coerceIn(1, 19)
+        val zoom = request.zoomLevel.coerceIn(1, 17)
         val centerTileX = lonToTileX(request.centerLongitude, zoom)
         val centerTileY = latToTileY(request.centerLatitude, zoom)
 

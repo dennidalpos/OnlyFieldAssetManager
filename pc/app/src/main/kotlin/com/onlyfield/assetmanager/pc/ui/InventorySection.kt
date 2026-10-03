@@ -33,6 +33,7 @@ fun InventorySection(
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
     var editing by remember { mutableStateOf<Device?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     var portsOf by remember { mutableStateOf<String?>(null) }
     var replaceTarget by remember { mutableStateOf<Device?>(null) }
@@ -59,13 +60,13 @@ fun InventorySection(
             onSearchSubmit = {
                 // Exact code (e.g. from a USB reader): open the device it identifies.
                 when (val match = CodeLookup.find(index, query)) {
-                    is CodeMatch.DeviceMatch -> editing = match.device
-                    is CodeMatch.PortMatch -> portsOf = match.port.device.id
+                    is CodeMatch.DeviceMatch -> changeDetail { editing = match.device }
+                    is CodeMatch.PortMatch -> changeDetail { portsOf = match.port.device.id }
                     else -> Unit
                 }
             }
         ) {
-            Button(onClick = { creating = true }, enabled = project.businessUnits.isNotEmpty()) { Text("+ Nuovo apparato") }
+            Button(onClick = { changeDetail { creating = true } }, enabled = project.businessUnits.isNotEmpty()) { Text("+ Nuovo apparato") }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -90,7 +91,7 @@ fun InventorySection(
             Spacer(Modifier.weight(1f))
             if (selectedIds.isNotEmpty()) {
                 Text("${selectedIds.size} selezionati", fontWeight = FontWeight.SemiBold)
-                OutlinedButton(onClick = { showBatch = true }) { Text("Modifica in blocco…") }
+                OutlinedButton(onClick = { changeDetail { showBatch = true } }) { Text("Modifica in blocco…") }
                 TextButton(onClick = { selectedIds = emptySet() }) { Text("Deseleziona") }
             } else if (filtered.isNotEmpty()) {
                 TextButton(onClick = { selectedIds = filtered.map { it.id }.toSet() }) { Text("Seleziona tutti") }
@@ -125,16 +126,16 @@ fun InventorySection(
                             )
                         }
                     ) {
-                        TextButton(onClick = { portsOf = dev.id }) { Text("Porte") }
+                        TextButton(onClick = { changeDetail { portsOf = dev.id } }) { Text("Porte") }
                         EditButton { editing = dev }
                         Box {
                             TextButton(onClick = { menuOpen = true }) { Text("Altro ▾") }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(text = { Text("Sostituisci con nuovo apparato…") }, onClick = { menuOpen = false; replaceTarget = dev })
+                                DropdownMenuItem(text = { Text("Sostituisci con nuovo apparato…") }, onClick = { menuOpen = false; changeDetail { replaceTarget = dev } })
                                 DropdownMenuItem(
                                     text = { Text("Unisci un duplicato…") },
                                     enabled = index.devices.size > 1,
-                                    onClick = { menuOpen = false; mergeTarget = dev }
+                                    onClick = { menuOpen = false; changeDetail { mergeTarget = dev } }
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
@@ -216,7 +217,7 @@ private fun DeviceDialog(
     onSave: (Project, String) -> Unit,
 ) {
     val initialBu = device?.let { index.businessUnitOf(it.id)?.id } ?: project.businessUnits.singleOrNull()?.id
-    var form by remember(device) { mutableStateOf(DeviceForm.from(device, initialBu)) }
+    var form by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(DeviceForm.from(device, initialBu)) }
     val rack = index.rack(form.rackId)
     val errors = form.errors(rack?.heightU)
     val buAreas = project.businessUnits.find { it.id == form.businessUnitId }
@@ -326,8 +327,8 @@ private fun PortsDialog(
     onProjectUpdated: (Project, String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var name by remember { mutableStateOf("") }
-    var label by remember { mutableStateOf("") }
+    var name by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
+    var label by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
     val duplicate = device.ports.any { it.name.equals(name.trim(), ignoreCase = true) }
 
     AlertDialog(
@@ -377,8 +378,8 @@ private fun PortsDialog(
 
 @Composable
 private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (String, DeviceCategory) -> Unit) {
-    var name by remember { mutableStateOf("") }
-    var category by remember { mutableStateOf(device.category) }
+    var name by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
+    var category by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(device.category) }
     EditPanel(
         title = "Sostituisci «${device.technicalName}»",
         onDismiss = onDismiss,
@@ -396,8 +397,8 @@ private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (Str
 @Composable
 private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> Unit, onConfirm: (String, MergeDataChoices) -> Unit) {
     val candidates = index.devices.filter { it.id != survivor.id }
-    var duplicate by remember { mutableStateOf<Device?>(null) }
-    var choices by remember { mutableStateOf(MergeDataChoices()) }
+    var duplicate by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf<Device?>(null) }
+    var choices by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(MergeDataChoices()) }
 
     EditPanel(
         title = "Unisci un duplicato in «${survivor.technicalName}»",
@@ -438,7 +439,7 @@ private fun BatchEditDialog(
     onDismiss: () -> Unit,
     onApply: (BatchDeviceChanges) -> Unit,
 ) {
-    var changes by remember { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH, mountingType = MountingType.RACK_MOUNT)) }
+    var changes by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH, mountingType = MountingType.RACK_MOUNT)) }
     val any = changes.updateCategory || changes.updateAreaId || changes.updateRackId || changes.updateMountingType || changes.updateObservationNotes
 
     EditPanel(

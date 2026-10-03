@@ -18,15 +18,32 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-/** Called by the input components on every user change; [EditPanel] uses it to know the form is dirty. */
+/** Marks unsaved form changes. */
 val LocalMarkDirty = staticCompositionLocalOf<() -> Unit> { {} }
 
 /** Holds the editor currently shown in the right pane of [MasterDetailHost]. */
 class DetailSlot {
     var content by mutableStateOf<(@Composable () -> Unit)?>(null)
+    var dirty by mutableStateOf(false)
+    var editorVersion by mutableStateOf(0)
+    var pendingChange by mutableStateOf<(() -> Unit)?>(null)
+    var dismiss: (() -> Unit)? = null
+
+    fun requestChange(action: () -> Unit) {
+        if (dirty) pendingChange = action else change(action)
+    }
+
+    fun change(action: () -> Unit) {
+        pendingChange = null
+        dirty = false
+        dismiss?.invoke()
+        editorVersion++
+        action()
+    }
 }
 
 val LocalDetailSlot = staticCompositionLocalOf<DetailSlot?> { null }
+val LocalDetailChange = staticCompositionLocalOf<(() -> Unit) -> Unit> { { it() } }
 
 /** Section on the left (list with search), the open [EditPanel] on the right. */
 @Composable
@@ -34,17 +51,22 @@ fun MasterDetailHost(modifier: Modifier = Modifier, master: @Composable () -> Un
     val slot = remember { DetailSlot() }
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.weight(1f).fillMaxHeight()) {
-            CompositionLocalProvider(LocalDetailSlot provides slot) { master() }
+            CompositionLocalProvider(LocalDetailSlot provides slot, LocalDetailChange provides slot::requestChange) { master() }
         }
-        slot.content?.invoke()
+        key(slot.editorVersion) { slot.content?.invoke() }
+    }
+    slot.pendingChange?.let { action ->
+        AlertDialog(
+            onDismissRequest = { slot.pendingChange = null },
+            title = { Text("Scartare le modifiche?") },
+            text = { Text("Le modifiche non salvate andranno perse.") },
+            confirmButton = { TextButton(onClick = { slot.change(action) }) { Text("Scarta") } },
+            dismissButton = { TextButton(onClick = { slot.pendingChange = null }) { Text("Continua a modificare") } }
+        )
     }
 }
 
-/**
- * Entity editor shown in the right pane; called where a FormDialog used to be, so the form state stays
- * in the section. Ctrl+S saves, Esc closes; closing a modified form asks first. Without a host it
- * falls back to a dialog.
- */
+/** Entity editor: Ctrl+S saves, Esc requests closing. */
 @Composable
 fun EditPanel(
     title: String,
@@ -62,10 +84,19 @@ fun EditPanel(
     }
     // The pane composes elsewhere: read the latest arguments through updated state.
     val args by rememberUpdatedState(PanelArgs(title, onDismiss, onConfirm, confirmEnabled, confirmLabel, width, content))
-    val panel: @Composable () -> Unit = remember { { PanelBody(args) } }
+    val panel: @Composable () -> Unit = remember { { PanelBody(args, slot) } }
     DisposableEffect(slot) {
         slot.content = panel
-        onDispose { if (slot.content === panel) slot.content = null }
+        slot.dismiss = { args.onDismiss() }
+        slot.dirty = false
+        onDispose {
+            if (slot.content === panel) {
+                slot.content = null
+                slot.dismiss = null
+                slot.dirty = false
+                slot.pendingChange = null
+            }
+        }
     }
 }
 
@@ -80,11 +111,8 @@ private class PanelArgs(
 )
 
 @Composable
-private fun PanelBody(args: PanelArgs) {
-    // A new title means another entity: start clean.
-    var dirty by remember(args.title) { mutableStateOf(false) }
-    var askDiscard by remember { mutableStateOf(false) }
-    val close = { if (dirty) askDiscard = true else args.onDismiss() }
+private fun PanelBody(args: PanelArgs, slot: DetailSlot) {
+    val close = { slot.requestChange {} }
 
     // Wide forms (e.g. configuration text) get a wider pane.
     Surface(Modifier.width(args.width.coerceIn(440.dp, 640.dp)).fillMaxHeight(), tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium) {
@@ -106,7 +134,7 @@ private fun PanelBody(args: PanelArgs) {
                 )
                 TextButton(onClick = close) { Text("✕") }
             }
-            CompositionLocalProvider(LocalMarkDirty provides { dirty = true }) {
+            CompositionLocalProvider(LocalMarkDirty provides { slot.dirty = true }) {
                 Column(
                     Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
@@ -119,14 +147,5 @@ private fun PanelBody(args: PanelArgs) {
                 Button(onClick = args.onConfirm, enabled = args.confirmEnabled) { Text(args.confirmLabel) }
             }
         }
-    }
-    if (askDiscard) {
-        AlertDialog(
-            onDismissRequest = { askDiscard = false },
-            title = { Text("Scartare le modifiche?") },
-            text = { Text("Le modifiche non salvate andranno perse.") },
-            confirmButton = { TextButton(onClick = { askDiscard = false; args.onDismiss() }) { Text("Scarta") } },
-            dismissButton = { TextButton(onClick = { askDiscard = false }) { Text("Continua a modificare") } }
-        )
     }
 }

@@ -1,117 +1,33 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 completata (S01-F05); v1.0 completata (A00-A13, W00-W05, U01-U02). Nessun task aperto.",
+  "currentPhase": "MAP02 completato: navigazione BU/piano e mappa Android/Windows; residui aperti nel tracker.",
   "activeTask": null,
   "summary": {
-    "totalTasks": 36,
-    "completedTasks": 36,
+    "totalTasks": 39,
+    "completedTasks": 39,
     "pendingTasks": 0,
     "progressPercentage": 100.0,
-    "totalPassedTests": 117,
+    "totalPassedTests": 152,
     "testsByModule": {
-      "mobile/app": 24,
-      "shared/core": 30,
-      "shared/exchange": 24,
-      "pc/app": 39
-    }
+      "mobile/app": 29,
+      "shared/core": 40,
+      "shared/exchange": 28,
+      "pc/app": 55
+    },
+    "unitAndComposeTests": 149,
+    "androidInstrumentedTests": 3
   },
-  "completedTasks": [
-    {
-      "id": "S01",
-      "title": "Database Android cifrato",
-      "date": "2026-10-03",
-      "evidence": "Room + SQLCipher 4.19.1 (EncryptedDatabase), chiave casuale cifrata con chiave Keystore in no_backup/; migrazione del DB v9 in chiaro provata su emulatore (progetto esistente aperto, file non più leggibile come SQLite); allowBackup=false + data_extraction_rules"
-    },
-    {
-      "id": "S02",
-      "title": "Password del progetto con PBKDF2 e salt",
-      "date": "2026-10-03",
-      "evidence": "PasswordHasher in :shared:exchange (PBKDF2-HMAC-SHA256, salt 16 byte, 600.000 iterazioni); hash SHA-256 legacy ricalcolati al primo sblocco; PasswordHasherTest + test di migrazione nel repository"
-    },
-    {
-      "id": "O01",
-      "title": "Procedura guidata \"Nuovo sito\" condivisa",
-      "date": "2026-10-03",
-      "evidence": "core.onboarding.NewSiteWizard (passi, validazione, creazione via ProjectEdits) usato da Android NewSiteScreen e dalla finestra a passi Windows; NewSiteWizardTest + test Windows con password"
-    },
-    {
-      "id": "O02",
-      "title": "Schermata iniziale chiara",
-      "date": "2026-10-03",
-      "evidence": "Android ProjectsScreen: azioni grandi al primo avvio e «Continua: «ultimo progetto»» in cima; Windows WelcomeCard con le stesse azioni; procedura verificata su emulatore"
-    },
-    {
-      "id": "O03",
-      "title": "Home progetto Android: ricerca e azioni rapide",
-      "date": "2026-10-03",
-      "evidence": "Ricerca apparati in cima alla home (stessi campi dell'Inventario) con apertura diretta della scheda, azione rapida «Aggiungi apparato»; Foto/Scansiona collegate in F01/F02; verificata su emulatore"
-    },
-    {
-      "id": "R01",
-      "title": "Android: modifiche a pagina intera",
-      "date": "2026-10-03",
-      "evidence": "EditScreen a pagina intera per tutti i 27 editor di entità, conferma su modifiche non salvate (LocalMarkDirty), configChanges per la rotazione; verificato su emulatore (rotazione, Indietro, insets)"
-    },
-    {
-      "id": "R02",
-      "title": "Windows: pannello laterale (master-detail)",
-      "date": "2026-10-03",
-      "evidence": "MasterDetailHost + EditPanel per tutte le sezioni Windows (Ctrl+S, Esc, conferma su modifiche non salvate); MasterDetailTest (Compose UI test desktop); residuo RES-08"
-    },
-    {
-      "id": "R03",
-      "title": "Icone Material e tema scuro",
-      "date": "2026-10-03",
-      "evidence": "Material Symbols al posto delle emoji (drawable Android, SymbolIcons Windows), tema Android chiaro/scuro di sistema anche per la finestra, Windows «Visualizza › Tema scuro» salvato nella cartella dati; verificato in tema scuro su emulatore"
-    },
-    {
-      "id": "R04",
-      "title": "Refactor repository Android",
-      "date": "2026-10-03",
-      "evidence": "ProjectRepository (1.141 righe) diviso in facciata + 6 classi per area, EntityMappers (945) in 5 file di mapper; rimossi 20 metodi senza chiamanti e lo stack di undo mai letto; 22 test Android invariati e verdi"
-    },
-    {
-      "id": "F01",
-      "title": "Foto dalla fotocamera",
-      "date": "2026-10-03",
-      "evidence": "TakePicture + FileProvider nella cartella allegati, collegamento automatico ad apparato/rack/area/progetto, elenco nella scheda apparato e indicazione del collegamento su Android e Windows; scatto verificato su emulatore"
-    },
-    {
-      "id": "F02",
-      "title": "Scansione QR/barcode",
-      "date": "2026-10-03",
-      "evidence": "Scanner CameraX + ML Kit incluso (offline), CodeLookup condiviso (seriale, etichetta, alias, cavi, porte), nuovo serialNumber (contratto 1.8, DB v10) con pacchetti 1.7 importabili (ContractVersionTest), lettore USB su Windows con Invio; permesso, anteprima e migrazione verificati su emulatore"
-    },
-    {
-      "id": "F03",
-      "title": "Etichette QR proprie",
-      "date": "2026-10-03",
-      "evidence": "LabelCode ofam://<progetto>/<tipo>/<id> riconosciuto da CodeLookup (apparati, rack, cavi; altro progetto segnalato), foglio A4 condiviso LabelSheetPdf (ZXing 3.5.4) su Android e Windows; orientamento dei QR verificato sul PDF generato"
-    },
-    {
-      "id": "F04",
-      "title": "Fusione all'import con scelta per elemento",
-      "date": "2026-10-03",
-      "evidence": "ProjectMerger (fusione a tre vie per elemento, conflitti tieni mio/importato, senza base ogni differenza è conflitto) con base salvata a ogni export/import (Android sync_snapshots DB v11, Windows data/sync cifrato); UI uno-per-uno su entrambe le app; ProjectMergerTest (5 casi) + test Windows; migrazione verificata su emulatore"
-    },
-    {
-      "id": "F05",
-      "title": "Mappe su Android (chiude RES-07)",
-      "date": "2026-10-03",
-      "evidence": "Permesso INTERNET solo per «Allegati › Mappa…» (3×3 tessere con attribuzione salvate come allegato), messaggio chiaro senza rete e per fonti che rifiutano (401/403), URL CARTO Positron corretto; verificato su emulatore con e senza rete; chiude RES-07, apre RES-09"
-    }
-  ],
+  "completedTasks": [],
   "remainingTasks": [],
   "nextSessionNotes": [
-    "Passaggio di sessione 2026-10-03: fase v1.1 completata e pubblicata su origin/main; build completa verde (117 test, exe portable, APK debug). Prima decisione da prendere: RES-09.",
-    "Nessun task pianificato: la fase v1.1 e' chiusa. Residui aperti: RES-01, RES-02 (futuri), RES-08, RES-09.",
-    "Audit e interventi UX per fase: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
-    "Condivisi in :shared:core: core.edit.ProjectEdits, core.forms, core.display, core.onboarding, core.scan (CodeLookup, LabelCode).",
-    "Condivisi in :shared:exchange: PackageSerializer (contratto 1.8), PasswordHasher, AttachmentFiles, ProjectMerger, LabelSheetPdf.",
-    "Android: DB SQLCipher v11 (EncryptedDatabase), editor a pagina intera (EditScreen), scanner CameraX + ML Kit. Windows: MasterDetailHost/EditPanel, tema in data/settings.properties, basi di fusione in data/sync.",
-    "Verifica dei codici con fotocamera reale non eseguita (solo emulatore: permesso, anteprima, migrazioni).",
-    "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main."
+    "Riprendere dal branch main; verificare git status e git log -1 prima di nuove modifiche. Il lavoro della sessione è salvato nel commit di consegna.",
+    "Tracker con solo lavoro aperto; evidenze e completamenti in roadmap.md.",
+    "MAP02 implementato su Android e Windows; contratto .ofam 1.9 legge 1.7/1.8 e rifiuta versioni non supportate. Entrambe le app devono essere aggiornate per scambiare i nuovi dati.",
+    "149 test unit/Compose e 3 strumentali su Android API 36 passati. Verificati backup SQLCipher/migrazione/ripristino, PDF multipagina e clic/trascinamento Android in installazione QA separata.",
+    "APK con identificativo normale e portable Windows ricostruiti, BUILD SUCCESSFUL. Artefatti in mobile/app/build/outputs/apk/debug e dist/; non versionati.",
+    "RES-10: protezione delle azioni globali Windows; RES-12: consolidamento delle specifiche iniziali. RES-01/02/11 sono miglioramenti futuri.",
+    "RES-13: collaudo manuale di fotocamera/QR, multitouch e lettore USB fisico ancora aperto."
   ],
   "residuals": [
     {
@@ -127,46 +43,28 @@
       "description": "Estensione localizzazione stringhe UI a Inglese e Spagnolo."
     },
     {
-      "id": "RES-03",
-      "title": "PDF Windows non valido",
-      "status": "RESOLVED",
-      "description": "PDF reale multipagina (SimplePdfWriter) e stampa su piu' pagine con lo stesso contenuto (ReportContent)."
-    },
-    {
-      "id": "RES-04",
-      "title": "Allegati esclusi dai pacchetti .ofam",
-      "status": "RESOLVED",
-      "description": "I file degli allegati viaggiano nel pacchetto (AttachmentFiles); cifrati con AES-256-GCM nei progetti protetti (manifest.attachmentsEncrypted)."
-    },
-    {
-      "id": "RES-05",
-      "title": "Cestino Windows solo in memoria",
-      "status": "RESOLVED",
-      "description": "Cestino salvato su disco per i progetti senza password; Annulla (Ctrl+Z, 50 passi) per ogni modifica."
-    },
-    {
-      "id": "RES-06",
-      "title": "Messaggi di validazione in inglese",
-      "status": "RESOLVED",
-      "description": "Messaggi di ModelValidator e di importazione pacchetti in italiano."
-    },
-    {
-      "id": "RES-07",
-      "title": "Acquisizione mappe su Android",
-      "status": "RESOLVED",
-      "description": "Risolto con F05 (2026-10-03): permesso INTERNET solo per il download delle mappe su richiesta; senza rete messaggio chiaro, app offline-first."
-    },
-    {
-      "id": "RES-08",
-      "title": "Cambio elemento con editor Windows modificato",
+      "id": "RES-10",
+      "title": "Uscita globale con editor Windows modificato",
       "status": "OPEN",
-      "description": "Nel pannello laterale (R02), scegliere un altro elemento nella lista mentre il form ha modifiche non salvate apre il nuovo elemento senza chiedere conferma; la conferma c'è solo per Annulla/Esc/chiusura. Richiede di instradare la selezione delle sezioni attraverso il pannello."
+      "description": "Cambio sezione dal menu Strumenti o dal menu di sistema, chiusura del progetto e uscita non passano ancora dalla conferma del pannello. RES-08 protegge cambio elemento, creazione e tab interne; estendere la protezione alle azioni globali."
     },
     {
-      "id": "RES-09",
-      "title": "Chiave API per le mappe CARTO",
+      "id": "RES-11",
+      "title": "Aggiornamento API deprecate della toolchain",
+      "status": "FUTURE_ENHANCEMENT",
+      "description": "Deprecazioni preesistenti: proprietà Gradle by tasks.registering in pc/app/build.gradle.kts:68 (rimossa in Gradle 10) e createComposeRule v1 nei test UI. Identificate con --warning-mode all; build e test verdi."
+    },
+    {
+      "id": "RES-12",
+      "title": "Consolidare il piano dettagliato precedente a v1.1",
       "status": "OPEN",
-      "description": "La documentazione CARTO (CartoDB/basemap-styles) indica che i basemap richiedono una chiave API. Le fonti CARTO restano selezionabili; in caso di rifiuto (401/403) l'app suggerisce OpenTopoMap, che è la fonte predefinita. Da decidere se procurare una chiave o rimuovere CARTO."
+      "description": "docs/plan.md mantiene specifiche iniziali A00-W05 non allineate a v1.1, inclusa l'esclusione della fusione all'import ora implementata. Intestazione e nota sul wrapper corrette; consolidare i dettagli nei documenti correnti prima di ritirarlo."
+    },
+    {
+      "id": "RES-13",
+      "title": "Collaudo manuale dei dispositivi di acquisizione e multitouch",
+      "status": "OPEN",
+      "description": "Scatto/lettura QR con fotocamera reale, lettore USB fisico e zoom/panoramica multitouch manuali non verificati. Test nativi del canvas, PdfRenderer e backup/migrazione SQLCipher passati su telefono API 36."
     }
   ]
 }

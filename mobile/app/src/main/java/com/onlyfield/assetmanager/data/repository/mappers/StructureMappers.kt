@@ -42,6 +42,8 @@ internal fun toProjectEntity(project: Project): ProjectEntity {
         createdEpochMs = project.createdEpochMs,
         updatedEpochMs = project.updatedEpochMs,
         isPasswordProtected = project.isPasswordProtected,
+        objectTypesJson = mapperJson.encodeToString(project.objectTypes),
+        cableRoutesJson = mapperJson.encodeToString(project.cableRoutes),
     )
 }
 
@@ -180,6 +182,7 @@ internal fun toDeviceEntity(buId: String, device: Device): DeviceEntity {
         mountingType = device.mountingType.name,
         deviceModelId = device.deviceModelId,
         category = device.category.name,
+        objectTypeId = device.objectTypeId,
         serialNumber = device.serialNumber
     )
 }
@@ -317,6 +320,7 @@ internal fun toProject(
                 mountingType = try { MountingType.valueOf(devEnt.mountingType) } catch (_: Exception) { MountingType.OUT_OF_RACK },
                 deviceModelId = devEnt.deviceModelId,
                 category = try { DeviceCategory.valueOf(devEnt.category) } catch (_: Exception) { DeviceCategory.CUSTOM },
+                objectTypeId = devEnt.objectTypeId,
                 serialNumber = devEnt.serialNumber,
             )
         }
@@ -381,6 +385,8 @@ internal fun toProject(
         powerFeeds = powerFeeds,
         poeMappings = poeMappings,
         documentBadges = documentBadges,
+        objectTypes = mapperJson.decodeFromString(entity.objectTypesJson),
+        cableRoutes = mapperJson.decodeFromString(entity.cableRoutesJson),
         isPasswordProtected = entity.isPasswordProtected
     )
 }

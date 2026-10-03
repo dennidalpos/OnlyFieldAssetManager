@@ -385,6 +385,30 @@ object ModelValidator {
             }
         }
 
+        for (type in project.objectTypes) {
+            checkUuid("INVALID_OBJECT_TYPE_UUID", type.id, "Identificativo non valido (tipologia)", issues)
+            trackId(type.id, "DUPLICATE_OBJECT_TYPE_ID", "Tipologia duplicata", seenIds, issues)
+            if (type.name.isBlank() || com.onlyfield.assetmanager.core.model.ObjectCatalog.builtins.any { it.id == type.id }) {
+                issues += ValidationIssue("INVALID_OBJECT_TYPE", "Tipologia senza nome o identificativo riservato", ValidationSeverity.STRUCTURAL_ERROR, type.id)
+            }
+        }
+        val routeKeys = mutableSetOf<Pair<String, String>>()
+        for (route in project.cableRoutes) {
+            checkUuid("INVALID_CABLE_ROUTE_UUID", route.id, "Identificativo non valido (percorso)", issues)
+            trackId(route.id, "DUPLICATE_CABLE_ROUTE_ID", "Percorso duplicato", seenIds, issues)
+            if (!routeKeys.add(route.cableId to route.areaId) || route.areaId !in allAreaIds || project.cables.none { it.id == route.cableId }) {
+                issues += ValidationIssue("INVALID_CABLE_ROUTE", "Percorso duplicato o riferimenti mancanti", ValidationSeverity.STRUCTURAL_ERROR, route.id)
+            }
+            if (route.points.size < 2 || route.points.any { !it.x.isFinite() || !it.y.isFinite() || it.x !in 0f..1f || it.y !in 0f..1f }) {
+                issues += ValidationIssue("INVALID_CABLE_ROUTE_POINTS", "Coordinate del percorso non valide", ValidationSeverity.STRUCTURAL_ERROR, route.id)
+            }
+        }
+        for (cable in project.cables) {
+            if (listOfNotNull(cable.deviceAId, cable.deviceBId).any { it !in allDeviceIds }) {
+                issues += ValidationIssue("CABLE_DEVICE_TO_VERIFY", "Estremità del cavo da verificare", ValidationSeverity.DOCUMENTARY_WARNING, cable.id)
+            }
+        }
+
         // Validate Annotations
         for (ann in project.annotations) {
             checkUuid("INVALID_ANNOTATION_UUID", ann.id, "Identificativo non valido (annotazione)", issues)
@@ -453,7 +477,7 @@ object ModelValidator {
             checkUuid("INVALID_CABLE_UUID", cable.id, "Identificativo non valido (cavo)", issues)
             trackId(cable.id, "DUPLICATE_CABLE_ID", "Identificativo duplicato (cavo): ${cable.id}", seenIds, issues)
 
-            if (cable.portAId == null || cable.portBId == null) {
+            if ((cable.portAId == null && cable.deviceAId == null) || (cable.portBId == null && cable.deviceBId == null)) {
                 issues.add(
                     ValidationIssue(
                         code = "DETACHED_CABLE_ENDPOINT",

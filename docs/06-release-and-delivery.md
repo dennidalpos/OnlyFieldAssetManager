@@ -7,7 +7,7 @@ Data: 3 ottobre 2026
 Tutti i comandi si eseguono dalla radice del repository con il wrapper Gradle:
 
 ```powershell
-# Suite completa dei test unitari (94 test)
+# Suite JVM/Room/Compose (149 test; altri 3 test Android sul dispositivo)
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest
 
 # APK Android debug e release
@@ -31,7 +31,7 @@ Tutti i comandi si eseguono dalla radice del repository con il wrapper Gradle:
     data/                       ← creata al primo avvio: progetti salvati
   ```
 - **Windows portable (archivio):** `dist/OnlyFieldAssetManager-portable-x64-1.0.0.zip` (stessa cartella, senza `data/`)
-- **Contratto Dati Consolidato:** Versione `1.8`, compatibile in lettura con la `1.7` (`docs/02-domain-data-contract.md`)
+- **Contratto Dati Consolidato:** Versione `1.9`, legge `1.7` e `1.8`; versioni successive rifiutate (`docs/02-domain-data-contract.md`)
 
 ## Uso del Programma Portable
 
@@ -41,3 +41,30 @@ Tutti i comandi si eseguono dalla radice del repository con il wrapper Gradle:
 4. Se la cartella del programma non è scrivibile (es. `C:\Program Files`), i dati vengono salvati in `%USERPROFILE%\.onlyfield_asset_manager`. Il percorso in uso è sempre visibile nella barra di stato.
 
 La ricostruzione con `packagePortable` sostituisce `app/` e `runtime/` ma conserva `data/`.
+
+
+## Collaudo nativo Android senza sostituire l'app personale
+
+Verificati su telefono API 36: `FloorNativeTest` (2 casi) e `FloorGestureNativeTest` (1 caso). Il runner installa e rimuove l'app QA separata. Le fixture della migrazione usano comunque un database isolato nella cache. Per ripetere il controllo, creare questo init script temporaneo in `mobile/app/build/qa-phone.init.gradle`:
+
+```groovy
+allprojects { project ->
+    project.plugins.withId('com.android.application') {
+        project.extensions.getByName('androidComponents').finalizeDsl { android ->
+            android.defaultConfig.applicationId = 'com.onlyfield.assetmanager.qa'
+        }
+    }
+}
+```
+
+Eseguire separatamente i filtri (il wrapper Windows può troncare un elenco di classi separato da virgole):
+
+```powershell
+.\gradlew.bat -I mobile/app/build/qa-phone.init.gradle :mobile:app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.onlyfield.assetmanager.FloorNativeTest'
+.\gradlew.bat -I mobile/app/build/qa-phone.init.gradle :mobile:app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.onlyfield.assetmanager.FloorGestureNativeTest'
+Remove-Item -LiteralPath mobile/app/build/qa-phone.init.gradle
+# Ricostruire l'APK con l'identificativo normale dopo il collaudo QA.
+.\gradlew.bat :mobile:app:assembleDebug
+```
+
+Controllare il conteggio nei report `mobile/app/build/outputs/androidTest-results/connected/debug/` dopo ogni filtro. Non sono stati collaudati scatto/QR reali, lettore USB fisico e multitouch manuale.

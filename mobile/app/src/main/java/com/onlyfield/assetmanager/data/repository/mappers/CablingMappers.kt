@@ -1,33 +1,7 @@
 package com.onlyfield.assetmanager.data.repository.mappers
 
-import com.onlyfield.assetmanager.core.model.Area
-import com.onlyfield.assetmanager.core.model.BusinessUnit
-import com.onlyfield.assetmanager.core.model.Credential
-import com.onlyfield.assetmanager.core.model.CredentialType
-import com.onlyfield.assetmanager.core.model.Device
-import com.onlyfield.assetmanager.core.model.DeviceCategory
-import com.onlyfield.assetmanager.core.model.DeviceModel
-import com.onlyfield.assetmanager.core.model.EndpointStatus
-import com.onlyfield.assetmanager.core.model.MountingType
-import com.onlyfield.assetmanager.core.model.NumberingDirection
 import com.onlyfield.assetmanager.core.model.Observation
 import com.onlyfield.assetmanager.core.model.ObservationStatus
-import com.onlyfield.assetmanager.core.model.Port
-import com.onlyfield.assetmanager.core.model.PortTemplate
-import com.onlyfield.assetmanager.core.model.Project
-import com.onlyfield.assetmanager.core.model.Rack
-import com.onlyfield.assetmanager.core.model.RackSide
-import com.onlyfield.assetmanager.core.model.Site
-import com.onlyfield.assetmanager.data.local.AreaEntity
-import com.onlyfield.assetmanager.data.local.BusinessUnitEntity
-import com.onlyfield.assetmanager.data.local.CredentialEntity
-import com.onlyfield.assetmanager.data.local.DeviceEntity
-import com.onlyfield.assetmanager.data.local.DeviceModelEntity
-import com.onlyfield.assetmanager.data.local.PortEntity
-import com.onlyfield.assetmanager.data.local.ProjectEntity
-import com.onlyfield.assetmanager.data.local.RackEntity
-import com.onlyfield.assetmanager.data.local.SiteEntity
-import kotlinx.serialization.json.Json
 
 // Room <-> domain mapping: cables, shared paths, panel mappings.
 
@@ -61,6 +35,9 @@ internal fun toCableEntity(projectId: String, cable: com.onlyfield.assetmanager.
         id = cable.id,
         projectId = projectId,
         codeOrLabel = cable.codeOrLabel,
+        objectTypeId = cable.objectTypeId,
+        deviceAId = cable.deviceAId,
+        deviceBId = cable.deviceBId,
         portAId = cable.portAId,
         portBId = cable.portBId,
         medium = cable.medium.name,
@@ -99,6 +76,9 @@ internal fun toCable(entity: com.onlyfield.assetmanager.data.local.CableEntity):
     return com.onlyfield.assetmanager.core.model.Cable(
         id = entity.id,
         codeOrLabel = entity.codeOrLabel,
+        objectTypeId = entity.objectTypeId,
+        deviceAId = entity.deviceAId,
+        deviceBId = entity.deviceBId,
         portAId = entity.portAId,
         portBId = entity.portBId,
         medium = try { com.onlyfield.assetmanager.core.model.CableMedium.valueOf(entity.medium) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.CableMedium.ETHERNET_COPPER },

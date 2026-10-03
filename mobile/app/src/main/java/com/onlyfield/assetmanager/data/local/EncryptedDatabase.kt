@@ -29,10 +29,32 @@ object EncryptedDatabase {
         // SQLCipher raw-key syntax: skips the passphrase KDF.
         val keyLiteral = "x'" + loadOrCreateKey(app).toHex() + "'"
         migratePlaintext(app.getDatabasePath(DB_NAME), keyLiteral)
+        backupBeforeUpgrade(app, keyLiteral)
         return Room.databaseBuilder(app, AppDatabase::class.java, DB_NAME)
             .openHelperFactory(SupportOpenHelperFactory(keyLiteral.toByteArray(Charsets.US_ASCII)))
             .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .build()
+    }
+
+    private fun backupBeforeUpgrade(context: Context, keyLiteral: String) {
+        val source = context.getDatabasePath(DB_NAME)
+        if (!source.isFile) return
+        val db = SQLiteDatabase.openDatabase(source.path, keyLiteral.toByteArray(Charsets.US_ASCII), null, SQLiteDatabase.OPEN_READWRITE, null, null)
+        val version = try {
+            if (db.version < 12) db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", emptyArray()).use { cursor ->
+                check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "Database occupato: backup non eseguito" }
+            }
+            db.version
+        } finally { db.close() }
+        if (version >= 12) return
+        val backup = File(context.noBackupFilesDir, "$DB_NAME.v$version.backup")
+        if (!backup.exists()) {
+            val temporary = File(backup.path + ".tmp")
+            try {
+                Files.copy(source.toPath(), temporary.toPath(), StandardCopyOption.REPLACE_EXISTING)
+                Files.move(temporary.toPath(), backup.toPath(), StandardCopyOption.ATOMIC_MOVE)
+            } finally { temporary.delete() }
+        }
     }
 
     /** True if the file starts with the plain SQLite header (i.e. it is not encrypted). */

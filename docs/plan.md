@@ -1,6 +1,6 @@
 # OnlyFieldAssetManager — Piano operativo di sviluppo
 
-Aggiornato: 2 ottobre 2026. Eseguire gli step Android A00–A13 in Android Studio con Gemini; iniziare gli step Windows W00–W05 soltanto dopo il completamento di A13. Questo documento contiene il contesto da fornire agli agenti e le istruzioni di implementazione. Lo stato delle attività e le evidenze sono in roadmap.md.
+Specifiche iniziali A00–W05 del 2 ottobre 2026. Le fasi sono completate; per il comportamento corrente e gli interventi v1.1/manutenzione usare il [piano in radice](../plan.md), la [roadmap](../roadmap.md) e i documenti di dominio. Il riallineamento delle specifiche iniziali è tracciato in RES-12: le esclusioni originarie, ad esempio la fusione all'import, non descrivono tutte le funzioni attuali.
 
 ## 1. Contesto operativo
 
@@ -270,7 +270,7 @@ Dopo W00, se si adotta Compose Desktop:
 .\gradlew.bat :pc:app:test :pc:app:createDistributable
 ```
 
-Questi comandi sono istruzioni future: wrapper, moduli e runner non sono ancora presenti. Verificare i task realmente generati, aggiungere soltanto i task nativi necessari e registrarli dopo esecuzione. Non disabilitare test/lint né usare bypass. Le prove su dispositivi assenti sono non verificate.
+Wrapper, moduli e test unitari sono presenti. I comandi eseguiti e gli esiti correnti sono registrati in [roadmap.md](../roadmap.md) e [06-release-and-delivery.md](06-release-and-delivery.md). Le prove su dispositivi assenti restano non verificate.
 
 Per ogni step aggiornare roadmap.md con stato, data, comandi ed esiti, dispositivo/volume, evidenze e difetti aperti. Mettere schermate/report sintetici pertinenti in docs/testing/; tenere output voluminosi e temporanei in percorsi ignorati. Riesaminare il diff e rimuovere residui temporanei prima di dichiarare concluso lo step. Non conservare piani alternativi, implementazioni duplicate o istruzioni sostituite.
 

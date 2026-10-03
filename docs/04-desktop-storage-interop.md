@@ -24,7 +24,7 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
 ## Interoperabilità e Scambio Android <-> Windows (`BidirectionalInteropTest`)
 
 1. **Contratto Pacchetto Omogeneo:**
-   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.8 (anche v1.7 in lettura).
+   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.9 (1.7 e 1.8 in lettura, versioni successive rifiutate).
 2. **Supporto Cifratura Completo:**
    - Supporto identico per pacchetti cifrati con password mediante PBKDF2 (100.000 iterazioni) e AES-256-GCM.
 3. **Confronto Semantico delle Versioni (`ProjectComparison`):**
@@ -40,6 +40,8 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
      - Importazione ed estrazione trasparente su Windows Desktop via `DesktopStorageManager`.
      - Modifica ed aggiornamento transazionale atomico su Windows.
      - Re-esportazione pacchetto da Windows ed importazione su Android con riscontro `NEWER_REVISION` e verifica dell'integrità del modello di dominio.
+
+Le nuove tipologie, posizioni, pagine di planimetria, percorsi e foto dei cavi sono inclusi anche nei pacchetti cifrati. Per scambiarli occorrono entrambe le app aggiornate. `ObjectMapExchangeTest`, `ObjectMapStorageTest` e `FloorMediaTest` verificano rispettivamente contratto/fusione, persistenza Android e archiviazione Windows.
 
 ## Fusione all'import (fase v1.1, F04)
 

@@ -30,7 +30,9 @@ enum class AppSection(val title: String, val icon: ImageVector, val needsProject
     INVENTORY("Inventario", SymbolIcons.inventory2),
     RACKS("Rack", SymbolIcons.dns),
     MODELS("Modelli", SymbolIcons.category),
-    FLOORPLANS("Planimetrie", SymbolIcons.map),
+    FLOORPLANS("Mappa del piano", SymbolIcons.map),
+    CREDENTIALS("Credenziali", SymbolIcons.inventory2),
+    MEDIA("Allegati e cartografia", SymbolIcons.map),
     CABLING("Cablaggio", SymbolIcons.cable),
     NETWORK("Rete", SymbolIcons.lan),
     POWER("Alimentazione", SymbolIcons.bolt),
@@ -77,6 +79,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     var canUndo by mutableStateOf(false)
         private set
     val undoLabel: String? get() = history.lastOrNull()?.second
+    var selectedBuId by mutableStateOf<String?>(null)
+    var selectedAreaId by mutableStateOf<String?>(null)
     var section by mutableStateOf(AppSection.PROJECT)
     var dialog by mutableStateOf<AppDialog?>(null)
 
@@ -115,7 +119,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     val warningCount: Int get() = issues.count { it.severity == ValidationSeverity.DOCUMENTARY_WARNING }
     val windowTitle: String get() = project?.let { "${it.name} — OnlyField Asset Manager" } ?: "OnlyField Asset Manager"
 
-    fun update(updated: Project, message: String) {
+    fun update(updated: Project, message: String) = update(updated, message, true)
+
+    private fun update(updated: Project, message: String, persist: Boolean) {
         project?.takeIf { it.id == updated.id }?.let {
             history.addLast(it to message)
             if (history.size > MAX_UNDO) history.removeFirst()
@@ -124,7 +130,44 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         project = updated
         issues = ModelValidator.validateProject(updated).issues
         status = message
-        save()
+        if (persist) save()
+    }
+
+    fun saveMapObject(draft: com.onlyfield.assetmanager.core.forms.MapObjectDraft, photos: List<File>, removed: Set<String>): Boolean =
+        saveMapEdit(photos, draft.targetType, draft.id, { p -> draft.apply(p).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } }) != null
+
+    fun importFloorplan(file: File, areaId: String): Attachment? =
+        saveMapEdit(listOf(file), AttachmentTargetType.AREA, areaId, { it })?.singleOrNull()
+
+    private fun saveMapEdit(files: List<File>, type: AttachmentTargetType, targetId: String, transform: (Project) -> Project): List<Attachment>? {
+        val before = project ?: return null
+        val created = mutableListOf<File>()
+        var committed = false
+        return try {
+            val attachments = files.map { source ->
+                val pdf = source.extension.equals("pdf", true)
+                val pages = if (pdf) PlanMedia.pageCount(source) else { PlanMedia.validateImage(source); 1 }
+                require(pages > 0) { "PDF senza pagine" }
+                val att = Attachment(name = source.nameWithoutExtension, originalFileName = source.name, relativePath = "", pageCount = pages,
+                    fileType = if (pdf) AttachmentType.PDF else AttachmentType.IMAGE, mimeType = if (pdf) "application/pdf" else java.nio.file.Files.probeContentType(source.toPath()) ?: "image/jpeg",
+                    targetType = type, targetId = targetId)
+                created += storage.attachmentFile(before.id, att)
+                storage.storeAttachmentFile(before.id, att, source)
+                att.copy(relativePath = com.onlyfield.assetmanager.exchange.AttachmentFiles.entryName(att))
+            }
+            val edited = transform(before)
+            val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
+            storage.saveProjectLocally(saved, password)
+            committed = true
+            update(saved, "Salvato.", persist = false)
+            error = null
+            refreshStoredList()
+            attachments
+        } catch (e: Exception) {
+            if (!committed) created.forEach { it.delete() }
+            error = "Salvataggio non riuscito: ${e.message}"
+            null
+        }
     }
 
     /** Copies [file] into the data folder and adds it to the project as an attachment. */
@@ -144,8 +187,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             classification = classification
         )
         try {
-            storage.storeAttachmentFile(p.id, attachment, file)
-            val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
+            val checked = attachment.copy(pageCount = if (attachment.fileType == AttachmentType.PDF) PlanMedia.pageCount(file) else 1)
+            storage.storeAttachmentFile(p.id, checked, file)
+            val saved = checked.copy(relativePath = AttachmentFiles.entryName(checked))
             update(ProjectEdits.addAttachment(p, saved), "Allegato «${saved.name}» aggiunto.")
         } catch (e: Exception) {
             error = "Impossibile copiare «${file.name}»: ${e.message}"
@@ -154,6 +198,28 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     fun attachmentFile(attachment: Attachment): File? =
         project?.let { storage.attachmentFile(it.id, attachment) }?.takeIf { it.isFile }
+
+    fun addMapSnapshot(snapshot: DesktopMapSnapshot, name: String): Boolean {
+        val p = project ?: return false
+        val attachment = Attachment(
+            name = name.trim(), originalFileName = "map_snapshot.png",
+            fileType = AttachmentType.IMAGE, mimeType = "image/png", relativePath = "",
+            classification = AttachmentClassification.SHAREABLE,
+            targetType = AttachmentTargetType.PROJECT, targetId = p.id,
+            attributionText = snapshot.attributionText,
+        ).let { it.copy(relativePath = AttachmentFiles.entryName(it)) }
+        val target = storage.attachmentFile(p.id, attachment)
+        try {
+            java.nio.file.Files.createDirectories(target.parentFile.toPath())
+            java.nio.file.Files.write(target.toPath(), snapshot.imageBytes)
+            update(ProjectEdits.addAttachment(p, attachment), "Mappa «${attachment.name}» salvata negli allegati.")
+            return error == null
+        } catch (e: java.io.IOException) {
+            java.nio.file.Files.deleteIfExists(target.toPath())
+            error = "Impossibile salvare la mappa: ${e.message}"
+            return false
+        }
+    }
 
     /** Restores the project as it was before the last change. */
     fun undo() {
@@ -202,7 +268,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         clearHistory()
         trashState = if (newProject.isPasswordProtected) emptyList() else storage.loadTrash(newProject.id)
         issues = ModelValidator.validateProject(newProject).issues
-        if (section == AppSection.PROJECT) section = AppSection.INVENTORY
+        selectedBuId = null
+        selectedAreaId = null
+        section = AppSection.FLOORPLANS
         status = message
         save()
     }

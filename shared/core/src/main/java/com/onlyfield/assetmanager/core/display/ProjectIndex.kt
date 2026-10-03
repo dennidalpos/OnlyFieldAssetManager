@@ -47,6 +47,7 @@ class ProjectIndex(val project: Project) {
             "DEVICE" -> device(targetId)?.technicalName
             "RACK" -> rack(targetId)?.name
             "PORT" -> port(targetId)?.let { "${it.device.technicalName} › ${it.port.name}" }
+            "CABLE" -> project.cables.find { it.id == targetId }?.codeOrLabel
             "AREA" -> area(targetId)?.name
             "SITE" -> targetId?.let(siteById::get)?.name
             "BUSINESS_UNIT" -> targetId?.let(buById::get)?.name

@@ -238,6 +238,15 @@ object PackageSerializer {
             return PackageImportResult(null, ValidationResult(issues))
         }
 
+        if (manifest.formatVersion !in setOf("1.7", "1.8", "1.9")) {
+            issues += ValidationIssue(
+                code = "UNSUPPORTED_FORMAT_VERSION",
+                message = "Formato ${manifest.formatVersion} non supportato. Aggiorna l'applicazione.",
+                severity = ValidationSeverity.STRUCTURAL_ERROR,
+            )
+            return PackageImportResult(null, ValidationResult(issues))
+        }
+
         val projectBytes: ByteArray
         var key: SecretKeySpec? = null
         if (manifest.isEncrypted) {

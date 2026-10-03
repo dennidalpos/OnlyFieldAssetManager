@@ -67,6 +67,7 @@ fun PortPicker(
 private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<Cable?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     val cables = project.cables.filter {
         matchesQuery(query, it.codeOrLabel, it.color, index.portLabel(it.portAId), index.portLabel(it.portBId))
@@ -74,7 +75,7 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Cavi", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca codice, apparato, porta…") {
-            Button(onClick = { creating = true }) { Text("+ Nuovo cavo") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo cavo") }
         }
         if (cables.isEmpty()) {
             EmptyState(if (project.cables.isEmpty()) "Nessun cavo censito." else "Nessun cavo corrisponde alla ricerca.",
@@ -104,7 +105,7 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 
     if (creating || editing != null) {
         val cable = editing
-        var form by remember(cable) { mutableStateOf(CableForm.from(cable)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, cable) { mutableStateOf(CableForm.from(cable)) }
         val errors = form.errors()
         val busy = project.cables.filter { it.id != cable?.id }.flatMap { listOfNotNull(it.portAId, it.portBId) }.toSet()
         val busyError = { id: String? -> if (id != null && id in busy) "Porta già usata da un altro cavo" else null }
@@ -157,11 +158,12 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 @Composable
 private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<SharedPathSegment?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Percorsi condivisi", subtitle = "Canaline, dorsali e passaggi attraversati dai cavi") {
-            Button(onClick = { creating = true }) { Text("+ Nuovo percorso") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo percorso") }
         }
         if (project.sharedPathSegments.isEmpty()) {
             EmptyState("Nessun percorso definito.", actionLabel = "+ Nuovo percorso", onAction = { creating = true })
@@ -186,7 +188,7 @@ private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
 
     if (creating || editing != null) {
         val seg = editing
-        var form by remember(seg) { mutableStateOf(SharedPathForm.from(seg)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, seg) { mutableStateOf(SharedPathForm.from(seg)) }
         val errors = form.errors()
         EditPanel(
             title = if (seg == null) "Nuovo percorso" else "Modifica percorso",
@@ -213,11 +215,12 @@ private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
 @Composable
 private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<PanelMapping?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Permutazioni", subtitle = "Collegamenti interni tra porte di patch panel (fronte ↔ retro)") {
-            Button(onClick = { creating = true }) { Text("+ Nuova permutazione") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuova permutazione") }
         }
         if (project.panelMappings.isEmpty()) {
             EmptyState("Nessuna permutazione definita.", actionLabel = "+ Nuova permutazione", onAction = { creating = true })
@@ -237,7 +240,7 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
 
     if (creating || editing != null) {
         val m = editing
-        var form by remember(m) { mutableStateOf(PanelMappingForm.from(m)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, m) { mutableStateOf(PanelMappingForm.from(m)) }
         val errors = form.errors()
         EditPanel(
             title = if (m == null) "Nuova permutazione" else "Modifica permutazione",

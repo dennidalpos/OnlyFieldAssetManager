@@ -209,7 +209,8 @@ fun Tag(text: String, container: androidx.compose.ui.graphics.Color = MaterialTh
 
 @Composable
 fun EditButton(onClick: () -> Unit) {
-    TextButton(onClick = onClick) { Text("Modifica") }
+    val changeDetail = LocalDetailChange.current
+    TextButton(onClick = { changeDetail(onClick) }) { Text("Modifica") }
 }
 
 /** Delete action that always asks for confirmation first. */
@@ -233,11 +234,12 @@ fun DeleteButton(itemName: String, onDelete: () -> Unit, label: String = "Elimin
 
 @Composable
 fun EmptyState(message: String, modifier: Modifier = Modifier, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
+    val changeDetail = LocalDetailChange.current
     Box(modifier = modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (actionLabel != null && onAction != null) {
-                Button(onClick = onAction) { Text(actionLabel) }
+                Button(onClick = { changeDetail(onAction) }) { Text(actionLabel) }
             }
         }
     }
@@ -246,9 +248,10 @@ fun EmptyState(message: String, modifier: Modifier = Modifier, actionLabel: Stri
 /** Sub-navigation inside a section (e.g. Cavi / Percorsi / Permutazioni). */
 @Composable
 fun SubTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
+    val changeDetail = LocalDetailChange.current
     PrimaryTabRow(selectedTabIndex = selected) {
         tabs.forEachIndexed { i, title ->
-            Tab(selected = selected == i, onClick = { onSelect(i) }, text = { Text(title) })
+            Tab(selected = selected == i, onClick = { if (selected != i) changeDetail { onSelect(i) } }, text = { Text(title) })
         }
     }
 }

@@ -14,7 +14,7 @@ class DesktopAppStateTest {
     private fun newState() = DesktopAppState(DesktopStorageManager(Files.createTempDirectory("ofam_state").toFile()))
 
     private fun site(area: String, password: String = "") = NewSiteWizard(
-        draft = NewSiteDraft(projectName = "Prova", businessUnit = "Sede", area = area, password = password, passwordConfirm = password)
+        draft = NewSiteDraft(projectName = "Prova", businessUnits = listOf(com.onlyfield.assetmanager.core.model.BusinessUnit(name = "Sede", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = area)))), password = password, passwordConfirm = password)
     )
 
     @Test

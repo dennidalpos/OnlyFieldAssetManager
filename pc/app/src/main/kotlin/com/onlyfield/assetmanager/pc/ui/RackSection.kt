@@ -34,6 +34,7 @@ fun RackSection(
     var selectedRackId by remember { mutableStateOf(project.racks.firstOrNull()?.id) }
     var side by remember { mutableStateOf(RackSide.FRONT) }
     var editing by remember { mutableStateOf<Rack?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     var placing by remember { mutableStateOf(false) }
 
@@ -48,7 +49,7 @@ fun RackSection(
             onSearchChange = { query = it },
             searchPlaceholder = "Cerca rack o area…"
         ) {
-            Button(onClick = { creating = true }) { Text("+ Nuovo rack") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo rack") }
         }
 
         if (project.racks.isEmpty()) {
@@ -64,7 +65,7 @@ fun RackSection(
                     Card(
                         modifier = Modifier.fillMaxWidth()
                             .border(if (isSelected) 2.dp else 0.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(12.dp))
-                            .clickable { selectedRackId = rack.id },
+                            .clickable { if (selectedRackId != rack.id) changeDetail { selectedRackId = rack.id } },
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
                         )
@@ -98,7 +99,7 @@ fun RackSection(
                                     }
                                 }
                             }
-                            Button(onClick = { placing = true }) { Text("Colloca apparato…") }
+                            Button(onClick = { changeDetail { placing = true } }) { Text("Colloca apparato…") }
                             EditButton { editing = rack }
                             DeleteButton(rack.name, label = "Sposta nel cestino", message = "Gli apparati montati verranno segnati come fuori rack.", onDelete = {
                                 val (updated, trashItem) = ProjectEdits.deleteRackToTrash(project, rack.id)
@@ -201,9 +202,9 @@ private fun RackElevation(rack: Rack, devices: List<Device>, side: RackSide, mod
 @Composable
 private fun PlaceDeviceDialog(rack: Rack, index: ProjectIndex, initialSide: RackSide, onDismiss: () -> Unit, onPlace: (Device, Int, RackSide) -> Unit) {
     val candidates = index.devices.filter { it.rackId != rack.id || it.positionU == null }
-    var device by remember { mutableStateOf<Device?>(null) }
-    var side by remember { mutableStateOf(initialSide) }
-    var start by remember { mutableStateOf<Int?>(null) }
+    var device by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf<Device?>(null) }
+    var side by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(initialSide) }
+    var start by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf<Int?>(null) }
     val free = device?.let { RackLayout.freeStartPositions(rack, index.devices, it.heightU, side, it.id) } ?: emptyList()
     LaunchedEffect(device, side) { start = free.firstOrNull() }
 
@@ -243,7 +244,7 @@ private fun PlaceDeviceDialog(rack: Rack, index: ProjectIndex, initialSide: Rack
 
 @Composable
 private fun RackDialog(index: ProjectIndex, rack: Rack?, onDismiss: () -> Unit, onSave: (Rack, Boolean) -> Unit) {
-    var form by remember(rack) { mutableStateOf(RackForm.from(rack)) }
+    var form by remember(LocalDetailSlot.current?.editorVersion, rack) { mutableStateOf(RackForm.from(rack)) }
     val errors = form.errors()
     val tallestDevice = rack?.let { r -> index.devices.filter { it.rackId == r.id && it.positionU != null }.maxOfOrNull { it.positionU!! + it.heightU - 1 } }
     val shrinkError = tallestDevice?.let { top -> form.heightU.toIntOrNull()?.takeIf { it < top }?.let { "Ci sono apparati fino a U$top" } }

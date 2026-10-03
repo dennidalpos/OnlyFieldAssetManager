@@ -14,6 +14,8 @@ data class ProjectEntity(
     val updatedEpochMs: Long,
     val isPasswordProtected: Boolean = false,
     val passwordHash: String? = null,
+    val objectTypesJson: String = "[]",
+    val cableRoutesJson: String = "[]",
 )
 
 @Entity(
@@ -266,6 +268,7 @@ data class DeviceEntity(
     val mountingType: String = "OUT_OF_RACK",
     val deviceModelId: String? = null,
     val category: String = "CUSTOM",
+    val objectTypeId: String? = null,
     val serialNumber: String? = null
 )
 
@@ -330,6 +333,9 @@ data class SharedPathSegmentEntity(
     indices = [Index("projectId"), Index("portAId"), Index("portBId")]
 )
 data class CableEntity(
+    val objectTypeId: String? = null,
+    val deviceAId: String? = null,
+    val deviceBId: String? = null,
     @PrimaryKey val id: String,
     val projectId: String,
     val codeOrLabel: String?,

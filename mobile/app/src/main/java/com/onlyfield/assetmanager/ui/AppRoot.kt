@@ -50,7 +50,8 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                 } else if (p == null || screen == Screen.Projects) {
                     ProjectsScreen(vm, snackbar)
                 } else when (screen) {
-                    Screen.Home -> HomeScreen(vm, p, snackbar)
+                    Screen.Home -> FloorHomeScreen(vm, p, snackbar)
+                    Screen.ProjectTools -> ProjectToolsScreen(vm, p, snackbar)
                     Screen.Inventory -> InventoryScreen(vm, p, snackbar)
                     is Screen.DeviceDetail -> DeviceDetailScreen(vm, p, screen.deviceId, snackbar)
                     Screen.Structure -> StructureScreen(vm, p, snackbar)
@@ -61,7 +62,7 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                     Screen.Network -> NetworkScreen(vm, p, snackbar)
                     Screen.Power -> PowerScreen(vm, p, snackbar)
                     Screen.Attachments -> AttachmentsScreen(vm, p, snackbar)
-                    Screen.Floorplan -> FloorplanScreen(vm, p, snackbar)
+                    Screen.Floorplan -> FloorHomeScreen(vm, p, snackbar)
                     Screen.Credentials -> CredentialsScreen(vm, p, snackbar)
                     Screen.Trash -> TrashScreen(vm, snackbar)
                     Screen.Documents -> DocumentsScreen(vm, p, snackbar)

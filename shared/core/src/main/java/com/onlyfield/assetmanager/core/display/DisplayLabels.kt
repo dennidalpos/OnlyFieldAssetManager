@@ -74,7 +74,8 @@ fun AttachmentTargetType.toDisplayString(): String = when (this) {
     AttachmentTargetType.PROJECT -> "Progetto"
     AttachmentTargetType.RACK -> "Rack"
     AttachmentTargetType.DEVICE -> "Apparato"
-    AttachmentTargetType.AREA -> "Area"
+    AttachmentTargetType.AREA -> "Piano / zona"
+    AttachmentTargetType.CABLE -> "Cavo"
 }
 
 fun AnnotationType.toDisplayString(): String = when (this) {

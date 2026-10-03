@@ -37,12 +37,13 @@ fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> U
 private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<PowerFeed?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     val feeds = project.powerFeeds.filter { matchesQuery(query, it.feedName, index.deviceName(it.deviceId), index.deviceName(it.sourceDeviceId, "")) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Alimentazioni", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca linea o apparato…") {
-            Button(onClick = { creating = true }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova alimentazione") }
+            Button(onClick = { changeDetail { creating = true } }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova alimentazione") }
         }
         if (feeds.isEmpty()) EmptyState(if (index.devices.isEmpty()) "Crea prima gli apparati in Inventario." else "Nessuna alimentazione registrata.")
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -71,7 +72,7 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
 
     if (creating || editing != null) {
         val f = editing
-        var form by remember(f) { mutableStateOf(PowerFeedForm.from(f)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, f) { mutableStateOf(PowerFeedForm.from(f)) }
         val errors = form.errors()
         EditPanel(
             title = if (f == null) "Nuova alimentazione" else "Modifica alimentazione",
@@ -108,11 +109,12 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
 @Composable
 private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<PoeMapping?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Power over Ethernet", subtitle = "Porte che erogano o ricevono alimentazione PoE") {
-            Button(onClick = { creating = true }, enabled = index.ports.isNotEmpty()) { Text("+ Nuova porta PoE") }
+            Button(onClick = { changeDetail { creating = true } }, enabled = index.ports.isNotEmpty()) { Text("+ Nuova porta PoE") }
         }
         if (project.poeMappings.isEmpty()) EmptyState(if (index.ports.isEmpty()) "Aggiungi prima le porte agli apparati." else "Nessuna porta PoE registrata.")
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -131,7 +133,7 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
 
     if (creating || editing != null) {
         val poe = editing
-        var form by remember(poe) { mutableStateOf(PoeForm.from(poe)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, poe) { mutableStateOf(PoeForm.from(poe)) }
         val errors = form.errors()
         val existingOnPort = project.poeMappings.find { it.portId == form.portId && it.id != poe?.id }
         EditPanel(
@@ -160,11 +162,12 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
 @Composable
 private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<DocumentBadge?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Badge documentali", subtitle = "Etichette che compaiono nei documenti esportati") {
-            Button(onClick = { creating = true }) { Text("+ Nuovo badge") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo badge") }
         }
         if (project.documentBadges.isEmpty()) EmptyState("Nessun badge.", actionLabel = "+ Nuovo badge", onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -183,7 +186,7 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 
     if (creating || editing != null) {
         val b = editing
-        var form by remember(b) { mutableStateOf(BadgeForm.from(b)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, b) { mutableStateOf(BadgeForm.from(b)) }
         val errors = form.errors()
         EditPanel(
             title = if (b == null) "Nuovo badge" else "Modifica badge",

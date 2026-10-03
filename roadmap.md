@@ -9,8 +9,8 @@ Data aggiornamento: 3 ottobre 2026
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
 - **Fase v1.1 (S/O/R/F)**: Completata il 3 ottobre 2026 (14 step su 14), vedi `docs/07-ux-audit.md`.
-- **Stato Complessivo**: 36 step completati su 36 (v1.0 e fase v1.1 chiuse).
-- **Test Unitari Totali Passati**: 117 test su 117 (24 mobile/app, 30 shared/core, 24 shared/exchange, 39 pc/app).
+- **Stato Complessivo**: 36 step di fase e 3 interventi di manutenzione completati (39/39).
+- **Test Totali Passati**: 152 test: 149 unit/Compose (26 mobile/app, 40 shared/core, 28 shared/exchange, 55 pc/app) e 3 Android nativi, inclusi i test UI Compose desktop.
 
 ## Tabella Riassuntiva degli Step
 
@@ -62,21 +62,44 @@ Data aggiornamento: 3 ottobre 2026
 
 ## Registro Residui e Note di Monitoraggio
 
-Nessun blocco operativo o anomalia residua rilevata durante il collaudo W05.
-Segnalazioni per future iterazioni (non bloccanti):
+Il tracker `PROJECT_STATUS.json` contiene soltanto attività e residui aperti. Evidenze di completamento nelle sezioni precedenti e nel registro manutenzione.
 - **RES-01 (Integrazione CI/CD Automation)**: Aggiunta opzionale di workflow GitHub Actions per la pubblicazione automatica di `app-debug.apk` e dell'eseguibile Windows Desktop ad ogni tag release.
 - **RES-02 (Localizzazione Multi-lingua)**: Espansione del dizionario stringhe da Italiano a Inglese/Spagnolo per mercati internazionali.
-- ~~RES-03 (PDF Windows)~~: risolto il 03/10/2026 — PDF reale multipagina (`SimplePdfWriter`) e stampa su più pagine, stesso contenuto (`ReportContent`).
-- ~~RES-04 (Allegati nei pacchetti)~~: risolto il 03/10/2026 — i file viaggiano nel `.ofam` (`AttachmentFiles`), cifrati nei progetti protetti.
-- ~~RES-05 (Cestino Windows)~~: risolto il 03/10/2026 — cestino salvato su disco (progetti senza password) e «Annulla» (Ctrl+Z, 50 passi) per ogni modifica.
-- ~~RES-06 (Messaggi di validazione)~~: risolto il 03/10/2026 — messaggi di validazione e di importazione in italiano.
-- ~~RES-07 (Mappe Android)~~: risolto il 03/10/2026 con F05 — permesso di rete solo per il download delle mappe su richiesta.
-- **RES-08 (Editor Windows)**: con un form modificato nel pannello laterale, la scelta di un altro elemento nella lista non chiede conferma (solo Annulla/Esc la chiedono).
-- **RES-09 (Mappe CARTO)**: CARTO dichiara che i basemap richiedono una chiave API; OpenTopoMap resta la fonte predefinita e, se CARTO rifiuta la richiesta, l'app lo spiega. Da decidere se procurare una chiave o togliere CARTO.
+- **RES-10 (Editor Windows, azioni globali)**: cambio sezione dalla barra/menu, chiusura progetto e uscita non chiedono ancora conferma per form modificati.
+- **RES-11 (Toolchain)**: deprecazioni preesistenti: proprietà Gradle `by tasks.registering` (`pc/app/build.gradle.kts:68`, rimozione prevista in Gradle 10) e `createComposeRule` v1 nei test UI. Build verde; aggiornamento futuro.
+- **RES-12 (Specifiche iniziali)**: `docs/plan.md` contiene ancora vincoli/fasi anteriori a v1.1 (es. esclusione fusione all'import). Intestazione e comandi obsolete corretti; consolidare i dettagli residui nei documenti correnti.
 
 ## Note per la prossima sessione
 
-- Passaggio di sessione del 03/10/2026: fase v1.1 completata e pubblicata su `origin/main`; build completa verde (117 test, exe portable, APK debug).
+- Stato di consegna del 03/10/2026: RES-08, MAP01 e MAP02 completati; 152 test passati, portable Windows e APK debug ricostruiti. Ripresa dal branch `main`, commit di consegna identificabile con `git log -1`.
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessun task pianificato. Decisione aperta: RES-09 (chiave API CARTO o rimozione della fonte).
+- Prossimo intervento: RES-10, poi consolidamento delle specifiche RES-12; collaudo manuale RES-13 ancora aperto. RES-01/02/11 sono miglioramenti futuri.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
+
+## Manutenzione dopo v1.1
+
+- **RES-08 completato (03/10/2026)**: la conferma precede cambio elemento, creazione e cambio tab interne; scartare chiude il vecchio editor. I modelli inizializzano i campi per elemento e la modifica delle porte generate segnala il form modificato. `.\gradlew.bat :pc:app:test`: BUILD SUCCESSFUL, 42 test passati (4 scenari MasterDetailTest).
+- **MAP01 completato, chiude RES-09 (03/10/2026)**: download Windows di nove tessere OpenTopoMap in background, anteprima PNG, salvataggio negli allegati e attribuzione nei pixel/metadati. CARTO rimosso su Android e Windows, zoom 1–17. Fonte/condizioni verificate su [OpenTopoMap](https://opentopomap.org/about#verwendung) e requisito chiave su [CARTO](https://github.com/CartoDB/basemap-styles). Download reale Roma: PNG 768 × 800, 645.178 byte, ispezionato. Backend, errori, riapertura offline e trasferimento cifrato coperti da 5 test; interazione manuale dell'eseguibile non verificata.
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:packagePortable :mobile:app:assembleDebug
+# BUILD SUCCESSFUL, 125 test passati; portable e APK debug generati.
+.\gradlew.bat :pc:app:test :pc:app:packagePortable --warning-mode all
+# BUILD SUCCESSFUL, 47 test Windows; deprecazione Gradle preesistente tracciata in RES-11.
+```
+
+
+## MAP02 — Navigazione BU/piano e mappa interattiva (03/10/2026)
+
+Completato su Android e Windows: wizard con elenchi BU/piani, home del piano a mappa, menu Strumenti, catalogo generico e tipologie personalizzate, schede con foto e campi extra, oggetti trascinabili e cavi con percorsi/estremità. Sfondo a griglia o immagine/PDF offline con anteprime numerate e pagina per piano. Rimossi il passo Primo apparato, la home a tile e il posizionamento tramite clic sullo sfondo.
+
+Contratto approvato 1.9 con lettura 1.7/1.8 e rifiuto di versioni non supportate; nuove geometrie/tipologie/foto incluse in fusione e cifratura. Room 11 → 12 additiva, con backup SQLCipher prima dell'upgrade. I campi nascosti e gli allegati preesistenti sono preservati; un errore nella seconda foto annulla anche la copia della prima.
+
+Evidenze: 149 test dei quattro moduli, UI desktop reale Compose, migrazione Room, PDFBox multipagina/protetto, riapertura e scambio cifrato. Su telefono API 36, installazione QA separata: 2 test nativi per PdfRenderer e backup/migrazione/ripristino SQLCipher; 1 test del clic/trascinamento Android. Fixture isolate, dati dell'app personale preservati. Totale 152 test passati.
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest :pc:app:test :mobile:app:assembleDebug :pc:app:packagePortable
+# BUILD SUCCESSFUL; 149 test unit/Compose, APK normale e portable generati.
+```
+
+Comandi dei 3 test nativi in [docs/06-release-and-delivery.md](docs/06-release-and-delivery.md). Non verificati: scatto/QR con fotocamera reale, lettore USB fisico e multitouch manuale (RES-13). Deprecazioni preesistenti RES-11. Documentazione e tracker sincronizzati per il cambio sessione; commit e push su `main` autorizzati dall'utente.

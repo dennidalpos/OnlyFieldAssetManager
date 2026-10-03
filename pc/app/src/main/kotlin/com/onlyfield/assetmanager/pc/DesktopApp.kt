@@ -45,8 +45,6 @@ fun DesktopApp(state: DesktopAppState) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
                 Row(modifier = Modifier.fillMaxSize()) {
-                    SectionRail(state)
-                    VerticalDivider()
                     Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         ProjectToolbar(state)
                         state.error?.let { ErrorBanner(it) { state.error = null } }
@@ -64,59 +62,34 @@ fun DesktopApp(state: DesktopAppState) {
 }
 
 @Composable
-private fun SectionRail(state: DesktopAppState) {
-    val project = state.project
-    NavigationRail(modifier = Modifier.fillMaxHeight().width(104.dp)) {
-        Spacer(Modifier.height(8.dp))
-        AppSection.entries.forEach { s ->
-            val enabled = project != null || !s.needsProject
-            val label = if (s == AppSection.TRASH && state.trash.isNotEmpty()) "${s.title} (${state.trash.size})" else s.title
-            NavigationRailItem(
-                selected = state.section == s,
-                onClick = { state.section = s },
-                enabled = enabled,
-                icon = { Icon(s.icon, contentDescription = null) },
-                label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                alwaysShowLabel = true
-            )
-        }
-    }
-}
-
-@Composable
 private fun ProjectToolbar(state: DesktopAppState) {
     val project = state.project
+    var tools by remember { mutableStateOf(false) }
     Surface(tonalElevation = 2.dp) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    project?.name ?: "Nessun progetto aperto",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                if (project != null) {
-                    Text(
-                        (if (project.isPasswordProtected) "🔒 Protetto da password · " else "") + "Salvataggio automatico attivo",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f)) {
+                Text(project?.name ?: "Seleziona progetto", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (project != null) Text("Salvataggio automatico" + if (project.isPasswordProtected) " · Protetto da password" else "", style = MaterialTheme.typography.bodySmall)
+            }
+            if (project == null) {
+                OutlinedButton(onClick = { state.dialog = AppDialog.NewProject }) { Text("Nuovo sito") }
+                OutlinedButton(onClick = state::pickAndImport) { Text("Importa .ofam…") }
+            } else {
+                TextButton(onClick = { state.section = AppSection.FLOORPLANS }) { Text("Mappa") }
+                TextButton(onClick = state::undo, enabled = state.canUndo) { Text("Annulla") }
+                Box {
+                    OutlinedButton(onClick = { tools = true }) { Text("Strumenti") }
+                    DropdownMenu(expanded = tools, onDismissRequest = { tools = false }) {
+                        AppSection.entries.forEach { section -> DropdownMenuItem(text = { Text(section.title) }, onClick = { tools = false; state.section = section }) }
+                        HorizontalDivider()
+                        DropdownMenuItem(text = { Text("Documenti e stampa") }, onClick = { tools = false; state.dialog = AppDialog.Documents })
+                        DropdownMenuItem(text = { Text("Password del progetto") }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
+                        DropdownMenuItem(text = { Text("Esporta .ofam") }, onClick = { tools = false; state.exportPackage() })
+                        DropdownMenuItem(text = { Text("Apri / Importa…") }, onClick = { tools = false; state.pickAndImport() })
+                        DropdownMenuItem(text = { Text("Nuovo sito") }, onClick = { tools = false; state.dialog = AppDialog.NewProject })
+                        DropdownMenuItem(text = { Text("Chiudi progetto") }, onClick = { tools = false; state.closeProject() })
+                    }
                 }
-            }
-            if (project != null) {
-                TextButton(onClick = state::undo, enabled = state.canUndo) { Text("↶ Annulla") }
-            }
-            OutlinedButton(onClick = { state.dialog = AppDialog.NewProject }) { Text("Nuovo") }
-            OutlinedButton(onClick = state::pickAndImport) { Text("Apri / Importa…") }
-            Button(onClick = state::exportPackage, enabled = project != null) { Text("Esporta .ofam") }
-            OutlinedButton(onClick = { state.dialog = AppDialog.Documents }, enabled = project != null) { Text("Documenti e stampa") }
-            OutlinedButton(onClick = { state.dialog = AppDialog.ManagePassword }, enabled = project != null) {
-                Text(if (project?.isPasswordProtected == true) "Password" else "Proteggi")
             }
         }
     }
@@ -180,7 +153,9 @@ private fun SectionContent(state: DesktopAppState) {
         AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash)
         AppSection.RACKS -> RackSection(project, update, state::addToTrash)
         AppSection.MODELS -> DeviceModelsSection(project, update)
-        AppSection.FLOORPLANS -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentFile)
+        AppSection.FLOORPLANS -> FloorHomeSection(state)
+        AppSection.CREDENTIALS -> CredentialsSection(project, update)
+        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentFile, state::addMapSnapshot)
         AppSection.CABLING -> CablingSection(project, update)
         AppSection.NETWORK -> NetworkLogicalSection(project, update)
         AppSection.POWER -> PowerBadgeSection(project, update)

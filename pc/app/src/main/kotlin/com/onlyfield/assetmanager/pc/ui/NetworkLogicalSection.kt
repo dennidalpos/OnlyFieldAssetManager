@@ -50,12 +50,13 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
     val index = remember(project) { ProjectIndex(project) }
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<Vlan?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     val vlans = project.vlans.filter { matchesQuery(query, it.vlanId.toString(), it.name, it.description) }.sortedBy { it.vlanId }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("VLAN", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca numero o nome…") {
-            Button(onClick = { creating = true }) { Text("+ Nuova VLAN") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuova VLAN") }
         }
         if (vlans.isEmpty()) EmptyState("Nessuna VLAN.", actionLabel = "+ Nuova VLAN", onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -72,7 +73,7 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
 
     if (creating || editing != null) {
         val v = editing
-        var form by remember(v) { mutableStateOf(VlanForm.from(v)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, v) { mutableStateOf(VlanForm.from(v)) }
         val taken = project.vlans.filter { it.id != v?.id && it.scopeType == VlanScopeType.PROJECT }.map { it.vlanId }.toSet()
         val errors = form.errors(taken)
         EditPanel(
@@ -105,10 +106,11 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
 @Composable
 private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<Subnet?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader("Subnet") { Button(onClick = { creating = true }) { Text("+ Nuova subnet") } }
+        SectionHeader("Subnet") { Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuova subnet") } }
         if (project.subnets.isEmpty()) EmptyState("Nessuna subnet.", actionLabel = "+ Nuova subnet", onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.subnets, key = { it.id }) { s ->
@@ -129,7 +131,7 @@ private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> U
 
     if (creating || editing != null) {
         val s = editing
-        var form by remember(s) { mutableStateOf(SubnetForm.from(s)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, s) { mutableStateOf(SubnetForm.from(s)) }
         val errors = form.errors()
         EditPanel(
             title = if (s == null) "Nuova subnet" else "Modifica subnet",
@@ -157,11 +159,12 @@ private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> U
 @Composable
 private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<LogicalInterface?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Interfacce logiche", subtitle = "SVI, loopback e altre interfacce di livello 3") {
-            Button(onClick = { creating = true }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova interfaccia") }
+            Button(onClick = { changeDetail { creating = true } }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova interfaccia") }
         }
         if (project.logicalInterfaces.isEmpty()) EmptyState("Nessuna interfaccia logica.")
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -182,7 +185,7 @@ private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdate
 
     if (creating || editing != null) {
         val li = editing
-        var form by remember(li) { mutableStateOf(LogicalInterfaceForm.from(li)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, li) { mutableStateOf(LogicalInterfaceForm.from(li)) }
         val errors = form.errors()
         EditPanel(
             title = if (li == null) "Nuova interfaccia logica" else "Modifica interfaccia",
@@ -214,10 +217,11 @@ private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdate
 @Composable
 private fun WanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<WanVpnConnection?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader("Connessioni WAN / VPN") { Button(onClick = { creating = true }) { Text("+ Nuova connessione") } }
+        SectionHeader("Connessioni WAN / VPN") { Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuova connessione") } }
         if (project.wanVpnConnections.isEmpty()) EmptyState("Nessuna connessione WAN o VPN.", actionLabel = "+ Nuova connessione", onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.wanVpnConnections, key = { it.id }) { c ->
@@ -237,7 +241,7 @@ private fun WanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
 
     if (creating || editing != null) {
         val c = editing
-        var form by remember(c) { mutableStateOf(WanForm.from(c)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, c) { mutableStateOf(WanForm.from(c)) }
         val errors = form.errors()
         EditPanel(
             title = if (c == null) "Nuova connessione" else "Modifica connessione",
@@ -274,11 +278,12 @@ private fun WanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
 @Composable
 private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<DeviceConfiguration?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Configurazioni apparati", subtitle = "Copie testuali di running-config e script") {
-            Button(onClick = { creating = true }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova configurazione") }
+            Button(onClick = { changeDetail { creating = true } }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova configurazione") }
         }
         if (project.deviceConfigurations.isEmpty()) EmptyState("Nessuna configurazione salvata.")
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -296,7 +301,7 @@ private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: 
 
     if (creating || editing != null) {
         val cfg = editing
-        var form by remember(cfg) { mutableStateOf(DeviceConfigForm.from(cfg)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, cfg) { mutableStateOf(DeviceConfigForm.from(cfg)) }
         val errors = form.errors()
         EditPanel(
             title = if (cfg == null) "Nuova configurazione" else "Modifica configurazione",
@@ -330,11 +335,12 @@ private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: 
 @Composable
 private fun ExtraFieldsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
     var editing by remember { mutableStateOf<CustomExtraField?>(null) }
+    val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader("Campi extra", subtitle = "Informazioni aggiuntive libere su progetto, apparati, rack, porte o aree") {
-            Button(onClick = { creating = true }) { Text("+ Nuovo campo") }
+            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo campo") }
         }
         if (project.customExtraFields.isEmpty()) EmptyState("Nessun campo extra.", actionLabel = "+ Nuovo campo", onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -353,7 +359,7 @@ private fun ExtraFieldsTab(project: Project, index: ProjectIndex, onProjectUpdat
 
     if (creating || editing != null) {
         val f = editing
-        var form by remember(f) { mutableStateOf(ExtraFieldForm.from(f)) }
+        var form by remember(LocalDetailSlot.current?.editorVersion, f) { mutableStateOf(ExtraFieldForm.from(f)) }
         val errors = form.errors()
         EditPanel(
             title = if (f == null) "Nuovo campo extra" else "Modifica campo extra",

@@ -132,6 +132,7 @@ data class Device(
     val category: DeviceCategory = DeviceCategory.CUSTOM,
     /** Manufacturer serial (contract 1.8); absent in 1.7 packages. */
     val serialNumber: String? = null,
+    val objectTypeId: String? = null,
 )
 
 @Serializable
@@ -154,7 +155,8 @@ enum class AttachmentTargetType {
     PROJECT,
     RACK,
     DEVICE,
-    AREA
+    AREA,
+    CABLE
 }
 
 @Serializable
@@ -308,7 +310,10 @@ data class Cable(
     val orientation: CableOrientation = CableOrientation.NONE,
     val sharedPathSegmentIds: List<String> = emptyList(),
     val observation: Observation? = null,
-    val notes: String? = null
+    val notes: String? = null,
+    val deviceAId: String? = null,
+    val deviceBId: String? = null,
+    val objectTypeId: String? = null,
 )
 
 @Serializable
@@ -634,6 +639,8 @@ data class Project(
     val attachments: List<Attachment> = emptyList(),
     val annotations: List<Annotation> = emptyList(),
     val floorplanPlacements: List<FloorplanPlacement> = emptyList(),
+    val objectTypes: List<ObjectType> = emptyList(),
+    val cableRoutes: List<CableRoute> = emptyList(),
     val cables: List<Cable> = emptyList(),
     val sharedPathSegments: List<SharedPathSegment> = emptyList(),
     val panelMappings: List<PanelMapping> = emptyList(),
