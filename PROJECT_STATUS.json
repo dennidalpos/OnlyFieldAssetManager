@@ -1,13 +1,13 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (8/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "R04",
+  "currentPhase": "Fase v1.1 in corso (9/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "F01",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 30,
-    "pendingTasks": 6,
-    "progressPercentage": 83.3,
+    "completedTasks": 31,
+    "pendingTasks": 5,
+    "progressPercentage": 86.1,
     "totalPassedTests": 103,
     "testsByModule": {
       "mobile/app": 22,
@@ -76,16 +76,15 @@
       "title": "Icone Material e tema scuro",
       "date": "2026-10-03",
       "evidence": "Material Symbols al posto delle emoji (drawable Android, SymbolIcons Windows), tema Android chiaro/scuro di sistema anche per la finestra, Windows «Visualizza › Tema scuro» salvato nella cartella dati; verificato in tema scuro su emulatore"
+    },
+    {
+      "id": "R04",
+      "title": "Refactor repository Android",
+      "date": "2026-10-03",
+      "evidence": "ProjectRepository (1.141 righe) diviso in facciata + 6 classi per area, EntityMappers (945) in 5 file di mapper; rimossi 20 metodi senza chiamanti e lo stack di undo mai letto; 22 test Android invariati e verdi"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "R04",
-      "area": "Refactor UI",
-      "title": "Refactor repository Android",
-      "description": "Dividere ProjectRepository (~1.100 righe) ed EntityMappers (~950) per area funzionale, senza cambiare comportamento.",
-      "acceptance": "Tutti i test esistenti passano invariati."
-    },
     {
       "id": "F01",
       "area": "Funzioni",
@@ -127,7 +126,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: R04."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F01."
   ],
   "residuals": [
     {
