@@ -64,7 +64,7 @@ class ProjectRepository(
     private val inventoryDao = db.inventoryDao()
     private val store = ProjectStore(db)
     private val documents = DocumentExports(store::load)
-    private val exchange = PackageExchange(attachmentsRoot, store::load, store::save)
+    private val exchange = PackageExchange(attachmentsRoot, store::load, store::save, store::saveBase)
     private val search = InventorySearch(db)
     private val trash = TrashOperations(db, store::load)
 
@@ -80,6 +80,7 @@ class ProjectRepository(
 
     /** Deletes the project and, through cascading foreign keys, everything it contains. */
     suspend fun deleteProject(projectId: String) {
+        projectDao.deleteSyncSnapshot(projectId)
         projectDao.deleteProjectById(projectId)
     }
 
@@ -163,6 +164,11 @@ class ProjectRepository(
         exchange.evaluateImportPackage(inputStream, password, currentProjectId)
 
     suspend fun importProjectPackage(pkg: ProjectPackage) = exchange.importProjectPackage(pkg)
+
+    suspend fun importMergedPackage(pkg: ProjectPackage, merged: Project) = exchange.importMerged(pkg, merged)
+
+    /** Last synced snapshot of the project, or null if it was never exported/imported. */
+    suspend fun getSyncBase(projectId: String): Project? = store.loadBase(projectId)
 
     fun attachmentFile(projectId: String, attachment: com.onlyfield.assetmanager.core.model.Attachment) = exchange.attachmentFile(projectId, attachment)
 

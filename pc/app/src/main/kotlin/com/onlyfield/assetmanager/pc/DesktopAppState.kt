@@ -18,6 +18,11 @@ import com.onlyfield.assetmanager.exchange.PackageManifest
 import com.onlyfield.assetmanager.exchange.ProjectComparison
 import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
 import com.onlyfield.assetmanager.exchange.ProjectPackage
+import com.onlyfield.assetmanager.exchange.MergeConflict
+import com.onlyfield.assetmanager.exchange.MergeKey
+import com.onlyfield.assetmanager.exchange.MergeResult
+import com.onlyfield.assetmanager.exchange.MergeSide
+import com.onlyfield.assetmanager.exchange.ProjectMerger
 import java.io.File
 
 /** Main areas of the editor, in navigation-rail order. */
@@ -38,6 +43,10 @@ sealed interface AppDialog {
     data class ImportPassword(val file: File, val error: String? = null) : AppDialog
     data object ManagePassword : AppDialog
     data class Compare(val comparison: ProjectComparison, val pkg: ProjectPackage, val password: String?) : AppDialog
+    /** Merge conflicts answered one at a time (F04). */
+    data class Merge(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap()) : AppDialog {
+        val current: MergeConflict? get() = result.conflicts.getOrNull(choices.size)
+    }
     data object Documents : AppDialog
     data object Validation : AppDialog
 }
@@ -256,12 +265,37 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         dialog = null
         storage.extractAttachments(pkg)
         open(pkg.project, pkg.manifest, password, "Aperto «${pkg.project.name}» (${pkg.project.businessUnits.sumOf { it.devices.size }} apparati).")
+        if (compare) storage.saveSyncBase(pkg.project, password)
     }
 
     fun acceptIncoming(pkg: ProjectPackage, incomingPassword: String?) {
         dialog = null
         storage.extractAttachments(pkg)
         open(pkg.project, pkg.manifest, incomingPassword, "Sostituita la copia di lavoro con «${pkg.project.name}».")
+        storage.saveSyncBase(pkg.project, incomingPassword)
+    }
+
+    /** Three-way merge of the package into the open copy; without conflicts it is applied at once. */
+    fun startMerge(pkg: ProjectPackage) {
+        val current = project ?: return
+        val result = ProjectMerger.merge(storage.loadSyncBase(current.id, password), current, pkg.project)
+        val merge = AppDialog.Merge(pkg, result)
+        if (result.conflicts.isEmpty()) applyMerge(merge) else dialog = merge
+    }
+
+    fun chooseMergeSide(side: MergeSide) {
+        val merge = dialog as? AppDialog.Merge ?: return
+        val conflict = merge.current ?: return
+        val next = merge.copy(choices = merge.choices + (conflict.key to side))
+        if (next.current == null) applyMerge(next) else dialog = next
+    }
+
+    private fun applyMerge(merge: AppDialog.Merge) {
+        dialog = null
+        storage.extractAttachments(merge.pkg)
+        // Through update(): the merge can be undone with Ctrl+Z like any other change.
+        update(merge.result.resolve(merge.choices), "Unione completata: ${merge.result.autoApplied} modifiche dal pacchetto, ${merge.choices.size} conflitti risolti.")
+        storage.saveSyncBase(merge.pkg.project, password)
     }
 
     fun exportPackage() {
@@ -272,6 +306,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         ) ?: return
         try {
             storage.exportPackageToFile(p, file, password)
+            storage.saveSyncBase(p, password)
             val missing = storage.missingAttachments(p)
             error = if (missing.isEmpty()) null
             else "Esportato, ma ${missing.size} allegati non hanno il file sul disco e non sono nel pacchetto: " + missing.joinToString { it.name }

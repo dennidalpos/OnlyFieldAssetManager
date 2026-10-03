@@ -61,4 +61,29 @@ class DesktopAppStateTest {
         state.openStored(file)
         assertEquals(listOf("SW-01"), state.trash.map { it.displayName })
     }
+
+    @Test
+    fun mergeAppliesRemoteChangesAndAsksOnConflicts() {
+        val state = newState()
+        state.createProject(site("CED"))
+        val p = state.project!!
+        val buId = p.businessUnits.first().id
+        val sw = Device(technicalName = "SW-01", ipAddress = "10.0.0.1")
+        state.update(ProjectEdits.addDevice(p, buId, sw), "aggiunto")
+        val exported = state.project!!
+        state.storage.saveSyncBase(exported, null) // as after an export
+
+        // Phone renames the device and adds a rack; the PC changes the same device's IP.
+        val phone = ProjectEdits.addRack(ProjectEdits.updateDevice(exported, sw.copy(technicalName = "SW-PIANO1")), Rack(name = "R-Telefono"))
+        state.update(ProjectEdits.updateDevice(state.project!!, sw.copy(ipAddress = "10.0.0.9")), "IP")
+
+        state.startMerge(com.onlyfield.assetmanager.exchange.ProjectPackage(com.onlyfield.assetmanager.exchange.PackageManifest(exportId = "x", exportedEpochMs = 1L, projectId = p.id, projectName = p.name), phone))
+        val merge = state.dialog as AppDialog.Merge
+        assertEquals("SW-01", merge.current!!.name)
+        state.chooseMergeSide(com.onlyfield.assetmanager.exchange.MergeSide.INCOMING)
+        val merged = state.project!!
+        assertEquals(listOf("R-Telefono"), merged.racks.map { it.name })
+        assertEquals("SW-PIANO1", merged.businessUnits.first().devices.single().technicalName)
+        assertTrue(state.canUndo)
+    }
 }

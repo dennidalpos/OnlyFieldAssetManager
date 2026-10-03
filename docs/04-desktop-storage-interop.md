@@ -40,3 +40,7 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
      - Importazione ed estrazione trasparente su Windows Desktop via `DesktopStorageManager`.
      - Modifica ed aggiornamento transazionale atomico su Windows.
      - Re-esportazione pacchetto da Windows ed importazione su Android con riscontro `NEWER_REVISION` e verifica dell'integrità del modello di dominio.
+
+## Fusione all'import (fase v1.1, F04)
+
+Quando si importa un pacchetto dello stesso progetto, oltre a «Sostituisci» è disponibile «Unisci…» (Android: revisione dell'import; Windows: finestra di confronto). Le modifiche fatte da una sola parte dopo l'ultimo scambio vengono applicate da sole; per ogni elemento modificato in entrambe le copie l'app mostra il conflitto (tipo, nome, campi diversi) e chiede «Tieni mio» o «Tieni importato», uno alla volta. La base è l'ultima istantanea sincronizzata (`data/sync/<id>.ofam` su Windows, tabella `sync_snapshots` su Android), aggiornata a ogni export e import. Su Windows l'unione è una modifica come le altre e si annulla con Ctrl+Z.

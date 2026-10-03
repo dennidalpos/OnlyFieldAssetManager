@@ -35,8 +35,9 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         PoeMappingEntity::class,
         DocumentBadgeEntity::class,
         TrashItemEntity::class,
+        SyncSnapshotEntity::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -552,9 +553,16 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** Merge base snapshots (F04). */
+        val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS `sync_snapshots` (`projectId` TEXT NOT NULL, `projectJson` TEXT NOT NULL, `savedEpochMs` INTEGER NOT NULL, PRIMARY KEY(`projectId`))")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-            MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10,
+            MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11,
         )
     }
 }

@@ -238,6 +238,19 @@ class ProjectRepositoryTest {
     }
 
     @Test
+    fun syncBaseFollowsExportAndSurvivesSaves() = runBlocking {
+        val projId = UUID.randomUUID().toString()
+        val p = Project(id = projId, name = "Base", createdEpochMs = 1L, updatedEpochMs = 1L)
+        repository.saveProject(p)
+        assertEquals(null, repository.getSyncBase(projId))
+        repository.exportProjectPackage(projId)
+        repository.saveProject(p.copy(name = "Rinominato", updatedEpochMs = 2L))
+        assertEquals("Base", repository.getSyncBase(projId)!!.name)
+        repository.deleteProject(projId)
+        assertEquals(null, repository.getSyncBase(projId))
+    }
+
+    @Test
     fun serialNumberIsStoredAndSearchable() = runBlocking {
         val projId = UUID.randomUUID().toString()
         val device = Device(technicalName = "SW-SER", serialNumber = "FOC1234X0AB")

@@ -23,4 +23,13 @@ interface ProjectDao {
 
     @Query("DELETE FROM projects WHERE id = :id")
     suspend fun deleteProjectById(id: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveSyncSnapshot(snapshot: SyncSnapshotEntity)
+
+    @Query("SELECT * FROM sync_snapshots WHERE projectId = :projectId")
+    suspend fun getSyncSnapshot(projectId: String): SyncSnapshotEntity?
+
+    @Query("DELETE FROM sync_snapshots WHERE projectId = :projectId")
+    suspend fun deleteSyncSnapshot(projectId: String)
 }

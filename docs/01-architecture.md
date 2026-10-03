@@ -31,11 +31,13 @@ OnlyFieldAssetManager/
    - Cifratura simmetrica AES-256-GCM / PBKDF2.
    - Verifica della password di progetto (`PasswordHasher`): PBKDF2-HMAC-SHA256 con salt casuale da 16 byte e 600.000 iterazioni (OWASP Password Storage Cheat Sheet), formato `pbkdf2-sha256$<iterazioni>$<salt>$<hash>`; gli hash SHA-256 senza salt delle versioni precedenti sono accettati e ricalcolati al primo sblocco riuscito.
    - Foglio etichette QR A4 (`LabelSheetPdf`, ZXing core) condiviso da Android e Windows.
+   - Fusione a tre vie all'import (`ProjectMerger`): il progetto è scomposto in elementi identificati per id (dati del progetto, business unit, sedi, aree, apparati con le loro porte, ogni voce delle altre liste) e confrontato con la base. Una modifica fatta da una parte sola viene applicata da sé; un elemento cambiato in entrambe le copie è un conflitto da risolvere con «tieni mio» o «tieni importato». Senza base ogni differenza è un conflitto. Gli elementi rimasti senza genitore (es. apparato spostato in una business unit eliminata dall'altra parte) vengono tenuti sotto la prima business unit.
+   - Base della fusione = ultima istantanea sincronizzata, cioè la copia che l'altro dispositivo ha visto per ultima: si salva a ogni export (progetto esportato) e a ogni import (progetto del pacchetto). Android la tiene nella tabella `sync_snapshots` del DB cifrato (v11); Windows in `data/sync/<id>.ofam`, cifrato con la password del progetto se protetto.
    - Generatori di documentazione espostabile: OpenXML XLSX (`XlsxExportManager`), Markdown (`MarkdownExportManager`), confronto semantico (`ProjectComparison`).
 
 3. **`:mobile:app`**:
    - Applicazione Android Jetpack Compose (minSdk 34, compileSdk 37, targetSdk 35).
-   - Persistenza locale autonoma con Room Database (`AppDatabase`) e migrazioni (v1 -> v10; la 9 -> 10 aggiunge il numero di serie).
+   - Persistenza locale autonoma con Room Database (`AppDatabase`) e migrazioni (v1 -> v11; la 9 -> 10 aggiunge il numero di serie, la 10 -> 11 la base di sincronizzazione).
    - Livello dati diviso per area dietro la facciata `ProjectRepository`: `ProjectStore` (lettura/scrittura dell'albero del progetto), `DocumentExports` (PDF, Excel, Markdown, stampa), `PackageExchange` (pacchetti `.ofam` e file allegati), `InventorySearch`, `TrashOperations` (cestino, sostituzione, fusione, modifica in blocco), `CableTracer`; mapper Room ↔ dominio in `data.repository.mappers` (struttura, media, cablaggio, rete, alimentazione).
    - Database cifrato con SQLCipher (`EncryptedDatabase`): chiave casuale da 256 bit, conservata in `no_backup/db_key.bin` cifrata con una chiave AES-GCM del Keystore Android; il DB in chiaro delle versioni precedenti viene convertito una sola volta all'avvio (`sqlcipher_export`).
    - Backup automatico e trasferimento tra dispositivi disattivati (`allowBackup="false"`, `data_extraction_rules.xml`): i progetti escono dal telefono solo con l'export `.ofam`.

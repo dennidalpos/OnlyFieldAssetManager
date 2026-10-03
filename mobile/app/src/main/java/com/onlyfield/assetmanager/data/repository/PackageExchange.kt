@@ -41,6 +41,7 @@ internal class PackageExchange(
     private val attachmentsRoot: java.io.File?,
     private val load: suspend (String) -> Project?,
     private val save: suspend (Project) -> Unit,
+    private val saveBase: suspend (Project) -> Unit,
 ) {
     private suspend fun getProjectById(projectId: String) = load(projectId)
     private suspend fun saveProject(project: Project) = save(project)
@@ -48,7 +49,7 @@ internal class PackageExchange(
     suspend fun exportProjectPackage(projectId: String, password: String? = null): ByteArray? {
         val project = getProjectById(projectId) ?: return null
         val files = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
-        return PackageSerializer.exportPackage(project, attachments = files, password = password)
+        return PackageSerializer.exportPackage(project, attachments = files, password = password).also { saveBase(project) }
     }
 
     /** Local file of an attachment, also accepting the older `filesDir`-relative path. */
@@ -104,6 +105,14 @@ internal class PackageExchange(
     suspend fun importProjectPackage(pkg: ProjectPackage): Boolean {
         attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
         saveProject(pkg.project)
+        saveBase(pkg.project)
         return true
+    }
+
+    /** Saves the result of a merge; the base becomes the package, i.e. what the other device has. */
+    suspend fun importMerged(pkg: ProjectPackage, merged: Project) {
+        attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
+        saveProject(merged)
+        saveBase(pkg.project)
     }
 }

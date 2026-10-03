@@ -19,6 +19,7 @@ import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import com.onlyfield.assetmanager.exchange.LabelSheetPdf
+import com.onlyfield.assetmanager.exchange.MergeSide
 import com.onlyfield.assetmanager.pc.AppDialog
 import com.onlyfield.assetmanager.pc.DesktopAppState
 import com.onlyfield.assetmanager.pc.DesktopDocumentManager
@@ -34,6 +35,7 @@ fun ProjectDialogs(state: DesktopAppState) {
         is AppDialog.ImportPassword -> ImportPasswordDialog(state, d)
         AppDialog.ManagePassword -> ManagePasswordDialog(state)
         is AppDialog.Compare -> CompareDialog(state, d)
+        is AppDialog.Merge -> MergeDialog(state, d)
         AppDialog.Documents -> DocumentsDialog(state)
         AppDialog.Validation -> ValidationDialog(state)
     }
@@ -177,13 +179,47 @@ private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
                 Text("Esito del confronto: ${d.comparison.status.toDisplayString()}")
                 d.comparison.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Text(
-                    "Il progetto aperto verrà sostituito dal contenuto del pacchetto. Non viene eseguita alcuna unione automatica.",
+                    "«Sostituisci» usa solo il pacchetto. «Unisci» tiene le modifiche di entrambe le copie e chiede cosa fare " +
+                        "quando lo stesso elemento è cambiato in tutte e due.",
                     style = MaterialTheme.typography.bodySmall
                 )
             }
         },
-        confirmButton = { Button(onClick = { state.acceptIncoming(d.pkg, d.password) }) { Text("Sostituisci") } },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                val sameProject = d.comparison.currentProjectId == d.pkg.project.id
+                if (sameProject) OutlinedButton(onClick = { state.startMerge(d.pkg) }) { Text("Unisci…") }
+                Button(onClick = { state.acceptIncoming(d.pkg, d.password) }) { Text("Sostituisci") }
+            }
+        },
         dismissButton = { TextButton(onClick = { state.dialog = null }) { Text("Annulla") } }
+    )
+}
+
+@Composable
+private fun MergeDialog(state: DesktopAppState, d: AppDialog.Merge) {
+    val conflict = d.current ?: return
+    AlertDialog(
+        onDismissRequest = {},
+        modifier = Modifier.width(600.dp),
+        title = { Text("Conflitto ${d.choices.size + 1} di ${d.result.conflicts.size}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("${conflict.kindLabel}: ${conflict.name}", fontWeight = FontWeight.SemiBold)
+                Text(conflict.description)
+                LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                    items(conflict.differences()) { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                }
+                if (d.result.autoApplied > 0) Text("${d.result.autoApplied} modifiche senza conflitto verranno applicate da sole.", style = MaterialTheme.typography.bodySmall)
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { state.chooseMergeSide(MergeSide.LOCAL) }) { Text("Tieni mio") }
+                Button(onClick = { state.chooseMergeSide(MergeSide.INCOMING) }) { Text("Tieni importato") }
+            }
+        },
+        dismissButton = { TextButton(onClick = { state.dialog = null }) { Text("Annulla unione") } }
     )
 }
 

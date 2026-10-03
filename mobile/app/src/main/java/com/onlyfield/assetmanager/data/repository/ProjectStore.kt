@@ -301,4 +301,14 @@ internal class ProjectStore(private val db: AppDatabase) {
             if (documentBadgeEntities.isNotEmpty()) inventoryDao.insertDocumentBadges(documentBadgeEntities)
         }
     }
+
+    /** Stores [project] as the merge base: the state the other device now has. */
+    suspend fun saveBase(project: Project) {
+        val json = PackageSerializer.jsonConfig.encodeToString(Project.serializer(), project)
+        projectDao.saveSyncSnapshot(com.onlyfield.assetmanager.data.local.SyncSnapshotEntity(project.id, json, System.currentTimeMillis()))
+    }
+
+    suspend fun loadBase(projectId: String): Project? = projectDao.getSyncSnapshot(projectId)?.let {
+        runCatching { PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), it.projectJson) }.getOrNull()
+    }
 }

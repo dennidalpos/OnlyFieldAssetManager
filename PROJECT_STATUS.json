@@ -1,19 +1,19 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (12/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "F04",
+  "currentPhase": "Fase v1.1 in corso (13/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "F05",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 34,
-    "pendingTasks": 2,
-    "progressPercentage": 94.4,
-    "totalPassedTests": 110,
+    "completedTasks": 35,
+    "pendingTasks": 1,
+    "progressPercentage": 97.2,
+    "totalPassedTests": 117,
     "testsByModule": {
-      "mobile/app": 23,
+      "mobile/app": 24,
       "shared/core": 30,
-      "shared/exchange": 19,
-      "pc/app": 38
+      "shared/exchange": 24,
+      "pc/app": 39
     }
   },
   "completedTasks": [
@@ -100,16 +100,15 @@
       "title": "Etichette QR proprie",
       "date": "2026-10-03",
       "evidence": "LabelCode ofam://<progetto>/<tipo>/<id> riconosciuto da CodeLookup (apparati, rack, cavi; altro progetto segnalato), foglio A4 condiviso LabelSheetPdf (ZXing 3.5.4) su Android e Windows; orientamento dei QR verificato sul PDF generato"
+    },
+    {
+      "id": "F04",
+      "title": "Fusione all'import con scelta per elemento",
+      "date": "2026-10-03",
+      "evidence": "ProjectMerger (fusione a tre vie per elemento, conflitti tieni mio/importato, senza base ogni differenza è conflitto) con base salvata a ogni export/import (Android sync_snapshots DB v11, Windows data/sync cifrato); UI uno-per-uno su entrambe le app; ProjectMergerTest (5 casi) + test Windows; migrazione verificata su emulatore"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "F04",
-      "area": "Funzioni",
-      "title": "Fusione all'import con scelta per elemento",
-      "description": "Fusione a tre vie in :shared:exchange estendendo ProjectComparisonEvaluator (caso DIVERGENT), con base = ultima istantanea sincronizzata salvata a ogni export/import. Modifiche senza conflitto applicate da sole; per ogni conflitto \"tieni mio\" / \"tieni importato\"; senza base ogni differenza è un conflitto. UI su entrambe le app.",
-      "acceptance": "Due copie modificate in parti diverse si fondono senza perdite; i conflitti sono mostrati uno per uno."
-    },
     {
       "id": "F05",
       "area": "Funzioni",
@@ -123,7 +122,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F04."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F05."
   ],
   "residuals": [
     {

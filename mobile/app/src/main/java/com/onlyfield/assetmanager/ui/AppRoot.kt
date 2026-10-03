@@ -3,6 +3,11 @@ package com.onlyfield.assetmanager.ui
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.Modifier
+import com.onlyfield.assetmanager.exchange.MergeSide
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
@@ -111,11 +116,38 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
                             Text(comparisonLabel(c.status.name))
                             c.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         }
-                        if (sameProjectExists) Text("La copia attuale verrà sostituita. Non viene eseguita alcuna unione automatica.", style = MaterialTheme.typography.bodySmall)
+                        if (sameProjectExists) Text("«Sostituisci» usa solo il pacchetto. «Unisci» tiene le modifiche di entrambe le copie e chiede cosa fare quando lo stesso elemento è cambiato in tutte e due.", style = MaterialTheme.typography.bodySmall)
                     }
                 },
-                confirmButton = { TextButton(onClick = vm::confirmImport) { Text(if (sameProjectExists) "Sostituisci" else "Importa") } },
+                confirmButton = {
+                    Row {
+                        if (sameProjectExists && comparison?.status?.name != "IDENTICAL") TextButton(onClick = vm::startMerge) { Text("Unisci…") }
+                        TextButton(onClick = vm::confirmImport) { Text(if (sameProjectExists) "Sostituisci" else "Importa") }
+                    }
+                },
                 dismissButton = { TextButton(onClick = vm::cancelImport) { Text("Annulla") } }
+            )
+        }
+        is ImportState.Merging -> {
+            val conflict = state.current ?: return
+            AlertDialog(
+                onDismissRequest = {},
+                title = { Text("Conflitto ${state.choices.size + 1} di ${state.result.conflicts.size}") },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Text("${conflict.kindLabel}: ${conflict.name}", fontWeight = FontWeight.SemiBold)
+                        Text(conflict.description)
+                        conflict.differences().forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                        if (state.result.autoApplied > 0) Text("${state.result.autoApplied} modifiche senza conflitto verranno applicate da sole.", style = MaterialTheme.typography.bodySmall)
+                    }
+                },
+                confirmButton = {
+                    Row {
+                        TextButton(onClick = { vm.chooseMergeSide(MergeSide.LOCAL) }) { Text("Tieni mio") }
+                        TextButton(onClick = { vm.chooseMergeSide(MergeSide.INCOMING) }) { Text("Tieni importato") }
+                    }
+                },
+                dismissButton = { TextButton(onClick = vm::cancelImport) { Text("Annulla unione") } }
             )
         }
     }

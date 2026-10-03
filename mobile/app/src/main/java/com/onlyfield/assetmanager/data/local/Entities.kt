@@ -684,3 +684,14 @@ data class TrashItemEntity(
     val deletedEpochMs: Long,
     val affectedReferencesSummary: String?
 )
+
+/**
+ * Merge base (F04): the project as the other device last saw it, saved at every export and import.
+ * No foreign key on purpose: saveProject replaces the project row, which would cascade-delete it.
+ */
+@Entity(tableName = "sync_snapshots")
+data class SyncSnapshotEntity(
+    @PrimaryKey val projectId: String,
+    val projectJson: String,
+    val savedEpochMs: Long,
+)

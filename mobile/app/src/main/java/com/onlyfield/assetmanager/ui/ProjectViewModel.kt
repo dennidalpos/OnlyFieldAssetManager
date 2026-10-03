@@ -23,6 +23,12 @@ import com.onlyfield.assetmanager.data.repository.PackageImportEvaluation
 import com.onlyfield.assetmanager.data.repository.ProjectRepository
 import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.exchange.LabelSheetPdf
+import com.onlyfield.assetmanager.exchange.MergeConflict
+import com.onlyfield.assetmanager.exchange.MergeKey
+import com.onlyfield.assetmanager.exchange.MergeResult
+import com.onlyfield.assetmanager.exchange.MergeSide
+import com.onlyfield.assetmanager.exchange.ProjectMerger
+import com.onlyfield.assetmanager.exchange.ProjectPackage
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -42,6 +48,10 @@ data class UiMessage(val text: String, val undo: (() -> Unit)? = null, val isErr
 sealed interface ImportState {
     data class NeedsPassword(val uri: Uri, val wrongPassword: Boolean = false) : ImportState
     data class Review(val evaluation: PackageImportEvaluation) : ImportState
+    /** Conflicts of a merge, answered one at a time (F04). */
+    data class Merging(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap()) : ImportState {
+        val current: MergeConflict? get() = result.conflicts.getOrNull(choices.size)
+    }
 }
 
 /**
@@ -384,6 +394,43 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun cancelImport() {
         _importState.value = null
+    }
+
+    /** Three-way merge of the package with the local copy; without conflicts it is applied at once. */
+    fun startMerge() {
+        val review = _importState.value as? ImportState.Review ?: return
+        val pkg = review.evaluation.importResult.pkg ?: return
+        viewModelScope.launch {
+            try {
+                val local = repository.getProjectById(pkg.project.id) ?: error("copia locale non trovata")
+                val result = ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project)
+                if (result.conflicts.isEmpty()) applyMerge(ImportState.Merging(pkg, result))
+                else _importState.value = ImportState.Merging(pkg, result)
+            } catch (e: Exception) {
+                _importState.value = null
+                fail("Unione non riuscita", e)
+            }
+        }
+    }
+
+    fun chooseMergeSide(side: MergeSide) {
+        val merging = _importState.value as? ImportState.Merging ?: return
+        val conflict = merging.current ?: return
+        val next = merging.copy(choices = merging.choices + (conflict.key to side))
+        if (next.current == null) applyMerge(next) else _importState.value = next
+    }
+
+    private fun applyMerge(merging: ImportState.Merging) {
+        _importState.value = null
+        viewModelScope.launch {
+            try {
+                repository.importMergedPackage(merging.pkg, merging.result.resolve(merging.choices))
+                openProject(merging.pkg.project.id)
+                notify("Unione completata: ${merging.result.autoApplied} modifiche dal pacchetto, ${merging.choices.size} conflitti risolti.")
+            } catch (e: Exception) {
+                fail("Unione non riuscita", e)
+            }
+        }
     }
 
     // --- Documents -------------------------------------------------------------------------------

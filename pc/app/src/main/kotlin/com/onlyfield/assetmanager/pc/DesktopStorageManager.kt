@@ -85,6 +85,28 @@ class DesktopStorageManager(
     fun getProjectsFolder(): File = File(dataDir, "projects")
     fun getTempFolder(): File = File(dataDir, "tmp")
 
+    // --- Merge base (F04): the project as the other device last saw it -----------------------
+
+    private fun syncBaseFile(projectId: String) = File(dataDir, "sync/$projectId.ofam")
+
+    /** Saved as a package so a protected project keeps its base encrypted with the same password. */
+    fun saveSyncBase(project: Project, password: String?) {
+        try {
+            val file = syncBaseFile(project.id).apply { parentFile?.mkdirs() }
+            val tmp = File(file.path + ".tmp")
+            tmp.writeBytes(PackageSerializer.exportPackage(project, password = password))
+            java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
+        } catch (_: Exception) {
+            // Without a base the next merge simply asks about every difference.
+        }
+    }
+
+    fun loadSyncBase(projectId: String, password: String?): Project? = try {
+        syncBaseFile(projectId).takeIf { it.isFile }?.let { PackageSerializer.importPackage(it.readBytes(), password).pkg?.project }
+    } catch (_: Exception) {
+        null
+    }
+
     /** Folder holding the files of the attachments, one sub-folder per project. */
     fun getMediaFolder(): File = File(dataDir, "media")
 
