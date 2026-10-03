@@ -41,14 +41,20 @@ private fun WelcomeCard(state: DesktopAppState) {
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Benvenuto in OnlyField Asset Manager", style = MaterialTheme.typography.headlineSmall)
+            state.storedProjects.maxByOrNull { it.lastModifiedEpochMs }?.let { last ->
+                Button(onClick = { state.openStored(last.file) }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                    Text("Continua: «${last.name}»", style = MaterialTheme.typography.titleMedium)
+                }
+            }
             Text(
-                "Crea un nuovo progetto oppure apri un pacchetto .ofam esportato dall'app Android o da un altro PC. " +
+                "Censisci un sito partendo da zero, oppure apri il pacchetto .ofam ricevuto dal telefono o da un collega. " +
                     "Le modifiche vengono salvate automaticamente nella cartella dati.",
                 style = MaterialTheme.typography.bodyMedium
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { state.dialog = AppDialog.NewProject }) { Text("Nuovo progetto") }
-                OutlinedButton(onClick = state::pickAndImport) { Text("Apri / Importa .ofam…") }
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                val big = Modifier.weight(1f).heightIn(min = 52.dp)
+                Button(onClick = { state.dialog = AppDialog.NewProject }, modifier = big) { Text("Inizia un nuovo sito") }
+                OutlinedButton(onClick = state::pickAndImport, modifier = big) { Text("Apri un pacchetto ricevuto (.ofam)…") }
             }
         }
     }

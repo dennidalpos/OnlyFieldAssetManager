@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -37,27 +38,39 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
         busy = vm.busy,
         actions = { TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Text("Importa .ofam") } },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = vm::startNewSite, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Nuovo sito") })
+            if (projects.isNotEmpty()) {
+                ExtendedFloatingActionButton(onClick = vm::startNewSite, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Nuovo sito") })
+            }
         }
     ) { padding ->
+        val open = { p: ProjectEntity -> if (p.isPasswordProtected) unlocking = p else vm.openProject(p.id) }
         if (projects.isEmpty()) {
-            EmptyState(
-                "Nessun progetto. Creane uno nuovo o importa un pacchetto .ofam ricevuto dal PC.",
-                Modifier.padding(padding),
-                actionLabel = "Importa .ofam",
-                onAction = { importLauncher.launch(arrayOf("*/*")) }
+            StartActions(
+                onNewSite = vm::startNewSite,
+                onImport = { importLauncher.launch(arrayOf("*/*")) },
+                modifier = Modifier.padding(padding)
             )
         } else LazyColumn(
             modifier = Modifier.padding(padding),
             contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            // Projects are ordered by last change: the first one is where the user left off.
+            item(key = "continue") {
+                val last = projects.first()
+                Button(onClick = { open(last) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
+                    Text("Continua: «${last.name}»", style = MaterialTheme.typography.titleMedium)
+                }
+            }
+            item(key = "header") {
+                Text("Tutti i progetti", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+            }
             items(projects, key = { it.id }) { p ->
                 ItemCard(
                     title = p.name,
                     badge = if (p.isPasswordProtected) "🔒 Protetto" else null,
                     details = listOf(p.description.orEmpty(), "Modificato ${formatDateTime(p.updatedEpochMs)}"),
-                    onClick = { if (p.isPasswordProtected) unlocking = p else vm.openProject(p.id) },
+                    onClick = { open(p) },
                     menu = listOf(
                         MenuAction("Rinomina") { renaming = p },
                         MenuAction("Elimina", destructive = true) {
@@ -98,5 +111,27 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
             },
             dismissButton = { TextButton(onClick = { unlocking = null }) { Text("Annulla") } }
         )
+    }
+}
+
+/** First launch: the two ways to get a project onto the phone. */
+@Composable
+private fun StartActions(onNewSite: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
+    Column(
+        modifier.fillMaxSize().padding(24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+    ) {
+        Text("Benvenuto", style = MaterialTheme.typography.headlineMedium)
+        Text(
+            "Censisci un sito partendo da zero, oppure apri il progetto che hai ricevuto dal PC o da un collega.",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Button(onClick = onNewSite, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+            Text("Inizia un nuovo sito", style = MaterialTheme.typography.titleMedium)
+        }
+        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
+            Text("Apri un pacchetto ricevuto (.ofam)", style = MaterialTheme.typography.titleMedium)
+        }
     }
 }

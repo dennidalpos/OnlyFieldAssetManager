@@ -8,8 +8,8 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (3 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 25 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Fase v1.1 (S/O/R/F)**: In corso (4 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 26 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
 - **Test Unitari Totali Passati**: 102 test su 102 (22 mobile/app, 27 shared/core, 16 shared/exchange, 37 pc/app).
 
 ## Tabella Riassuntiva degli Step
@@ -41,7 +41,7 @@ Data aggiornamento: 3 ottobre 2026
 | **S01** | Sicurezza | Database Android cifrato | Completato | 03/10/2026 | Room + SQLCipher 4.19.1 (EncryptedDatabase), chiave casuale cifrata con chiave Keystore in no_backup/; migrazione del DB v9 in chiaro provata su emulatore (progetto esistente aperto, file non più leggibile come SQLite); allowBackup=false + data_extraction_rules |
 | **S02** | Sicurezza | Password del progetto con PBKDF2 e salt | Completato | 03/10/2026 | PasswordHasher in :shared:exchange (PBKDF2-HMAC-SHA256, salt 16 byte, 600.000 iterazioni); hash SHA-256 legacy ricalcolati al primo sblocco; PasswordHasherTest + test di migrazione nel repository |
 | **O01** | Avvio | Procedura guidata "Nuovo sito" condivisa | Completato | 03/10/2026 | core.onboarding.NewSiteWizard (passi, validazione, creazione via ProjectEdits) usato da Android NewSiteScreen e dalla finestra a passi Windows; NewSiteWizardTest + test Windows con password |
-| **O02** | Avvio | Schermata iniziale chiara | Da fare | — | — |
+| **O02** | Avvio | Schermata iniziale chiara | Completato | 03/10/2026 | Android ProjectsScreen: azioni grandi al primo avvio e «Continua: «ultimo progetto»» in cima; Windows WelcomeCard con le stesse azioni; procedura verificata su emulatore |
 | **O03** | Avvio | Home progetto Android: ricerca e azioni rapide | Da fare | — | — |
 | **R01** | Refactor UI | Android: modifiche a pagina intera | Da fare | — | — |
 | **R02** | Refactor UI | Windows: pannello laterale (master-detail) | Da fare | — | — |
@@ -75,5 +75,5 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: O02.
+- Nessuna decisione aperta. Prossimo task: O03.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.

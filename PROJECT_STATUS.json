@@ -1,13 +1,13 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (3/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "O02",
+  "currentPhase": "Fase v1.1 in corso (4/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "O03",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 25,
-    "pendingTasks": 11,
-    "progressPercentage": 69.4,
+    "completedTasks": 26,
+    "pendingTasks": 10,
+    "progressPercentage": 72.2,
     "totalPassedTests": 102,
     "testsByModule": {
       "mobile/app": 22,
@@ -46,16 +46,15 @@
       "title": "Procedura guidata \"Nuovo sito\" condivisa",
       "date": "2026-10-03",
       "evidence": "core.onboarding.NewSiteWizard (passi, validazione, creazione via ProjectEdits) usato da Android NewSiteScreen e dalla finestra a passi Windows; NewSiteWizardTest + test Windows con password"
+    },
+    {
+      "id": "O02",
+      "title": "Schermata iniziale chiara",
+      "date": "2026-10-03",
+      "evidence": "Android ProjectsScreen: azioni grandi al primo avvio e «Continua: «ultimo progetto»» in cima; Windows WelcomeCard con le stesse azioni; procedura verificata su emulatore"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "O02",
-      "area": "Avvio",
-      "title": "Schermata iniziale chiara",
-      "description": "Senza progetti: due azioni grandi \"Inizia un nuovo sito\" e \"Apri un pacchetto ricevuto (.ofam)\" con una riga di spiegazione; con progetti: \"Continua: «ultimo progetto»\" in cima. Android ProjectsScreen, Windows WelcomeCard.",
-      "acceptance": "Al primo avvio un utente nuovo arriva in un progetto in pochi tocchi, senza istruzioni esterne."
-    },
     {
       "id": "O03",
       "area": "Avvio",
@@ -132,7 +131,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: O02."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: O03."
   ],
   "residuals": [
     {

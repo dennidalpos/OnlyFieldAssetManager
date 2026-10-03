@@ -142,4 +142,9 @@ Riferimento dei percorsi:
 - I messaggi di validazione sono in italiano.
 - Su Windows le planimetrie mostrano l'immagine di sfondo e gli allegati si aprono con l'applicazione predefinita.
 
-Resta aperto RES-07 (mappe su Android, richiede una decisione sul permesso di rete).
+RES-07 (mappe su Android) è stato deciso il 3 ottobre 2026 ed è pianificato come F05.
+
+## Fase v1.1: avvio
+
+- **Nuovo sito (O01)**: una procedura guidata condivisa (`core.onboarding`) sostituisce il dialog «Nuovo progetto». I passi sono progetto/cliente → sede → prima area → primo apparato (saltabile) → password (facoltativa). Su Android è una schermata, dove il tasto Indietro torna al passo precedente; su Windows è una finestra a passi.
+- **Schermata iniziale (O02)**: al primo avvio due azioni grandi, «Inizia un nuovo sito» e «Apri un pacchetto ricevuto (.ofam)», con una riga di spiegazione. Quando ci sono progetti, in cima compare «Continua: «ultimo progetto»» (il più recente). Android: `ProjectsScreen`; Windows: `WelcomeCard`.

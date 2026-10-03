@@ -36,7 +36,7 @@ fun main() = application {
     ) {
         MenuBar {
             Menu("File", mnemonic = 'F') {
-                Item("Nuovo progetto…", shortcut = KeyShortcut(Key.N, ctrl = true), onClick = { state.dialog = AppDialog.NewProject })
+                Item("Nuovo sito…", shortcut = KeyShortcut(Key.N, ctrl = true), onClick = { state.dialog = AppDialog.NewProject })
                 Item("Apri / Importa .ofam…", shortcut = KeyShortcut(Key.O, ctrl = true), onClick = state::pickAndImport)
                 Item("Esporta .ofam…", shortcut = KeyShortcut(Key.E, ctrl = true), enabled = hasProject, onClick = state::exportPackage)
                 Separator()
