@@ -22,7 +22,6 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
     val context = LocalContext.current
     val confirm = LocalConfirm.current
     val projects by vm.projects.collectAsState()
-    var creating by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<ProjectEntity?>(null) }
     var unlocking by remember { mutableStateOf<ProjectEntity?>(null) }
 
@@ -38,7 +37,7 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
         busy = vm.busy,
         actions = { TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Text("Importa .ofam") } },
         floatingActionButton = {
-            ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Nuovo progetto") })
+            ExtendedFloatingActionButton(onClick = vm::startNewSite, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Nuovo sito") })
         }
     ) { padding ->
         if (projects.isEmpty()) {
@@ -69,20 +68,6 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
                     )
                 )
             }
-        }
-    }
-
-    if (creating) {
-        var name by remember { mutableStateOf("") }
-        var description by remember { mutableStateOf("") }
-        var bu by remember { mutableStateOf("Sede principale") }
-        var area by remember { mutableStateOf("") }
-        FormDialog("Nuovo progetto", { creating = false }, { creating = false; vm.createProject(name, description, bu, area) },
-            confirmEnabled = name.isNotBlank(), confirmLabel = "Crea") {
-            FormField(name, { name = it }, "Nome progetto *")
-            FormField(description, { description = it }, "Descrizione", singleLine = false)
-            FormField(bu, { bu = it }, "Business unit / sede")
-            FormField(area, { area = it }, "Prima area (facoltativa)", hint = "Es. Sala server")
         }
     }
 

@@ -3,6 +3,7 @@ package com.onlyfield.assetmanager.ui
 /** Destinations of the app. The back stack is kept in [ProjectViewModel]. */
 sealed interface Screen {
     data object Projects : Screen
+    data object NewSite : Screen
     data object Home : Screen
     data object Inventory : Screen
     data class DeviceDetail(val deviceId: String) : Screen

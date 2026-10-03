@@ -40,7 +40,9 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
             Surface {
                 val screen = vm.currentScreen
                 val p = project
-                if (p == null || screen == Screen.Projects) {
+                if (screen == Screen.NewSite) {
+                    NewSiteScreen(vm, snackbar)
+                } else if (p == null || screen == Screen.Projects) {
                     ProjectsScreen(vm, snackbar)
                 } else when (screen) {
                     Screen.Home -> HomeScreen(vm, p, snackbar)
@@ -59,7 +61,7 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                     Screen.Trash -> TrashScreen(vm, snackbar)
                     Screen.Documents -> DocumentsScreen(vm, p, snackbar)
                     Screen.Issues -> IssuesScreen(vm, p, snackbar)
-                    Screen.Projects -> Unit
+                    Screen.Projects, Screen.NewSite -> Unit
                 }
             }
             ImportDialogs(vm, importState)

@@ -1,19 +1,19 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (2/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "O01",
+  "currentPhase": "Fase v1.1 in corso (3/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "O02",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 24,
-    "pendingTasks": 12,
-    "progressPercentage": 66.7,
-    "totalPassedTests": 98,
+    "completedTasks": 25,
+    "pendingTasks": 11,
+    "progressPercentage": 69.4,
+    "totalPassedTests": 102,
     "testsByModule": {
       "mobile/app": 22,
-      "shared/core": 24,
+      "shared/core": 27,
       "shared/exchange": 16,
-      "pc/app": 36
+      "pc/app": 37
     }
   },
   "completedTasks": [
@@ -40,16 +40,15 @@
       "title": "Password del progetto con PBKDF2 e salt",
       "date": "2026-10-03",
       "evidence": "PasswordHasher in :shared:exchange (PBKDF2-HMAC-SHA256, salt 16 byte, 600.000 iterazioni); hash SHA-256 legacy ricalcolati al primo sblocco; PasswordHasherTest + test di migrazione nel repository"
+    },
+    {
+      "id": "O01",
+      "title": "Procedura guidata \"Nuovo sito\" condivisa",
+      "date": "2026-10-03",
+      "evidence": "core.onboarding.NewSiteWizard (passi, validazione, creazione via ProjectEdits) usato da Android NewSiteScreen e dalla finestra a passi Windows; NewSiteWizardTest + test Windows con password"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "O01",
-      "area": "Avvio",
-      "title": "Procedura guidata \"Nuovo sito\" condivisa",
-      "description": "Passi e stato in :shared:core (core.onboarding, creazione via ProjectEdits): progetto/cliente → sede (BU) → prima area → primo apparato (saltabile) → password (facoltativa). Sostituisce il dialog Nuovo progetto su Android e AppDialog.NewProject su Windows.",
-      "acceptance": "Stessa procedura su entrambe le app; alla fine si apre la home del progetto."
-    },
     {
       "id": "O02",
       "area": "Avvio",
@@ -133,7 +132,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: O01."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: O02."
   ],
   "residuals": [
     {

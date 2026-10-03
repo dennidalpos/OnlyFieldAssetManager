@@ -12,6 +12,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.core.validation.ValidationIssue
 import com.onlyfield.assetmanager.data.local.ProjectEntity
@@ -76,6 +77,10 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     /** Returns false when already at the root, so the activity can close. */
     fun back(): Boolean {
+        if (currentScreen == Screen.NewSite && !newSite.isFirst) {
+            newSite = newSite.back()
+            return true
+        }
         if (backStack.size <= 1) return false
         val leaving = backStack.removeAt(backStack.lastIndex)
         if (leaving == Screen.Home) closeProject()
@@ -124,27 +129,29 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         backStack.add(Screen.Projects)
     }
 
-    fun createProject(name: String, description: String, businessUnit: String, area: String) {
+    /** State of the "Nuovo sito" wizard; kept here so it survives rotation. */
+    var newSite by mutableStateOf(NewSiteWizard())
+
+    fun startNewSite() {
+        newSite = NewSiteWizard()
+        navigate(Screen.NewSite)
+    }
+
+    fun finishNewSite() {
+        val wizard = newSite
+        if (!wizard.canProceed) return
         viewModelScope.launch {
+            busy = "Creazione del progetto…"
             try {
-                val now = System.currentTimeMillis()
-                val p = Project(
-                    name = name.trim(),
-                    description = description.trim().ifBlank { null },
-                    createdEpochMs = now,
-                    updatedEpochMs = now,
-                    businessUnits = listOf(
-                        BusinessUnit(
-                            name = businessUnit.trim().ifBlank { "Sede principale" },
-                            areas = area.trim().takeIf { it.isNotEmpty() }?.let { listOf(Area(name = it)) } ?: emptyList()
-                        )
-                    )
-                )
+                val p = wizard.buildProject()
                 repository.saveProject(p)
+                wizard.password?.let { repository.setProjectPassword(p.id, currentPassword = null, newPassword = it) }
                 openProject(p.id)
                 notify("Progetto «${p.name}» creato.")
             } catch (e: Exception) {
                 fail("Impossibile creare il progetto", e)
+            } finally {
+                busy = null
             }
         }
     }

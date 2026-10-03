@@ -21,6 +21,7 @@ OnlyFieldAssetManager/
    - Pura libreria Kotlin/JVM a zero dipendenze UI o Android.
    - Definizione di tutte le entità di dominio (`Project`, `Device`, `Rack`, `Cable`, `Vlan`, ecc.).
    - Motore di validazione del modello (`ModelValidator`), separazione tra errori strutturali e avvisi documentali.
+   - Procedura guidata «Nuovo sito» (`core.onboarding.NewSiteWizard`): passi progetto/cliente → sede → prima area → primo apparato (saltabile) → password (facoltativa), con validazione e creazione via `ProjectEdits`. Android la mostra come schermata (`NewSiteScreen`), Windows come finestra a passi; la password viene applicata da ciascuna app con il proprio meccanismo.
 
 2. **`:shared:exchange`**:
    - Pura libreria Kotlin/JVM dipendente solo da `:shared:core`.

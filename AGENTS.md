@@ -8,7 +8,7 @@ Facts and execution constraints for AI agents.
 - Code, identifiers and comments are in English. Documentation is in Italian.
 - Current progress, test counts and open decisions are in `PROJECT_STATUS.json` and `roadmap.md`; read them there rather than relying on a summary in this file.
 - The repository is organized into Gradle modules: `:mobile:app`, `:pc:app`, `:shared:core`, `:shared:exchange`. `:shared:core` and `:shared:exchange` must never depend on Android UI or Context APIs.
-- Project mutations, form state and Italian enum labels are shared: `core.edit.ProjectEdits`, `core.forms`, `core.display`. Both UIs use them; edit forms must `copy()` the existing entity so hidden fields are preserved.
+- Project mutations, form state and Italian enum labels are shared: `core.edit.ProjectEdits`, `core.forms`, `core.display`, `core.onboarding` ("Nuovo sito" wizard). Both UIs use them; edit forms must `copy()` the existing entity so hidden fields are preserved.
 - Windows portable build: `.\gradlew.bat :pc:app:packagePortable` → `dist/OnlyFieldAssetManager/OnlyFieldAssetManager.exe` (+ ZIP). Data lives in `data/` next to the exe.
 - Run one step at a time, verify baseline unit tests, review diffs, and keep documentation clean and synchronized.
 

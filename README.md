@@ -5,7 +5,7 @@ Editor offline per censimento e documentazione di infrastrutture di networking e
 ## Piattaforme e Moduli
 - **Android 14+ (`:mobile:app`)**: App mobile Compose con persistenza Room, acquisizione fotocamera/mappe, export e stampa.
 - **Windows 11 x64 (`:pc:app`)**: Editor portable Compose Desktop: `dist\OnlyFieldAssetManager\OnlyFieldAssetManager.exe`, dati in `data\` accanto all'eseguibile (`.\gradlew.bat :pc:app:packagePortable`).
-- **Moduli Comuni (`:shared:core`, `:shared:exchange`)**: Modello dati pure JVM, operazioni di modifica e form condivisi tra le due app (`ProjectEdits`, `core.forms`), etichette italiane (`core.display`), motore di validazione, serializzazione pacchetti ZIP `.ofam` v1.7, cifratura AES-256-GCM / PBKDF2 ed esportazione OpenXML XLSX / Markdown.
+- **Moduli Comuni (`:shared:core`, `:shared:exchange`)**: Modello dati pure JVM, operazioni di modifica e form condivisi tra le due app (`ProjectEdits`, `core.forms`), etichette italiane (`core.display`), procedura guidata «Nuovo sito» (`core.onboarding`), motore di validazione, serializzazione pacchetti ZIP `.ofam` v1.7, cifratura AES-256-GCM / PBKDF2 ed esportazione OpenXML XLSX / Markdown.
 
 ## Documentazione di Dominio
 - [01-architecture.md](docs/01-architecture.md) — Architettura del sistema, moduli e toolchain

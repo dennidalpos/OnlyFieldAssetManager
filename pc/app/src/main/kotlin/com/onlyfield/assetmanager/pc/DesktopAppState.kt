@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.core.validation.ValidationIssue
@@ -177,18 +178,12 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     // --- Project lifecycle -------------------------------------------------------------------
 
-    fun createProject(name: String, description: String, businessUnitName: String, areaName: String) {
-        val now = System.currentTimeMillis()
-        val areas = areaName.trim().takeIf { it.isNotEmpty() }?.let { listOf(Area(name = it)) } ?: emptyList()
-        val newProject = Project(
-            name = name.trim(),
-            description = description.trim().ifBlank { null },
-            createdEpochMs = now,
-            updatedEpochMs = now,
-            businessUnits = listOf(BusinessUnit(name = businessUnitName.trim().ifBlank { "Sede principale" }, areas = areas))
-        )
+    /** Creates the project built by the "Nuovo sito" wizard and opens it. */
+    fun createProject(wizard: NewSiteWizard) {
+        val newPassword = wizard.password
+        val newProject = wizard.buildProject().copy(isPasswordProtected = newPassword != null)
         dialog = null
-        open(newProject, null, null, "Creato il progetto «${newProject.name}».")
+        open(newProject, null, newPassword, "Creato il progetto «${newProject.name}».")
     }
 
     fun closeProject() {

@@ -12,6 +12,9 @@ import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
+import com.onlyfield.assetmanager.core.onboarding.NewSiteDraft
+import com.onlyfield.assetmanager.core.onboarding.NewSiteStep
+import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import com.onlyfield.assetmanager.pc.AppDialog
@@ -34,29 +37,74 @@ fun ProjectDialogs(state: DesktopAppState) {
     }
 }
 
+/** "Nuovo sito" wizard; steps and validation come from core.onboarding.NewSiteWizard. */
 @Composable
 private fun NewProjectDialog(state: DesktopAppState) {
-    var name by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var businessUnit by remember { mutableStateOf("Sede principale") }
-    var area by remember { mutableStateOf("") }
-
-    FormDialog(
-        title = "Nuovo progetto",
-        onDismiss = { state.dialog = null },
-        onConfirm = { state.createProject(name, description, businessUnit, area) },
-        confirmEnabled = name.isNotBlank(),
-        confirmLabel = "Crea progetto"
-    ) {
-        if (state.project != null) {
-            Text("Il progetto attuale viene chiuso; resta salvato nella cartella dati.", style = MaterialTheme.typography.bodySmall)
-        }
-        FormField(name, { name = it }, "Nome progetto *")
-        FormField(description, { description = it }, "Descrizione", singleLine = false, minLines = 2)
-        FormField(businessUnit, { businessUnit = it }, "Business unit / sede", hint = "Potrai aggiungerne altre dalla sezione Progetto")
-        FormField(area, { area = it }, "Prima area (facoltativa)", hint = "Es. Sala server, Piano 1")
+    var w by remember { mutableStateOf(NewSiteWizard()) }
+    val errors = w.errors()
+    fun set(t: (NewSiteDraft) -> NewSiteDraft) {
+        w = w.update(t)
     }
+
+    AlertDialog(
+        onDismissRequest = { state.dialog = null },
+        modifier = Modifier.width(560.dp),
+        title = { Text("Nuovo sito · passo ${w.stepNumber} di ${w.stepCount}") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                LinearProgressIndicator(progress = { w.stepNumber / w.stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
+                Text(w.step.title, style = MaterialTheme.typography.titleMedium)
+                Text(w.step.hint, style = MaterialTheme.typography.bodySmall)
+                if (w.isFirst && state.project != null) {
+                    Text("Il progetto attuale viene chiuso; resta salvato nella cartella dati.", style = MaterialTheme.typography.bodySmall)
+                }
+                // key(): the fields' "touched" state restarts on each step
+                key(w.step) {
+                    val d = w.draft
+                    when (w.step) {
+                        NewSiteStep.PROJECT -> {
+                            FormField(d.projectName, { v -> set { it.copy(projectName = v) } }, "Nome progetto *", error = errors["projectName"])
+                            FormField(d.customer, { v -> set { it.copy(customer = v) } }, "Cliente", hint = "Facoltativo")
+                        }
+                        NewSiteStep.BUSINESS_UNIT ->
+                            FormField(d.businessUnit, { v -> set { it.copy(businessUnit = v) } }, "Nome sede *", error = errors["businessUnit"])
+                        NewSiteStep.AREA ->
+                            FormField(d.area, { v -> set { it.copy(area = v) } }, "Nome area *", error = errors["area"], hint = "Es. Sala server, Piano 1")
+                        NewSiteStep.DEVICE -> {
+                            FormField(d.deviceName, { v -> set { it.copy(deviceName = v) } }, "Nome apparato", error = errors["deviceName"], hint = "Es. SW-CORE-01")
+                            FormField(d.deviceIp, { v -> set { it.copy(deviceIp = v) } }, "Indirizzo IP", error = errors["deviceIp"])
+                        }
+                        NewSiteStep.PASSWORD -> {
+                            WizardPassword(d.password, { v -> set { it.copy(password = v) } }, "Password", null)
+                            WizardPassword(d.passwordConfirm, { v -> set { it.copy(passwordConfirm = v) } }, "Conferma password", errors["passwordConfirm"])
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (w.step.skippable && !w.isLast) TextButton(onClick = { w = w.skip() }) { Text("Salta") }
+                Button(
+                    enabled = w.canProceed,
+                    onClick = { if (w.isLast) state.createProject(w) else w = w.next() }
+                ) { Text(if (w.isLast) "Crea e apri" else "Avanti") }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = { if (w.isFirst) state.dialog = null else w = w.back() }) {
+                Text(if (w.isFirst) "Annulla" else "Indietro")
+            }
+        }
+    )
 }
+
+@Composable
+private fun WizardPassword(value: String, onChange: (String) -> Unit, label: String, error: String?) = OutlinedTextField(
+    value = value, onValueChange = onChange, label = { Text(label) }, singleLine = true,
+    visualTransformation = PasswordVisualTransformation(), isError = error != null,
+    supportingText = error?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth()
+)
 
 @Composable
 private fun ImportPasswordDialog(state: DesktopAppState, d: AppDialog.ImportPassword) {

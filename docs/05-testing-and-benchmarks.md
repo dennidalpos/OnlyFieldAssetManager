@@ -15,7 +15,7 @@ Total Passed Unit Tests: 73
 ```
 
 ### Copertura dei Test per Modulo
-- **`:shared:core` (`ModelValidatorTest`, `CoreModuleTest`)**: Validazione completa di tutte le entità, errori strutturali, avvisi documentali, sovrapposizioni slot rack, cicli di alimentazione e derivazione badge.
+- **`:shared:core` (`ModelValidatorTest`, `NewSiteWizardTest`, `CoreModuleTest`)**: Validazione completa di tutte le entità, errori strutturali, avvisi documentali, sovrapposizioni slot rack, cicli di alimentazione, derivazione badge e passi della procedura «Nuovo sito».
 - **`:shared:exchange` (`PackageSerializerTest`, `DocumentExportTest`, `FixtureTest`, `DeviceModelSerializerTest`, `PasswordHasherTest`)**: Round-trip di pacchetti `.ofam` v1.7 liberi e cifrati AES-GCM, verifica checksum SHA-256, hash PBKDF2 delle password di progetto e migrazione degli hash SHA-256, test di integrità OpenXML XLSX, Markdown e fixtures sintetiche.
 - **`:mobile:app` (`ProjectRepositoryTest`, `CartographicMapManagerTest`, `PilotBenchmarkTest`, `EncryptedDatabaseTest`)**: Persistenza Room, riconoscimento del DB in chiaro da convertire, migrazioni DB v1->v9, repository, gestione tessere cartografiche offline e benchmark pilota.
 - **`:pc:app` (`DesktopStorageTest`, `DesktopToolchainTest`, `DesktopDomainLogicTest`, `DesktopDocumentAndCartographyTest`, `BidirectionalInteropTest`)**: Gestore storage desktop, salvataggio atomico, blocco `.lock`, password, interoperabilità bidirezionale Android ↔ Windows, UI rack elevation, cablaggio, rete logica, alimentazione A/B, badge documentali e cartografia.
