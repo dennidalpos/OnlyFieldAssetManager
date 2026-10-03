@@ -29,8 +29,10 @@ OnlyFieldAssetManager/
    - Generatori di documentazione espostabile: OpenXML XLSX (`XlsxExportManager`), Markdown (`MarkdownExportManager`), confronto semantico (`ProjectComparison`).
 
 3. **`:mobile:app`**:
-   - Applicazione Android Jetpack Compose (minSdk 34, compileSdk 35).
+   - Applicazione Android Jetpack Compose (minSdk 34, compileSdk 37, targetSdk 35).
    - Persistenza locale autonoma con Room Database (`AppDatabase`) e migrazioni verificate (v1 -> v9).
+   - Database cifrato con SQLCipher (`EncryptedDatabase`): chiave casuale da 256 bit, conservata in `no_backup/db_key.bin` cifrata con una chiave AES-GCM del Keystore Android; il DB in chiaro delle versioni precedenti viene convertito una sola volta all'avvio (`sqlcipher_export`).
+   - Backup automatico e trasferimento tra dispositivi disattivati (`allowBackup="false"`, `data_extraction_rules.xml`): i progetti escono dal telefono solo con l'export `.ofam`.
    - Acquisizione cartografica offline con attribuzione (`CartographicMapManager`).
    - Generazione report PDF composti e adattatore per la stampa Android (`ProjectPrintDocumentAdapter`).
 
@@ -45,5 +47,6 @@ OnlyFieldAssetManager/
 - **Android Gradle Plugin (AGP):** 9.4.1
 - **Kotlin / Compose Plugin:** 2.4.20
 - **Room:** 2.8.5
+- **SQLCipher for Android:** 4.19.1 (`net.zetetic:sqlcipher-android`, richiede `androidx.sqlite` 2.7 e quindi compileSdk ≥ 36)
 - **Compose Multiplatform (Desktop):** 1.12.1
-- **Min SDK / Target SDK / Compile SDK (Android):** 34 / 35 / 35
+- **Min SDK / Target SDK / Compile SDK (Android):** 34 / 35 / 37

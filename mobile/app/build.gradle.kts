@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.onlyfield.assetmanager"
-    compileSdk = 35
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.onlyfield.assetmanager"
@@ -62,6 +62,7 @@ dependencies {
     implementation(libs.androidx.room.runtime)
     implementation(libs.androidx.room.ktx)
     ksp(libs.androidx.room.compiler)
+    implementation(libs.sqlcipher.android)
 
     testImplementation(libs.junit)
     testImplementation(libs.robolectric)

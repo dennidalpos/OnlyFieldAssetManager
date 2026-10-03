@@ -6,11 +6,11 @@ Data aggiornamento: 3 ottobre 2026
 
 - **Fase Android (A00–A13)**: 100% Completata (14 step completati su 14).
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
-- **Toolchain**: Gradle 9.7.1, AGP 9.4.1, API 35 (compileSdk 35, targetSdk 35, minSdk 34).
+- **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: Pianificata (0 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 22 step completati su 36 (v1.0 chiusa, fase v1.1 pianificata).
-- **Test Unitari Totali Passati**: 94 test su 94 (20 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app).
+- **Fase v1.1 (S/O/R/F)**: In corso (1 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 23 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Test Unitari Totali Passati**: 95 test su 95 (21 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app).
 
 ## Tabella Riassuntiva degli Step
 
@@ -38,7 +38,7 @@ Data aggiornamento: 3 ottobre 2026
 | **W05** | Windows | Interoperabilità bidirezionale e pacchetto portable x64 | Completato | 02/10/2026 | BidirectionalInteropTest, createDistributable / AppImage portable x64, 29 test pc:app |
 | **U01** | Windows | Rework UX editor e programma portable con .exe in radice | Completato | 03/10/2026 | `packagePortable` → `dist/`, dati portable, navigazione laterale, menu e scorciatoie, selettori, conferme, form che preservano i campi |
 | **U02** | Android | Rework UX app: navigazione, schermate dedicate, selettori | Completato | 03/10/2026 | Back stack nel ViewModel, Back di sistema, rotazione, CRUD apparati/porte/aree/credenziali, snackbar con Annulla, export su stream corretto |
-| **S01** | Sicurezza | Database Android cifrato | Da fare | — | — |
+| **S01** | Sicurezza | Database Android cifrato | Completato | 03/10/2026 | Room + SQLCipher 4.19.1 (EncryptedDatabase), chiave casuale cifrata con chiave Keystore in no_backup/; migrazione del DB v9 in chiaro provata su emulatore (progetto esistente aperto, file non più leggibile come SQLite); allowBackup=false + data_extraction_rules |
 | **S02** | Sicurezza | Password del progetto con PBKDF2 e salt | Da fare | — | — |
 | **O01** | Avvio | Procedura guidata "Nuovo sito" condivisa | Da fare | — | — |
 | **O02** | Avvio | Schermata iniziale chiara | Da fare | — | — |
@@ -57,7 +57,7 @@ Data aggiornamento: 3 ottobre 2026
 
 ```powershell
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:packagePortable :mobile:app:assembleDebug
-# Esito: BUILD SUCCESSFUL (94 passed unit tests: 20 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app)
+# Esito: BUILD SUCCESSFUL (95 passed unit tests: 21 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app)
 ```
 
 ## Registro Residui e Note di Monitoraggio
@@ -75,5 +75,5 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: S01 (database Android cifrato).
+- Nessuna decisione aperta. Prossimo task: S02.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
