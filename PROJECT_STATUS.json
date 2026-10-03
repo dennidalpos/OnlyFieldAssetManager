@@ -1,7 +1,7 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (14/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "currentPhase": "Fase v1.1 completata (S01-F05); v1.0 completata (A00-A13, W00-W05, U01-U02). Nessun task aperto.",
   "activeTask": null,
   "summary": {
     "totalTasks": 36,
@@ -17,18 +17,6 @@
     }
   },
   "completedTasks": [
-    {
-      "id": "U01",
-      "title": "Rework UX Windows e programma portable con .exe in radice",
-      "date": "2026-10-03",
-      "evidence": "`:pc:app:packagePortable` -> dist/OnlyFieldAssetManager/OnlyFieldAssetManager.exe + ZIP; dati in data/ accanto all'exe; navigazione laterale, menu e scorciatoie, selettori, conferme, form che preservano i campi"
-    },
-    {
-      "id": "U02",
-      "title": "Rework UX Android",
-      "date": "2026-10-03",
-      "evidence": "Schermate dedicate con back stack nel ViewModel, Back di sistema e rotazione, CRUD apparati/porte/aree/credenziali, selettori al posto del 'primo elemento', snackbar con Annulla"
-    },
     {
       "id": "S01",
       "title": "Database Android cifrato",
@@ -116,11 +104,13 @@
   ],
   "remainingTasks": [],
   "nextSessionNotes": [
-    "Audit e interventi: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
-    "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
-    "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
-    "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: None."
+    "Nessun task pianificato: la fase v1.1 e' chiusa. Residui aperti: RES-01, RES-02 (futuri), RES-08, RES-09.",
+    "Audit e interventi UX per fase: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
+    "Condivisi in :shared:core: core.edit.ProjectEdits, core.forms, core.display, core.onboarding, core.scan (CodeLookup, LabelCode).",
+    "Condivisi in :shared:exchange: PackageSerializer (contratto 1.8), PasswordHasher, AttachmentFiles, ProjectMerger, LabelSheetPdf.",
+    "Android: DB SQLCipher v11 (EncryptedDatabase), editor a pagina intera (EditScreen), scanner CameraX + ML Kit. Windows: MasterDetailHost/EditPanel, tema in data/settings.properties, basi di fusione in data/sync.",
+    "Verifica dei codici con fotocamera reale non eseguita (solo emulatore: permesso, anteprima, migrazioni).",
+    "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main."
   ],
   "residuals": [
     {

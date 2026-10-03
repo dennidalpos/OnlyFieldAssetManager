@@ -7,7 +7,7 @@ Data aggiornamento: 3 ottobre 2026
 Editor offline per tecnici di networking e telecomunicazioni.
 
 - **`shared/core/`**: Modello di dominio, regole di validazione, senza dipendenze Android UI.
-- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.8 (legge la v1.7), cifratura AES-GCM, OpenXML XLSX, Markdown.
+- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.8 (legge la v1.7), fusione all'import, etichette QR, cifratura AES-GCM, OpenXML XLSX, Markdown.
 - **`mobile/app/`**: App Android 14+ Jetpack Compose, Room DB, fotocamera, mappe offline, stampa.
 - **`pc/app/`**: Editor Windows 11 x64 Compose Desktop, storage esplicito, salvataggio atomico e blocco `.lock`.
 
@@ -37,19 +37,18 @@ Editor offline per tecnici di networking e telecomunicazioni.
 - **W04 [COMPLETATO]**: Anteprima e stampa nativa Windows 11 (`PrinterJob`), esportazione XLSX/PDF/Markdown, cartografia Desktop e risoluzione anomalie UI Android/Desktop (`UI-01` .. `UI-07`).
 - **W05 [COMPLETATO]**: Collaudo finale di interoperabilità bidirezionale Android ↔ Windows e pacchettizzazione portable x64 (`BidirectionalInteropTest`, `createDistributable`, 73 unit test passati).
 
-### Fase v1.1 (S/O/R/F) — IN CORSO (1/14)
-Ordine di esecuzione: Sicurezza → Avvio → Refactor UI → Funzioni. Utente tipo: tecnico singolo con telefono; il PC serve per il censimento completo e i documenti.
-- **S01 [COMPLETATO]** (Sicurezza) Database Android cifrato: Room con SQLCipher (SupportOpenHelperFactory), chiave casuale protetta dal Keystore Android; migrazione una tantum del DB in chiaro v9; allowBackup="false" e dataExtractionRules che escludono database e allegati. *Accettazione:* Il file del database non è leggibile senza chiave; i progetti esistenti si aprono dopo l'aggiornamento.
-- **S02 [COMPLETATO]** (Sicurezza) Password del progetto con PBKDF2 e salt: Sostituire hashPassword SHA-256 (ProjectRepository) con la derivazione PBKDF2 di :shared:exchange; gli hash vecchi vengono ricalcolati al primo sblocco riuscito. *Accettazione:* Test su verifica password, migrazione degli hash e password errata.
-- **O01 [COMPLETATO]** (Avvio) Procedura guidata "Nuovo sito" condivisa: Passi e stato in :shared:core (core.onboarding, creazione via ProjectEdits): progetto/cliente → sede (BU) → prima area → primo apparato (saltabile) → password (facoltativa). Sostituisce il dialog Nuovo progetto su Android e AppDialog.NewProject su Windows. *Accettazione:* Stessa procedura su entrambe le app; alla fine si apre la home del progetto.
-- **O02 [COMPLETATO]** (Avvio) Schermata iniziale chiara: Senza progetti: due azioni grandi "Inizia un nuovo sito" e "Apri un pacchetto ricevuto (.ofam)" con una riga di spiegazione; con progetti: "Continua: «ultimo progetto»" in cima. Android ProjectsScreen, Windows WelcomeCard. *Accettazione:* Al primo avvio un utente nuovo arriva in un progetto in pochi tocchi, senza istruzioni esterne.
-- **O03 [COMPLETATO]** (Avvio) Home progetto Android: ricerca e azioni rapide: Barra di ricerca in alto (nome, IP, etichetta, alias; InventoryDao.searchDevices), azioni rapide Aggiungi apparato / Foto (F01) / Scansiona (F02); sotto scheda di controllo e griglia sezioni. *Accettazione:* Un apparato si trova dalla home senza entrare in Inventario.
-- **R01 [COMPLETATO]** (Refactor UI) Android: modifiche a pagina intera: Componente EditScreen (barra Annulla/Salva, imePadding, rememberSaveable, conferma su modifiche non salvate) e route per entità in Screen; conversione per area: Inventario, Sedi/Rack, Cablaggio, Rete/Alimentazione, Media. Dialog solo per conferme, password e scelte brevi. *Accettazione:* Nessun FormDialog per gli editor di entità; rotazione e Indietro non perdono i dati inseriti.
-- **R02 [COMPLETATO]** (Refactor UI) Windows: pannello laterale (master-detail): Componente MasterDetail: lista con ricerca a sinistra, editor a destra con core.forms, Ctrl+S / Esc, avviso su modifiche non salvate. Restano dialog: documenti, password, validazione, confronto import. *Accettazione:* Nessun FormDialog nelle sezioni; i form continuano a preservare i campi nascosti.
-- **R03 [COMPLETATO]** (Refactor UI) Icone Material e tema scuro: Icone Material al posto delle emoji (SectionTile Android, AppSection Windows); schemi Material3 chiaro e scuro (Android segue il sistema, Windows opzione nel menu); eliminati i colori fissi. *Accettazione:* Entrambe le app leggibili in tema chiaro e scuro, senza emoji nella navigazione.
-- **R04 [COMPLETATO]** (Refactor UI) Refactor repository Android: Dividere ProjectRepository (~1.100 righe) ed EntityMappers (~950) per area funzionale, senza cambiare comportamento. *Accettazione:* Tutti i test esistenti passano invariati.
-- **F01 [COMPLETATO]** (Funzioni) Foto dalla fotocamera: Scatto con ActivityResultContracts.TakePicture e FileProvider nella cartella allegati del progetto; collegamento automatico all'apparato, rack o area aperti; le foto viaggiano nel .ofam. *Accettazione:* Una foto scattata dalla scheda di un apparato compare tra i suoi allegati e arriva sul PC.
-- **F02 [COMPLETATO]** (Funzioni) Scansione QR/barcode: CameraX + ML Kit barcode con modello incluso (offline). Il codice cerca tra seriali, etichette, alias, etichette di cavi e porte, oppure compila il numero di serie. Nuovo campo serialNumber (ed etichette cavi/porte se mancano): contratto .ofam v1.8 con default nulli, pacchetti 1.7 leggibili. Windows: lettore USB come tastiera nel campo di ricerca. *Accettazione:* La scansione di un seriale noto apre l'apparato; i pacchetti 1.7 si importano senza errori.
-- **F03 [COMPLETATO]** (Funzioni) Etichette QR proprie: QR con contenuto ofam://<progetto>/<tipo>/<id> e foglio etichette PDF (PdfExportManager Android, SimplePdfWriter Windows); la scansione apre la scheda. *Accettazione:* Un'etichetta stampata e scansionata apre l'entità corretta.
-- **F04 [COMPLETATO]** (Funzioni) Fusione all'import con scelta per elemento: Fusione a tre vie in :shared:exchange estendendo ProjectComparisonEvaluator (caso DIVERGENT), con base = ultima istantanea sincronizzata salvata a ogni export/import. Modifiche senza conflitto applicate da sole; per ogni conflitto "tieni mio" / "tieni importato"; senza base ogni differenza è un conflitto. UI su entrambe le app. *Accettazione:* Due copie modificate in parti diverse si fondono senza perdite; i conflitti sono mostrati uno per uno.
-- **F05 [COMPLETATO]** (Funzioni) Mappe su Android (chiude RES-07): Permesso INTERNET usato solo per scaricare le mappe su richiesta esplicita; riattivare la UI di CartographicMapManager con messaggio chiaro senza rete; documentare che l'app resta offline-first. *Accettazione:* Download delle mappe funzionante con rete; senza rete l'app funziona e spiega perché la mappa non si scarica.
+### Fase v1.1 (S/O/R/F) — COMPLETATA (14/14)
+- **S01 [COMPLETATO]**: Database Android cifrato con SQLCipher, chiave protetta dal Keystore, migrazione del DB in chiaro, backup disattivato.
+- **S02 [COMPLETATO]**: Password di progetto con PBKDF2-HMAC-SHA256 e salt; hash SHA-256 legacy ricalcolati al primo sblocco.
+- **O01 [COMPLETATO]**: Procedura guidata «Nuovo sito» condivisa (`core.onboarding`) su Android e Windows.
+- **O02 [COMPLETATO]**: Schermata iniziale con azioni grandi e «Continua: «ultimo progetto»».
+- **O03 [COMPLETATO]**: Home progetto Android con ricerca apparati e azioni rapide (Aggiungi apparato, Foto, Scansiona).
+- **R01 [COMPLETATO]**: Editor a pagina intera su Android (`EditScreen`), rotazione e Indietro senza perdita di dati.
+- **R02 [COMPLETATO]**: Editor nel pannello laterale su Windows (`MasterDetailHost`/`EditPanel`), Ctrl+S / Esc.
+- **R03 [COMPLETATO]**: Icone Material Symbols e tema scuro su entrambe le app.
+- **R04 [COMPLETATO]**: Livello dati Android diviso per area dietro `ProjectRepository`; mapper per area.
+- **F01 [COMPLETATO]**: Foto dalla fotocamera collegate ad apparato, rack, area o progetto.
+- **F02 [COMPLETATO]**: Scansione QR/barcode offline (CameraX + ML Kit), numero di serie (contratto 1.8), lettore USB su Windows.
+- **F03 [COMPLETATO]**: Etichette QR `ofam://` e foglio etichette PDF condiviso.
+- **F04 [COMPLETATO]**: Fusione a tre vie all'import con scelta per elemento.
+- **F05 [COMPLETATO]**: Mappe su Android scaricate su richiesta (chiude RES-07).

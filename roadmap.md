@@ -8,8 +8,8 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (14 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 36 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Fase v1.1 (S/O/R/F)**: Completata il 3 ottobre 2026 (14 step su 14), vedi `docs/07-ux-audit.md`.
+- **Stato Complessivo**: 36 step completati su 36 (v1.0 e fase v1.1 chiuse).
 - **Test Unitari Totali Passati**: 117 test su 117 (24 mobile/app, 30 shared/core, 24 shared/exchange, 39 pc/app).
 
 ## Tabella Riassuntiva degli Step
@@ -63,7 +63,7 @@ Data aggiornamento: 3 ottobre 2026
 ## Registro Residui e Note di Monitoraggio
 
 Nessun blocco operativo o anomalia residua rilevata durante il collaudo W05.
-Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
+Segnalazioni per future iterazioni (non bloccanti):
 - **RES-01 (Integrazione CI/CD Automation)**: Aggiunta opzionale di workflow GitHub Actions per la pubblicazione automatica di `app-debug.apk` e dell'eseguibile Windows Desktop ad ogni tag release.
 - **RES-02 (Localizzazione Multi-lingua)**: Espansione del dizionario stringhe da Italiano a Inglese/Spagnolo per mercati internazionali.
 - ~~RES-03 (PDF Windows)~~: risolto il 03/10/2026 — PDF reale multipagina (`SimplePdfWriter`) e stampa su più pagine, stesso contenuto (`ReportContent`).
@@ -77,5 +77,5 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: None.
+- Nessun task pianificato. Decisione aperta: RES-09 (chiave API CARTO o rimozione della fonte).
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
