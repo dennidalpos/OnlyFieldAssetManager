@@ -7,6 +7,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -126,6 +131,8 @@ fun SectionHeader(
     searchQuery: String? = null,
     onSearchChange: ((String) -> Unit)? = null,
     searchPlaceholder: String = "Cerca…",
+    /** Enter in the search box; USB barcode readers type the code and press Enter. */
+    onSearchSubmit: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Row(
@@ -145,7 +152,11 @@ fun SectionHeader(
                 onValueChange = onSearchChange,
                 placeholder = { Text(searchPlaceholder) },
                 singleLine = true,
-                modifier = Modifier.width(280.dp),
+                modifier = Modifier.width(280.dp).onPreviewKeyEvent { e ->
+                    if (onSearchSubmit != null && e.type == KeyEventType.KeyDown && (e.key == Key.Enter || e.key == Key.NumPadEnter)) {
+                        onSearchSubmit(); true
+                    } else false
+                },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
                     { TextButton(onClick = { onSearchChange("") }) { Text("✕") } }
                 } else null

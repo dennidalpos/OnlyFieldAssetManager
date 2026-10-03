@@ -238,6 +238,18 @@ class ProjectRepositoryTest {
     }
 
     @Test
+    fun serialNumberIsStoredAndSearchable() = runBlocking {
+        val projId = UUID.randomUUID().toString()
+        val device = Device(technicalName = "SW-SER", serialNumber = "FOC1234X0AB")
+        repository.saveProject(
+            Project(id = projId, name = "Seriali", createdEpochMs = 1L, updatedEpochMs = 1L,
+                businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(device))))
+        )
+        assertEquals("FOC1234X0AB", repository.getProjectById(projId)!!.businessUnits.single().devices.single().serialNumber)
+        assertEquals(listOf(device.id), repository.searchInventory(projId, "1234X0").map { it.device.id })
+    }
+
+    @Test
     fun legacySha256PasswordIsUpgradedOnUnlock() = runBlocking {
         val projId = UUID.randomUUID().toString()
         repository.saveProject(Project(id = projId, name = "Legacy", createdEpochMs = 1L, updatedEpochMs = 1L))

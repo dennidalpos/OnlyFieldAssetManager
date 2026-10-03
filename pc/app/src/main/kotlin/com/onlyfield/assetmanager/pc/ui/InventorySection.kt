@@ -15,6 +15,8 @@ import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.pc.ui.components.*
 import com.onlyfield.assetmanager.core.forms.DeviceForm
+import com.onlyfield.assetmanager.core.scan.CodeLookup
+import com.onlyfield.assetmanager.core.scan.CodeMatch
 
 @Composable
 fun InventorySection(
@@ -39,7 +41,7 @@ fun InventorySection(
 
     val filtered = remember(index, query, categoryFilter, areaFilter) {
         index.devices.filter { d ->
-            matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress) &&
+            matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress, d.serialNumber) &&
                 (categoryFilter == null || d.category == categoryFilter) &&
                 (areaFilter == null || d.areaId == areaFilter?.id)
         }
@@ -53,7 +55,15 @@ fun InventorySection(
             subtitle = "${filtered.size} di ${index.devices.size} apparati",
             searchQuery = query,
             onSearchChange = { query = it },
-            searchPlaceholder = "Cerca nome, etichetta, IP, MAC…"
+            searchPlaceholder = "Cerca nome, etichetta, IP, MAC, seriale…",
+            onSearchSubmit = {
+                // Exact code (e.g. from a USB reader): open the device it identifies.
+                when (val match = CodeLookup.find(index, query)) {
+                    is CodeMatch.DeviceMatch -> editing = match.device
+                    is CodeMatch.PortMatch -> portsOf = match.port.device.id
+                    else -> Unit
+                }
+            }
         ) {
             Button(onClick = { creating = true }, enabled = project.businessUnits.isNotEmpty()) { Text("+ Nuovo apparato") }
         }
@@ -236,6 +246,7 @@ private fun DeviceDialog(
             FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, "Indirizzo IP", Modifier.weight(1f), errors["ipAddress"])
             FormField(form.macAddress, { form = form.copy(macAddress = it) }, "Indirizzo MAC", Modifier.weight(1f), errors["macAddress"])
         }
+        FormField(form.serialNumber, { form = form.copy(serialNumber = it) }, "Numero di serie", hint = "Con il lettore USB: clic nel campo e leggi il codice")
 
         Text("Posizione", fontWeight = FontWeight.SemiBold)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

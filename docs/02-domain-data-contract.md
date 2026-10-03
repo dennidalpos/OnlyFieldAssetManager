@@ -1,4 +1,4 @@
-# Contratto Dati di Dominio, Pacchetto .ofam v1.7 e Validazione
+# Contratto Dati di Dominio, Pacchetto .ofam v1.8 e Validazione
 
 Data: 2 ottobre 2026
 
@@ -20,12 +20,17 @@ L'infrastruttura è organizzata secondo la gerarchia principale:
 - **DocumentBadge**: Badge documentali liberi e derivati automaticamente dal modello.
 - **TrashItem**: Cestino locale temporaneo per il ripristino di elementi eliminati (escluso dagli export).
 
-## 2. Formato del Pacchetto di Scambio (`.ofam` / ZIP v1.7)
+## 2. Formato del Pacchetto di Scambio (`.ofam` / ZIP v1.8)
 
-L'archivio ZIP `.ofam` v1.7 costituisce il formato universale di scambio tra Android e Windows Desktop e contiene:
-- `manifest.json`: Metadati del pacchetto, formato (`1.7`), timestamp, checksum SHA-256 e parametri di cifratura KDF.
+L'archivio ZIP `.ofam` v1.8 costituisce il formato universale di scambio tra Android e Windows Desktop e contiene:
+- `manifest.json`: Metadati del pacchetto, formato (`1.8`), timestamp, checksum SHA-256 e parametri di cifratura KDF.
 - `project.json` (o `project.json.enc` se cifrato): L'albero completo del progetto in JSON UTF-8.
 - `attachments/<idAllegato>/<nomeFile>`: i file degli allegati (foto, planimetrie, PDF…), con checksum SHA-256 nel manifest. Il percorso è calcolato da `AttachmentFiles.entryName` (`:shared:exchange`) ed è lo stesso su Android e Windows. Un allegato il cui file non è presente sul dispositivo viene esportato solo come metadati, con un avviso all'utente.
+
+### Versioni del Contratto
+
+- **1.8** (fase v1.1): aggiunge `Device.serialNumber` (facoltativo). Tutti i campi nuovi hanno default nullo e l'import ignora le chiavi sconosciute, quindi i pacchetti 1.7 si importano senza errori (campo assente = `null`) e le app 1.7 leggono i pacchetti 1.8 ignorando il seriale. Verificato da `ContractVersionTest`.
+- **1.7**: versione consegnata con la v1.0 (allegati nei pacchetti, `attachmentsEncrypted`).
 
 ### Parametri Crittografici del Pacchetto Cifrato
 - **Derivazione Chiave (KDF):** `PBKDF2WithHmacSHA256`, 100.000 iterazioni, salt casuale da 16 byte.

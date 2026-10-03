@@ -44,9 +44,12 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var addingDevice by remember { mutableStateOf(false) }
     val takePhoto = rememberPhotoCapture(vm)
+    var scanning by remember { mutableStateOf(false) }
+    var unknownCode by remember { mutableStateOf<String?>(null) }
+    var newWithSerial by remember { mutableStateOf<String?>(null) }
     // Same fields as the Inventory search
     val found = if (query.isBlank()) emptyList() else index.devices.filter {
-        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress)
+        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber)
     }
 
     val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri: Uri? ->
@@ -121,6 +124,7 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { addingDevice = true }) { Text("+ Aggiungi apparato") }
                     OutlinedButton(onClick = { takePhoto(AttachmentTargetType.PROJECT, null) }) { Text("Foto") }
+                    OutlinedButton(onClick = { scanning = true }) { Text("Scansiona") }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {
@@ -178,6 +182,17 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
 
     if (managingPassword) PasswordDialog(vm, project) { managingPassword = false }
     if (addingDevice) DeviceDialog(vm, project, index, null) { addingDevice = false }
+    unknownCode?.let { code ->
+        AlertDialog(
+            onDismissRequest = { unknownCode = null },
+            title = { Text("Codice non trovato") },
+            text = { Text("«$code» non corrisponde a nessun apparato, cavo o porta. Vuoi creare un apparato con questo numero di serie?") },
+            confirmButton = { TextButton(onClick = { unknownCode = null; newWithSerial = code }) { Text("Nuovo apparato") } },
+            dismissButton = { TextButton(onClick = { unknownCode = null }) { Text("Chiudi") } }
+        )
+    }
+    newWithSerial?.let { serial -> DeviceDialog(vm, project, index, null, initialSerial = serial) { newWithSerial = null } }
+    if (scanning) BarcodeScanner(onCode = { code -> scanning = false; unknownCode = vm.openScannedCode(code) }, onClose = { scanning = false })
 }
 
 @Composable

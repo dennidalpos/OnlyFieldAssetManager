@@ -265,7 +265,8 @@ data class DeviceEntity(
     val rackSide: String = "BOTH",
     val mountingType: String = "OUT_OF_RACK",
     val deviceModelId: String? = null,
-    val category: String = "CUSTOM"
+    val category: String = "CUSTOM",
+    val serialNumber: String? = null
 )
 
 @Entity(

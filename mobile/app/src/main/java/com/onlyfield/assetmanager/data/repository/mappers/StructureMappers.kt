@@ -179,7 +179,8 @@ internal fun toDeviceEntity(buId: String, device: Device): DeviceEntity {
         rackSide = device.rackSide.name,
         mountingType = device.mountingType.name,
         deviceModelId = device.deviceModelId,
-        category = device.category.name
+        category = device.category.name,
+        serialNumber = device.serialNumber
     )
 }
 
@@ -316,6 +317,7 @@ internal fun toProject(
                 mountingType = try { MountingType.valueOf(devEnt.mountingType) } catch (_: Exception) { MountingType.OUT_OF_RACK },
                 deviceModelId = devEnt.deviceModelId,
                 category = try { DeviceCategory.valueOf(devEnt.category) } catch (_: Exception) { DeviceCategory.CUSTOM },
+                serialNumber = devEnt.serialNumber,
             )
         }
 

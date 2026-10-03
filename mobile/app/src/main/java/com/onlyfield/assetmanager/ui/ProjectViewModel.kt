@@ -12,7 +12,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
+import com.onlyfield.assetmanager.core.scan.CodeLookup
+import com.onlyfield.assetmanager.core.scan.CodeMatch
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.core.validation.ValidationIssue
 import com.onlyfield.assetmanager.data.local.ProjectEntity
@@ -502,5 +505,21 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     private fun formatPhotoTitle() = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ITALY).format(java.util.Date())
+
+
+    fun notifyError(text: String) = fail(text)
+
+    // --- Code scanning (F02) --------------------------------------------------------------------
+
+    /** Opens what a scanned code points to; an unknown code is returned so the UI can offer a new device. */
+    fun openScannedCode(code: String): String? {
+        val p = _project.value ?: return null
+        return when (val match = CodeLookup.find(ProjectIndex(p), code)) {
+            is CodeMatch.DeviceMatch -> { navigate(Screen.DeviceDetail(match.device.id)); notify("Trovato per ${match.field.lowercase()}: ${match.device.technicalName}"); null }
+            is CodeMatch.PortMatch -> { navigate(Screen.DeviceDetail(match.port.device.id)); notify("Porta ${match.port.port.name} di ${match.port.device.technicalName}"); null }
+            is CodeMatch.CableMatch -> { navigate(Screen.Cabling); notify("Cavo ${match.cable.codeOrLabel}"); null }
+            is CodeMatch.NotFound -> match.code
+        }
+    }
 
 }

@@ -7,6 +7,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,7 +33,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var batch by remember { mutableStateOf(false) }
 
     val devices = index.devices.filter {
-        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress) && (areaFilter == null || it.areaId == areaFilter?.id)
+        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id)
     }
 
     AppScaffold(
@@ -53,7 +54,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     ) { padding ->
         Column(Modifier.padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SearchField(query, { query = it }, "Cerca nome, etichetta, IP, MAC…")
+            SearchField(query, { query = it }, "Cerca nome, etichetta, IP, MAC, seriale…")
             if (index.areas.isNotEmpty()) {
                 OptionPicker("Area", index.areas, areaFilter, { it.name }, { areaFilter = it }, noneLabel = "Tutte le aree")
             }
@@ -140,6 +141,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                         InfoRow("Alias", device.alias)
                         InfoRow("IP", device.ipAddress)
                         InfoRow("MAC", device.macAddress)
+                        InfoRow("Numero di serie", device.serialNumber)
                         InfoRow("Modello", project.deviceModels.find { it.id == device.deviceModelId }?.name)
                         InfoRow("Rilievo", device.observation?.status?.toDisplayString() ?: "Da verificare")
                         device.observation?.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
@@ -243,9 +245,10 @@ private fun InfoRow(label: String, value: String?) {
 }
 
 @Composable
-internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: ProjectIndex, device: Device?, onClose: () -> Unit) {
+internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: ProjectIndex, device: Device?, initialSerial: String? = null, onClose: () -> Unit) {
     val initialBu = device?.let { index.businessUnitOf(it.id)?.id } ?: project.businessUnits.firstOrNull()?.id
-    var form by remember(device) { mutableStateOf(DeviceForm.from(device, initialBu)) }
+    var form by remember(device) { mutableStateOf(DeviceForm.from(device, initialBu).let { f -> initialSerial?.let { f.copy(serialNumber = it) } ?: f }) }
+    var scanningSerial by remember { mutableStateOf(false) }
     val rack = index.rack(form.rackId)
     val errors = form.errors(rack?.heightU)
     val buAreas = project.businessUnits.find { it.id == form.businessUnitId }?.let { bu -> bu.areas + bu.sites.flatMap { it.areas } } ?: index.areas
@@ -267,6 +270,11 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: Project
         FormField(form.alias, { form = form.copy(alias = it) }, "Alias")
         FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, "Indirizzo IP", error = errors["ipAddress"], kind = FieldKind.IP)
         FormField(form.macAddress, { form = form.copy(macAddress = it) }, "Indirizzo MAC", error = errors["macAddress"])
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormField(form.serialNumber, { form = form.copy(serialNumber = it) }, "Numero di serie", Modifier.weight(1f))
+            val markDirty = LocalMarkDirty.current
+            OutlinedButton(onClick = { markDirty(); scanningSerial = true }) { Text("Scansiona") }
+        }
         SectionTitle("Posizione")
         if (project.businessUnits.size > 1 || device == null) {
             OptionPicker("Business unit *", project.businessUnits, project.businessUnits.find { it.id == form.businessUnitId }, { it.name },
@@ -289,6 +297,11 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: Project
         EnumPicker("Stato", ObservationStatus.entries, form.observationStatus, { it.toDisplayString() }, { form = form.copy(observationStatus = it) })
         FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false, minLines = 2)
     }
+    if (scanningSerial) BarcodeScanner(
+        onCode = { code -> scanningSerial = false; form = form.copy(serialNumber = code) },
+        onClose = { scanningSerial = false },
+        hint = "Inquadra il codice del numero di serie"
+    )
 }
 
 @Composable

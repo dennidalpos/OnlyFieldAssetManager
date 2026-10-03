@@ -15,7 +15,7 @@ Facts and execution constraints for AI agents.
 ## Application Boundaries & Constraints
 
 - Offline-first Android 14+ APK and Windows 11 x64 portable editor.
-- Exchange contract: ZIP packages `.ofam` v1.7 with optional AES-256-GCM / PBKDF2 encryption.
+- Exchange contract: ZIP packages `.ofam` v1.8 (1.7 still readable) with optional AES-256-GCM / PBKDF2 encryption.
 - Direct manual export/import. No server required, no automatic cloud sync, no automatic merge.
 - Credentials integrated into project. Optional project password. No secret leakage in exports/documents.
 - Strict separation of structural errors (`STRUCTURAL_ERROR`) vs documentary warnings (`DOCUMENTARY_WARNING`). Domain warnings do not block saving.

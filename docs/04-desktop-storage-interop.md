@@ -24,7 +24,7 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
 ## Interoperabilità e Scambio Android <-> Windows (`BidirectionalInteropTest`)
 
 1. **Contratto Pacchetto Omogeneo:**
-   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.7.
+   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.8 (anche v1.7 in lettura).
 2. **Supporto Cifratura Completo:**
    - Supporto identico per pacchetti cifrati con password mediante PBKDF2 (100.000 iterazioni) e AES-256-GCM.
 3. **Confronto Semantico delle Versioni (`ProjectComparison`):**

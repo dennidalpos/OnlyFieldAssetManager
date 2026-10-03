@@ -130,6 +130,8 @@ data class Device(
     val mountingType: MountingType = MountingType.OUT_OF_RACK,
     val deviceModelId: String? = null,
     val category: DeviceCategory = DeviceCategory.CUSTOM,
+    /** Manufacturer serial (contract 1.8); absent in 1.7 packages. */
+    val serialNumber: String? = null,
 )
 
 @Serializable

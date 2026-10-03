@@ -31,7 +31,7 @@ Tutti i comandi si eseguono dalla radice del repository con il wrapper Gradle:
     data/                       ← creata al primo avvio: progetti salvati
   ```
 - **Windows portable (archivio):** `dist/OnlyFieldAssetManager-portable-x64-1.0.0.zip` (stessa cartella, senza `data/`)
-- **Contratto Dati Consolidato:** Versione `1.7` (`docs/02-domain-data-contract.md`)
+- **Contratto Dati Consolidato:** Versione `1.8`, compatibile in lettura con la `1.7` (`docs/02-domain-data-contract.md`)
 
 ## Uso del Programma Portable
 

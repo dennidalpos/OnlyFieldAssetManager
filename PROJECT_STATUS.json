@@ -1,18 +1,18 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (10/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "F02",
+  "currentPhase": "Fase v1.1 in corso (11/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "F03",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 32,
-    "pendingTasks": 4,
-    "progressPercentage": 88.9,
-    "totalPassedTests": 104,
+    "completedTasks": 33,
+    "pendingTasks": 3,
+    "progressPercentage": 91.7,
+    "totalPassedTests": 108,
     "testsByModule": {
-      "mobile/app": 22,
-      "shared/core": 28,
-      "shared/exchange": 16,
+      "mobile/app": 23,
+      "shared/core": 29,
+      "shared/exchange": 18,
       "pc/app": 38
     }
   },
@@ -88,16 +88,15 @@
       "title": "Foto dalla fotocamera",
       "date": "2026-10-03",
       "evidence": "TakePicture + FileProvider nella cartella allegati, collegamento automatico ad apparato/rack/area/progetto, elenco nella scheda apparato e indicazione del collegamento su Android e Windows; scatto verificato su emulatore"
+    },
+    {
+      "id": "F02",
+      "title": "Scansione QR/barcode",
+      "date": "2026-10-03",
+      "evidence": "Scanner CameraX + ML Kit incluso (offline), CodeLookup condiviso (seriale, etichetta, alias, cavi, porte), nuovo serialNumber (contratto 1.8, DB v10) con pacchetti 1.7 importabili (ContractVersionTest), lettore USB su Windows con Invio; permesso, anteprima e migrazione verificati su emulatore"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "F02",
-      "area": "Funzioni",
-      "title": "Scansione QR/barcode",
-      "description": "CameraX + ML Kit barcode con modello incluso (offline). Il codice cerca tra seriali, etichette, alias, etichette di cavi e porte, oppure compila il numero di serie. Nuovo campo serialNumber (ed etichette cavi/porte se mancano): contratto .ofam v1.8 con default nulli, pacchetti 1.7 leggibili. Windows: lettore USB come tastiera nel campo di ricerca.",
-      "acceptance": "La scansione di un seriale noto apre l'apparato; i pacchetti 1.7 si importano senza errori."
-    },
     {
       "id": "F03",
       "area": "Funzioni",
@@ -125,7 +124,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F02."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F03."
   ],
   "residuals": [
     {
