@@ -13,7 +13,10 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.annotation.DrawableRes
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
+import com.onlyfield.assetmanager.R
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -26,7 +29,7 @@ import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.Screen
 import com.onlyfield.assetmanager.ui.components.*
 
-private data class SectionTile(val icon: String, val title: String, val count: String, val screen: Screen)
+private data class SectionTile(@DrawableRes val icon: Int, val title: String, val count: String, val screen: Screen)
 
 @Composable
 fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
@@ -58,18 +61,18 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
     val errors = issues.count { it.severity == ValidationSeverity.STRUCTURAL_ERROR }
     val warnings = issues.size - errors
     val tiles = listOf(
-        SectionTile("📦", "Inventario", "${index.devices.size} apparati", Screen.Inventory),
-        SectionTile("🗄️", "Rack", "${project.racks.size}", Screen.Racks),
-        SectionTile("🔌", "Cablaggio", "${project.cables.size} cavi", Screen.Cabling),
-        SectionTile("🌐", "Rete", "${project.vlans.size} VLAN", Screen.Network),
-        SectionTile("⚡", "Alimentazione", "${project.powerFeeds.size} linee", Screen.Power),
-        SectionTile("🗺️", "Planimetrie", "${project.floorplanPlacements.size} elementi", Screen.Floorplan),
-        SectionTile("📎", "Allegati", "${project.attachments.size}", Screen.Attachments),
-        SectionTile("🔑", "Credenziali", "${project.credentials.size}", Screen.Credentials),
-        SectionTile("📐", "Modelli", "${project.deviceModels.size}", Screen.Models),
-        SectionTile("🏢", "Sedi e aree", "${index.areas.size} aree", Screen.Structure),
-        SectionTile("🗑️", "Cestino", "${trash.size}", Screen.Trash),
-        SectionTile("📄", "Documenti", "PDF, Excel, stampa", Screen.Documents),
+        SectionTile(R.drawable.ic_inventory_2, "Inventario", "${index.devices.size} apparati", Screen.Inventory),
+        SectionTile(R.drawable.ic_dns, "Rack", "${project.racks.size}", Screen.Racks),
+        SectionTile(R.drawable.ic_cable, "Cablaggio", "${project.cables.size} cavi", Screen.Cabling),
+        SectionTile(R.drawable.ic_lan, "Rete", "${project.vlans.size} VLAN", Screen.Network),
+        SectionTile(R.drawable.ic_bolt, "Alimentazione", "${project.powerFeeds.size} linee", Screen.Power),
+        SectionTile(R.drawable.ic_map, "Planimetrie", "${project.floorplanPlacements.size} elementi", Screen.Floorplan),
+        SectionTile(R.drawable.ic_attach_file, "Allegati", "${project.attachments.size}", Screen.Attachments),
+        SectionTile(R.drawable.ic_key, "Credenziali", "${project.credentials.size}", Screen.Credentials),
+        SectionTile(R.drawable.ic_category, "Modelli", "${project.deviceModels.size}", Screen.Models),
+        SectionTile(R.drawable.ic_apartment, "Sedi e aree", "${index.areas.size} aree", Screen.Structure),
+        SectionTile(R.drawable.ic_delete, "Cestino", "${trash.size}", Screen.Trash),
+        SectionTile(R.drawable.ic_description, "Documenti", "PDF, Excel, stampa", Screen.Documents),
     )
 
     AppScaffold(
@@ -139,7 +142,7 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
             items(tiles) { tile ->
                 Card(modifier = Modifier.fillMaxWidth().clickable { vm.navigate(tile.screen) }) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text(tile.icon, style = MaterialTheme.typography.headlineSmall)
+                        Icon(painterResource(tile.icon), contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Text(tile.title, fontWeight = FontWeight.SemiBold)
                         Text(tile.count, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }

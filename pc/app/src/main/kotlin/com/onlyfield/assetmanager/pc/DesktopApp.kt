@@ -16,7 +16,7 @@ import com.onlyfield.assetmanager.pc.ui.components.ConfirmHost
 import com.onlyfield.assetmanager.pc.ui.components.EmptyState
 import com.onlyfield.assetmanager.pc.ui.dialogs.ProjectDialogs
 
-private val AppColors = lightColorScheme(
+private val LightColors = lightColorScheme(
     primary = Color(0xFF1565C0),
     onPrimary = Color.White,
     primaryContainer = Color(0xFFD6E3FF),
@@ -31,9 +31,17 @@ private val AppColors = lightColorScheme(
     surface = Color(0xFFF8F9FC),
 )
 
+private val DarkColors = darkColorScheme(
+    primary = Color(0xFFA9C7FF),
+    onPrimary = Color(0xFF003063),
+    primaryContainer = Color(0xFF00468C),
+    onPrimaryContainer = Color(0xFFD6E3FF),
+    tertiary = Color(0xFF80D4D9),
+)
+
 @Composable
 fun DesktopApp(state: DesktopAppState) {
-    MaterialTheme(colorScheme = AppColors) {
+    MaterialTheme(colorScheme = if (state.darkTheme) DarkColors else LightColors) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -67,7 +75,7 @@ private fun SectionRail(state: DesktopAppState) {
                 selected = state.section == s,
                 onClick = { state.section = s },
                 enabled = enabled,
-                icon = { Text(s.icon, style = MaterialTheme.typography.titleLarge) },
+                icon = { Icon(s.icon, contentDescription = null) },
                 label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                 alwaysShowLabel = true
             )

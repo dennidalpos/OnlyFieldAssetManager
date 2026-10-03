@@ -8,8 +8,8 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (7 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 29 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Fase v1.1 (S/O/R/F)**: In corso (8 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 30 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
 - **Test Unitari Totali Passati**: 103 test su 103 (22 mobile/app, 27 shared/core, 16 shared/exchange, 38 pc/app).
 
 ## Tabella Riassuntiva degli Step
@@ -45,7 +45,7 @@ Data aggiornamento: 3 ottobre 2026
 | **O03** | Avvio | Home progetto Android: ricerca e azioni rapide | Completato | 03/10/2026 | Ricerca apparati in cima alla home (stessi campi dell'Inventario) con apertura diretta della scheda, azione rapida «Aggiungi apparato»; Foto/Scansiona collegate in F01/F02; verificata su emulatore |
 | **R01** | Refactor UI | Android: modifiche a pagina intera | Completato | 03/10/2026 | EditScreen a pagina intera per tutti i 27 editor di entità, conferma su modifiche non salvate (LocalMarkDirty), configChanges per la rotazione; verificato su emulatore (rotazione, Indietro, insets) |
 | **R02** | Refactor UI | Windows: pannello laterale (master-detail) | Completato | 03/10/2026 | MasterDetailHost + EditPanel per tutte le sezioni Windows (Ctrl+S, Esc, conferma su modifiche non salvate); MasterDetailTest (Compose UI test desktop); residuo RES-08 |
-| **R03** | Refactor UI | Icone Material e tema scuro | Da fare | — | — |
+| **R03** | Refactor UI | Icone Material e tema scuro | Completato | 03/10/2026 | Material Symbols al posto delle emoji (drawable Android, SymbolIcons Windows), tema Android chiaro/scuro di sistema anche per la finestra, Windows «Visualizza › Tema scuro» salvato nella cartella dati; verificato in tema scuro su emulatore |
 | **R04** | Refactor UI | Refactor repository Android | Da fare | — | — |
 | **F01** | Funzioni | Foto dalla fotocamera | Da fare | — | — |
 | **F02** | Funzioni | Scansione QR/barcode | Da fare | — | — |
@@ -76,5 +76,5 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: R03.
+- Nessuna decisione aperta. Prossimo task: R04.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.

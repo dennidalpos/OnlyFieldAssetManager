@@ -54,6 +54,9 @@ fun main() = application {
                     onClick = state::undo
                 )
             }
+            Menu("Visualizza", mnemonic = 'S') {
+                CheckboxItem("Tema scuro", checked = state.darkTheme, onCheckedChange = { state.toggleDarkTheme() })
+            }
             Menu("Vai", mnemonic = 'V') {
                 val digits = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight, Key.Nine)
                 AppSection.entries.forEachIndexed { i, section ->

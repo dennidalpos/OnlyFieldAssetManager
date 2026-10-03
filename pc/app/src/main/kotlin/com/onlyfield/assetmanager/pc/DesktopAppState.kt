@@ -3,7 +3,9 @@ package com.onlyfield.assetmanager.pc
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.pc.ui.SymbolIcons
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.validation.ModelValidator
@@ -19,16 +21,16 @@ import com.onlyfield.assetmanager.exchange.ProjectPackage
 import java.io.File
 
 /** Main areas of the editor, in navigation-rail order. */
-enum class AppSection(val title: String, val icon: String, val needsProject: Boolean = true) {
-    INVENTORY("Inventario", "📦"),
-    RACKS("Rack", "🗄️"),
-    MODELS("Modelli", "📐"),
-    FLOORPLANS("Planimetrie", "🗺️"),
-    CABLING("Cablaggio", "🔌"),
-    NETWORK("Rete", "🌐"),
-    POWER("Alimentazione", "⚡"),
-    TRASH("Cestino", "🗑️"),
-    PROJECT("Progetto", "⚙️", needsProject = false),
+enum class AppSection(val title: String, val icon: ImageVector, val needsProject: Boolean = true) {
+    INVENTORY("Inventario", SymbolIcons.inventory2),
+    RACKS("Rack", SymbolIcons.dns),
+    MODELS("Modelli", SymbolIcons.category),
+    FLOORPLANS("Planimetrie", SymbolIcons.map),
+    CABLING("Cablaggio", SymbolIcons.cable),
+    NETWORK("Rete", SymbolIcons.lan),
+    POWER("Alimentazione", SymbolIcons.bolt),
+    TRASH("Cestino", SymbolIcons.delete),
+    PROJECT("Progetto", SymbolIcons.settings, needsProject = false),
 }
 
 sealed interface AppDialog {
@@ -78,6 +80,26 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         private set
     var dataDir by mutableStateOf(storage.checkDataDirectoryStatus())
         private set
+
+    // UI preferences live next to the data, so the portable copy keeps them.
+    private val settingsFile get() = File(storage.dataDir, "settings.properties")
+
+    var darkTheme by mutableStateOf(loadSettings().getProperty("theme") == "dark")
+        private set
+
+    fun toggleDarkTheme() {
+        darkTheme = !darkTheme
+        try {
+            val props = loadSettings().apply { setProperty("theme", if (darkTheme) "dark" else "light") }
+            settingsFile.outputStream().use { props.store(it, null) }
+        } catch (_: Exception) {
+            // Preference not saved: the theme still applies to this session.
+        }
+    }
+
+    private fun loadSettings() = java.util.Properties().apply {
+        try { if (settingsFile.isFile) settingsFile.inputStream().use { load(it) } } catch (_: Exception) {}
+    }
 
     val hasPassword: Boolean get() = password != null
     val errorCount: Int get() = issues.count { it.severity == ValidationSeverity.STRUCTURAL_ERROR }
