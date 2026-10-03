@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.pdf.PdfRenderer
@@ -11,8 +13,8 @@ import java.io.IOException
 import kotlin.math.max
 
 object PlanMedia {
-    fun pageCount(file: File): Int = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { it.pageCount } }
-    fun image(file: File, pdf: Boolean, page: Int, maxSide: Int = 2048): ImageBitmap {
+    fun pageCount(file: File, i18n: Messages = Messages()): Int = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd -> PdfRenderer(fd).use { it.pageCount } }
+    fun image(file: File, pdf: Boolean, page: Int, maxSide: Int = 2048, i18n: Messages = Messages()): ImageBitmap {
         if (pdf) return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
             PdfRenderer(fd).use { renderer ->
                 renderer.openPage(page).use { p ->
@@ -26,9 +28,9 @@ object PlanMedia {
         }
         val options = BitmapFactory.Options().apply { inJustDecodeBounds = true }
         BitmapFactory.decodeFile(file.path, options)
-        if (options.outWidth <= 0 || options.outHeight <= 0) throw IOException("Immagine non leggibile")
+        if (options.outWidth <= 0 || options.outHeight <= 0) throw IOException(i18n.text("text.dffbcd08384a"))
         var sample = 1
         while (max(options.outWidth, options.outHeight) / sample > maxSide) sample *= 2
-        return (BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: throw IOException("Immagine non leggibile")).asImageBitmap()
+        return (BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = sample }) ?: throw IOException(i18n.text("text.dffbcd08384a"))).asImageBitmap()
     }
 }

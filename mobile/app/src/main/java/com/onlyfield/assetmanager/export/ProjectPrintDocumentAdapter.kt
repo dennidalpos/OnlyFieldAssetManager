@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.export
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
@@ -19,7 +21,8 @@ import java.io.FileOutputStream
 class ProjectPrintDocumentAdapter(
     private val project: Project,
     private val filterConfig: ExportFilterConfig = ExportFilterConfig(),
-    private val reportSelection: ReportSelection = ReportSelection()
+    private val reportSelection: ReportSelection = ReportSelection(),
+    private val i18n: Messages = Messages()
 ) : PrintDocumentAdapter() {
 
     override fun onLayout(
@@ -49,7 +52,7 @@ class ProjectPrintDocumentAdapter(
         callback: WriteResultCallback?
     ) {
         if (destination == null) {
-            callback?.onWriteFailed("Output file descriptor non valido")
+            callback?.onWriteFailed(i18n.text("text.6a0fbef6bf9b"))
             return
         }
 
@@ -59,8 +62,8 @@ class ProjectPrintDocumentAdapter(
                     project = project,
                     filterConfig = filterConfig,
                     selection = reportSelection,
-                    outputStream = outputStream
-                )
+                    outputStream = outputStream,
+                    i18n = i18n)
             }
 
             if (cancellationSignal?.isCanceled == true) {

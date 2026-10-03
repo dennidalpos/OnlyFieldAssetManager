@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.data.repository
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.data.repository.mappers.*
 import androidx.room.withTransaction
 import com.onlyfield.assetmanager.core.model.Device
@@ -24,15 +26,15 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         inventoryDao.deleteTrashItemById(trashId)
     }
 
-    suspend fun moveToTrash(projectId: String, itemType: String, itemId: String): com.onlyfield.assetmanager.core.model.TrashItem? {
+    suspend fun moveToTrash(projectId: String, itemType: String, itemId: String, i18n: Messages = Messages()): com.onlyfield.assetmanager.core.model.TrashItem? {
         val project = getProjectById(projectId) ?: return null
 
         val trashItem = db.withTransaction {
             when (itemType.uppercase()) {
                 "DEVICE", "RACK" -> {
                     val (updated, item) = if (itemType.uppercase() == "DEVICE")
-                        com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteDeviceToTrash(project, itemId)
-                    else com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteRackToTrash(project, itemId)
+                        com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteDeviceToTrash(project, itemId, i18n = i18n)
+                    else com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteRackToTrash(project, itemId, i18n = i18n)
                     if (item != null) {
                         save(updated)
                         inventoryDao.insertTrashItems(listOf(toTrashItemEntity(item)))
@@ -48,7 +50,7 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
                         itemId = itemId,
                         displayName = cred.username,
                         serializedJson = jsonStr,
-                        affectedReferencesSummary = "Credenziale per utente ${cred.username}"
+                        affectedReferencesSummary = i18n.text("text.0f40bc910c52", cred.username)
                     )
                     inventoryDao.insertTrashItems(listOf(toTrashItemEntity(item)))
                     inventoryDao.deleteCredentialById(itemId)
@@ -61,7 +63,7 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         return trashItem
     }
 
-    suspend fun restoreFromTrash(projectId: String, trashId: String): Boolean {
+    suspend fun restoreFromTrash(projectId: String, trashId: String, i18n: Messages = Messages()): Boolean {
         val trashEntity = inventoryDao.getTrashItemById(trashId) ?: return false
         val trashItem = toTrashItem(trashEntity)
 
@@ -69,7 +71,7 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
             when (trashItem.itemType.uppercase()) {
                 "DEVICE", "RACK" -> {
                     val project = getProjectById(projectId) ?: return@withTransaction
-                    save(com.onlyfield.assetmanager.core.edit.ProjectEdits.restoreFromTrash(project, trashItem))
+                    save(com.onlyfield.assetmanager.core.edit.ProjectEdits.restoreFromTrash(project, trashItem, i18n = i18n))
                     inventoryDao.deleteTrashItemById(trashId)
                 }
                 "CREDENTIAL" -> {
@@ -86,14 +88,14 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         projectId: String,
         oldDeviceId: String,
         newTechnicalName: String,
-        newCategory: com.onlyfield.assetmanager.core.model.DeviceCategory
-    ): Pair<com.onlyfield.assetmanager.core.model.TrashItem?, com.onlyfield.assetmanager.core.model.Device> {
-        val project = getProjectById(projectId) ?: throw IllegalArgumentException("Project not found")
+        newCategory: com.onlyfield.assetmanager.core.model.DeviceCategory,
+        i18n: Messages = Messages()): Pair<com.onlyfield.assetmanager.core.model.TrashItem?, com.onlyfield.assetmanager.core.model.Device> {
+        val project = getProjectById(projectId) ?: throw IllegalArgumentException(i18n.text("text.758e8416eb8a"))
         val bu = project.businessUnits.find { bu -> bu.devices.any { it.id == oldDeviceId } }
-            ?: throw IllegalArgumentException("Device $oldDeviceId not found in project")
+            ?: throw IllegalArgumentException(i18n.text("text.4ac20cd01b41", oldDeviceId))
         val oldDevice = bu.devices.find { it.id == oldDeviceId }!!
 
-        val trashItem = moveToTrash(projectId, "DEVICE", oldDeviceId)
+        val trashItem = moveToTrash(projectId, "DEVICE", oldDeviceId, i18n = i18n)
 
         val newDevice = com.onlyfield.assetmanager.core.model.Device(
             id = java.util.UUID.randomUUID().toString(),
@@ -116,8 +118,8 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         projectId: String,
         survivingDeviceId: String,
         duplicateDeviceId: String,
-        choices: com.onlyfield.assetmanager.core.model.MergeDataChoices
-    ): com.onlyfield.assetmanager.core.model.Device? {
+        choices: com.onlyfield.assetmanager.core.model.MergeDataChoices,
+        i18n: Messages = Messages()): com.onlyfield.assetmanager.core.model.Device? {
         if (survivingDeviceId == duplicateDeviceId) return null
         val project = getProjectById(projectId) ?: return null
 
@@ -171,7 +173,7 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
                 inventoryDao.insertPorts(updatedSurvivingDevice.ports.map { toPortEntity(it) })
             }
 
-            moveToTrash(projectId, "DEVICE", duplicateDeviceId)
+            moveToTrash(projectId, "DEVICE", duplicateDeviceId, i18n = i18n)
         }
 
         return updatedSurvivingDevice
@@ -180,9 +182,9 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
     suspend fun batchEditDevices(
         projectId: String,
         deviceIds: List<String>,
-        changes: com.onlyfield.assetmanager.core.model.BatchDeviceChanges
-    ) {
+        changes: com.onlyfield.assetmanager.core.model.BatchDeviceChanges,
+        i18n: Messages = Messages()) {
         val project = getProjectById(projectId) ?: return
-        save(com.onlyfield.assetmanager.core.edit.ProjectEdits.batchEditDevices(project, deviceIds, changes))
+        save(com.onlyfield.assetmanager.core.edit.ProjectEdits.batchEditDevices(project, deviceIds, changes, i18n = i18n))
     }
 }

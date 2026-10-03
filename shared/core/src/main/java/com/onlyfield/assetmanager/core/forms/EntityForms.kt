@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.forms
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.FieldValidators.parseDecimal
 import com.onlyfield.assetmanager.core.forms.FieldValidators.parseInt
@@ -32,17 +34,18 @@ data class DeviceForm(
     val deviceModelId: String? = null,
     val observationStatus: ObservationStatus = ObservationStatus.TO_VERIFY,
     val notes: String = "",
+    val hardware: HardwareSpec = HardwareSpec(),
 ) {
-    fun errors(rackHeightU: Int?): Map<String, String> = buildMap {
-        FieldValidators.required(technicalName, "Nome tecnico")?.let { put("technicalName", it) }
-        if (businessUnitId == null) put("businessUnitId", "Selezionare la business unit")
-        FieldValidators.ipv4(ipAddress)?.let { put("ipAddress", it) }
-        FieldValidators.mac(macAddress)?.let { put("macAddress", it) }
-        FieldValidators.int(heightU, min = 1, max = 60, required = true)?.let { put("heightU", it) }
+    fun errors(rackHeightU: Int?, i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.required(technicalName, i18n.text("text.4f1b2dcbe4ce"), i18n = i18n)?.let { put("technicalName", it) }
+        if (businessUnitId == null) put("businessUnitId", i18n.text("text.da384d522c1b"))
+        FieldValidators.ipv4(ipAddress, i18n = i18n)?.let { put("ipAddress", it) }
+        FieldValidators.mac(macAddress, i18n = i18n)?.let { put("macAddress", it) }
+        FieldValidators.int(heightU, min = 1, max = 60, required = true, i18n = i18n)?.let { put("heightU", it) }
         if (rackId != null) {
             val height = parseInt(heightU) ?: 1
             val maxStart = rackHeightU?.let { (it - height + 1).coerceAtLeast(1) }
-            FieldValidators.int(positionU, min = 1, max = maxStart)?.let { put("positionU", it) }
+            FieldValidators.int(positionU, min = 1, max = maxStart, i18n = i18n)?.let { put("positionU", it) }
         }
     }
 
@@ -74,6 +77,7 @@ data class DeviceForm(
             mountingType = mountingType,
             deviceModelId = deviceModelId,
             observation = observation,
+            hardware = hardware,
         )
     }
 
@@ -98,12 +102,16 @@ data class DeviceForm(
                 deviceModelId = it.deviceModelId,
                 observationStatus = it.observation?.status ?: ObservationStatus.TO_VERIFY,
                 notes = it.observation?.notes.orEmpty(),
+                hardware = it.hardware,
             )
         } ?: DeviceForm(businessUnitId = businessUnitId)
     }
 }
 
 data class RackForm(
+    val mountingDepthMm: String = "",
+    val deviceModelId: String? = null,
+    val mountingType: String? = null,
     val name: String = "",
     val heightU: String = "42",
     val numberingDirection: NumberingDirection = NumberingDirection.BOTTOM_TO_TOP,
@@ -111,10 +119,11 @@ data class RackForm(
     val depthMm: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        FieldValidators.required(name, "Nome")?.let { put("name", it) }
-        FieldValidators.int(heightU, min = 1, max = 60, required = true)?.let { put("heightU", it) }
-        FieldValidators.int(depthMm, min = 100, max = 2000)?.let { put("depthMm", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.required(name, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("name", it) }
+        FieldValidators.int(heightU, min = 1, max = 60, required = true, i18n = i18n)?.let { put("heightU", it) }
+        FieldValidators.int(depthMm, min = 100, max = 2000, i18n = i18n)?.let { put("depthMm", it) }
+        FieldValidators.int(mountingDepthMm, min = 1, max = 2000, i18n = i18n)?.let { put("mountingDepthMm", it) }
     }
 
     fun toRack(existing: Rack?): Rack = (existing ?: Rack(name = name.trim())).copy(
@@ -123,17 +132,21 @@ data class RackForm(
         numberingDirection = numberingDirection,
         areaId = areaId,
         depthMm = parseInt(depthMm),
+        mountingDepthMm = parseInt(mountingDepthMm),
+        deviceModelId = deviceModelId,
+        mountingType = mountingType,
         notes = notes.orNull(),
     )
 
     companion object {
         fun from(rack: Rack?) = rack?.let {
-            RackForm(it.name, it.heightU.toString(), it.numberingDirection, it.areaId, it.depthMm?.toString().orEmpty(), it.notes.orEmpty())
+            RackForm(name = it.name, heightU = it.heightU.toString(), numberingDirection = it.numberingDirection, areaId = it.areaId, depthMm = it.depthMm?.toString().orEmpty(), notes = it.notes.orEmpty(), mountingDepthMm = it.mountingDepthMm?.toString().orEmpty(), deviceModelId = it.deviceModelId, mountingType = it.mountingType)
         } ?: RackForm()
     }
 }
 
 data class CableForm(
+    val deviceModelId: String? = null,
     val codeOrLabel: String = "",
     val portAId: String? = null,
     val portBId: String? = null,
@@ -148,13 +161,14 @@ data class CableForm(
     val sharedPathSegmentIds: List<String> = emptyList(),
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        if (portAId != null && portAId == portBId) put("portBId", "Le due estremità devono essere porte diverse")
-        FieldValidators.decimal(lengthValue, min = 0.0)?.let { put("lengthValue", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        if (portAId != null && portAId == portBId) put("portBId", i18n.text("text.54cba72dee5f"))
+        FieldValidators.decimal(lengthValue, min = 0.0, i18n = i18n)?.let { put("lengthValue", it) }
     }
 
     fun toCable(existing: Cable?): Cable = (existing ?: Cable()).copy(
         codeOrLabel = codeOrLabel.orNull(),
+        deviceModelId = deviceModelId,
         portAId = portAId,
         portBId = portBId,
         medium = medium,
@@ -172,7 +186,7 @@ data class CableForm(
     companion object {
         fun from(c: Cable?) = c?.let {
             CableForm(
-                it.codeOrLabel.orEmpty(), it.portAId, it.portBId, it.medium, it.connectorA.orEmpty(), it.connectorB.orEmpty(),
+                it.deviceModelId, it.codeOrLabel.orEmpty(), it.portAId, it.portBId, it.medium, it.connectorA.orEmpty(), it.connectorB.orEmpty(),
                 it.nominalCharacteristics.orEmpty(), it.observedSpeed.orEmpty(), it.color.orEmpty(),
                 it.lengthValue?.toString().orEmpty(), it.orientation, it.sharedPathSegmentIds, it.notes.orEmpty()
             )
@@ -188,9 +202,9 @@ data class SharedPathForm(
     val capacityMaxCables: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        FieldValidators.required(name, "Nome")?.let { put("name", it) }
-        FieldValidators.int(capacityMaxCables, min = 1)?.let { put("capacityMaxCables", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.required(name, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("name", it) }
+        FieldValidators.int(capacityMaxCables, min = 1, i18n = i18n)?.let { put("capacityMaxCables", it) }
     }
 
     fun toSegment(existing: SharedPathSegment?): SharedPathSegment = (existing ?: SharedPathSegment(name = name.trim())).copy(
@@ -216,9 +230,9 @@ data class PanelMappingForm(
     val isUnknownPassage: Boolean = false,
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        if (portAId == null) put("portAId", "Selezionare la porta A")
-        if (portAId != null && portAId == portBId) put("portBId", "Le due porte devono essere diverse")
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        if (portAId == null) put("portAId", i18n.text("text.c3f00a679699"))
+        if (portAId != null && portAId == portBId) put("portBId", i18n.text("text.7a79a3b345af"))
     }
 
     fun toMapping(existing: PanelMapping?): PanelMapping {
@@ -241,11 +255,11 @@ data class VlanForm(
     val scopeTargetId: String? = null,
     val description: String = "",
 ) {
-    fun errors(existingVlanIds: Set<Int>): Map<String, String> = buildMap {
-        val numberError = FieldValidators.int(vlanId, min = 1, max = 4094, required = true)
+    fun errors(existingVlanIds: Set<Int>, i18n: Messages = Messages()): Map<String, String> = buildMap {
+        val numberError = FieldValidators.int(vlanId, min = 1, max = 4094, required = true, i18n = i18n)
         if (numberError != null) put("vlanId", numberError)
-        else if (parseInt(vlanId) in existingVlanIds && scopeType == VlanScopeType.PROJECT) put("vlanId", "VLAN già definita nel progetto")
-        FieldValidators.required(name, "Nome")?.let { put("name", it) }
+        else if (parseInt(vlanId) in existingVlanIds && scopeType == VlanScopeType.PROJECT) put("vlanId", i18n.text("text.9360f1518699"))
+        FieldValidators.required(name, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("name", it) }
     }
 
     fun toVlan(existing: Vlan?): Vlan {
@@ -271,9 +285,9 @@ data class SubnetForm(
     val name: String = "",
     val description: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        FieldValidators.cidr(cidrBlock, required = true)?.let { put("cidrBlock", it) }
-        FieldValidators.ipv4(gatewayIp)?.let { put("gatewayIp", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.cidr(cidrBlock, required = true, i18n = i18n)?.let { put("cidrBlock", it) }
+        FieldValidators.ipv4(gatewayIp, i18n = i18n)?.let { put("gatewayIp", it) }
     }
 
     fun toSubnet(existing: Subnet?): Subnet = (existing ?: Subnet(cidrBlock = cidrBlock.trim())).copy(
@@ -300,12 +314,12 @@ data class LogicalInterfaceForm(
     val macAddress: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        if (deviceId == null) put("deviceId", "Selezionare l'apparato")
-        FieldValidators.required(name, "Nome")?.let { put("name", it) }
-        FieldValidators.ipv4(ipAddress)?.let { put("ipAddress", it) }
-        FieldValidators.cidr(subnetCidr)?.let { put("subnetCidr", it) }
-        FieldValidators.mac(macAddress)?.let { put("macAddress", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        if (deviceId == null) put("deviceId", i18n.text("text.a723641bd589"))
+        FieldValidators.required(name, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("name", it) }
+        FieldValidators.ipv4(ipAddress, i18n = i18n)?.let { put("ipAddress", it) }
+        FieldValidators.cidr(subnetCidr, i18n = i18n)?.let { put("subnetCidr", it) }
+        FieldValidators.mac(macAddress, i18n = i18n)?.let { put("macAddress", it) }
     }
 
     fun toInterface(existing: LogicalInterface?): LogicalInterface {
@@ -340,8 +354,8 @@ data class WanForm(
     val remoteSite: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        FieldValidators.required(name, "Nome")?.let { put("name", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.required(name, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("name", it) }
     }
 
     fun toConnection(existing: WanVpnConnection?): WanVpnConnection = (existing ?: WanVpnConnection(name = name.trim())).copy(
@@ -372,9 +386,9 @@ data class DeviceConfigForm(
     val configText: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        if (deviceId == null) put("deviceId", "Selezionare l'apparato")
-        FieldValidators.required(title, "Titolo")?.let { put("title", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        if (deviceId == null) put("deviceId", i18n.text("text.a723641bd589"))
+        FieldValidators.required(title, i18n.text("text.d8f4eedefb37"), i18n = i18n)?.let { put("title", it) }
     }
 
     fun toConfig(existing: DeviceConfiguration?): DeviceConfiguration {
@@ -402,14 +416,14 @@ data class PowerFeedForm(
     val runtimeMinutes: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        if (deviceId == null) put("deviceId", "Selezionare l'apparato alimentato")
-        FieldValidators.required(feedName, "Nome")?.let { put("feedName", it) }
-        if (sourceDeviceId != null && sourceDeviceId == deviceId) put("sourceDeviceId", "La sorgente non può essere l'apparato stesso")
-        FieldValidators.int(voltage, min = 1, max = 1000)?.let { put("voltage", it) }
-        FieldValidators.decimal(loadVa, min = 0.0)?.let { put("loadVa", it) }
-        FieldValidators.decimal(loadWatts, min = 0.0)?.let { put("loadWatts", it) }
-        FieldValidators.int(runtimeMinutes, min = 0)?.let { put("runtimeMinutes", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        if (deviceId == null) put("deviceId", i18n.text("text.ed0843a576b5"))
+        FieldValidators.required(feedName, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("feedName", it) }
+        if (sourceDeviceId != null && sourceDeviceId == deviceId) put("sourceDeviceId", i18n.text("text.5c29f4443952"))
+        FieldValidators.int(voltage, min = 1, max = 1000, i18n = i18n)?.let { put("voltage", it) }
+        FieldValidators.decimal(loadVa, min = 0.0, i18n = i18n)?.let { put("loadVa", it) }
+        FieldValidators.decimal(loadWatts, min = 0.0, i18n = i18n)?.let { put("loadWatts", it) }
+        FieldValidators.int(runtimeMinutes, min = 0, i18n = i18n)?.let { put("runtimeMinutes", it) }
     }
 
     fun toFeed(existing: PowerFeed?): PowerFeed {
@@ -446,9 +460,9 @@ data class PoeForm(
     val watts: String = "",
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        if (portId == null) put("portId", "Selezionare la porta")
-        FieldValidators.decimal(watts, min = 0.0, max = 100.0)?.let { put("watts", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        if (portId == null) put("portId", i18n.text("text.4d544da7edd0"))
+        FieldValidators.decimal(watts, min = 0.0, max = 100.0, i18n = i18n)?.let { put("watts", it) }
     }
 
     fun toMapping(existing: PoeMapping?): PoeMapping {
@@ -477,9 +491,9 @@ data class BadgeForm(
     val category: BadgeCategory = BadgeCategory.FREE_LABEL,
     val notes: String = "",
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        FieldValidators.required(label, "Etichetta")?.let { put("label", it) }
-        if (target.type != "PROJECT" && target.id == null) put("target", "Selezionare l'elemento")
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.required(label, i18n.text("text.9fe5b72aa900"), i18n = i18n)?.let { put("label", it) }
+        if (target.type != "PROJECT" && target.id == null) put("target", i18n.text("text.efc248da0e70"))
     }
 
     fun toBadge(existing: DocumentBadge?, projectId: String): DocumentBadge {
@@ -502,10 +516,10 @@ data class ExtraFieldForm(
     val fieldType: CustomFieldType = CustomFieldType.STRING,
     val classification: AttachmentClassification = AttachmentClassification.SHAREABLE,
 ) {
-    fun errors(): Map<String, String> = buildMap {
-        FieldValidators.required(key, "Nome campo")?.let { put("key", it) }
-        if (target.type != "PROJECT" && target.id == null) put("target", "Selezionare l'elemento")
-        if (fieldType == CustomFieldType.NUMBER) FieldValidators.decimal(value)?.let { put("value", it) }
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
+        FieldValidators.required(key, i18n.text("text.8451f41f283d"), i18n = i18n)?.let { put("key", it) }
+        if (target.type != "PROJECT" && target.id == null) put("target", i18n.text("text.efc248da0e70"))
+        if (fieldType == CustomFieldType.NUMBER) FieldValidators.decimal(value, i18n = i18n)?.let { put("value", it) }
     }
 
     fun toField(existing: CustomExtraField?, projectId: String): CustomExtraField {

@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -41,6 +43,7 @@ private val DarkColors = darkColorScheme(
 
 @Composable
 fun DesktopApp(state: DesktopAppState) {
+    CompositionLocalProvider(LocalMessages provides state.i18n) {
     MaterialTheme(colorScheme = if (state.darkTheme) DarkColors else LightColors) {
         com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {
@@ -63,33 +66,37 @@ fun DesktopApp(state: DesktopAppState) {
     }
 }
 
+}
+
 @Composable
 private fun ProjectToolbar(state: DesktopAppState) {
+    val i18n = LocalMessages.current
+
     val project = state.project
     var tools by remember { mutableStateOf(false) }
     Surface(tonalElevation = 2.dp) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Column(Modifier.weight(1f)) {
-                Text(project?.name ?: "Seleziona progetto", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (project != null) Text("Salvataggio automatico" + if (project.isPasswordProtected) " · Protetto da password" else "", style = MaterialTheme.typography.bodySmall)
+                Text(project?.name ?: i18n.text("text.57ecf1a02db6"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (project != null) Text(i18n.text("text.b1f6bb96d793") + if (project.isPasswordProtected) i18n.text("text.29322f0f7cb0") else "", style = MaterialTheme.typography.bodySmall)
             }
             if (project == null) {
-                OutlinedButton(onClick = { state.newProject() }) { Text("Nuovo sito") }
-                OutlinedButton(onClick = state::pickAndImport) { Text("Importa .ofam…") }
+                OutlinedButton(onClick = { state.newProject() }) { Text(i18n.text("text.ac667fe865c9")) }
+                OutlinedButton(onClick = state::pickAndImport) { Text(i18n.text("text.a6afc0c52be6")) }
             } else {
-                TextButton(onClick = { state.section = AppSection.FLOORPLANS }) { Text("Mappa") }
-                TextButton(onClick = state::undo, enabled = state.canUndo) { Text("Annulla") }
+                TextButton(onClick = { state.section = AppSection.FLOORPLANS }) { Text(i18n.text("text.2b71c6a11df1")) }
+                TextButton(onClick = state::undo, enabled = state.canUndo) { Text(i18n.text("text.18c9d912a210")) }
                 Box {
-                    OutlinedButton(onClick = { tools = true }) { Text("Strumenti") }
+                    OutlinedButton(onClick = { tools = true }) { Text(i18n.text("text.bb1ca9a0ad66")) }
                     DropdownMenu(expanded = tools, onDismissRequest = { tools = false }) {
-                        AppSection.entries.forEach { section -> DropdownMenuItem(text = { Text(section.title) }, onClick = { tools = false; state.section = section }) }
+                        AppSection.entries.forEach { section -> DropdownMenuItem(text = { Text(section.localizedTitle(i18n)) }, onClick = { tools = false; state.section = section }) }
                         HorizontalDivider()
-                        DropdownMenuItem(text = { Text("Documenti e stampa") }, onClick = { tools = false; state.dialog = AppDialog.Documents })
-                        DropdownMenuItem(text = { Text("Password del progetto") }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
-                        DropdownMenuItem(text = { Text("Esporta .ofam") }, onClick = { tools = false; state.exportPackage() })
-                        DropdownMenuItem(text = { Text("Apri / Importa…") }, onClick = { tools = false; state.pickAndImport() })
-                        DropdownMenuItem(text = { Text("Nuovo sito") }, onClick = { tools = false; state.newProject() })
-                        DropdownMenuItem(text = { Text("Chiudi progetto") }, onClick = { tools = false; state.closeProject() })
+                        DropdownMenuItem(text = { Text(i18n.text("text.b59593297419")) }, onClick = { tools = false; state.dialog = AppDialog.Documents })
+                        DropdownMenuItem(text = { Text(i18n.text("text.f6a32b19c4b1")) }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
+                        DropdownMenuItem(text = { Text(i18n.text("text.8a1d8b27e511")) }, onClick = { tools = false; state.exportPackage() })
+                        DropdownMenuItem(text = { Text(i18n.text("text.c890f54eece6")) }, onClick = { tools = false; state.pickAndImport() })
+                        DropdownMenuItem(text = { Text(i18n.text("text.ac667fe865c9")) }, onClick = { tools = false; state.newProject() })
+                        DropdownMenuItem(text = { Text(i18n.text("text.c00df9e3726e")) }, onClick = { tools = false; state.closeProject() })
                     }
                 }
             }
@@ -99,19 +106,23 @@ private fun ProjectToolbar(state: DesktopAppState) {
 
 @Composable
 private fun ErrorBanner(message: String, onDismiss: () -> Unit) {
+    val i18n = LocalMessages.current
+
     Surface(color = MaterialTheme.colorScheme.errorContainer) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(message, color = MaterialTheme.colorScheme.onErrorContainer, modifier = Modifier.weight(1f))
-            TextButton(onClick = onDismiss) { Text("Chiudi", color = MaterialTheme.colorScheme.onErrorContainer) }
+            TextButton(onClick = onDismiss) { Text(i18n.text("text.32d4079b315b"), color = MaterialTheme.colorScheme.onErrorContainer) }
         }
     }
 }
 
 @Composable
 private fun StatusBar(state: DesktopAppState) {
+    val i18n = LocalMessages.current
+
     Row(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -123,8 +134,8 @@ private fun StatusBar(state: DesktopAppState) {
             val warnings = state.warningCount
             Text(
                 text = when {
-                    errors == 0 && warnings == 0 -> "✓ Nessun problema"
-                    else -> "⛔ $errors errori · ⚠ $warnings avvisi"
+                    errors == 0 && warnings == 0 -> i18n.text("text.f040619ad6e5")
+                    else -> i18n.text("text.d9cc835db98b", errors, warnings)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (errors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
@@ -133,7 +144,7 @@ private fun StatusBar(state: DesktopAppState) {
             )
         }
         Text(
-            "Dati: ${state.dataDir.path.absolutePath}",
+            i18n.text("text.2e723f924356", state.dataDir.path.absolutePath),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             maxLines = 1,
@@ -161,7 +172,7 @@ private fun SectionContent(state: DesktopAppState) {
         AppSection.CABLING -> CablingSection(project, update)
         AppSection.NETWORK -> NetworkLogicalSection(project, update)
         AppSection.POWER -> PowerBadgeSection(project, update)
-        AppSection.TRASH -> TrashBatchSection(project, state.trash, update) { state.trash = it }
+        AppSection.TRASH -> TrashBatchSection(project, state.trash, state::restoreTrash) { state.trash = it }
         AppSection.PROJECT -> EmptyState("")
     }
 }

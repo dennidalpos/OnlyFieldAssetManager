@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager
 
+
 import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -19,7 +20,11 @@ object AppGraph {
 
     fun repository(context: Context): ProjectRepository = repository ?: synchronized(this) {
         repository ?: ProjectRepository(
-            EncryptedDatabase.open(context),
+            EncryptedDatabase.open(context, com.onlyfield.assetmanager.core.i18n.Messages(
+                (com.onlyfield.assetmanager.core.i18n.AppLanguage.entries.firstOrNull {
+                    it.tag == context.getSharedPreferences("ui", Context.MODE_PRIVATE).getString("language", "")
+                } ?: com.onlyfield.assetmanager.core.i18n.AppLanguage.SYSTEM).resolve()
+            )),
             attachmentsRoot = java.io.File(context.applicationContext.filesDir, "attachments")
         ).also { repository = it }
     }
@@ -37,8 +42,15 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        val preferences = getSharedPreferences("ui", MODE_PRIVATE)
+        viewModel.changeLanguage(com.onlyfield.assetmanager.core.i18n.AppLanguage.entries.firstOrNull {
+            it.tag == preferences.getString("language", "")
+        } ?: com.onlyfield.assetmanager.core.i18n.AppLanguage.SYSTEM)
+        viewModel.saveLanguage = { preferences.edit().putString("language", it.tag).commit() }
         setContent {
+            androidx.compose.runtime.CompositionLocalProvider(com.onlyfield.assetmanager.ui.LocalMessages provides viewModel.i18n) {
             AppRoot(viewModel, onExit = ::finish)
+            }
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -12,6 +14,8 @@ import java.io.File
 
 @Composable
 internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial: MapObjectDraft, close: () -> Unit) {
+    val i18n = LocalMessages.current
+
     if (LocalDetailSlot.current == null) {
         val slot = remember { DetailSlot() }
         DetailChangeHost(slot) { FloorObjectEditor(state, project, initial, close) }
@@ -35,19 +39,19 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
         }
     }
     SideEffect { slot.dirty = dirty }
-    FormDialog(initial.type.name, { slot.requestChange {} }, {
+    FormDialog(com.onlyfield.assetmanager.core.model.ObjectCatalog.displayName(initial.type, i18n), { slot.requestChange {} }, {
         if (state.saveMapObject(draft, photos.toList(), removed)) close()
-    }, confirmEnabled = draft.errors(project).isEmpty(), width = 680.dp) {
+    }, confirmEnabled = draft.errors(project, i18n = i18n).isEmpty(), width = 680.dp) {
         ObjectFields(project, draft) { draft = it }
-        Text("Foto e allegati", style = MaterialTheme.typography.titleMedium)
+        Text(i18n.text("text.db7291baccc1"), style = MaterialTheme.typography.titleMedium)
         project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
             Text(a.name); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
-            TextButton(onClick = { removed = removed + a.id }) { Text("Rimuovi allegato") }
+            TextButton(onClick = { removed = removed + a.id }) { Text(i18n.text("text.960630ee842c")) }
         }
         photos.toList().forEach { file ->
             Text(file.name); MediaThumbnail(file)
-            TextButton(onClick = { photos.remove(file) }) { Text("Rimuovi foto") }
+            TextButton(onClick = { photos.remove(file) }) { Text(i18n.text("text.f5115aa0e57e")) }
         }
-        OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile("Scegli foto", "Immagini", "png", "jpg", "jpeg", "webp", "bmp")?.let { photos += it } }) { Text("Aggiungi foto…") }
+        OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile(i18n.text("text.a111cc717443"), i18n.text("text.a9f46a362f48"), "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { photos += it } }) { Text(i18n.text("text.e2ca686d60a1")) }
     }
 }

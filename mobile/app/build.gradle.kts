@@ -37,6 +37,8 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
 
+    sourceSets.getByName("main").kotlin.directories.add("../../shared/configurator/src/main/kotlin")
+
     buildFeatures {
         compose = true
     }

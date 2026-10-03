@@ -26,7 +26,7 @@ class ContractVersionTest {
     @Test
     fun serialNumberRoundTripsInVersion110() {
         val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(project))
-        assertEquals("1.10", result.pkg!!.manifest.formatVersion)
+        assertEquals("1.11", result.pkg!!.manifest.formatVersion)
         assertEquals("FOC123", result.pkg!!.project.businessUnits.single().devices.single().serialNumber)
     }
 

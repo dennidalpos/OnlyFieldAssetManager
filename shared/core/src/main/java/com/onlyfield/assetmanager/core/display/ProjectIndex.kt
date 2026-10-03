@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.display
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.*
 
 /**
@@ -31,7 +33,7 @@ class ProjectIndex(val project: Project) {
     fun businessUnitOf(deviceId: String): BusinessUnit? =
         project.businessUnits.find { bu -> bu.devices.any { it.id == deviceId } }
 
-    fun deviceName(id: String?, fallback: String = "—"): String = device(id)?.technicalName ?: fallback
+    fun deviceName(id: String?, fallback: String = "—", i18n: Messages = Messages()): String = device(id)?.technicalName ?: fallback
     fun areaName(id: String?, fallback: String = "—"): String = area(id)?.name ?: fallback
     fun rackName(id: String?, fallback: String = "—"): String = rack(id)?.name ?: fallback
     fun siteName(id: String?, fallback: String = "—"): String = id?.let(siteById::get)?.name ?: fallback
@@ -41,7 +43,7 @@ class ProjectIndex(val project: Project) {
         port(id)?.let { "${it.device.technicalName} › ${it.port.name}" } ?: fallback
 
     /** Name of an entity referenced by a string target type ("DEVICE", "RACK", "PORT", ...). */
-    fun targetLabel(targetType: String, targetId: String?): String {
+    fun targetLabel(targetType: String, targetId: String?, i18n: Messages = Messages()): String {
         val name = when (targetType.uppercase()) {
             "PROJECT" -> project.name
             "DEVICE" -> device(targetId)?.technicalName
@@ -53,19 +55,19 @@ class ProjectIndex(val project: Project) {
             "BUSINESS_UNIT" -> targetId?.let(buById::get)?.name
             else -> null
         }
-        return "${EntityTypeLabels.of(targetType)}: ${name ?: "non trovato"}"
+        return "${EntityTypeLabels.of(targetType, i18n = i18n)}: ${name ?: i18n.text("text.c86fc6dfbd62")}"
     }
 
     /** Attachments linked to an entity (photos of a device, rack or area). */
     fun attachmentsOf(targetId: String): List<Attachment> = project.attachments.filter { it.targetId == targetId }
 
     /** "Apparato: SW-01" for a linked attachment, null when it belongs to the whole project. */
-    fun attachmentTarget(attachment: Attachment): String? = attachment.targetType
+    fun attachmentTarget(attachment: Attachment, i18n: Messages = Messages()): String? = attachment.targetType
         ?.takeIf { it != AttachmentTargetType.PROJECT }
-        ?.let { targetLabel(it.name, attachment.targetId) }
+        ?.let { targetLabel(it.name, attachment.targetId, i18n = i18n) }
 
     /** Best-effort name of any entity in the project, used e.g. for validation issues. */
-    fun entityName(id: String?): String? {
+    fun entityName(id: String?, i18n: Messages = Messages()): String? {
         if (id == null) return null
         return device(id)?.technicalName
             ?: port(id)?.let { "${it.device.technicalName} › ${it.port.name}" }
@@ -73,8 +75,8 @@ class ProjectIndex(val project: Project) {
             ?: area(id)?.name
             ?: siteById[id]?.name
             ?: buById[id]?.name
-            ?: project.cables.find { it.id == id }?.let { "Cavo ${it.codeOrLabel ?: portLabel(it.portAId)}" }
-            ?: project.vlans.find { it.id == id }?.let { "VLAN ${it.vlanId} ${it.name}" }
+            ?: project.cables.find { it.id == id }?.let { i18n.text("text.dae31b0efa98", it.codeOrLabel ?: portLabel(it.portAId)) }
+            ?: project.vlans.find { it.id == id }?.let { i18n.text("text.b3bc38a1979e", it.vlanId, it.name) }
             ?: project.subnets.find { it.id == id }?.cidrBlock
             ?: project.deviceModels.find { it.id == id }?.name
             ?: project.attachments.find { it.id == id }?.name

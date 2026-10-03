@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.exchange
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.Project
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -33,7 +35,7 @@ object ProjectComparisonEvaluator {
         currentProject: Project?,
         currentManifest: PackageManifest? = null,
         incomingPackage: ProjectPackage,
-    ): ProjectComparison {
+     i18n: Messages = Messages()): ProjectComparison {
         val (incomingManifest, incomingProj) = incomingPackage
 
         if (currentProject == null) {
@@ -47,7 +49,7 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "Nuovo progetto locale",
+                summary = i18n.text("text.c889142ab486"),
             )
         }
 
@@ -62,8 +64,8 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "Progetto con identificatore differente rispetto a quello aperto",
-                warningMessage = "Attenzione: Stai importando un progetto differente (${incomingProj.name}) che affiancherà o sostituirà la selezione attuale.",
+                summary = i18n.text("text.e47e726c1f3f"),
+                warningMessage = i18n.text("text.279fd779e388", incomingProj.name),
             )
         }
 
@@ -83,7 +85,7 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "La copia importata è identica a quella locale",
+                summary = i18n.text("text.5dc0bf387420"),
             )
         }
 
@@ -98,7 +100,7 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "La copia importata è una revisione più recente",
+                summary = i18n.text("text.41250362f6f4"),
             )
         }
 
@@ -115,8 +117,8 @@ object ProjectComparisonEvaluator {
                 incomingProjectName = incomingProj.name,
                 incomingExportedEpochMs = incomingManifest.exportedEpochMs,
                 incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-                summary = "La copia importata è antecedente a quella locale",
-                warningMessage = "AVVISO: La copia importata ($formattedIncoming) è antecedente alla versione locale corrente ($formattedLocal). Continuare sovrascriverà le modifiche locali più recenti.",
+                summary = i18n.text("text.6dbac3913064"),
+                warningMessage = i18n.text("text.bbb48cace21a", formattedIncoming, formattedLocal),
             )
         }
 
@@ -130,8 +132,8 @@ object ProjectComparisonEvaluator {
             incomingProjectName = incomingProj.name,
             incomingExportedEpochMs = incomingManifest.exportedEpochMs,
             incomingUpdatedEpochMs = incomingProj.updatedEpochMs,
-            summary = "Le due copie sono divergenti",
-            warningMessage = "AVVISO: Le modifiche nella copia importata divergono dallo stato locale. Procedendo verranno applicati i dati del pacchetto importato.",
+            summary = i18n.text("text.5f87354e83f0"),
+            warningMessage = i18n.text("text.ca47acdad352"),
         )
     }
 

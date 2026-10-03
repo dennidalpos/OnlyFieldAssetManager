@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -25,7 +27,7 @@ import androidx.compose.ui.unit.dp
 data class ConfirmRequest(
     val title: String,
     val message: String,
-    val confirmLabel: String = "Elimina",
+    val confirmLabel: String? = null,
     val destructive: Boolean = true,
     val onConfirm: () -> Unit,
 )
@@ -34,6 +36,8 @@ val LocalConfirm = staticCompositionLocalOf<(ConfirmRequest) -> Unit> { { it.onC
 
 @Composable
 fun ConfirmHost(content: @Composable () -> Unit) {
+    val i18n = LocalMessages.current
+
     var pending by remember { mutableStateOf<ConfirmRequest?>(null) }
     CompositionLocalProvider(LocalConfirm provides { pending = it }) { content() }
     pending?.let { req ->
@@ -46,9 +50,9 @@ fun ConfirmHost(content: @Composable () -> Unit) {
                     onClick = { pending = null; req.onConfirm() },
                     colors = if (req.destructive) ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
                     else ButtonDefaults.textButtonColors()
-                ) { Text(req.confirmLabel) }
+                ) { Text(req.confirmLabel ?: i18n.text("text.7efe336bd548")) }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Annulla") } }
+            dismissButton = { TextButton(onClick = { pending = null }) { Text(i18n.text("text.18c9d912a210")) } }
         )
     }
 }
@@ -67,6 +71,8 @@ fun AppScaffold(
     busy: String? = null,
     content: @Composable (PaddingValues) -> Unit,
 ) {
+    val i18n = LocalMessages.current
+
     Scaffold(
         topBar = {
             Column {
@@ -78,7 +84,7 @@ fun AppScaffold(
                         }
                     },
                     navigationIcon = {
-                        if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Indietro") }
+                        if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = i18n.text("text.80426885bb74")) }
                     },
                     actions = actions
                 )
@@ -94,7 +100,8 @@ fun AppScaffold(
 data class MenuAction(val label: String, val destructive: Boolean = false, val onClick: () -> Unit)
 
 @Composable
-fun OverflowMenu(actions: List<MenuAction>, contentDescription: String = "Altre azioni") {
+fun OverflowMenu(actions: List<MenuAction>, contentDescription: String = LocalMessages.current.text("text.93f019bac960")) {
+
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = contentDescription) }
@@ -190,9 +197,11 @@ fun FormDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
-    confirmLabel: String = "Salva",
+    confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val i18n = LocalMessages.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
@@ -204,7 +213,7 @@ fun FormDialog(
             )
         },
         confirmButton = { TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("text.18c9d912a210")) } }
     )
 }
 
@@ -279,6 +288,8 @@ fun <T> OptionPicker(
     isError: Boolean = false,
     enabled: Boolean = true,
 ) {
+    val i18n = LocalMessages.current
+
     var open by remember { mutableStateOf(false) }
     val markDirty = LocalMarkDirty.current
     Box(modifier = modifier.fillMaxWidth()) {
@@ -288,7 +299,7 @@ fun <T> OptionPicker(
             readOnly = true,
             enabled = enabled,
             label = { Text(label) },
-            placeholder = { Text("Seleziona…") },
+            placeholder = { Text(i18n.text("text.60d6013749f3")) },
             trailingIcon = { Text("▾") },
             isError = isError,
             supportingText = supportingText?.let { { Text(it) } },
@@ -308,7 +319,7 @@ fun <T> OptionPicker(
             title = { Text(label.removeSuffix(" *")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (options.size > 7) SearchField(query, { query = it }, "Cerca…")
+                    if (options.size > 7) SearchField(query, { query = it }, i18n.text("text.30109da716dd"))
                     LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                         if (noneLabel != null && query.isBlank()) {
                             item {
@@ -316,7 +327,7 @@ fun <T> OptionPicker(
                                 HorizontalDivider()
                             }
                         }
-                        if (filtered.isEmpty()) item { Text(if (options.isEmpty()) "Nessun elemento disponibile" else "Nessun risultato", modifier = Modifier.padding(16.dp)) }
+                        if (filtered.isEmpty()) item { Text(if (options.isEmpty()) i18n.text("text.0391aa0b5565") else i18n.text("text.0af987882e51"), modifier = Modifier.padding(16.dp)) }
                         items(filtered) { o ->
                             ListItem(
                                 headlineContent = { Text(optionLabel(o)) },
@@ -328,7 +339,7 @@ fun <T> OptionPicker(
                     }
                 }
             },
-            confirmButton = { TextButton(onClick = { open = false }) { Text("Chiudi") } }
+            confirmButton = { TextButton(onClick = { open = false }) { Text(i18n.text("text.32d4079b315b")) } }
         )
     }
 }

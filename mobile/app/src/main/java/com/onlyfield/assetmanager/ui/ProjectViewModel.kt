@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.ui
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+import com.onlyfield.assetmanager.core.i18n.AppLanguage
+
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
@@ -63,6 +66,18 @@ sealed interface ImportState {
  */
 class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() {
 
+    var language by mutableStateOf(AppLanguage.SYSTEM)
+        private set
+    val i18n: Messages get() = Messages(language.resolve())
+    var saveLanguage: (AppLanguage) -> Boolean = { true }
+
+    fun changeLanguage(value: AppLanguage) {
+        // Language controls are available outside edit screens and the site wizard.
+        if (!saveLanguage(value)) { fail(i18n.text("language.saveFailed")); return }
+        language = value
+        _issues.value = _project.value?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
+    }
+
     val projects: StateFlow<List<ProjectEntity>> = repository.getAllProjects()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
@@ -117,7 +132,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     private fun setProject(p: Project?) {
         _project.value = p
-        _issues.value = p?.let { ModelValidator.validateProject(it).issues } ?: emptyList()
+        _issues.value = p?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
     }
 
     // --- Projects ------------------------------------------------------------------------------
@@ -126,7 +141,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         viewModelScope.launch {
             val p = repository.getProjectById(projectId)
             if (p == null) {
-                fail("Progetto non trovato.")
+                fail(i18n.text("text.05065b58f085"))
                 return@launch
             }
             selectedBuId = null
@@ -163,15 +178,15 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val wizard = newSite
         if (!wizard.canProceed) return
         viewModelScope.launch {
-            busy = "Creazione del progetto…"
+            busy = i18n.text("text.e02d15067dea")
             try {
                 val p = wizard.buildProject()
                 repository.saveProject(p)
                 wizard.password?.let { repository.setProjectPassword(p.id, currentPassword = null, newPassword = it) }
                 openProject(p.id)
-                notify("Progetto «${p.name}» creato.")
+                notify(i18n.text("text.b0656bad125d", p.name))
             } catch (e: Exception) {
-                fail("Impossibile creare il progetto", e)
+                fail(i18n.text("text.cae20309d41d"), e)
             } finally {
                 busy = null
             }
@@ -182,7 +197,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         viewModelScope.launch {
             repository.renameProject(projectId, newName.trim())
             if (_project.value?.id == projectId) setProject(repository.getProjectById(projectId))
-            notify("Progetto rinominato.")
+            notify(i18n.text("text.7aec8adfe336"))
         }
     }
 
@@ -191,9 +206,9 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             try {
                 repository.deleteProject(projectId)
                 if (_project.value?.id == projectId) closeProject()
-                notify("Progetto eliminato.")
+                notify(i18n.text("text.070c3a74ee96"))
             } catch (e: Exception) {
-                fail("Eliminazione non riuscita", e)
+                fail(i18n.text("text.5d8f97c003c8"), e)
             }
         }
     }
@@ -211,7 +226,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val after = try {
             transform(before)
         } catch (e: Exception) {
-            fail("Modifica non applicata", e)
+            fail(i18n.text("text.8921cbfc9370"), e)
             return
         }
         if (after == before) return
@@ -223,7 +238,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 notify(message, undo = { restoreSnapshot(before) })
             } catch (e: Exception) {
                 setProject(before)
-                fail("Salvataggio non riuscito", e)
+                fail(i18n.text("text.9b6ca71eb272"), e)
             }
         }
     }
@@ -233,9 +248,9 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             try {
                 repository.saveProject(snapshot)
                 setProject(snapshot)
-                notify("Modifica annullata.")
+                notify(i18n.text("text.1e7b4fb4b88a"))
             } catch (e: Exception) {
-                fail("Impossibile annullare", e)
+                fail(i18n.text("text.80eba573acd4"), e)
             }
         }
     }
@@ -257,11 +272,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val projectId = _project.value?.id ?: return
         viewModelScope.launch {
             try {
-                val item = repository.moveToTrash(projectId, itemType, itemId)
+                val item = repository.moveToTrash(projectId, itemType, itemId, i18n = i18n)
                 reload()
-                if (item != null) notify("«$name» spostato nel cestino.", undo = { restoreFromTrash(item.id) })
+                if (item != null) notify(i18n.text("text.4e2629d50c9b", name), undo = { restoreFromTrash(item.id) })
             } catch (e: Exception) {
-                fail("Impossibile spostare nel cestino", e)
+                fail(i18n.text("text.ce9e7fe8c973"), e)
             }
         }
     }
@@ -270,11 +285,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val projectId = _project.value?.id ?: return
         viewModelScope.launch {
             try {
-                repository.restoreFromTrash(projectId, trashId)
+                repository.restoreFromTrash(projectId, trashId, i18n = i18n)
                 reload()
-                notify("Elemento ripristinato.")
+                notify(i18n.text("text.5d47acb0a3de"))
             } catch (e: Exception) {
-                fail("Ripristino non riuscito", e)
+                fail(i18n.text("text.23d93971ed41"), e)
             }
         }
     }
@@ -283,7 +298,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         viewModelScope.launch {
             repository.deleteTrashItemPermanently(trashId)
             refreshTrash()
-            notify("Elemento eliminato definitivamente.")
+            notify(i18n.text("text.af6b7821ed8a"))
         }
     }
 
@@ -292,7 +307,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         viewModelScope.launch {
             repository.emptyTrash(projectId)
             refreshTrash()
-            notify("Cestino svuotato.")
+            notify(i18n.text("text.9259b5bf717b"))
         }
     }
 
@@ -300,11 +315,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val projectId = _project.value?.id ?: return
         viewModelScope.launch {
             try {
-                val (_, newDevice) = repository.replaceDevice(projectId, oldDeviceId, newName, category)
+                val (_, newDevice) = repository.replaceDevice(projectId, oldDeviceId, newName, category, i18n = i18n)
                 reload()
-                notify("Sostituito con «${newDevice.technicalName}».")
+                notify(i18n.text("text.f033a5d0dac5", newDevice.technicalName))
             } catch (e: Exception) {
-                fail("Sostituzione non riuscita", e)
+                fail(i18n.text("text.a86610be9d16"), e)
             }
         }
     }
@@ -313,11 +328,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val projectId = _project.value?.id ?: return
         viewModelScope.launch {
             try {
-                val merged = repository.mergeDevices(projectId, survivorId, duplicateId, choices)
+                val merged = repository.mergeDevices(projectId, survivorId, duplicateId, choices, i18n = i18n)
                 reload()
-                if (merged != null) notify("Apparati uniti in «${merged.technicalName}».") else fail("Apparati non validi per l'unione.")
+                if (merged != null) notify(i18n.text("text.fc7aa94c3fb8", merged.technicalName)) else fail(i18n.text("text.03f600b15086"))
             } catch (e: Exception) {
-                fail("Unione non riuscita", e)
+                fail(i18n.text("text.932f8500aa16"), e)
             }
         }
     }
@@ -330,12 +345,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             val ok = if (newPassword.isEmpty()) repository.removeProjectPassword(p.id, current)
             else repository.setProjectPassword(p.id, current.ifEmpty { null }, newPassword)
             if (!ok) {
-                onResult("La password attuale non è corretta.")
+                onResult(i18n.text("text.0ab6e626d98f"))
                 return@launch
             }
             setProject(repository.getProjectById(p.id))
             onResult(null)
-            notify(if (newPassword.isEmpty()) "Protezione con password rimossa." else "Password impostata.")
+            notify(if (newPassword.isEmpty()) i18n.text("text.666e96d6fcf0") else i18n.text("text.85a2bd406195"))
         }
     }
 
@@ -344,19 +359,19 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun exportPackage(resolver: ContentResolver, uri: Uri, password: String?) {
         val p = _project.value ?: return
         viewModelScope.launch {
-            busy = "Esportazione in corso…"
+            busy = i18n.text("text.263e01561fa7")
             try {
                 if (p.isPasswordProtected && (password == null || !repository.verifyProjectPassword(p.id, password))) {
-                    fail("Password errata: esportazione annullata.")
+                    fail(i18n.text("text.ec4889ca63e4"))
                     return@launch
                 }
-                val bytes = repository.exportProjectPackage(p.id, password) ?: error("progetto non trovato")
-                resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error("destinazione non scrivibile")
+                val bytes = repository.exportProjectPackage(p.id, password, i18n = i18n) ?: error(i18n.text("text.8ad65d90f29b"))
+                resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error(i18n.text("text.f9b9a0075030"))
                 val missing = repository.missingAttachments(p)
-                if (missing.isEmpty()) notify(if (password != null) "Pacchetto cifrato esportato." else "Pacchetto esportato.")
-                else fail("Pacchetto esportato senza i file di ${missing.size} allegati non presenti sul dispositivo.")
+                if (missing.isEmpty()) notify(if (password != null) i18n.text("text.b73d46f629a2") else i18n.text("text.5814b1d61f28"))
+                else fail(i18n.text("text.56a129cb0f6c", missing.size))
             } catch (e: Exception) {
-                fail("Esportazione non riuscita", e)
+                fail(i18n.text("text.ad15389bdede"), e)
             } finally {
                 busy = null
             }
@@ -365,10 +380,10 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun startImport(resolver: ContentResolver, uri: Uri, password: String? = null) {
         viewModelScope.launch {
-            busy = "Lettura del pacchetto…"
+            busy = i18n.text("text.e73a6312c02c")
             try {
-                val stream = resolver.openInputStream(uri) ?: error("file non leggibile")
-                val evaluation = repository.evaluateImportPackage(stream, password, _project.value?.id)
+                val stream = resolver.openInputStream(uri) ?: error(i18n.text("text.fb0c10a218fc"))
+                val evaluation = repository.evaluateImportPackage(stream, password, _project.value?.id, i18n = i18n)
                 val codes = evaluation.importResult.validationResult.issues.map { it.code }
                 when {
                     "PASSWORD_REQUIRED" in codes || "INVALID_PACKAGE_PASSWORD" in codes ->
@@ -378,12 +393,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                     else -> {
                         _importState.value = null
                         val reasons = evaluation.importResult.validationResult.issues.joinToString("; ") { it.message }
-                        fail("Il file non è un pacchetto valido" + if (reasons.isNotBlank()) ": $reasons" else ".")
+                        fail(i18n.text("text.d8f9e7b1df7e") + if (reasons.isNotBlank()) ": $reasons" else ".")
                     }
                 }
             } catch (e: Exception) {
                 _importState.value = null
-                fail("Impossibile leggere il pacchetto", e)
+                fail(i18n.text("text.a503d881af39"), e)
             } finally {
                 busy = null
             }
@@ -398,9 +413,9 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             try {
                 repository.importProjectPackage(pkg)
                 openProject(pkg.project.id)
-                notify("Importato «${pkg.project.name}».")
+                notify(i18n.text("text.66f7b7ff42d4", pkg.project.name))
             } catch (e: Exception) {
-                fail("Importazione non riuscita", e)
+                fail(i18n.text("text.7b94ff9ddb10"), e)
             }
         }
     }
@@ -415,13 +430,13 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val pkg = review.evaluation.importResult.pkg ?: return
         viewModelScope.launch {
             try {
-                val local = repository.getProjectById(pkg.project.id) ?: error("copia locale non trovata")
-                val result = ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project)
+                val local = repository.getProjectById(pkg.project.id) ?: error(i18n.text("text.03d3a4092bb0"))
+                val result = ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project, i18n = i18n)
                 if (result.conflicts.isEmpty()) applyMerge(ImportState.Merging(pkg, result))
                 else _importState.value = ImportState.Merging(pkg, result)
             } catch (e: Exception) {
                 _importState.value = null
-                fail("Unione non riuscita", e)
+                fail(i18n.text("text.932f8500aa16"), e)
             }
         }
     }
@@ -437,11 +452,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         _importState.value = null
         viewModelScope.launch {
             try {
-                repository.importMergedPackage(merging.pkg, merging.result.resolve(merging.choices))
+                repository.importMergedPackage(merging.pkg, merging.result.resolve(merging.choices, i18n = i18n))
                 openProject(merging.pkg.project.id)
-                notify("Unione completata: ${merging.result.autoApplied} modifiche dal pacchetto, ${merging.choices.size} conflitti risolti.")
+                notify(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size))
             } catch (e: Exception) {
-                fail("Unione non riuscita", e)
+                fail(i18n.text("text.932f8500aa16"), e)
             }
         }
     }
@@ -451,52 +466,58 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private fun writeDocument(resolver: ContentResolver, uri: Uri, label: String, block: suspend (String, OutputStream) -> Boolean) {
         val p = _project.value ?: return
         viewModelScope.launch {
-            busy = "Generazione $label…"
+            busy = i18n.text("text.7e484517449f", label)
             try {
                 val ok = resolver.openOutputStream(uri)?.use { block(p.id, it) } ?: false
-                if (ok) notify("$label salvato.") else fail("Generazione $label non riuscita.")
+                if (ok) notify(i18n.text("text.edbaabf3f213", label)) else fail(i18n.text("text.91981b4324f5", label))
             } catch (e: Exception) {
-                fail("Generazione $label non riuscita", e)
+                fail(i18n.text("text.41b538bf4cba", label), e)
             } finally {
                 busy = null
             }
         }
     }
 
-    fun exportPdf(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig, selection: ReportSelection) =
-        writeDocument(resolver, uri, "report PDF") { id, out -> repository.exportCompositePdfToStream(id, filter, selection, out) }
+    fun exportPdf(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig, selection: ReportSelection) = i18n.let { i18n ->
+        writeDocument(resolver, uri, i18n.text("text.76ab48d47754")) { id, out -> repository.exportCompositePdfToStream(id, filter, selection, out, i18n = i18n) }
+    }
 
-    fun exportXlsx(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig) =
-        writeDocument(resolver, uri, "foglio Excel") { id, out -> repository.exportXlsxToStream(id, filter, out) }
+    fun exportXlsx(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig) = i18n.let { i18n ->
+        writeDocument(resolver, uri, i18n.text("text.b46f77c8367e")) { id, out -> repository.exportXlsxToStream(id, filter, out, i18n = i18n) }
+    }
 
-    fun exportMarkdown(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig) =
-        writeDocument(resolver, uri, "documento Markdown") { id, out -> repository.exportMarkdownToStream(id, filter, out) }
+    fun exportMarkdown(resolver: ContentResolver, uri: Uri, filter: ExportFilterConfig) = i18n.let { i18n ->
+        writeDocument(resolver, uri, i18n.text("text.6f1caee9d678")) { id, out -> repository.exportMarkdownToStream(id, filter, out, i18n = i18n) }
+    }
 
     /** QR labels of every device, rack and labelled cable (F03). */
-    fun exportLabels(resolver: ContentResolver, uri: Uri) =
-        writeDocument(resolver, uri, "foglio etichette") { _, out ->
-            _project.value?.let { LabelSheetPdf.write(LabelSheetPdf.labelsFor(it), out); true } ?: false
+    fun exportLabels(resolver: ContentResolver, uri: Uri) = i18n.let { i18n ->
+        writeDocument(resolver, uri, i18n.text("text.601ccac1ac2a")) { _, out ->
+            _project.value?.let { LabelSheetPdf.write(LabelSheetPdf.labelsFor(it, i18n = i18n), out); true } ?: false
         }
+    }
 
-    fun exportRackPdf(resolver: ContentResolver, uri: Uri, rackId: String) =
-        writeDocument(resolver, uri, "scheda rack") { id, out -> repository.exportRackPdfToStream(id, rackId, out) }
+    fun exportRackPdf(resolver: ContentResolver, uri: Uri, rackId: String) = i18n.let { i18n ->
+        writeDocument(resolver, uri, i18n.text("text.38145d73944c")) { id, out -> repository.exportRackPdfToStream(id, rackId, out, i18n = i18n) }
+    }
 
     fun print(context: Context, filter: ExportFilterConfig, selection: ReportSelection) {
         val p = _project.value ?: return
+        val i18n = this.i18n
         viewModelScope.launch {
             val ok = try {
-                repository.printProjectDocument(context, p.id, filter, selection)
+                repository.printProjectDocument(context, p.id, filter, selection, i18n = i18n)
             } catch (e: Exception) {
                 false
             }
-            if (!ok) fail("Servizio di stampa non disponibile.")
+            if (!ok) fail(i18n.text("text.103f48541a86"))
         }
     }
 
     fun attachmentFile(attachment: Attachment): File? = _project.value?.let { repository.attachmentFile(it.id, attachment) }
 
     fun saveMapObject(context: Context, draft: com.onlyfield.assetmanager.core.forms.MapObjectDraft, photos: List<Uri>, removed: Set<String>, onSaved: () -> Unit) {
-        saveMediaEdit(context, photos, draft.targetType, draft.id, AttachmentClassification.SHAREABLE, { p -> draft.apply(p).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } }) { onSaved() }
+        saveMediaEdit(context, photos, draft.targetType, draft.id, AttachmentClassification.SHAREABLE, { p -> draft.apply(p, i18n = i18n).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } }) { onSaved() }
     }
 
     fun importFloorplan(context: Context, uri: Uri, areaId: String, onSaved: (Attachment) -> Unit) {
@@ -508,7 +529,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         if (busy != null) return
         val initial = _project.value ?: return
         viewModelScope.launch {
-            busy = "Salvataggio…"
+            busy = i18n.text("text.c4f57f0165aa")
             val created = mutableListOf<File>()
             var committed = false
             try {
@@ -517,30 +538,30 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                         val resolver = context.contentResolver
                         val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "foto.jpg"
                         val mime = resolver.getType(uri) ?: "image/jpeg"
-                        require(mime.startsWith("image/") || mime == "application/pdf") { "Scegli un'immagine o un PDF" }
+                        require(mime.startsWith("image/") || mime == "application/pdf") { i18n.text("text.2f0112e6d87f") }
                         val att = Attachment(name = name.substringBeforeLast('.'), originalFileName = name, relativePath = "", mimeType = mime,
                             fileType = if (mime == "application/pdf") AttachmentType.PDF else AttachmentType.IMAGE, classification = classification, targetType = type, targetId = targetId)
-                        val root = repository.attachmentsRoot() ?: error("Archivio allegati non disponibile")
+                        val root = repository.attachmentsRoot() ?: error(i18n.text("text.333abdb13e5a"))
                         val file = AttachmentFiles.localFile(root, initial.id, att)
                         file.parentFile?.mkdirs(); created += file
-                        resolver.openInputStream(uri)?.use { input -> file.outputStream().use { input.copyTo(it) } } ?: error("File non leggibile")
-                        val pages = if (att.fileType == AttachmentType.PDF) PlanMedia.pageCount(file) else { PlanMedia.image(file, false, 0, 256); 1 }
-                        require(pages > 0) { "PDF senza pagine" }
+                        resolver.openInputStream(uri)?.use { input -> file.outputStream().use { input.copyTo(it) } } ?: error(i18n.text("text.2af75627a512"))
+                        val pages = if (att.fileType == AttachmentType.PDF) PlanMedia.pageCount(file, i18n = i18n) else { PlanMedia.image(file, false, 0, 256, i18n = i18n); 1 }
+                        require(pages > 0) { i18n.text("text.4acdb5acf0b0") }
                         att.copy(relativePath = AttachmentFiles.entryName(att), pageCount = pages)
                     }
                 }
-                val before = _project.value?.takeIf { it.id == initial.id } ?: error("Progetto chiuso durante il salvataggio")
+                val before = _project.value?.takeIf { it.id == initial.id } ?: error(i18n.text("text.2af4c267c11f"))
                 val edited = transform(before)
                 val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
                 repository.saveProject(saved)
                 committed = true
                 setProject(saved)
-                notify("Salvato.", undo = { restoreSnapshot(before) })
+                notify(i18n.text("text.b1b5983f51f1"), undo = { restoreSnapshot(before) })
                 onSaved(attachments)
             } catch (e: Exception) {
                 if (!committed) created.forEach { it.delete() }
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail("Salvataggio non riuscito", e)
+                fail(i18n.text("text.9b6ca71eb272"), e)
             } finally { busy = null }
         }
     }
@@ -551,7 +572,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun addAttachment(context: Context, uri: Uri, name: String, classification: AttachmentClassification) {
         val p = _project.value ?: return
         viewModelScope.launch {
-            busy = "Copia del file…"
+            busy = i18n.text("text.83c96a43520b")
             try {
                 val resolver = context.contentResolver
                 val original = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
@@ -571,15 +592,15 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                     relativePath = "",
                     classification = classification
                 )
-                val root = repository.attachmentsRoot() ?: error("archivio allegati non disponibile")
+                val root = repository.attachmentsRoot() ?: error(i18n.text("text.01d086263d55"))
                 val target = AttachmentFiles.localFile(root, p.id, attachment)
                 target.parentFile?.mkdirs()
                 resolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it) } }
-                    ?: error("file non leggibile")
-                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment), pageCount = if (attachment.fileType == AttachmentType.PDF) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PlanMedia.pageCount(target) } else 1)
-                edit("Allegato «${saved.name}» aggiunto.") { ProjectEdits.addAttachment(it, saved) }
+                    ?: error(i18n.text("text.fb0c10a218fc"))
+                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment), pageCount = if (attachment.fileType == AttachmentType.PDF) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PlanMedia.pageCount(target, i18n = i18n) } else 1)
+                edit(i18n.text("text.5d5df1229dea", saved.name)) { ProjectEdits.addAttachment(it, saved) }
             } catch (e: Exception) {
-                fail("Impossibile aggiungere l'allegato", e)
+                fail(i18n.text("text.314974424a12"), e)
             } finally {
                 busy = null
             }
@@ -597,7 +618,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val root = repository.attachmentsRoot() ?: return null
         val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT).format(java.util.Date())
         val attachment = Attachment(
-            name = "Foto ${formatPhotoTitle()}",
+            name = i18n.text("text.9f1847b1bb2e", formatPhotoTitle()),
             originalFileName = "foto_$stamp.jpg",
             fileType = AttachmentType.IMAGE,
             mimeType = "image/jpeg",
@@ -618,7 +639,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             return
         }
         val added = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
-        edit("Foto aggiunta agli allegati.") { ProjectEdits.addAttachment(it, added) }
+        edit(i18n.text("text.ef0af7808f11")) { ProjectEdits.addAttachment(it, added) }
     }
 
     private fun formatPhotoTitle() = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ITALY).format(java.util.Date())
@@ -631,12 +652,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     /** Opens what a scanned code points to; an unknown code is returned so the UI can offer a new device. */
     fun openScannedCode(code: String): String? {
         val p = _project.value ?: return null
-        return when (val match = CodeLookup.find(ProjectIndex(p), code)) {
-            is CodeMatch.DeviceMatch -> { navigate(Screen.DeviceDetail(match.device.id)); notify("Trovato per ${match.field.lowercase()}: ${match.device.technicalName}"); null }
-            is CodeMatch.PortMatch -> { navigate(Screen.DeviceDetail(match.port.device.id)); notify("Porta ${match.port.port.name} di ${match.port.device.technicalName}"); null }
-            is CodeMatch.CableMatch -> { navigate(Screen.Cabling); notify("Cavo ${match.cable.codeOrLabel}"); null }
+        return when (val match = CodeLookup.find(ProjectIndex(p), code, i18n = i18n)) {
+            is CodeMatch.DeviceMatch -> { navigate(Screen.DeviceDetail(match.device.id)); notify(i18n.text("text.bb7c60d5c6c5", match.field.lowercase(), match.device.technicalName)); null }
+            is CodeMatch.PortMatch -> { navigate(Screen.DeviceDetail(match.port.device.id)); notify(i18n.text("text.bea0b67ed98a", match.port.port.name, match.port.device.technicalName)); null }
+            is CodeMatch.CableMatch -> { navigate(Screen.Cabling); notify(i18n.text("text.dae31b0efa98", match.cable.codeOrLabel)); null }
             is CodeMatch.RackMatch -> { navigate(Screen.RackDetail(match.rack.id)); null }
-            is CodeMatch.OtherProject -> { fail("L'etichetta appartiene a un altro progetto."); null }
+            is CodeMatch.OtherProject -> { fail(i18n.text("text.b18a8bb53b19")); null }
             is CodeMatch.NotFound -> match.code
         }
     }
@@ -648,25 +669,25 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun downloadMap(request: MapSnapshotRequest, name: String) {
         val p = _project.value ?: return
         viewModelScope.launch {
-            busy = "Download della mappa…"
+            busy = i18n.text("text.4618bc8c688e")
             try {
-                val snapshot = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { CartographicMapManager.acquireMapSnapshot(request) }
+                val snapshot = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { CartographicMapManager.acquireMapSnapshot(request, i18n = i18n) }
                 val attachment = Attachment(
-                    name = name.trim().ifBlank { "Mappa ${request.centerLatitude}, ${request.centerLongitude}" },
+                    name = name.trim().ifBlank { i18n.text("text.67c7c6400b1f", request.centerLatitude, request.centerLongitude) },
                     originalFileName = "mappa_z${request.zoomLevel}.png",
                     fileType = AttachmentType.IMAGE,
                     mimeType = snapshot.mimeType,
                     relativePath = "",
                     attributionText = snapshot.attributionText,
                 )
-                val root = repository.attachmentsRoot() ?: error("archivio allegati non disponibile")
+                val root = repository.attachmentsRoot() ?: error(i18n.text("text.01d086263d55"))
                 AttachmentFiles.localFile(root, p.id, attachment).apply { parentFile?.mkdirs() }.writeBytes(snapshot.imageBytes)
                 val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
-                edit("Mappa «${saved.name}» aggiunta agli allegati.") { ProjectEdits.addAttachment(it, saved) }
+                edit(i18n.text("text.9c32fd33c6a0", saved.name)) { ProjectEdits.addAttachment(it, saved) }
             } catch (e: OfflineMapException) {
-                fail(e.message ?: CartographicMapManager.NO_NETWORK_MESSAGE)
+                fail(e.message ?: i18n.text("map.network.android"))
             } catch (e: Exception) {
-                fail("Mappa non scaricata", e)
+                fail(i18n.text("text.d96c472cc255"), e)
             } finally {
                 busy = null
             }

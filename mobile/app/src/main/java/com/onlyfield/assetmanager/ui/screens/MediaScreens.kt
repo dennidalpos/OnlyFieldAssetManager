@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +27,8 @@ import com.onlyfield.assetmanager.ui.components.*
 
 @Composable
 fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     val confirm = LocalConfirm.current
     val index = remember(project) { ProjectIndex(project) }
@@ -36,31 +40,31 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     var mapping by remember { mutableStateOf(false) }
 
     AppScaffold(
-        "Allegati", onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
-        actions = { TextButton(onClick = { mapping = true }) { Text("Mappa…") } },
+        i18n.text("text.92a776eacf2a"), onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
+        actions = { TextButton(onClick = { mapping = true }) { Text(i18n.text("text.ba321e5c3cea")) } },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { picker.launch(arrayOf("image/*", "application/pdf", "*/*")) },
-                icon = { Icon(Icons.Default.Add, null) }, text = { Text("Allegato") })
+                icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.59cc6c3e1526")) })
         }
     ) { padding ->
-        if (project.attachments.isEmpty()) EmptyState("Nessun allegato. Aggiungi foto, planimetrie o documenti.", Modifier.padding(padding))
+        if (project.attachments.isEmpty()) EmptyState(i18n.text("text.0631006a320a"), Modifier.padding(padding))
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(project.attachments, key = { it.id }) { a ->
                 val usedBy = index.areas.filter { it.floorplanAttachmentId == a.id }.map { it.name }
                 ItemCard(
                     title = a.name,
-                    badge = a.classification.toDisplayString(),
+                    badge = a.classification.toDisplayString(i18n = i18n),
                     details = listOf(
-                        "${a.fileType.toDisplayString()} · ${a.originalFileName}",
-                        index.attachmentTarget(a).orEmpty(),
-                        usedBy.takeIf { it.isNotEmpty() }?.let { "Planimetria di ${it.joinToString()}" }.orEmpty()
+                        "${a.fileType.toDisplayString(i18n = i18n)} · ${a.originalFileName}",
+                        index.attachmentTarget(a, i18n = i18n).orEmpty(),
+                        usedBy.takeIf { it.isNotEmpty() }?.let { i18n.text("text.f3e846ee8611", it.joinToString()) }.orEmpty()
                     ).filter { it.isNotBlank() },
                     menu = listOfNotNull(
-                        MenuAction("Usa come planimetria…") { floorplanFor = a }.takeIf { index.areas.isNotEmpty() },
-                        MenuAction("Cambia classificazione…") { classifying = a },
-                        MenuAction("Elimina", destructive = true) {
-                            confirm(ConfirmRequest("Eliminare «${a.name}»?", "L'allegato verrà rimosso dal progetto." + if (usedBy.isNotEmpty()) " Le aree collegate resteranno senza planimetria." else "") {
-                                vm.edit("Allegato eliminato.") { ProjectEdits.deleteAttachment(it, a.id) }
+                        MenuAction(i18n.text("text.fa7e72cbd571")) { floorplanFor = a }.takeIf { index.areas.isNotEmpty() },
+                        MenuAction(i18n.text("text.2434a2bbb0cf")) { classifying = a },
+                        MenuAction(i18n.text("text.7efe336bd548"), destructive = true) {
+                            confirm(ConfirmRequest(i18n.text("text.e36c23dfb086", a.name), i18n.text("text.fed29593f8bf") + if (usedBy.isNotEmpty()) i18n.text("text.2d9541d6a243") else "") {
+                                vm.edit(i18n.text("text.0a1dce905d01")) { ProjectEdits.deleteAttachment(it, a.id) }
                             })
                         }
                     )
@@ -72,33 +76,33 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     picked?.let { uri ->
         var name by remember(uri) { mutableStateOf("") }
         var classification by remember(uri) { mutableStateOf(AttachmentClassification.SHAREABLE) }
-        EditScreen("Nuovo allegato", { picked = null }, { picked = null; vm.addAttachment(context, uri, name, classification) }, confirmLabel = "Aggiungi") {
-            FormField(name, { name = it }, "Nome", hint = "Vuoto = nome del file")
-            EnumPicker("Classificazione", AttachmentClassification.entries, classification, { it.toDisplayString() }, { classification = it })
+        EditScreen(i18n.text("text.686ed80a7ada"), { picked = null }, { picked = null; vm.addAttachment(context, uri, name, classification) }, confirmLabel = i18n.text("text.84cbef7b19b8")) {
+            FormField(name, { name = it }, i18n.text("text.5086900635fe"), hint = i18n.text("text.634787507dfd"))
+            EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, classification, { it.toDisplayString(i18n = i18n) }, { classification = it })
         }
     }
 
     floorplanFor?.let { a ->
         var area by remember(a) { mutableStateOf<Area?>(null) }
-        if (planArea == null) EditScreen("Usa come planimetria", { floorplanFor = null }, {
+        if (planArea == null) EditScreen(i18n.text("text.aa39391e8bb5"), { floorplanFor = null }, {
             planArea = area
-        }, confirmEnabled = area != null, confirmLabel = "Imposta") {
-            OptionPicker("Area *", index.areas, area, { it.name }, { area = it }, optionDetail = { ar -> ar.floorplanAttachmentId?.let { "ha già una planimetria" } })
+        }, confirmEnabled = area != null, confirmLabel = i18n.text("text.125d6d4967e5")) {
+            OptionPicker(i18n.text("text.ddbccb18e085"), index.areas, area, { it.name }, { area = it }, optionDetail = { ar -> ar.floorplanAttachmentId?.let { i18n.text("text.613f9fe4c7c9") } })
         }
     }
 
     if (planArea != null && floorplanFor != null) PlanChooser(project, planArea!!, floorplanFor!!.id, vm::attachmentFile, {}, { id, page, pages ->
-        vm.edit("Planimetria impostata.") { ProjectEdits.setAreaFloorplan(it, planArea!!.id, id, page, pages) }; planArea = null; floorplanFor = null
+        vm.edit(i18n.text("text.fcd1cc58f46b")) { ProjectEdits.setAreaFloorplan(it, planArea!!.id, id, page, pages) }; planArea = null; floorplanFor = null
     }, { planArea = null; floorplanFor = null })
 
     classifying?.let { a ->
         var c by remember(a) { mutableStateOf(a.classification) }
-        EditScreen("Classificazione", { classifying = null }, {
+        EditScreen(i18n.text("text.57fbd1029ff6"), { classifying = null }, {
             classifying = null
-            vm.edit("Classificazione aggiornata.") { p -> p.copy(attachments = p.attachments.map { if (it.id == a.id) it.copy(classification = c) else it }) }
+            vm.edit(i18n.text("text.9efcb947de14")) { p -> p.copy(attachments = p.attachments.map { if (it.id == a.id) it.copy(classification = c) else it }) }
         }) {
-            EnumPicker("Classificazione", AttachmentClassification.entries, c, { it.toDisplayString() }, { c = it })
-            Text("Gli allegati riservati sono esclusi dai documenti, salvo scelta esplicita in fase di esportazione.", style = MaterialTheme.typography.bodySmall)
+            EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, c, { it.toDisplayString(i18n = i18n) }, { c = it })
+            Text(i18n.text("text.c3176e79018f"), style = MaterialTheme.typography.bodySmall)
         }
     }
     if (mapping) MapDownloadEditor(vm) { mapping = false }
@@ -106,6 +110,8 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
 
 @Composable
 fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val confirm = LocalConfirm.current
     val index = remember(project) { ProjectIndex(project) }
     var editing by remember { mutableStateOf<Credential?>(null) }
@@ -113,25 +119,25 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     var revealed by remember { mutableStateOf(setOf<String>()) }
 
     AppScaffold(
-        "Credenziali", onBack = { vm.back() }, snackbarHost = snackbar, subtitle = "Mai incluse nei documenti esportati",
-        floatingActionButton = { ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Credenziale") }) }
+        i18n.text("text.52f7e6721e97"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.text("text.ac82e5f35ae8"),
+        floatingActionButton = { ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.602206d4ebfc")) }) }
     ) { padding ->
-        if (project.credentials.isEmpty()) EmptyState("Nessuna credenziale salvata.", Modifier.padding(padding))
+        if (project.credentials.isEmpty()) EmptyState(i18n.text("text.77ff79424562"), Modifier.padding(padding))
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(project.credentials, key = { it.id }) { c ->
                 val shown = c.id in revealed
                 ItemCard(
                     title = c.username,
-                    badge = c.type.toDisplayString(),
+                    badge = c.type.toDisplayString(i18n = i18n),
                     details = listOf(
-                        listOfNotNull(c.deviceId?.let { index.deviceName(it) }, c.groupName).joinToString(" · "),
-                        "Segreto: " + if (shown) c.secret else "••••••••"
+                        listOfNotNull(c.deviceId?.let { index.deviceName(it, i18n = i18n) }, c.groupName).joinToString(" · "),
+                        i18n.text("text.eea78f48b6d5") + if (shown) c.secret else "••••••••"
                     ),
                     onClick = { editing = c },
                     menu = listOf(
-                        MenuAction(if (shown) "Nascondi segreto" else "Mostra segreto") { revealed = if (shown) revealed - c.id else revealed + c.id },
-                        MenuAction("Sposta nel cestino", destructive = true) {
-                            confirm(ConfirmRequest("Spostare la credenziale «${c.username}» nel cestino?", "Potrai ripristinarla dal Cestino.", "Sposta nel cestino") {
+                        MenuAction(if (shown) i18n.text("text.db087165afca") else i18n.text("text.882782384909")) { revealed = if (shown) revealed - c.id else revealed + c.id },
+                        MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
+                            confirm(ConfirmRequest(i18n.text("text.e10428cea5cd", c.username), i18n.text("text.189761096af2"), i18n.text("text.dd41b3275173")) {
                                 vm.moveToTrash("CREDENTIAL", c.id, c.username)
                             })
                         }
@@ -149,49 +155,51 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
         var group by remember(c) { mutableStateOf(c?.groupName.orEmpty()) }
         var deviceId by remember(c) { mutableStateOf(c?.deviceId) }
         var notes by remember(c) { mutableStateOf(c?.notes.orEmpty()) }
-        EditScreen(if (c == null) "Nuova credenziale" else "Modifica credenziale", { creating = false; editing = null }, {
+        EditScreen(if (c == null) i18n.text("text.daf354006859") else i18n.text("text.81dda9b20962"), { creating = false; editing = null }, {
             creating = false; editing = null
             val saved = (c ?: Credential(username = username.trim(), secret = secret)).copy(
                 username = username.trim(), secret = secret, type = type, groupName = group.trim().ifBlank { null }, deviceId = deviceId, notes = notes.trim().ifBlank { null }
             )
-            vm.edit("Credenziale salvata.") { p ->
+            vm.edit(i18n.text("text.de37f6b34612")) { p ->
                 p.copy(credentials = if (c == null) p.credentials + saved else p.credentials.map { if (it.id == saved.id) saved else it })
             }
         }, confirmEnabled = username.isNotBlank() && secret.isNotEmpty()) {
-            FormField(username, { username = it }, "Utente *")
+            FormField(username, { username = it }, i18n.text("text.3255e3d5e3b4"))
             val markDirty = LocalMarkDirty.current
-            OutlinedTextField(secret, { markDirty(); secret = it }, label = { Text("Password / segreto *") }, singleLine = type != CredentialType.SSH_KEY, modifier = Modifier.fillMaxWidth())
-            EnumPicker("Tipo", CredentialType.entries, type, { it.toDisplayString() }, { type = it })
-            DevicePicker("Apparato", index, deviceId, { deviceId = it }, noneLabel = "Nessuno (credenziale di gruppo)")
-            FormField(group, { group = it }, "Gruppo", hint = "Es. Switch accesso")
-            FormField(notes, { notes = it }, "Note")
+            OutlinedTextField(secret, { markDirty(); secret = it }, label = { Text(i18n.text("text.7f9bedb6b654")) }, singleLine = type != CredentialType.SSH_KEY, modifier = Modifier.fillMaxWidth())
+            EnumPicker(i18n.text("text.3868d2843d59"), CredentialType.entries, type, { it.toDisplayString(i18n = i18n) }, { type = it })
+            DevicePicker(i18n.text("text.cf301d95d32c"), index, deviceId, { deviceId = it }, noneLabel = i18n.text("text.375889cbf5ec"))
+            FormField(group, { group = it }, i18n.text("text.b9bb40edbe6e"), hint = i18n.text("text.35a0170556ea"))
+            FormField(notes, { notes = it }, i18n.text("text.d8da2c49df39"))
         }
     }
 }
 
 @Composable
 fun TrashScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val confirm = LocalConfirm.current
     val trash by vm.trash.collectAsState()
     AppScaffold(
-        "Cestino", onBack = { vm.back() }, snackbarHost = snackbar,
+        i18n.text("text.9a3a36d5fa15"), onBack = { vm.back() }, snackbarHost = snackbar,
         actions = {
             if (trash.isNotEmpty()) TextButton(onClick = {
-                confirm(ConfirmRequest("Svuotare il cestino?", "${trash.size} elementi verranno eliminati definitivamente.", "Svuota") { vm.emptyTrash() })
-            }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Svuota") }
+                confirm(ConfirmRequest(i18n.text("text.5d7057a189e9"), i18n.text("text.f02845011433", trash.size), i18n.text("text.2bdc2424de84")) { vm.emptyTrash() })
+            }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(i18n.text("text.2bdc2424de84")) }
         }
     ) { padding ->
-        if (trash.isEmpty()) EmptyState("Il cestino è vuoto.", Modifier.padding(padding))
+        if (trash.isEmpty()) EmptyState(i18n.text("text.9744f9e3a70f"), Modifier.padding(padding))
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(trash.sortedByDescending { it.deletedEpochMs }, key = { it.id }) { t ->
                 ItemCard(
                     title = t.displayName,
-                    badge = com.onlyfield.assetmanager.core.display.EntityTypeLabels.of(t.itemType),
-                    details = listOf("Eliminato il ${formatDateTime(t.deletedEpochMs)}", t.affectedReferencesSummary.orEmpty()),
+                    badge = com.onlyfield.assetmanager.core.display.EntityTypeLabels.of(t.itemType, i18n = i18n),
+                    details = listOf(i18n.text("text.ede23b9e7ffa", formatDateTime(t.deletedEpochMs)), t.affectedReferencesSummary.orEmpty()),
                     menu = listOf(
-                        MenuAction("Ripristina") { vm.restoreFromTrash(t.id) },
-                        MenuAction("Elimina definitivamente", destructive = true) {
-                            confirm(ConfirmRequest("Eliminare definitivamente «${t.displayName}»?", "L'elemento non potrà più essere ripristinato.") { vm.deleteFromTrash(t.id) })
+                        MenuAction(i18n.text("text.cf1718087073")) { vm.restoreFromTrash(t.id) },
+                        MenuAction(i18n.text("text.8a62e526a037"), destructive = true) {
+                            confirm(ConfirmRequest(i18n.text("text.66e37e4027c9", t.displayName), i18n.text("text.e0be6b7281c4")) { vm.deleteFromTrash(t.id) })
                         }
                     )
                 )
@@ -203,6 +211,8 @@ fun TrashScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 /** Map download form (F05): the only feature that uses the network, and only when asked. */
 @Composable
 private fun MapDownloadEditor(vm: ProjectViewModel, onClose: () -> Unit) {
+    val i18n = LocalMessages.current
+
     val source = CartographicSource.OPEN_TOPO_MAP
     var lat by remember { mutableStateOf("") }
     var lon by remember { mutableStateOf("") }
@@ -211,23 +221,23 @@ private fun MapDownloadEditor(vm: ProjectViewModel, onClose: () -> Unit) {
     val latValue = FieldValidators.parseDecimal(lat)
     val lonValue = FieldValidators.parseDecimal(lon)
     val errors = buildMap {
-        FieldValidators.decimal(lat, -85.0, 85.0)?.let { put("lat", it) } ?: if (lat.isBlank()) put("lat", "Latitudine obbligatoria") else Unit
-        FieldValidators.decimal(lon, -180.0, 180.0)?.let { put("lon", it) } ?: if (lon.isBlank()) put("lon", "Longitudine obbligatoria") else Unit
-        FieldValidators.int(zoom, 1, 17, required = true)?.let { put("zoom", it) }
+        FieldValidators.decimal(lat, -85.0, 85.0, i18n = i18n)?.let { put("lat", it) } ?: if (lat.isBlank()) put("lat", i18n.text("text.61c9ef39a147")) else Unit
+        FieldValidators.decimal(lon, -180.0, 180.0, i18n = i18n)?.let { put("lon", it) } ?: if (lon.isBlank()) put("lon", i18n.text("text.cd59b62be30a")) else Unit
+        FieldValidators.int(zoom, 1, 17, required = true, i18n = i18n)?.let { put("zoom", it) }
     }
-    EditScreen("Mappa dal web", onClose, {
+    EditScreen(i18n.text("text.9d9c47709125"), onClose, {
         onClose()
         vm.downloadMap(MapSnapshotRequest(source, latValue!!, lonValue!!, FieldValidators.parseInt(zoom)!!), name)
-    }, confirmEnabled = errors.isEmpty(), confirmLabel = "Scarica") {
+    }, confirmEnabled = errors.isEmpty(), confirmLabel = i18n.text("text.723d32f77a1d")) {
         Text(
-            "Scarica una mappa (3 × 3 tessere) attorno al punto e la salva tra gli allegati con l'attribuzione. " +
-                "Serve la connessione solo per questo download: il resto dell'app funziona offline.",
+            i18n.text("text.25ca49b19a03") +
+                i18n.text("text.4d7cad637ae4"),
             style = MaterialTheme.typography.bodySmall
         )
-        FormField(lat, { lat = it }, "Latitudine *", error = errors["lat"], hint = "Es. 45,4642", kind = FieldKind.DECIMAL)
-        FormField(lon, { lon = it }, "Longitudine *", error = errors["lon"], hint = "Es. 9,1900", kind = FieldKind.DECIMAL)
-        FormField(zoom, { zoom = it }, "Zoom (1-17)", error = errors["zoom"], kind = FieldKind.NUMBER, hint = "17 = isolato, 15 = quartiere")
-        FormField(name, { name = it }, "Nome", hint = "Vuoto = coordinate")
+        FormField(lat, { lat = it }, i18n.text("text.259bd9884099"), error = errors["lat"], hint = i18n.text("text.c68adbb89b8d"), kind = FieldKind.DECIMAL)
+        FormField(lon, { lon = it }, i18n.text("text.8f00dfa444aa"), error = errors["lon"], hint = i18n.text("text.5e6ab81bedad"), kind = FieldKind.DECIMAL)
+        FormField(zoom, { zoom = it }, i18n.text("text.002fdf567c4f"), error = errors["zoom"], kind = FieldKind.NUMBER, hint = i18n.text("text.e2cbfeb6f905"))
+        FormField(name, { name = it }, i18n.text("text.5086900635fe"), hint = i18n.text("text.609e94eb3a8b"))
         Text(source.attributionText, style = MaterialTheme.typography.bodySmall)
     }
 }

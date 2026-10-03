@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -23,6 +25,8 @@ import java.util.UUID
 
 @Composable
 internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: MapObjectDraft, close: () -> Unit) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     var draft by remember { mutableStateOf(initial) }
     val photos = remember { mutableStateListOf<Uri>() }
@@ -40,35 +44,37 @@ internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: 
         camera.launch(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file))
     }
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed ->
-        if (allowed) shoot() else vm.notifyError("Serve il permesso della fotocamera per scattare foto.")
+        if (allowed) shoot() else vm.notifyError(i18n.text("text.0ac53f93c8a1"))
     }
     DisposableEffect(Unit) { onDispose { temporary.forEach { it.delete() } } }
-    EditScreen(initial.type.name, { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, confirmEnabled = draft.errors(project).isEmpty() && vm.busy == null) {
+    EditScreen(com.onlyfield.assetmanager.core.model.ObjectCatalog.displayName(initial.type, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, confirmEnabled = draft.errors(project, i18n = i18n).isEmpty() && vm.busy == null) {
         val dirty = LocalMarkDirty.current
         SideEffect { markDirty = dirty }
         ObjectFields(project, draft) { draft = it }
-        Text("Foto e allegati", style = MaterialTheme.typography.titleMedium)
+        Text(i18n.text("text.db7291baccc1"), style = MaterialTheme.typography.titleMedium)
         project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
             Text(a.name)
             MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
-            TextButton(onClick = { removed = removed + a.id; dirty() }) { Text("Rimuovi allegato") }
+            TextButton(onClick = { removed = removed + a.id; dirty() }) { Text(i18n.text("text.960630ee842c")) }
         }
         photos.toList().forEach { uri ->
-            Text(uri.lastPathSegment ?: "Foto selezionata")
+            Text(uri.lastPathSegment ?: i18n.text("text.7490e08564b3"))
             UriPhotoThumbnail(uri)
-            TextButton(onClick = { photos.remove(uri); dirty() }) { Text("Rimuovi foto") }
+            TextButton(onClick = { photos.remove(uri); dirty() }) { Text(i18n.text("text.f5115aa0e57e")) }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text("Foto dal telefono") }
+            OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text(i18n.text("text.0f9162856d60")) }
             OutlinedButton(onClick = {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) shoot() else permission.launch(Manifest.permission.CAMERA)
-            }) { Text("Scatta foto") }
+            }) { Text(i18n.text("text.d88211a9e4b9")) }
         }
     }
 }
 
 @Composable
 private fun UriPhotoThumbnail(uri: Uri) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     var image by remember(uri) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     var failure by remember(uri) { mutableStateOf<String?>(null) }
@@ -83,12 +89,12 @@ private fun UriPhotoThumbnail(uri: Uri) {
                         while (maxOf(bounds.outWidth, bounds.outHeight) / sample > 512) sample *= 2
                         inSampleSize = sample
                     }
-                    val bitmap = android.graphics.BitmapFactory.decodeFileDescriptor(fd.fileDescriptor, null, options) ?: error("Foto non leggibile")
+                    val bitmap = android.graphics.BitmapFactory.decodeFileDescriptor(fd.fileDescriptor, null, options) ?: error(i18n.text("text.5adc189e505a"))
                     bitmap.asImageBitmap()
-                } ?: error("Foto non disponibile")
+                } ?: error(i18n.text("text.d15d3071c8db"))
             }
         } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; failure = e.message }
     }
-    image?.let { androidx.compose.foundation.Image(it, "Foto selezionata", Modifier.fillMaxWidth().height(140.dp)) }
+    image?.let { androidx.compose.foundation.Image(it, i18n.text("text.7490e08564b3"), Modifier.fillMaxWidth().height(140.dp)) }
     failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 }

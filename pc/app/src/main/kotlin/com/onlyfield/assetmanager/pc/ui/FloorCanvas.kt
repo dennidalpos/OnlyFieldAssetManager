@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -27,6 +29,8 @@ import com.onlyfield.assetmanager.core.model.*
 
 @Composable
 internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, onUpdate: (Project, String) -> Unit, onNode: (MapNode) -> Unit, onCable: (String) -> Unit, modifier: Modifier = Modifier) {
+    val i18n = LocalMessages.current
+
     var width by remember { mutableStateOf(1f) }; var height by remember { mutableStateOf(1f) }
     var zoom by remember(areaId, image) { mutableStateOf(1f) }
     var pan by remember(areaId, image) { mutableStateOf(Offset.Zero) }
@@ -63,8 +67,8 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             TextButton(onClick = { zoom = (zoom / 1.25f).coerceAtLeast(.5f) }) { Text("−") }
             TextButton(onClick = { zoom = (zoom * 1.25f).coerceAtMost(6f) }) { Text("+") }
-            TextButton(onClick = { zoom = 1f; pan = Offset.Zero }) { Text("Adatta alla vista") }
-            Text("${nodes.size + routes.size} oggetti", modifier = Modifier.padding(top = 12.dp))
+            TextButton(onClick = { zoom = 1f; pan = Offset.Zero }) { Text(i18n.text("text.a6400fb2b6cc")) }
+            Text(i18n.text("text.76188f884c68", nodes.size + routes.size), modifier = Modifier.padding(top = 12.dp))
         }
         Canvas(Modifier.testTag("floor-map").fillMaxWidth().weight(1f).background(MaterialTheme.colorScheme.surfaceVariant)
             .onSizeChanged { width = it.width.toFloat().coerceAtLeast(1f); height = it.height.toFloat().coerceAtLeast(1f) }
@@ -108,8 +112,8 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
                         }
                     }
                 }, onDragCancel = { preview = emptyMap(); routePreview = null; movingNode = null; movingRoute = null }, onDragEnd = {
-                    movingNode?.let { n -> preview[n.id]?.let { p -> latestUpdate(ObjectMap.place(project, areaId, n.type, n.id, p), "Posizione aggiornata.") } }
-                    routePreview?.let { latestUpdate(ObjectMap.saveRoute(project, it), "Percorso aggiornato.") }
+                    movingNode?.let { n -> preview[n.id]?.let { p -> latestUpdate(ObjectMap.place(project, areaId, n.type, n.id, p), i18n.text("text.6f590fa5345d")) } }
+                    routePreview?.let { latestUpdate(ObjectMap.saveRoute(project, it), i18n.text("text.e020099624b5")) }
                     preview = emptyMap(); routePreview = null; movingNode = null; movingRoute = null
                 }) { change, delta ->
                     change.consume()
@@ -137,7 +141,7 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
                 points.zipWithNext().forEach { (a, b) -> drawLine(wireColor, screen(a), screen(b), if (selected == route.cableId) 6f else 3f) }
                 val count = connections.find { route.cableId in it.cableIds }?.cableIds?.size ?: 1
                 if (count > 1) {
-                    val label = textMeasurer.measure(AnnotatedString("$count cavi"), TextStyle(color = foreground, fontSize = 12.sp))
+                    val label = textMeasurer.measure(AnnotatedString(i18n.text("text.e512d1fed715", count)), TextStyle(color = foreground, fontSize = 12.sp))
                     val anchor = screen(points[points.size / 2])
                     drawRect(nodeBackground, anchor, androidx.compose.ui.geometry.Size(label.size.width.toFloat(), label.size.height.toFloat()))
                     drawText(label, topLeft = anchor)
@@ -161,15 +165,15 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
             }
         }
         connections.filter { it.internalAt != null }.forEach { group ->
-            TextButton(onClick = { choosing = group.cableIds; selected = null }) { Text("${ObjectHierarchy.name(project, group.internalAt!!)} · ${group.cableIds.size} cavi interni") }
+            TextButton(onClick = { choosing = group.cableIds; selected = null }) { Text(i18n.text("text.b50ecc5748fe", ObjectHierarchy.name(project, group.internalAt!!, i18n = i18n), group.cableIds.size)) }
         }
-        if (choosing.isNotEmpty()) AlertDialog(onDismissRequest = { choosing = emptyList() }, title = { Text("Scegli cavo") }, text = {
+        if (choosing.isNotEmpty()) AlertDialog(onDismissRequest = { choosing = emptyList() }, title = { Text(i18n.text("text.6dcebe1271dc")) }, text = {
             Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
                 choosing.mapNotNull { id -> project.cables.find { it.id == id } }.forEach { cable ->
-                    TextButton(onClick = { selected = cable.id; choosing = emptyList() }) { Text(ObjectMap.cableLabel(project, cable)) }
+                    TextButton(onClick = { selected = cable.id; choosing = emptyList() }) { Text(ObjectMap.cableLabel(project, cable, i18n = i18n)) }
                 }
             }
-        }, confirmButton = { TextButton(onClick = { choosing = emptyList() }) { Text("Chiudi") } })
+        }, confirmButton = { TextButton(onClick = { choosing = emptyList() }) { Text(i18n.text("text.32d4079b315b")) } })
         val cable = project.cables.find { it.id == selected }
         if (cable != null) {
             val a = ObjectMap.endpoint(project, cable, true); val b = ObjectMap.endpoint(project, cable, false)
@@ -178,10 +182,10 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
                 val floor = ObjectMap.areaId(project, d)
                 val bu = project.businessUnits.find { b -> b.devices.any { it.id == d.id } }
                 val area = bu?.let { ObjectMap.areas(it).find { it.id == floor } }
-                return d.technicalName + if (floor != areaId) " (${bu?.name ?: "BU sconosciuta"} / ${area?.let { ObjectMap.areaLabel(bu, it) } ?: "senza piano"})" else ""
+                return d.technicalName + if (floor != areaId) " (${bu?.name ?: i18n.text("text.a8ac5d134ef3")} / ${area?.let { ObjectMap.areaLabel(bu, it) } ?: i18n.text("text.37a8636584b2")})" else ""
             }
-            Text("${cable.codeOrLabel ?: "Cavo"}: ${endpointLabel(a)} → ${endpointLabel(b)}", style = MaterialTheme.typography.bodySmall)
-            TextButton(onClick = { onCable(cable.id) }) { Text("Scheda cavo e foto") }
-        } else Text("Tocca un oggetto per aprirlo; trascina per spostarlo. Trascina lo sfondo per scorrere.", style = MaterialTheme.typography.bodySmall)
+            Text("${cable.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${endpointLabel(a)} → ${endpointLabel(b)}", style = MaterialTheme.typography.bodySmall)
+            TextButton(onClick = { onCable(cable.id) }) { Text(i18n.text("text.478f91db1996")) }
+        } else Text(i18n.text("text.b48d753f9d81"), style = MaterialTheme.typography.bodySmall)
     }
 }

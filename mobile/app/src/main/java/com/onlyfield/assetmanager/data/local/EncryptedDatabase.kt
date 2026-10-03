@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.data.local
 
+import com.onlyfield.assetmanager.core.i18n.Messages
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -23,30 +24,30 @@ object EncryptedDatabase {
     private const val KEY_FILE = "db_key.bin"
     private const val GCM_IV_BYTES = 12
 
-    fun open(context: Context): AppDatabase {
+    fun open(context: Context, i18n: Messages = Messages()): AppDatabase {
         System.loadLibrary("sqlcipher")
         val app = context.applicationContext
         // SQLCipher raw-key syntax: skips the passphrase KDF.
         val keyLiteral = "x'" + loadOrCreateKey(app).toHex() + "'"
         migratePlaintext(app.getDatabasePath(DB_NAME), keyLiteral)
-        backupBeforeUpgrade(app, keyLiteral)
+        backupBeforeUpgrade(app, keyLiteral, i18n)
         return Room.databaseBuilder(app, AppDatabase::class.java, DB_NAME)
             .openHelperFactory(SupportOpenHelperFactory(keyLiteral.toByteArray(Charsets.US_ASCII)))
             .addMigrations(*AppDatabase.ALL_MIGRATIONS)
             .build()
     }
 
-    private fun backupBeforeUpgrade(context: Context, keyLiteral: String) {
+    private fun backupBeforeUpgrade(context: Context, keyLiteral: String, i18n: Messages) {
         val source = context.getDatabasePath(DB_NAME)
         if (!source.isFile) return
         val db = SQLiteDatabase.openDatabase(source.path, keyLiteral.toByteArray(Charsets.US_ASCII), null, SQLiteDatabase.OPEN_READWRITE, null, null)
         val version = try {
-            if (db.version < 12) db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", emptyArray()).use { cursor ->
-                check(cursor.moveToFirst() && cursor.getInt(0) == 0) { "Database occupato: backup non eseguito" }
+            if (db.version < 14) db.rawQuery("PRAGMA wal_checkpoint(TRUNCATE)", emptyArray()).use { cursor ->
+                check(cursor.moveToFirst() && cursor.getInt(0) == 0) { i18n.text("database.backupBusy") }
             }
             db.version
         } finally { db.close() }
-        if (version >= 13) return
+        if (version >= 14) return
         val backup = File(context.noBackupFilesDir, "$DB_NAME.v$version.backup")
         if (!backup.exists()) {
             val temporary = File(backup.path + ".tmp")

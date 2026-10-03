@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,6 +19,8 @@ import com.onlyfield.assetmanager.ui.ProjectViewModel
  */
 @Composable
 fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) -> Unit {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved -> vm.onPhotoResult(saved) }
     fun shoot(type: AttachmentTargetType, id: String?) {
@@ -27,7 +31,7 @@ fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) 
     // The manifest declares CAMERA (scanner), so the camera intent also requires it to be granted.
     var pending by remember { mutableStateOf<Pair<AttachmentTargetType, String?>?>(null) }
     val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        pending?.let { (type, id) -> if (ok) shoot(type, id) else vm.notifyError("Serve il permesso della fotocamera per scattare foto.") }
+        pending?.let { (type, id) -> if (ok) shoot(type, id) else vm.notifyError(i18n.text("text.0ac53f93c8a1")) }
         pending = null
     }
     return { type, id ->

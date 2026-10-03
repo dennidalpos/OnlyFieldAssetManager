@@ -16,6 +16,8 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
+kotlin.sourceSets.getByName("main").kotlin.srcDir("../../shared/configurator/src/main/kotlin")
+
 dependencies {
     implementation(project(":shared:core"))
     implementation(project(":shared:exchange"))
@@ -23,10 +25,10 @@ dependencies {
     implementation(libs.pdfbox)
 
     implementation(compose.desktop.currentOs)
-    implementation(compose.material3)
+    implementation(libs.desktop.material3)
 
     testImplementation(libs.junit)
-    testImplementation(compose.desktop.uiTestJUnit4)
+    testImplementation(libs.desktop.ui.test)
 }
 
 // jpackage is required to build the Windows app-image. The JDK used to run Gradle
@@ -66,7 +68,7 @@ compose.desktop {
 val portableAppName = "OnlyFieldAssetManager"
 val portableDistDir = rootProject.layout.projectDirectory.dir("dist")
 
-val assemblePortable by tasks.registering(Sync::class) {
+val assemblePortable = tasks.register<Sync>("assemblePortable") {
     group = "distribution"
     description = "Builds the portable Windows x64 folder with the .exe in its root under dist/."
     dependsOn("createDistributable")

@@ -4,7 +4,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
-import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.semantics.SemanticsActions
 import com.onlyfield.assetmanager.pc.ui.components.EditPanel
 import com.onlyfield.assetmanager.pc.ui.components.FormField
@@ -98,12 +98,12 @@ class MasterDetailTest {
         assertEquals("SW-01 modificato", project.businessUnits.single().devices[0].technicalName)
         assertEquals("SW-02", project.businessUnits.single().devices[1].technicalName)
         rule.onNodeWithText("Modifica").performSemanticsAction(SemanticsActions.OnClick) { it() }
-        rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome tecnico *")).assertExists()
+        rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome oggetto")).assertExists()
         rule.onNodeWithText("Scartare le modifiche?").assertDoesNotExist()
-        rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome tecnico *")).performTextReplacement("Bozza secondo")
+        rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome oggetto")).performTextReplacement("Bozza secondo")
         rule.onNodeWithText("Modifica").performSemanticsAction(SemanticsActions.OnClick) { it() }
         rule.onNodeWithText("Scarta").performClick()
-        rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome tecnico *")).assertExists()
+        rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome oggetto")).assertExists()
         rule.onNodeWithText("Bozza secondo").assertDoesNotExist()
     }
 

@@ -166,38 +166,6 @@ class ProjectRepositoryTest {
     }
 
     @Test
-    fun testRackPdfExportStream() = runBlocking {
-        val projId = UUID.randomUUID().toString()
-        val rackId = UUID.randomUUID().toString()
-
-        val rack = Rack(id = rackId, name = "Rack 01", heightU = 42)
-        val dev = Device(
-            id = UUID.randomUUID().toString(),
-            technicalName = "sw-access-01",
-            rackId = rackId,
-            positionU = 1,
-            heightU = 1
-        )
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", devices = listOf(dev))
-
-        val project = Project(
-            id = projId,
-            name = "PDF Export Project",
-            createdEpochMs = 1000L,
-            updatedEpochMs = 1000L,
-            racks = listOf(rack),
-            businessUnits = listOf(bu)
-        )
-
-        repository.saveProject(project)
-
-        val baos = ByteArrayOutputStream()
-        val success = repository.exportRackPdfToStream(projId, rackId, baos)
-        assertTrue(success)
-        assertTrue(baos.toByteArray().isNotEmpty())
-    }
-
-    @Test
     fun testProjectPasswordManagement() = runBlocking {
         val projId = UUID.randomUUID().toString()
         val project = Project(

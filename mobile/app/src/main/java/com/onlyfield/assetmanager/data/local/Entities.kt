@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.data.local
 
 import androidx.room.Entity
+import androidx.room.ColumnInfo
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
@@ -32,6 +33,9 @@ data class ProjectEntity(
     indices = [Index("projectId"), Index("areaId")],
 )
 data class RackEntity(
+    val mountingDepthMm: Int? = null,
+    val deviceModelId: String? = null,
+    val mountingType: String? = null,
     @PrimaryKey val id: String,
     val projectId: String,
     val name: String,
@@ -55,6 +59,8 @@ data class RackEntity(
     indices = [Index("projectId")]
 )
 data class DeviceModelEntity(
+    @ColumnInfo(defaultValue = "'{}'")
+    val configurationJson: String = "{}",
     @PrimaryKey val id: String,
     val projectId: String,
     val name: String,
@@ -249,6 +255,8 @@ data class FloorplanPlacementEntity(
     ]
 )
 data class DeviceEntity(
+    @ColumnInfo(defaultValue = "'{}'")
+    val hardwareJson: String = "{}",
     @PrimaryKey val id: String,
     val businessUnitId: String,
     val siteId: String?,
@@ -286,6 +294,8 @@ data class DeviceEntity(
     indices = [Index("deviceId"), Index("connectedPortId")]
 )
 data class PortEntity(
+    @ColumnInfo(defaultValue = "'{}'")
+    val hardwareJson: String = "{}",
     @PrimaryKey val id: String,
     val deviceId: String,
     val name: String,
@@ -334,6 +344,7 @@ data class SharedPathSegmentEntity(
     indices = [Index("projectId"), Index("portAId"), Index("portBId")]
 )
 data class CableEntity(
+    val deviceModelId: String? = null,
     val objectTypeId: String? = null,
     val deviceAId: String? = null,
     val deviceBId: String? = null,

@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.model
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -16,10 +18,10 @@ object ObjectHierarchy {
     fun refs(project: Project): List<ObjectRef> = project.racks.map { ObjectRef(PlacementTargetType.RACK, it.id) } +
         project.businessUnits.flatMap { it.devices }.map { ObjectRef(PlacementTargetType.DEVICE, it.id) }
 
-    fun name(project: Project, ref: ObjectRef): String = when (ref.type) {
+    fun name(project: Project, ref: ObjectRef, i18n: Messages = Messages()): String = when (ref.type) {
         PlacementTargetType.RACK -> project.racks.find { it.id == ref.id }?.name
         PlacementTargetType.DEVICE -> project.businessUnits.flatMap { it.devices }.find { it.id == ref.id }?.technicalName
-    } ?: "Oggetto non disponibile"
+    } ?: i18n.text("text.959a2f5a08e6")
 
     fun canContain(project: Project, ref: ObjectRef): Boolean = when (ref.type) {
         PlacementTargetType.RACK -> project.racks.any { it.id == ref.id }
@@ -63,20 +65,20 @@ object ObjectHierarchy {
         }
     }
 
-    fun errors(project: Project): List<String> = buildList {
+    fun errors(project: Project, i18n: Messages = Messages()): List<String> = buildList {
         val refs = refs(project).toSet()
         val entries = relations(project)
-        if (entries.map { it.child }.distinct().size != entries.size) add("Un oggetto ha più contenitori")
+        if (entries.map { it.child }.distinct().size != entries.size) add(i18n.text("text.9b8bfd31aaaa"))
         entries.forEach { entry ->
-            if (entry.child !in refs || entry.parent !in refs) add("Riferimento a un oggetto inesistente")
-            if (entry.id != entry.child.id) add("Identità della relazione diversa dal figlio")
-            if (!canContain(project, entry.parent)) add("L’oggetto selezionato non può contenere altri oggetti")
-            if (entry.child == entry.parent || ancestors(project, entry.parent).contains(entry.child)) add("Ciclo nella gerarchia dei contenitori")
+            if (entry.child !in refs || entry.parent !in refs) add(i18n.text("text.027942ebbf8b"))
+            if (entry.id != entry.child.id) add(i18n.text("text.d52820b82761"))
+            if (!canContain(project, entry.parent)) add(i18n.text("text.161bcdb0c3e4"))
+            if (entry.child == entry.parent || ancestors(project, entry.parent).contains(entry.child)) add(i18n.text("text.a436233ba737"))
         }
     }.distinct()
 
-    fun assign(project: Project, child: ObjectRef, parent: ObjectRef?): Project {
-        require(child in refs(project)) { "Oggetto inesistente" }
+    fun assign(project: Project, child: ObjectRef, parent: ObjectRef?, i18n: Messages = Messages()): Project {
+        require(child in refs(project)) { i18n.text("text.b4f0135a1956") }
         val before = normalize(project)
         val floor = areaId(before, child)
         val updated = before.copy(objectContainments = before.objectContainments.filterNot { it.child == child } +
@@ -87,7 +89,7 @@ object ObjectHierarchy {
         }) }, racks = updated.racks.map { r ->
             if (child.type == PlacementTargetType.RACK && r.id == child.id && parent == null) r.copy(areaId = floor) else r
         })
-        require(errors(detached).isEmpty()) { errors(detached).joinToString("; ") }
+        require(errors(detached, i18n = i18n).isEmpty()) { errors(detached, i18n = i18n).joinToString("; ") }
         return synchronize(detached, before).copy(updatedEpochMs = System.currentTimeMillis())
     }
 
@@ -126,12 +128,12 @@ object ObjectHierarchy {
         return synchronize(result, before)
     }
 
-    fun restore(project: Project, trash: TrashItem): Project {
+    fun restore(project: Project, trash: TrashItem, i18n: Messages = Messages()): Project {
         var result = normalize(project)
         val available = refs(result).toSet()
         for (entry in trash.containments) {
             if (entry.child !in available || entry.parent !in available) continue
-            result = assign(result, entry.child, entry.parent)
+            result = assign(result, entry.child, entry.parent, i18n = i18n)
         }
         return result.copy(businessUnits = result.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d ->
             trash.mountSnapshots.find { it.deviceId == d.id && it.rackId == d.rackId }?.let {

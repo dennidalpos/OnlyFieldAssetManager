@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.validation
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
 import kotlinx.serialization.Serializable
@@ -28,25 +30,25 @@ data class ValidationResult(
 
 object ModelValidator {
 
-    fun validateProject(project: Project): ValidationResult {
+    fun validateProject(project: Project, i18n: Messages = Messages()): ValidationResult {
         val issues = mutableListOf<ValidationIssue>()
         val seenIds = mutableSetOf<String>()
-        issues += ObjectHierarchy.errors(project).map { ValidationIssue("INVALID_OBJECT_CONTAINMENT", it, ValidationSeverity.STRUCTURAL_ERROR) }
+        issues += ObjectHierarchy.errors(project, i18n = i18n).map { ValidationIssue("INVALID_OBJECT_CONTAINMENT", it, ValidationSeverity.STRUCTURAL_ERROR) }
 
         // 1. Project ID validity
-        checkUuid("INVALID_PROJECT_UUID", project.id, "Identificativo non valido (progetto)", issues)
-        trackId(project.id, "DUPLICATE_PROJECT_ID", "Identificativo duplicato (progetto): ${project.id}", seenIds, issues)
+        checkUuid("INVALID_PROJECT_UUID", project.id, i18n.text("text.02a97e1a7888"), issues)
+        trackId(project.id, "DUPLICATE_PROJECT_ID", i18n.text("text.ab40e25c2fe0", project.id), seenIds, issues)
 
         // Validate Racks
         val racksById = mutableMapOf<String, Rack>()
         for (rack in project.racks) {
-            checkUuid("INVALID_RACK_UUID", rack.id, "Identificativo non valido (rack)", issues)
-            trackId(rack.id, "DUPLICATE_RACK_ID", "Identificativo duplicato (rack): ${rack.id}", seenIds, issues)
+            checkUuid("INVALID_RACK_UUID", rack.id, i18n.text("text.739f725784ad"), issues)
+            trackId(rack.id, "DUPLICATE_RACK_ID", i18n.text("text.2c155aba5959", rack.id), seenIds, issues)
             if (rack.heightU <= 0) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_RACK_HEIGHT",
-                        message = "Rack '${rack.name}': l'altezza deve essere maggiore di 0",
+                        message = i18n.text("text.2494bd604387", rack.name),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = rack.id
                     )
@@ -57,8 +59,11 @@ object ModelValidator {
 
         // Validate DeviceModels
         for (model in project.deviceModels) {
-            checkUuid("INVALID_MODEL_UUID", model.id, "Identificativo non valido (modello)", issues)
-            trackId(model.id, "DUPLICATE_MODEL_ID", "Identificativo duplicato (modello): ${model.id}", seenIds, issues)
+            checkUuid("INVALID_MODEL_UUID", model.id, i18n.text("text.e704f269fdf5"), issues)
+            trackId(model.id, "DUPLICATE_MODEL_ID", i18n.text("text.18975c9e34a8", model.id), seenIds, issues)
+            if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(model.portTemplates) || model.defaultHeightU !in 1..60) {
+                issues.add(ValidationIssue("INVALID_MODEL_HARDWARE", i18n.text("config.invalidHardware"), ValidationSeverity.STRUCTURAL_ERROR, model.id))
+            }
         }
 
         val allPorts = mutableMapOf<String, Port>()
@@ -66,38 +71,38 @@ object ModelValidator {
 
         // Traverse Business Units
         for (bu in project.businessUnits) {
-            checkUuid("INVALID_BU_UUID", bu.id, "Identificativo non valido (business unit)", issues)
-            trackId(bu.id, "DUPLICATE_BU_ID", "Identificativo duplicato (business unit): ${bu.id}", seenIds, issues)
+            checkUuid("INVALID_BU_UUID", bu.id, i18n.text("text.95d1c4267bec"), issues)
+            trackId(bu.id, "DUPLICATE_BU_ID", i18n.text("text.cb0e7cb5a360", bu.id), seenIds, issues)
 
             // Traverse Sites
             for (site in bu.sites) {
-                checkUuid("INVALID_SITE_UUID", site.id, "Identificativo non valido (sede)", issues)
-                trackId(site.id, "DUPLICATE_SITE_ID", "Identificativo duplicato (sede): ${site.id}", seenIds, issues)
+                checkUuid("INVALID_SITE_UUID", site.id, i18n.text("text.91cc7ead7552"), issues)
+                trackId(site.id, "DUPLICATE_SITE_ID", i18n.text("text.3a57f298c821", site.id), seenIds, issues)
 
                 for (area in site.areas) {
-                    checkUuid("INVALID_AREA_UUID", area.id, "Identificativo non valido (area)", issues)
-                    trackId(area.id, "DUPLICATE_AREA_ID", "Identificativo duplicato (area): ${area.id}", seenIds, issues)
+                    checkUuid("INVALID_AREA_UUID", area.id, i18n.text("text.b4bcc3ce0e37"), issues)
+                    trackId(area.id, "DUPLICATE_AREA_ID", i18n.text("text.951d5d37b4da", area.id), seenIds, issues)
                 }
             }
 
             // Traverse BU Direct Areas
             for (area in bu.areas) {
-                checkUuid("INVALID_AREA_UUID", area.id, "Identificativo non valido (area)", issues)
-                trackId(area.id, "DUPLICATE_AREA_ID", "Identificativo duplicato (area): ${area.id}", seenIds, issues)
+                checkUuid("INVALID_AREA_UUID", area.id, i18n.text("text.b4bcc3ce0e37"), issues)
+                trackId(area.id, "DUPLICATE_AREA_ID", i18n.text("text.951d5d37b4da", area.id), seenIds, issues)
             }
 
             // Collect Devices
             for (device in bu.devices) {
                 allDevices.add(bu.id to device)
-                checkUuid("INVALID_DEVICE_UUID", device.id, "Identificativo non valido (apparato)", issues)
-                trackId(device.id, "DUPLICATE_DEVICE_ID", "Identificativo duplicato (apparato): ${device.id}", seenIds, issues)
+                checkUuid("INVALID_DEVICE_UUID", device.id, i18n.text("text.7bcae484093f"), issues)
+                trackId(device.id, "DUPLICATE_DEVICE_ID", i18n.text("text.8b3f7ead59e2", device.id), seenIds, issues)
 
                 // Unpositioned device check (Documentary warning)
                 if ((device.siteId == null) && (device.areaId == null) && (device.rackId == null)) {
                     issues.add(
                         ValidationIssue(
                             code = "UNPOSITIONED_DEVICE",
-                            message = "Apparato '${device.technicalName}' senza sede, area o rack",
+                            message = i18n.text("text.1602c55be9b1", device.technicalName),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -111,7 +116,7 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "INVALID_RACK_REFERENCE",
-                                message = "Apparato '${device.technicalName}' riferisce un rack non esistente",
+                                message = i18n.text("text.f01c47e831cf", device.technicalName),
                                 severity = ValidationSeverity.STRUCTURAL_ERROR,
                                 targetEntityId = device.id
                             )
@@ -123,7 +128,7 @@ object ModelValidator {
                                 issues.add(
                                     ValidationIssue(
                                         code = "RACK_U_OUT_OF_BOUNDS",
-                                        message = "Apparato '${device.technicalName}' in U$pos-$topU supera l'altezza del rack '${rack.name}' (${rack.heightU}U)",
+                                        message = i18n.text("text.94af6773b8a9", device.technicalName, pos, topU, rack.name, rack.heightU),
                                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                         targetEntityId = device.id
                                     )
@@ -140,7 +145,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "UNVERIFIED_DEVICE_OBSERVATION",
-                            message = "Apparato '${device.technicalName}': rilievo ${device.observation.status.toDisplayString().lowercase()}",
+                            message = i18n.text("text.9c2ca030d9f5", device.technicalName, device.observation.status.toDisplayString(i18n = i18n).lowercase()),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -148,15 +153,18 @@ object ModelValidator {
                 }
 
                 // Collect Ports
+                if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(device.hardware.portGroups)) {
+                    issues.add(ValidationIssue("INVALID_DEVICE_HARDWARE", i18n.text("config.invalidHardware"), ValidationSeverity.STRUCTURAL_ERROR, device.id))
+                }
                 for (port in device.ports) {
-                    checkUuid("INVALID_PORT_UUID", port.id, "Identificativo non valido (porta)", issues)
-                    trackId(port.id, "DUPLICATE_PORT_ID", "Identificativo duplicato (porta): ${port.id}", seenIds, issues)
+                    checkUuid("INVALID_PORT_UUID", port.id, i18n.text("text.06e78b6179b8"), issues)
+                    trackId(port.id, "DUPLICATE_PORT_ID", i18n.text("text.558ee3bae10a", port.id), seenIds, issues)
 
                     if (port.deviceId != device.id) {
                         issues.add(
                             ValidationIssue(
                                 code = "PORT_DEVICE_MISMATCH",
-                                message = "Porta '${port.name}' associata a un apparato diverso da '${device.technicalName}'",
+                                message = i18n.text("text.dceb0794e6d6", port.name, device.technicalName),
                                 severity = ValidationSeverity.STRUCTURAL_ERROR,
                                 targetEntityId = port.id
                             )
@@ -169,7 +177,7 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "DETACHED_PORT_ENDPOINT",
-                                message = "Porta '${port.name}' di '${device.technicalName}' scollegata, da verificare",
+                                message = i18n.text("text.6d8683663196", port.name, device.technicalName),
                                 severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                 targetEntityId = port.id
                             )
@@ -201,13 +209,20 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "RACK_SLOT_OVERLAP",
-                                message = "Nel rack '$rackName' l'apparato '${d1.technicalName}' (U$pos1Start-$pos1End) si sovrappone a '${d2.technicalName}' (U$pos2Start-$pos2End)",
+                                message = i18n.text("text.04eb08c5280e", rackName, d1.technicalName, pos1Start, pos1End, d2.technicalName, pos2Start, pos2End),
                                 severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                 targetEntityId = d1.id
                             )
                         )
                     }
                 }
+            }
+        }
+
+        val connectionGraph = ConnectionGraph(project)
+        for (port in allPorts.values) {
+            if (connectionGraph.state(port.id) == ConnectionState.CONFLICT) {
+                issues.add(ValidationIssue("PHYSICAL_CONNECTION_CONFLICT", i18n.text("config.conflict"), ValidationSeverity.DOCUMENTARY_WARNING, port.id))
             }
         }
 
@@ -219,7 +234,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "BROKEN_PORT_CONNECTION",
-                            message = "Porta '${port.name}' collegata a una porta non esistente",
+                            message = i18n.text("text.13021c1a46ea", port.name),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = port.id
                         )
@@ -240,7 +255,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "DUPLICATE_DEVICE_NAME_IN_BU",
-                            message = "Nome tecnico '${device.technicalName}' usato da più apparati",
+                            message = i18n.text("text.e18788ee03d7", device.technicalName),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -256,7 +271,7 @@ object ModelValidator {
                             issues.add(
                                 ValidationIssue(
                                     code = "DUPLICATE_IP_IN_BU",
-                                    message = "Indirizzo IP '$ip' usato da più apparati",
+                                    message = i18n.text("text.2c04c9e1b0bf", ip),
                                     severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                     targetEntityId = device.id
                                 )
@@ -271,14 +286,14 @@ object ModelValidator {
 
         // Validate Credentials
         for (cred in project.credentials) {
-            checkUuid("INVALID_CREDENTIAL_UUID", cred.id, "Identificativo non valido (credenziale)", issues)
-            trackId(cred.id, "DUPLICATE_CREDENTIAL_ID", "Identificativo duplicato (credenziale): ${cred.id}", seenIds, issues)
+            checkUuid("INVALID_CREDENTIAL_UUID", cred.id, i18n.text("text.c1257b966e13"), issues)
+            trackId(cred.id, "DUPLICATE_CREDENTIAL_ID", i18n.text("text.46f1ab481fed", cred.id), seenIds, issues)
 
             if (cred.username.isBlank()) {
                 issues.add(
                     ValidationIssue(
                         code = "BLANK_CREDENTIAL_USERNAME",
-                        message = "Credenziale senza nome utente",
+                        message = i18n.text("text.bc9c4df6e567"),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = cred.id
                     )
@@ -289,14 +304,14 @@ object ModelValidator {
         // Validate Attachments
         val attachmentsById = project.attachments.associateBy { it.id }
         for (att in project.attachments) {
-            checkUuid("INVALID_ATTACHMENT_UUID", att.id, "Identificativo non valido (allegato)", issues)
-            trackId(att.id, "DUPLICATE_ATTACHMENT_ID", "Identificativo duplicato (allegato): ${att.id}", seenIds, issues)
+            checkUuid("INVALID_ATTACHMENT_UUID", att.id, i18n.text("text.44d4461cb53d"), issues)
+            trackId(att.id, "DUPLICATE_ATTACHMENT_ID", i18n.text("text.377ad7bf34ba", att.id), seenIds, issues)
 
             if (att.classification == com.onlyfield.assetmanager.core.model.AttachmentClassification.REVIEW_REQUIRED) {
                 issues.add(
                     ValidationIssue(
                         code = "ATTACHMENT_NEEDS_REVIEW",
-                        message = "Allegato '${att.name}' classificato come 'Da riesaminare'",
+                        message = i18n.text("text.440e04f7570f", att.name),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = att.id
                     )
@@ -315,7 +330,7 @@ object ModelValidator {
                             issues.add(
                                 ValidationIssue(
                                     code = "INVALID_FLOORPLAN_ATTACHMENT",
-                                    message = "Area '${area.name}' riferisce planimetria non esistente '$fpId'",
+                                    message = i18n.text("text.8fd88b9ec7a0", area.name, fpId),
                                     severity = ValidationSeverity.STRUCTURAL_ERROR,
                                     targetEntityId = area.id
                                 )
@@ -331,7 +346,7 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "INVALID_FLOORPLAN_ATTACHMENT",
-                                message = "Area '${area.name}' riferisce planimetria non esistente '$fpId'",
+                                message = i18n.text("text.8fd88b9ec7a0", area.name, fpId),
                                 severity = ValidationSeverity.STRUCTURAL_ERROR,
                                 targetEntityId = area.id
                             )
@@ -345,14 +360,14 @@ object ModelValidator {
         val allDeviceIds = allDevices.map { it.second.id }.toSet()
         val allRackIds = racksById.keys
         for (placement in project.floorplanPlacements) {
-            checkUuid("INVALID_PLACEMENT_UUID", placement.id, "Identificativo non valido (posizionamento)", issues)
-            trackId(placement.id, "DUPLICATE_PLACEMENT_ID", "Identificativo duplicato (posizionamento): ${placement.id}", seenIds, issues)
+            checkUuid("INVALID_PLACEMENT_UUID", placement.id, i18n.text("text.5b35f8c18c02"), issues)
+            trackId(placement.id, "DUPLICATE_PLACEMENT_ID", i18n.text("text.b884c2aa0bae", placement.id), seenIds, issues)
 
             if (!allAreaIds.contains(placement.areaId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PLACEMENT_AREA",
-                        message = "Posizionamento su planimetria riferito a un'area non esistente",
+                        message = i18n.text("text.fbb9417724c8"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = placement.id
                     )
@@ -367,7 +382,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PLACEMENT_TARGET",
-                        message = "Posizionamento su planimetria riferito a un elemento non esistente",
+                        message = i18n.text("text.fb455bb6066e"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = placement.id
                     )
@@ -378,7 +393,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "PLACEMENT_OUT_OF_BOUNDS",
-                        message = "Posizionamento su planimetria con coordinate fuori dai limiti",
+                        message = i18n.text("text.becac17fa6bd"),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = placement.id
                     )
@@ -387,39 +402,39 @@ object ModelValidator {
         }
 
         for (type in project.objectTypes) {
-            checkUuid("INVALID_OBJECT_TYPE_UUID", type.id, "Identificativo non valido (tipologia)", issues)
-            trackId(type.id, "DUPLICATE_OBJECT_TYPE_ID", "Tipologia duplicata", seenIds, issues)
+            checkUuid("INVALID_OBJECT_TYPE_UUID", type.id, i18n.text("text.1d0fbaeb70a5"), issues)
+            trackId(type.id, "DUPLICATE_OBJECT_TYPE_ID", i18n.text("text.7849faba6efd"), seenIds, issues)
             if (type.name.isBlank() || com.onlyfield.assetmanager.core.model.ObjectCatalog.builtins.any { it.id == type.id }) {
-                issues += ValidationIssue("INVALID_OBJECT_TYPE", "Tipologia senza nome o identificativo riservato", ValidationSeverity.STRUCTURAL_ERROR, type.id)
+                issues += ValidationIssue("INVALID_OBJECT_TYPE", i18n.text("text.da1acad0ecac"), ValidationSeverity.STRUCTURAL_ERROR, type.id)
             }
         }
         val routeKeys = mutableSetOf<Pair<String, String>>()
         for (route in project.cableRoutes) {
-            checkUuid("INVALID_CABLE_ROUTE_UUID", route.id, "Identificativo non valido (percorso)", issues)
-            trackId(route.id, "DUPLICATE_CABLE_ROUTE_ID", "Percorso duplicato", seenIds, issues)
+            checkUuid("INVALID_CABLE_ROUTE_UUID", route.id, i18n.text("text.4f9f45a15a81"), issues)
+            trackId(route.id, "DUPLICATE_CABLE_ROUTE_ID", i18n.text("text.44b8403ac8aa"), seenIds, issues)
             if (!routeKeys.add(route.cableId to route.areaId) || route.areaId !in allAreaIds || project.cables.none { it.id == route.cableId }) {
-                issues += ValidationIssue("INVALID_CABLE_ROUTE", "Percorso duplicato o riferimenti mancanti", ValidationSeverity.STRUCTURAL_ERROR, route.id)
+                issues += ValidationIssue("INVALID_CABLE_ROUTE", i18n.text("text.c5fa6ea2eacd"), ValidationSeverity.STRUCTURAL_ERROR, route.id)
             }
             if (route.points.size < 2 || route.points.any { !it.x.isFinite() || !it.y.isFinite() || it.x !in 0f..1f || it.y !in 0f..1f }) {
-                issues += ValidationIssue("INVALID_CABLE_ROUTE_POINTS", "Coordinate del percorso non valide", ValidationSeverity.STRUCTURAL_ERROR, route.id)
+                issues += ValidationIssue("INVALID_CABLE_ROUTE_POINTS", i18n.text("text.44aa633d518d"), ValidationSeverity.STRUCTURAL_ERROR, route.id)
             }
         }
         for (cable in project.cables) {
             if (listOfNotNull(cable.deviceAId, cable.deviceBId).any { it !in allDeviceIds }) {
-                issues += ValidationIssue("CABLE_DEVICE_TO_VERIFY", "Estremità del cavo da verificare", ValidationSeverity.DOCUMENTARY_WARNING, cable.id)
+                issues += ValidationIssue("CABLE_DEVICE_TO_VERIFY", i18n.text("text.8c99fd4d3b61"), ValidationSeverity.DOCUMENTARY_WARNING, cable.id)
             }
         }
 
         // Validate Annotations
         for (ann in project.annotations) {
-            checkUuid("INVALID_ANNOTATION_UUID", ann.id, "Identificativo non valido (annotazione)", issues)
-            trackId(ann.id, "DUPLICATE_ANNOTATION_ID", "Identificativo duplicato (annotazione): ${ann.id}", seenIds, issues)
+            checkUuid("INVALID_ANNOTATION_UUID", ann.id, i18n.text("text.89907d0dbe9a"), issues)
+            trackId(ann.id, "DUPLICATE_ANNOTATION_ID", i18n.text("text.e179516c1b1b", ann.id), seenIds, issues)
 
             if (!allAreaIds.contains(ann.areaId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_ANNOTATION_AREA",
-                        message = "Annotazione '${ann.id}' riferisce area non esistente '${ann.areaId}'",
+                        message = i18n.text("text.fbf734680fb7", ann.id, ann.areaId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = ann.id
                     )
@@ -430,7 +445,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "ANNOTATION_NEEDS_REVIEW",
-                        message = "Annotazione '${ann.id}' classificata come 'Da riesaminare'",
+                        message = i18n.text("text.f42121cecd50", ann.id),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = ann.id
                     )
@@ -443,15 +458,15 @@ object ModelValidator {
         val cableCountBySegmentId = mutableMapOf<String, Int>()
 
         for (segment in project.sharedPathSegments) {
-            checkUuid("INVALID_PATH_SEGMENT_UUID", segment.id, "Identificativo non valido (percorso condiviso)", issues)
-            trackId(segment.id, "DUPLICATE_PATH_SEGMENT_ID", "Identificativo duplicato (percorso condiviso): ${segment.id}", seenIds, issues)
+            checkUuid("INVALID_PATH_SEGMENT_UUID", segment.id, i18n.text("text.637c9e4df064"), issues)
+            trackId(segment.id, "DUPLICATE_PATH_SEGMENT_ID", i18n.text("text.b4ee34346c23", segment.id), seenIds, issues)
 
             segment.sourceAreaId?.let { sAreaId ->
                 if (!allAreaIds.contains(sAreaId)) {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_PATH_AREA_REFERENCE",
-                            message = "Percorso '${segment.name}' riferisce area origine non esistente '$sAreaId'",
+                            message = i18n.text("text.dd9fe044c39d", segment.name, sAreaId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = segment.id
                         )
@@ -464,7 +479,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_PATH_AREA_REFERENCE",
-                            message = "Percorso '${segment.name}' riferisce area destinazione non esistente '$tAreaId'",
+                            message = i18n.text("text.a2effaa9e8a8", segment.name, tAreaId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = segment.id
                         )
@@ -475,14 +490,14 @@ object ModelValidator {
 
         // Validate Cables
         for (cable in project.cables) {
-            checkUuid("INVALID_CABLE_UUID", cable.id, "Identificativo non valido (cavo)", issues)
-            trackId(cable.id, "DUPLICATE_CABLE_ID", "Identificativo duplicato (cavo): ${cable.id}", seenIds, issues)
+            checkUuid("INVALID_CABLE_UUID", cable.id, i18n.text("text.c879515e30e7"), issues)
+            trackId(cable.id, "DUPLICATE_CABLE_ID", i18n.text("text.eebfcf38b5b5", cable.id), seenIds, issues)
 
             if ((cable.portAId == null && cable.deviceAId == null) || (cable.portBId == null && cable.deviceBId == null)) {
                 issues.add(
                     ValidationIssue(
                         code = "DETACHED_CABLE_ENDPOINT",
-                        message = "Cavo '${cable.codeOrLabel ?: cable.id}' ha un'estremità scollegata o da verificare",
+                        message = i18n.text("text.a7178c87cd4a", cable.codeOrLabel ?: cable.id),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = cable.id
                     )
@@ -494,7 +509,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_PORT_REFERENCE",
-                            message = "Cavo '${cable.codeOrLabel ?: cable.id}' riferisce porta A non esistente '$portA'",
+                            message = i18n.text("text.8be3e37c6021", cable.codeOrLabel ?: cable.id, portA),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = cable.id
                         )
@@ -507,7 +522,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_PORT_REFERENCE",
-                            message = "Cavo '${cable.codeOrLabel ?: cable.id}' riferisce porta B non esistente '$portB'",
+                            message = i18n.text("text.ecadbb52c901", cable.codeOrLabel ?: cable.id, portB),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = cable.id
                         )
@@ -520,7 +535,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_SHARED_PATH_REFERENCE",
-                            message = "Cavo '${cable.codeOrLabel ?: cable.id}' riferisce segmento di percorso condiviso non esistente '$segId'",
+                            message = i18n.text("text.bdc2b3e63a66", cable.codeOrLabel ?: cable.id, segId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = cable.id
                         )
@@ -536,7 +551,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "UNVERIFIED_CABLE",
-                        message = "Cavo '${cable.codeOrLabel ?: cable.id}': rilievo ${cable.observation.status.toDisplayString().lowercase()}",
+                        message = i18n.text("text.aa25688be809", cable.codeOrLabel ?: cable.id, cable.observation.status.toDisplayString(i18n = i18n).lowercase()),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = cable.id
                     )
@@ -553,7 +568,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "SHARED_PATH_CAPACITY_EXCEEDED",
-                            message = "Percorso condiviso '${segment.name}' supera la capacità massima ($count/$maxCap cavi)",
+                            message = i18n.text("text.728fbb1efcaf", segment.name, count, maxCap),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = segment.id
                         )
@@ -564,14 +579,14 @@ object ModelValidator {
 
         // Validate PanelMappings
         for (mapping in project.panelMappings) {
-            checkUuid("INVALID_PANEL_MAPPING_UUID", mapping.id, "Identificativo non valido (permutazione)", issues)
-            trackId(mapping.id, "DUPLICATE_PANEL_MAPPING_ID", "Identificativo duplicato (permutazione): ${mapping.id}", seenIds, issues)
+            checkUuid("INVALID_PANEL_MAPPING_UUID", mapping.id, i18n.text("text.7dc146223b7b"), issues)
+            trackId(mapping.id, "DUPLICATE_PANEL_MAPPING_ID", i18n.text("text.04f94f16bbbf", mapping.id), seenIds, issues)
 
             if (!allPorts.containsKey(mapping.portAId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PORT_REFERENCE",
-                        message = "Mapping pannello '${mapping.id}' riferisce porta A non esistente '${mapping.portAId}'",
+                        message = i18n.text("text.06302f2683ef", mapping.id, mapping.portAId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = mapping.id
                     )
@@ -583,7 +598,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_PORT_REFERENCE",
-                            message = "Mapping pannello '${mapping.id}' riferisce porta B non esistente '$portB'",
+                            message = i18n.text("text.38db947816ca", mapping.id, portB),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = mapping.id
                         )
@@ -595,7 +610,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "UNKNOWN_PASSAGE_IN_CHAIN",
-                        message = "Mapping pannello '${mapping.id}' contiene un passaggio ignoto nella catena",
+                        message = i18n.text("text.9acd0880c983", mapping.id),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = mapping.id
                     )
@@ -608,14 +623,14 @@ object ModelValidator {
         val knownVlanIds = project.vlans.map { it.vlanId }.toSet()
 
         for (vlan in project.vlans) {
-            checkUuid("INVALID_VLAN_UUID", vlan.id, "Identificativo non valido (VLAN)", issues)
-            trackId(vlan.id, "DUPLICATE_VLAN_ID", "Identificativo duplicato (VLAN): ${vlan.id}", seenIds, issues)
+            checkUuid("INVALID_VLAN_UUID", vlan.id, i18n.text("text.f1620ea04aeb"), issues)
+            trackId(vlan.id, "DUPLICATE_VLAN_ID", i18n.text("text.01f8a71e9988", vlan.id), seenIds, issues)
 
             if (vlan.vlanId !in 1..4094) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_VLAN_NUMBER",
-                        message = "VLAN ID ${vlan.vlanId} fuori dal range valido (1-4094)",
+                        message = i18n.text("text.9598660cddac", vlan.vlanId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = vlan.id
                     )
@@ -628,7 +643,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "DUPLICATE_VLAN_IN_SCOPE",
-                        message = "VLAN ${vlan.vlanId} duplicata nell'ambito $scopeKey",
+                        message = i18n.text("text.f8b8257476de", vlan.vlanId, scopeKey),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = vlan.id
                     )
@@ -640,14 +655,14 @@ object ModelValidator {
 
         // Validate Subnets
         for (subnet in project.subnets) {
-            checkUuid("INVALID_SUBNET_UUID", subnet.id, "Identificativo non valido (subnet)", issues)
-            trackId(subnet.id, "DUPLICATE_SUBNET_ID", "Identificativo duplicato (subnet): ${subnet.id}", seenIds, issues)
+            checkUuid("INVALID_SUBNET_UUID", subnet.id, i18n.text("text.61df76270ad5"), issues)
+            trackId(subnet.id, "DUPLICATE_SUBNET_ID", i18n.text("text.481a7568314f", subnet.id), seenIds, issues)
 
             if (subnet.cidrBlock.isBlank() || !subnet.cidrBlock.contains("/")) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_SUBNET_CIDR",
-                        message = "Blocco CIDR non valido: '${subnet.cidrBlock}'",
+                        message = i18n.text("text.e090d62efeb9", subnet.cidrBlock),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = subnet.id
                     )
@@ -657,14 +672,14 @@ object ModelValidator {
 
         // Validate Port VLAN Memberships
         for (membership in project.portVlanMemberships) {
-            checkUuid("INVALID_PORT_VLAN_MEMBERSHIP_UUID", membership.id, "Identificativo non valido (appartenenza VLAN)", issues)
-            trackId(membership.id, "DUPLICATE_PORT_VLAN_MEMBERSHIP_ID", "Identificativo duplicato (appartenenza VLAN): ${membership.id}", seenIds, issues)
+            checkUuid("INVALID_PORT_VLAN_MEMBERSHIP_UUID", membership.id, i18n.text("text.17b7672895e6"), issues)
+            trackId(membership.id, "DUPLICATE_PORT_VLAN_MEMBERSHIP_ID", i18n.text("text.587e47123a02", membership.id), seenIds, issues)
 
             if (!allPorts.containsKey(membership.portId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PORT_REFERENCE",
-                        message = "Membership VLAN riferisce porta non esistente '${membership.portId}'",
+                        message = i18n.text("text.da890bb0a3f9", membership.portId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = membership.id
                     )
@@ -676,7 +691,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "UNREFERENCED_VLAN_IN_MEMBERSHIP",
-                            message = "Membership riferisce VLAN untagged non catalogata $vlanId",
+                            message = i18n.text("text.1bce9e95935a", vlanId),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = membership.id
                         )
@@ -689,7 +704,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "UNREFERENCED_VLAN_IN_MEMBERSHIP",
-                            message = "Membership riferisce VLAN tagged non catalogata $tvId",
+                            message = i18n.text("text.4d3fbe7a4f19", tvId),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = membership.id
                         )
@@ -700,14 +715,14 @@ object ModelValidator {
 
         // Validate Logical Interfaces
         for (l3Int in project.logicalInterfaces) {
-            checkUuid("INVALID_LOGICAL_INTERFACE_UUID", l3Int.id, "Identificativo non valido (interfaccia logica)", issues)
-            trackId(l3Int.id, "DUPLICATE_LOGICAL_INTERFACE_ID", "Identificativo duplicato (interfaccia logica): ${l3Int.id}", seenIds, issues)
+            checkUuid("INVALID_LOGICAL_INTERFACE_UUID", l3Int.id, i18n.text("text.352cc3385a7d"), issues)
+            trackId(l3Int.id, "DUPLICATE_LOGICAL_INTERFACE_ID", i18n.text("text.ee0a1b225328", l3Int.id), seenIds, issues)
 
             if (!allDeviceIds.contains(l3Int.deviceId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_DEVICE_REFERENCE",
-                        message = "Interfaccia logica '${l3Int.name}' riferisce apparato non esistente '${l3Int.deviceId}'",
+                        message = i18n.text("text.4333a07a8c7e", l3Int.name, l3Int.deviceId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = l3Int.id
                     )
@@ -717,14 +732,14 @@ object ModelValidator {
 
         // Validate LAG Groups
         for (lag in project.lagGroups) {
-            checkUuid("INVALID_LAG_GROUP_UUID", lag.id, "Identificativo non valido (gruppo LAG)", issues)
-            trackId(lag.id, "DUPLICATE_LAG_GROUP_ID", "Identificativo duplicato (gruppo LAG): ${lag.id}", seenIds, issues)
+            checkUuid("INVALID_LAG_GROUP_UUID", lag.id, i18n.text("text.afe6ae0705a1"), issues)
+            trackId(lag.id, "DUPLICATE_LAG_GROUP_ID", i18n.text("text.975f7803ace9", lag.id), seenIds, issues)
 
             if (!allDeviceIds.contains(lag.deviceId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_DEVICE_REFERENCE",
-                        message = "Gruppo LAG '${lag.name}' riferisce apparato non esistente '${lag.deviceId}'",
+                        message = i18n.text("text.b0bce70a5331", lag.name, lag.deviceId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = lag.id
                     )
@@ -736,7 +751,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_PORT_REFERENCE",
-                            message = "Gruppo LAG '${lag.name}' riferisce porta membro non esistente '$pId'",
+                            message = i18n.text("text.1bd46f15eba4", lag.name, pId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = lag.id
                         )
@@ -747,14 +762,14 @@ object ModelValidator {
 
         // Validate Device Configurations
         for (config in project.deviceConfigurations) {
-            checkUuid("INVALID_DEVICE_CONFIG_UUID", config.id, "Identificativo non valido (configurazione)", issues)
-            trackId(config.id, "DUPLICATE_DEVICE_CONFIG_ID", "Identificativo duplicato (configurazione): ${config.id}", seenIds, issues)
+            checkUuid("INVALID_DEVICE_CONFIG_UUID", config.id, i18n.text("text.0cc55dc2828d"), issues)
+            trackId(config.id, "DUPLICATE_DEVICE_CONFIG_ID", i18n.text("text.768e86492ada", config.id), seenIds, issues)
 
             if (!allDeviceIds.contains(config.deviceId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_DEVICE_REFERENCE",
-                        message = "Configurazione '${config.title}' riferisce apparato non esistente '${config.deviceId}'",
+                        message = i18n.text("text.79c51cc879a5", config.title, config.deviceId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = config.id
                     )
@@ -766,7 +781,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_ATTACHMENT_REFERENCE",
-                            message = "Configurazione '${config.title}' riferisce allegato non esistente '$attId'",
+                            message = i18n.text("text.677a6c1a51fe", config.title, attId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = config.id
                         )
@@ -777,15 +792,15 @@ object ModelValidator {
 
         // Validate WAN/VPN Connections
         for (conn in project.wanVpnConnections) {
-            checkUuid("INVALID_WAN_VPN_UUID", conn.id, "Identificativo non valido (connessione WAN/VPN)", issues)
-            trackId(conn.id, "DUPLICATE_WAN_VPN_ID", "Identificativo duplicato (connessione WAN/VPN): ${conn.id}", seenIds, issues)
+            checkUuid("INVALID_WAN_VPN_UUID", conn.id, i18n.text("text.d652ce41458f"), issues)
+            trackId(conn.id, "DUPLICATE_WAN_VPN_ID", i18n.text("text.d6d376f48002", conn.id), seenIds, issues)
 
             conn.localEndpointDeviceId?.let { devId ->
                 if (!allDeviceIds.contains(devId)) {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_DEVICE_REFERENCE",
-                            message = "Connessione '${conn.name}' riferisce apparato locale non esistente '$devId'",
+                            message = i18n.text("text.a67084e3551f", conn.name, devId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = conn.id
                         )
@@ -798,7 +813,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_DEVICE_REFERENCE",
-                            message = "Connessione '${conn.name}' riferisce apparato remoto non esistente '$devId'",
+                            message = i18n.text("text.22860f412529", conn.name, devId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = conn.id
                         )
@@ -809,14 +824,14 @@ object ModelValidator {
 
         // Validate Video Surveillance Mappings
         for (video in project.videoSurveillanceMappings) {
-            checkUuid("INVALID_VIDEO_MAPPING_UUID", video.id, "Identificativo non valido (videosorveglianza)", issues)
-            trackId(video.id, "DUPLICATE_VIDEO_MAPPING_ID", "Identificativo duplicato (videosorveglianza): ${video.id}", seenIds, issues)
+            checkUuid("INVALID_VIDEO_MAPPING_UUID", video.id, i18n.text("text.bee37c27f111"), issues)
+            trackId(video.id, "DUPLICATE_VIDEO_MAPPING_ID", i18n.text("text.5d71ad933b74", video.id), seenIds, issues)
 
             if (!allDeviceIds.contains(video.cameraDeviceId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_DEVICE_REFERENCE",
-                        message = "Videosorveglianza riferisce telecamera non esistente '${video.cameraDeviceId}'",
+                        message = i18n.text("text.6a6357c88fe7", video.cameraDeviceId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = video.id
                     )
@@ -828,7 +843,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_DEVICE_REFERENCE",
-                            message = "Videosorveglianza riferisce gestore/NVR non esistente '$devId'",
+                            message = i18n.text("text.18f187c335c9", devId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = video.id
                         )
@@ -839,14 +854,14 @@ object ModelValidator {
 
         // Validate Custom Extra Fields
         for (field in project.customExtraFields) {
-            checkUuid("INVALID_CUSTOM_FIELD_UUID", field.id, "Identificativo non valido (campo extra)", issues)
-            trackId(field.id, "DUPLICATE_CUSTOM_FIELD_ID", "Identificativo duplicato (campo extra): ${field.id}", seenIds, issues)
+            checkUuid("INVALID_CUSTOM_FIELD_UUID", field.id, i18n.text("text.1fc3d96ea2ea"), issues)
+            trackId(field.id, "DUPLICATE_CUSTOM_FIELD_ID", i18n.text("text.b092fca6fb3c", field.id), seenIds, issues)
 
             if (field.classification == com.onlyfield.assetmanager.core.model.AttachmentClassification.REVIEW_REQUIRED) {
                 issues.add(
                     ValidationIssue(
                         code = "CUSTOM_FIELD_NEEDS_REVIEW",
-                        message = "Campo extra '${field.fieldKey}' classificato come 'Da riesaminare'",
+                        message = i18n.text("text.3523a7339a55", field.fieldKey),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = field.id
                     )
@@ -858,14 +873,14 @@ object ModelValidator {
         val allPortIds = allDevices.flatMap { it.second.ports }.map { it.id }.toSet()
         val powerFeedsByDevice = project.powerFeeds.groupBy { it.deviceId }
         for (feed in project.powerFeeds) {
-            checkUuid("INVALID_POWER_FEED_UUID", feed.id, "Identificativo non valido (alimentazione)", issues)
-            trackId(feed.id, "DUPLICATE_POWER_FEED_ID", "Identificativo duplicato (alimentazione): ${feed.id}", seenIds, issues)
+            checkUuid("INVALID_POWER_FEED_UUID", feed.id, i18n.text("text.a10fba81028f"), issues)
+            trackId(feed.id, "DUPLICATE_POWER_FEED_ID", i18n.text("text.09783358748b", feed.id), seenIds, issues)
 
             if (!allDeviceIds.contains(feed.deviceId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_POWER_FEED_DEVICE",
-                        message = "Alimentazione '${feed.feedName}' riferisce un apparato non esistente '${feed.deviceId}'",
+                        message = i18n.text("text.42e37de799be", feed.feedName, feed.deviceId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = feed.id
                     )
@@ -877,7 +892,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "INVALID_POWER_FEED_SOURCE",
-                            message = "Alimentazione '${feed.feedName}' riferisce una sorgente non esistente '$srcId'",
+                            message = i18n.text("text.1059883f726a", feed.feedName, srcId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = feed.id
                         )
@@ -903,7 +918,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "POWER_FEED_CYCLE_DETECTED",
-                            message = "Rilevato ciclo nella catena di alimentazione per l'apparato '${feed.deviceId}'",
+                            message = i18n.text("text.0c08ebb1a13c", feed.deviceId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = feed.id
                         )
@@ -916,7 +931,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "CALCULATED_AUTONOMIA_PROHIBITED_WARNING",
-                        message = "Autonomia espressa (${feed.observedRuntimeMinutes} min) priva di fonte o data rilevamento. Le autonomie calcolate non sono ammesse.",
+                        message = i18n.text("text.2a538889f18e", feed.observedRuntimeMinutes),
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = feed.id
                     )
@@ -934,7 +949,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "SINGLE_FEED_PARTIAL_COVERAGE_WARNING",
-                            message = "Apparato '${device.technicalName}' con copertura alimentazione parziale (manca A o B)",
+                            message = i18n.text("text.423c29b5d100", device.technicalName),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -945,14 +960,14 @@ object ModelValidator {
 
         // Validate PoE Mappings
         for (poe in project.poeMappings) {
-            checkUuid("INVALID_POE_MAPPING_UUID", poe.id, "Identificativo non valido (mappatura PoE)", issues)
-            trackId(poe.id, "DUPLICATE_POE_MAPPING_ID", "Identificativo duplicato (mappatura PoE): ${poe.id}", seenIds, issues)
+            checkUuid("INVALID_POE_MAPPING_UUID", poe.id, i18n.text("text.b9bb89ac9d9e"), issues)
+            trackId(poe.id, "DUPLICATE_POE_MAPPING_ID", i18n.text("text.b72c3e18b174", poe.id), seenIds, issues)
 
             if (!allPortIds.contains(poe.portId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_POE_PORT_REFERENCE",
-                        message = "Configurazione PoE riferisce porta non esistente '${poe.portId}'",
+                        message = i18n.text("text.d03f6e073cda", poe.portId),
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = poe.id
                     )
@@ -962,14 +977,14 @@ object ModelValidator {
 
         // Validate Document Badges
         for (badge in project.documentBadges) {
-            checkUuid("INVALID_DOCUMENT_BADGE_UUID", badge.id, "Identificativo non valido (badge)", issues)
-            trackId(badge.id, "DUPLICATE_DOCUMENT_BADGE_ID", "Identificativo duplicato (badge): ${badge.id}", seenIds, issues)
+            checkUuid("INVALID_DOCUMENT_BADGE_UUID", badge.id, i18n.text("text.41c5560480fd"), issues)
+            trackId(badge.id, "DUPLICATE_DOCUMENT_BADGE_ID", i18n.text("text.d9a9317b5874", badge.id), seenIds, issues)
         }
 
         return ValidationResult(issues)
     }
 
-    fun deriveBadges(project: Project, targetType: String, targetId: String): List<com.onlyfield.assetmanager.core.model.DocumentBadge> {
+    fun deriveBadges(project: Project, targetType: String, targetId: String, i18n: Messages = Messages()): List<com.onlyfield.assetmanager.core.model.DocumentBadge> {
         val result = mutableListOf<com.onlyfield.assetmanager.core.model.DocumentBadge>()
 
         // 1. Existing stored free labels
@@ -997,7 +1012,7 @@ object ModelValidator {
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
                                 targetId = targetId,
-                                label = "VLAN: ${vlanIds.sorted().joinToString()}",
+                                label = i18n.text("text.b6d96a03ea99", vlanIds.sorted().joinToString()),
                                 category = com.onlyfield.assetmanager.core.model.BadgeCategory.VLAN,
                                 isDerived = true
                             )
@@ -1015,7 +1030,7 @@ object ModelValidator {
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
                                 targetId = targetId,
-                                label = "MEZZO: ${media.joinToString()}",
+                                label = i18n.text("text.c576c7498dba", media.joinToString()),
                                 category = com.onlyfield.assetmanager.core.model.BadgeCategory.MEDIUM,
                                 isDerived = true
                             )
@@ -1030,7 +1045,7 @@ object ModelValidator {
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
                                 targetId = targetId,
-                                label = "POE: $poeText",
+                                label = i18n.text("text.80fbc2776190", poeText),
                                 category = com.onlyfield.assetmanager.core.model.BadgeCategory.POE,
                                 isDerived = true
                             )
@@ -1042,7 +1057,7 @@ object ModelValidator {
                     if (feeds.isNotEmpty()) {
                         val hasA = feeds.any { it.feedType == com.onlyfield.assetmanager.core.model.PowerFeedType.PRIMARY_A }
                         val hasB = feeds.any { it.feedType == com.onlyfield.assetmanager.core.model.PowerFeedType.SECONDARY_B }
-                        val covLabel = if (hasA && hasB) "COPERTURA: Doppia (A/B)" else "COPERTURA: Parziale"
+                        val covLabel = if (hasA && hasB) i18n.text("text.a19df1843eae") else i18n.text("text.424fa56accd4")
                         result.add(
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
@@ -1059,7 +1074,7 @@ object ModelValidator {
                                     (f.sourceDeviceId != null && project.businessUnits.flatMap { it.devices }
                                         .firstOrNull { it.id == f.sourceDeviceId }?.category == com.onlyfield.assetmanager.core.model.DeviceCategory.UPS_PDU)
                         }
-                        val upsLabel = if (hasUps) "UPS: Protetto" else "UPS: Nessuna protezione diretta"
+                        val upsLabel = if (hasUps) i18n.text("text.d65d2454047d") else i18n.text("text.dbdeacd918a5")
                         result.add(
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
@@ -1079,7 +1094,7 @@ object ModelValidator {
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
                                 targetId = targetId,
-                                label = "Questione aperta: ${device.observation.status.toDisplayString().lowercase()}",
+                                label = i18n.text("text.e5205cc54a13", device.observation.status.toDisplayString(i18n = i18n).lowercase()),
                                 category = com.onlyfield.assetmanager.core.model.BadgeCategory.OPEN_ISSUE,
                                 isDerived = true
                             )
@@ -1092,15 +1107,15 @@ object ModelValidator {
                 val membership = project.portVlanMemberships.firstOrNull { it.portId == targetId }
                 if (membership != null) {
                     val vlans = mutableListOf<String>()
-                    membership.untaggedVlanId?.let { vlans.add("untagged $it") }
+                    membership.untaggedVlanId?.let { vlans.add(i18n.text("text.5d4192a73511", it)) }
                     if (membership.taggedVlanIds.isNotEmpty()) {
-                        vlans.add("tagged ${membership.taggedVlanIds.joinToString()}")
+                        vlans.add(i18n.text("text.29697e42d0d3", membership.taggedVlanIds.joinToString()))
                     }
                     result.add(
                         com.onlyfield.assetmanager.core.model.DocumentBadge(
                             targetType = targetType,
                             targetId = targetId,
-                            label = "VLAN: ${vlans.joinToString(", ")}",
+                            label = i18n.text("text.b6d96a03ea99", vlans.joinToString(", ")),
                             category = com.onlyfield.assetmanager.core.model.BadgeCategory.VLAN,
                             isDerived = true
                         )
@@ -1113,7 +1128,7 @@ object ModelValidator {
                         com.onlyfield.assetmanager.core.model.DocumentBadge(
                             targetType = targetType,
                             targetId = targetId,
-                            label = "POE: ${poe.role} ${poe.standard}",
+                            label = i18n.text("text.c0e033a33b08", poe.role, poe.standard),
                             category = com.onlyfield.assetmanager.core.model.BadgeCategory.POE,
                             isDerived = true
                         )
@@ -1125,13 +1140,13 @@ object ModelValidator {
         return result
     }
 
-    fun validateMergeTargets(survivingDeviceId: String, duplicateDeviceId: String): ValidationResult {
+    fun validateMergeTargets(survivingDeviceId: String, duplicateDeviceId: String, i18n: Messages = Messages()): ValidationResult {
         val issues = mutableListOf<ValidationIssue>()
         if (survivingDeviceId == duplicateDeviceId) {
             issues.add(
                 ValidationIssue(
                     code = "CANNOT_MERGE_SAME_DEVICE",
-                    message = "L'apparato da mantenere e il duplicato devono essere diversi",
+                    message = i18n.text("text.2a50b6ed4103"),
                     severity = ValidationSeverity.STRUCTURAL_ERROR,
                     targetEntityId = survivingDeviceId
                 )
@@ -1140,14 +1155,14 @@ object ModelValidator {
         return ValidationResult(issues)
     }
 
-    fun generateBatchEditPreview(devices: List<Device>, changes: BatchDeviceChanges): BatchEditPreview {
+    fun generateBatchEditPreview(devices: List<Device>, changes: BatchDeviceChanges, i18n: Messages = Messages()): BatchEditPreview {
         val summaries = mutableListOf<String>()
-        if (changes.updateSiteId) summaries.add("Sede impostata su: ${changes.siteId ?: "Nessuna"}")
-        if (changes.updateAreaId) summaries.add("Area impostata su: ${changes.areaId ?: "Nessuna"}")
-        if (changes.updateCategory) summaries.add("Categoria impostata su: ${changes.category ?: "Personalizzato"}")
-        if (changes.updateRackId) summaries.add("Rack impostato su: ${changes.rackId ?: "Fuori rack"}")
-        if (changes.updateMountingType) summaries.add("Montaggio impostato su: ${changes.mountingType}")
-        if (changes.updateObservationNotes) summaries.add("Note osservazione aggiornate")
+        if (changes.updateSiteId) summaries.add(i18n.text("text.dd101e6f2821", changes.siteId ?: i18n.text("text.f56b9cfaeb27")))
+        if (changes.updateAreaId) summaries.add(i18n.text("text.a8fa7b3696e9", changes.areaId ?: i18n.text("text.f56b9cfaeb27")))
+        if (changes.updateCategory) summaries.add(i18n.text("text.8a307dae951d", changes.category ?: i18n.text("text.7925666e5976")))
+        if (changes.updateRackId) summaries.add(i18n.text("text.badf46c13b7d", changes.rackId ?: i18n.text("text.da968f7d518f")))
+        if (changes.updateMountingType) summaries.add(i18n.text("text.0a2d16e9070e", changes.mountingType))
+        if (changes.updateObservationNotes) summaries.add(i18n.text("text.5f2d69b5aec2"))
 
         return BatchEditPreview(
             targetDeviceIds = devices.map { it.id },

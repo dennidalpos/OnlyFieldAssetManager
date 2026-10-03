@@ -14,7 +14,7 @@ object RackLayout {
         val range = startU until startU + heightU
         return devices.filter { d ->
             d.rackId == rack.id && d.id != ignoreDeviceId && d.positionU != null && sidesOverlap(d.rackSide, side) &&
-                (d.positionU!! until d.positionU!! + d.heightU).any { it in range }
+                (d.positionU until d.positionU + d.heightU).any { it in range }
         }
     }
 

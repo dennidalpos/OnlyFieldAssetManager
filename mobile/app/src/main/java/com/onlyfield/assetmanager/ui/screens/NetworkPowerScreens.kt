@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
@@ -34,6 +36,8 @@ private fun <T> LazyListScope.entityItems(
 
 @Composable
 fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
     var tab by remember { mutableStateOf(0) }
@@ -43,55 +47,55 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     var wan by remember { mutableStateOf<EditTarget<WanVpnConnection>?>(null) }
     var config by remember { mutableStateOf<EditTarget<DeviceConfiguration>?>(null) }
     var extra by remember { mutableStateOf<EditTarget<CustomExtraField>?>(null) }
-    fun del(name: String, msg: String, op: (Project) -> Project) = confirm(ConfirmRequest("Eliminare «$name»?", "L'elemento verrà eliminato dal progetto.") { vm.edit(msg, op) })
-    fun vlanLabel(n: Int?) = n?.let { v -> project.vlans.find { it.vlanId == v }?.let { "VLAN $v · ${it.name}" } ?: "VLAN $v" }
+    fun del(name: String, msg: String, op: (Project) -> Project) = confirm(ConfirmRequest(i18n.text("text.e36c23dfb086", name), i18n.text("text.072043981f03")) { vm.edit(msg, op) })
+    fun vlanLabel(n: Int?) = n?.let { v -> project.vlans.find { it.vlanId == v }?.let { i18n.text("text.15fd0dfb7614", v, it.name) } ?: i18n.text("text.da4da5c165af", v) }
 
-    val tabs = listOf("VLAN", "Subnet", "Interfacce", "WAN/VPN", "Configurazioni", "Campi extra")
+    val tabs = listOf("VLAN", i18n.text("text.bfea90e5ae18"), i18n.text("text.ee7739e61881"), "WAN/VPN", i18n.text("text.e44eb05c3989"), i18n.text("text.00158c772cda"))
     AppScaffold(
-        "Rete", onBack = { vm.back() }, snackbarHost = snackbar,
+        i18n.text("text.a0dd274e04a0"), onBack = { vm.back() }, snackbarHost = snackbar,
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = {
                 when (tab) {
                     0 -> vlan = EditTarget(null); 1 -> subnet = EditTarget(null); 2 -> iface = EditTarget(null)
                     3 -> wan = EditTarget(null); 4 -> config = EditTarget(null); else -> extra = EditTarget(null)
                 }
-            }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Aggiungi") })
+            }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.84cbef7b19b8")) })
         }
     ) { padding ->
         Column(Modifier.padding(padding)) {
             SubTabs(tabs, tab) { tab = it }
             LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (tab) {
-                    0 -> entityItems(project.vlans.sortedBy { it.vlanId }, "Nessuna VLAN.", { it.id }) { v ->
-                        ItemCard("VLAN ${v.vlanId} · ${v.name}", listOf(v.scopeType.toDisplayString(), v.description.orEmpty()), onClick = { vlan = EditTarget(v) },
-                            menu = listOf(MenuAction("Elimina", true) { del("VLAN ${v.vlanId}", "VLAN eliminata.") { ProjectEdits.deleteVlan(it, v.id) } }))
+                    0 -> entityItems(project.vlans.sortedBy { it.vlanId }, i18n.text("text.7de621e87842"), { it.id }) { v ->
+                        ItemCard(i18n.text("text.15fd0dfb7614", v.vlanId, v.name), listOf(v.scopeType.toDisplayString(i18n = i18n), v.description.orEmpty()), onClick = { vlan = EditTarget(v) },
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i18n.text("text.da4da5c165af", v.vlanId), i18n.text("text.17c0edc568d1")) { ProjectEdits.deleteVlan(it, v.id) } }))
                     }
-                    1 -> entityItems(project.subnets, "Nessuna subnet.", { it.id }) { s ->
+                    1 -> entityItems(project.subnets, i18n.text("text.446498be42fe"), { it.id }) { s ->
                         val v = project.vlans.find { it.id == s.vlanId }
-                        ItemCard(s.cidrBlock + (s.name?.let { " · $it" } ?: ""), listOf(listOfNotNull(s.gatewayIp?.let { "Gateway $it" }, v?.let { "VLAN ${it.vlanId}" }).joinToString(" · ")),
+                        ItemCard(s.cidrBlock + (s.name?.let { " · $it" } ?: ""), listOf(listOfNotNull(s.gatewayIp?.let { i18n.text("text.87b3d4c8eb9f", it) }, v?.let { i18n.text("text.da4da5c165af", it.vlanId) }).joinToString(" · ")),
                             onClick = { subnet = EditTarget(s) },
-                            menu = listOf(MenuAction("Elimina", true) { del(s.cidrBlock, "Subnet eliminata.") { ProjectEdits.deleteSubnet(it, s.id) } }))
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(s.cidrBlock, i18n.text("text.2c102aea66fb")) { ProjectEdits.deleteSubnet(it, s.id) } }))
                     }
-                    2 -> entityItems(project.logicalInterfaces, "Nessuna interfaccia logica.", { it.id }) { i ->
-                        ItemCard("${index.deviceName(i.deviceId)} › ${i.name}", listOf(listOfNotNull(i.ipAddress, i.subnetCidr, vlanLabel(i.vlanId)).joinToString(" · ")),
+                    2 -> entityItems(project.logicalInterfaces, i18n.text("text.22e22d133b84"), { it.id }) { i ->
+                        ItemCard("${index.deviceName(i.deviceId, i18n = i18n)} › ${i.name}", listOf(listOfNotNull(i.ipAddress, i.subnetCidr, vlanLabel(i.vlanId)).joinToString(" · ")),
                             onClick = { iface = EditTarget(i) },
-                            menu = listOf(MenuAction("Elimina", true) { del(i.name, "Interfaccia eliminata.") { ProjectEdits.deleteLogicalInterface(it, i.id) } }))
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i.name, i18n.text("text.15971cc8f189")) { ProjectEdits.deleteLogicalInterface(it, i.id) } }))
                     }
-                    3 -> entityItems(project.wanVpnConnections, "Nessuna connessione WAN o VPN.", { it.id }) { c ->
-                        val local = c.localEndpointDeviceId?.let { index.deviceName(it) } ?: c.localEndpointSiteDescription ?: "?"
-                        val remote = c.remoteEndpointDeviceId?.let { index.deviceName(it) } ?: c.remoteEndpointSiteDescription ?: "?"
-                        ItemCard(c.name, listOf("$local → $remote", listOfNotNull(c.providerOrCarrier, c.bandwidth).joinToString(" · ")), badge = c.type.toDisplayString(),
+                    3 -> entityItems(project.wanVpnConnections, i18n.text("text.acd5d0fdeec2"), { it.id }) { c ->
+                        val local = c.localEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.localEndpointSiteDescription ?: "?"
+                        val remote = c.remoteEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.remoteEndpointSiteDescription ?: "?"
+                        ItemCard(c.name, listOf("$local → $remote", listOfNotNull(c.providerOrCarrier, c.bandwidth).joinToString(" · ")), badge = c.type.toDisplayString(i18n = i18n),
                             onClick = { wan = EditTarget(c) },
-                            menu = listOf(MenuAction("Elimina", true) { del(c.name, "Connessione eliminata.") { ProjectEdits.deleteWanVpnConnection(it, c.id) } }))
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(c.name, i18n.text("text.36f755a3cda8")) { ProjectEdits.deleteWanVpnConnection(it, c.id) } }))
                     }
-                    4 -> entityItems(project.deviceConfigurations, "Nessuna configurazione salvata.", { it.id }) { c ->
-                        ItemCard("${index.deviceName(c.deviceId)} › ${c.title}", listOf("${c.configText?.lines()?.size ?: 0} righe · ${formatDateTime(c.capturedEpochMs)}"),
+                    4 -> entityItems(project.deviceConfigurations, i18n.text("text.c15c34e10908"), { it.id }) { c ->
+                        ItemCard("${index.deviceName(c.deviceId, i18n = i18n)} › ${c.title}", listOf(i18n.text("text.adab2670eb2a", c.configText?.lines()?.size ?: 0, formatDateTime(c.capturedEpochMs))),
                             onClick = { config = EditTarget(c) },
-                            menu = listOf(MenuAction("Elimina", true) { del(c.title, "Configurazione eliminata.") { ProjectEdits.deleteDeviceConfiguration(it, c.id) } }))
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(c.title, i18n.text("text.fb507a93e55d")) { ProjectEdits.deleteDeviceConfiguration(it, c.id) } }))
                     }
-                    else -> entityItems(project.customExtraFields, "Nessun campo extra.", { it.id }) { f ->
-                        ItemCard("${f.fieldKey}: ${f.fieldValue}", listOf(index.targetLabel(f.targetType, f.targetId)), onClick = { extra = EditTarget(f) },
-                            menu = listOf(MenuAction("Elimina", true) { del(f.fieldKey, "Campo eliminato.") { ProjectEdits.deleteCustomExtraField(it, f.id) } }))
+                    else -> entityItems(project.customExtraFields, i18n.text("text.ca56999e82d8"), { it.id }) { f ->
+                        ItemCard("${f.fieldKey}: ${f.fieldValue}", listOf(index.targetLabel(f.targetType, f.targetId, i18n = i18n)), onClick = { extra = EditTarget(f) },
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(f.fieldKey, i18n.text("text.b43abaee4bcd")) { ProjectEdits.deleteCustomExtraField(it, f.id) } }))
                     }
                 }
             }
@@ -102,91 +106,91 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val v = t.item
         var form by remember(t) { mutableStateOf(VlanForm.from(v)) }
         val taken = project.vlans.filter { it.id != v?.id && it.scopeType == VlanScopeType.PROJECT }.map { it.vlanId }.toSet()
-        val errors = form.errors(taken)
-        EditScreen(if (v == null) "Nuova VLAN" else "Modifica VLAN", { vlan = null }, {
+        val errors = form.errors(taken, i18n = i18n)
+        EditScreen(if (v == null) i18n.text("text.864bdda898fc") else i18n.text("text.7413bdc75d86"), { vlan = null }, {
             vlan = null; val saved = form.toVlan(v)
-            vm.edit("VLAN ${saved.vlanId} salvata.") { if (v == null) ProjectEdits.addVlan(it, saved) else ProjectEdits.updateVlan(it, saved) }
+            vm.edit(i18n.text("text.9c856115c4fc", saved.vlanId)) { if (v == null) ProjectEdits.addVlan(it, saved) else ProjectEdits.updateVlan(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            FormField(form.vlanId, { form = form.copy(vlanId = it) }, "Numero VLAN *", error = errors["vlanId"], hint = "1–4094", kind = FieldKind.NUMBER)
-            FormField(form.name, { form = form.copy(name = it) }, "Nome *", error = errors["name"])
-            EnumPicker("Ambito", VlanScopeType.entries, form.scopeType, { it.toDisplayString() }, { form = form.copy(scopeType = it, scopeTargetId = null) })
+            FormField(form.vlanId, { form = form.copy(vlanId = it) }, i18n.text("text.21d0e8b7d284"), error = errors["vlanId"], hint = "1–4094", kind = FieldKind.NUMBER)
+            FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), error = errors["name"])
+            EnumPicker(i18n.text("text.03cbc24f25f2"), VlanScopeType.entries, form.scopeType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(scopeType = it, scopeTargetId = null) })
             when (form.scopeType) {
-                VlanScopeType.BUSINESS_UNIT -> OptionPicker("Business unit", project.businessUnits, project.businessUnits.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
-                VlanScopeType.SITE -> OptionPicker("Sede", index.sites, index.sites.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
-                VlanScopeType.DEVICE -> DevicePicker("Apparato", index, form.scopeTargetId, { form = form.copy(scopeTargetId = it) })
+                VlanScopeType.BUSINESS_UNIT -> OptionPicker(i18n.text("text.e4de7d26b141"), project.businessUnits, project.businessUnits.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
+                VlanScopeType.SITE -> OptionPicker(i18n.text("text.f163aa3f6310"), index.sites, index.sites.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
+                VlanScopeType.DEVICE -> DevicePicker(i18n.text("text.cf301d95d32c"), index, form.scopeTargetId, { form = form.copy(scopeTargetId = it) })
                 VlanScopeType.PROJECT -> Unit
             }
-            FormField(form.description, { form = form.copy(description = it) }, "Descrizione")
+            FormField(form.description, { form = form.copy(description = it) }, i18n.text("text.6fb818621896"))
         }
     }
 
     subnet?.let { t ->
         val s = t.item
         var form by remember(t) { mutableStateOf(SubnetForm.from(s)) }
-        val errors = form.errors()
-        EditScreen(if (s == null) "Nuova subnet" else "Modifica subnet", { subnet = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (s == null) i18n.text("text.5c8aa6f5ef27") else i18n.text("text.0db1e97aa029"), { subnet = null }, {
             subnet = null; val saved = form.toSubnet(s)
-            vm.edit("Subnet salvata.") { if (s == null) ProjectEdits.addSubnet(it, saved) else ProjectEdits.updateSubnet(it, saved) }
+            vm.edit(i18n.text("text.be84c37df37d")) { if (s == null) ProjectEdits.addSubnet(it, saved) else ProjectEdits.updateSubnet(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, "Blocco CIDR *", error = errors["cidrBlock"], hint = "Es. 192.168.10.0/24", kind = FieldKind.IP)
-            FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, "Gateway", error = errors["gatewayIp"], kind = FieldKind.IP)
-            OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId }, { "VLAN ${it.vlanId} · ${it.name}" },
-                { form = form.copy(vlanRefId = it?.id) }, noneLabel = "Nessuna VLAN")
-            FormField(form.name, { form = form.copy(name = it) }, "Nome")
-            FormField(form.description, { form = form.copy(description = it) }, "Descrizione")
+            FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, i18n.text("text.a1f614a904b2"), error = errors["cidrBlock"], hint = i18n.text("text.ee4725fa1904"), kind = FieldKind.IP)
+            FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, i18n.text("text.41ed52921661"), error = errors["gatewayIp"], kind = FieldKind.IP)
+            OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
+                { form = form.copy(vlanRefId = it?.id) }, noneLabel = i18n.text("text.b60b955a9981"))
+            FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.5086900635fe"))
+            FormField(form.description, { form = form.copy(description = it) }, i18n.text("text.6fb818621896"))
         }
     }
 
     iface?.let { t ->
         val i = t.item
         var form by remember(t) { mutableStateOf(LogicalInterfaceForm.from(i)) }
-        val errors = form.errors()
-        EditScreen(if (i == null) "Nuova interfaccia" else "Modifica interfaccia", { iface = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (i == null) i18n.text("text.80f149c18ac7") else i18n.text("text.a4d9c2f8f102"), { iface = null }, {
             iface = null; val saved = form.toInterface(i)
-            vm.edit("Interfaccia salvata.") { if (i == null) ProjectEdits.addLogicalInterface(it, saved) else ProjectEdits.updateLogicalInterface(it, saved) }
+            vm.edit(i18n.text("text.4292a16c17ce")) { if (i == null) ProjectEdits.addLogicalInterface(it, saved) else ProjectEdits.updateLogicalInterface(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            DevicePicker("Apparato *", index, form.deviceId, { form = form.copy(deviceId = it) })
-            FormField(form.name, { form = form.copy(name = it) }, "Nome *", error = errors["name"], hint = "Es. Vlan10")
-            FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, "Indirizzo IP", error = errors["ipAddress"], kind = FieldKind.IP)
-            FormField(form.subnetCidr, { form = form.copy(subnetCidr = it) }, "Subnet (CIDR)", error = errors["subnetCidr"], kind = FieldKind.IP)
-            OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId }, { "VLAN ${it.vlanId} · ${it.name}" },
-                { form = form.copy(vlanId = it?.vlanId) }, noneLabel = "Nessuna VLAN")
+            DevicePicker(i18n.text("text.e7f2c0e68768"), index, form.deviceId, { form = form.copy(deviceId = it) })
+            FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), error = errors["name"], hint = i18n.text("text.4575ffa32f9c"))
+            FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, i18n.text("text.ebb396f2d486"), error = errors["ipAddress"], kind = FieldKind.IP)
+            FormField(form.subnetCidr, { form = form.copy(subnetCidr = it) }, i18n.text("text.7cfdb8aaa25f"), error = errors["subnetCidr"], kind = FieldKind.IP)
+            OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
+                { form = form.copy(vlanId = it?.vlanId) }, noneLabel = i18n.text("text.b60b955a9981"))
             FormField(form.macAddress, { form = form.copy(macAddress = it) }, "MAC", error = errors["macAddress"])
-            LabeledCheckbox(form.isL3, { form = form.copy(isL3 = it) }, "Interfaccia di livello 3")
+            LabeledCheckbox(form.isL3, { form = form.copy(isL3 = it) }, i18n.text("text.3d62d85ca195"))
         }
     }
 
     wan?.let { t ->
         val c = t.item
         var form by remember(t) { mutableStateOf(WanForm.from(c)) }
-        val errors = form.errors()
-        EditScreen(if (c == null) "Nuova connessione" else "Modifica connessione", { wan = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (c == null) i18n.text("text.cfcfd59f1b90") else i18n.text("text.716af1fcb21e"), { wan = null }, {
             wan = null; val saved = form.toConnection(c)
-            vm.edit("Connessione salvata.") { if (c == null) ProjectEdits.addWanVpnConnection(it, saved) else ProjectEdits.updateWanVpnConnection(it, saved) }
+            vm.edit(i18n.text("text.ec170e822ebb")) { if (c == null) ProjectEdits.addWanVpnConnection(it, saved) else ProjectEdits.updateWanVpnConnection(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            FormField(form.name, { form = form.copy(name = it) }, "Nome / circuito *", error = errors["name"])
-            EnumPicker("Tipo", WanVpnType.entries, form.type, { it.toDisplayString() }, { form = form.copy(type = it) })
-            FormField(form.provider, { form = form.copy(provider = it) }, "Operatore")
-            FormField(form.bandwidth, { form = form.copy(bandwidth = it) }, "Banda", hint = "Es. 1 Gbps")
-            DevicePicker("Apparato locale", index, form.localDeviceId, { form = form.copy(localDeviceId = it) }, noneLabel = "Non nel progetto")
-            FormField(form.localSite, { form = form.copy(localSite = it) }, "Sede locale")
-            DevicePicker("Apparato remoto", index, form.remoteDeviceId, { form = form.copy(remoteDeviceId = it) }, noneLabel = "Non nel progetto")
-            FormField(form.remoteSite, { form = form.copy(remoteSite = it) }, "Sede remota")
+            FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.656e4a65e6cc"), error = errors["name"])
+            EnumPicker(i18n.text("text.3868d2843d59"), WanVpnType.entries, form.type, { it.toDisplayString(i18n = i18n) }, { form = form.copy(type = it) })
+            FormField(form.provider, { form = form.copy(provider = it) }, i18n.text("text.ad528b8d1f72"))
+            FormField(form.bandwidth, { form = form.copy(bandwidth = it) }, i18n.text("text.a4ed9939fab6"), hint = i18n.text("text.b2cbeb3179e9"))
+            DevicePicker(i18n.text("text.588719de20b9"), index, form.localDeviceId, { form = form.copy(localDeviceId = it) }, noneLabel = i18n.text("text.65389ba5d2fd"))
+            FormField(form.localSite, { form = form.copy(localSite = it) }, i18n.text("text.5b797e8b1a2c"))
+            DevicePicker(i18n.text("text.c0771cebf192"), index, form.remoteDeviceId, { form = form.copy(remoteDeviceId = it) }, noneLabel = i18n.text("text.65389ba5d2fd"))
+            FormField(form.remoteSite, { form = form.copy(remoteSite = it) }, i18n.text("text.dd76664512a4"))
         }
     }
 
     config?.let { t ->
         val c = t.item
         var form by remember(t) { mutableStateOf(DeviceConfigForm.from(c)) }
-        val errors = form.errors()
-        EditScreen(if (c == null) "Nuova configurazione" else "Modifica configurazione", { config = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (c == null) i18n.text("text.66b4e494cd62") else i18n.text("text.dfff9fc66812"), { config = null }, {
             config = null; val saved = form.toConfig(c)
-            vm.edit("Configurazione salvata.") { if (c == null) ProjectEdits.addDeviceConfiguration(it, saved) else ProjectEdits.updateDeviceConfiguration(it, saved) }
+            vm.edit(i18n.text("text.b2ed6f265907")) { if (c == null) ProjectEdits.addDeviceConfiguration(it, saved) else ProjectEdits.updateDeviceConfiguration(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            DevicePicker("Apparato *", index, form.deviceId, { form = form.copy(deviceId = it) })
-            FormField(form.title, { form = form.copy(title = it) }, "Titolo *", error = errors["title"])
+            DevicePicker(i18n.text("text.e7f2c0e68768"), index, form.deviceId, { form = form.copy(deviceId = it) })
+            FormField(form.title, { form = form.copy(title = it) }, i18n.text("text.b03a74353bbd"), error = errors["title"])
             val markDirty = LocalMarkDirty.current
-            OutlinedTextField(form.configText, { markDirty(); form = form.copy(configText = it) }, label = { Text("Testo della configurazione") },
+            OutlinedTextField(form.configText, { markDirty(); form = form.copy(configText = it) }, label = { Text(i18n.text("text.ae44cab9c2ac")) },
                 textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), minLines = 8, modifier = Modifier.fillMaxWidth())
         }
     }
@@ -194,58 +198,60 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     extra?.let { t ->
         val f = t.item
         var form by remember(t) { mutableStateOf(ExtraFieldForm.from(f)) }
-        val errors = form.errors()
-        EditScreen(if (f == null) "Nuovo campo extra" else "Modifica campo extra", { extra = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (f == null) i18n.text("text.84b0d716f809") else i18n.text("text.d6c18565dd61"), { extra = null }, {
             extra = null; val saved = form.toField(f, project.id)
-            vm.edit("Campo salvato.") { if (f == null) ProjectEdits.addCustomExtraField(it, saved) else ProjectEdits.updateCustomExtraField(it, saved) }
+            vm.edit(i18n.text("text.b24051277c7c")) { if (f == null) ProjectEdits.addCustomExtraField(it, saved) else ProjectEdits.updateCustomExtraField(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             TargetPicker(index, form.target, { form = form.copy(target = it) })
-            FormField(form.key, { form = form.copy(key = it) }, "Nome campo *", error = errors["key"], hint = "Es. Numero di serie")
-            EnumPicker("Tipo", CustomFieldType.entries, form.fieldType, { it.toDisplayString() }, { form = form.copy(fieldType = it) })
-            FormField(form.value, { form = form.copy(value = it) }, "Valore", error = errors["value"])
-            EnumPicker("Classificazione", AttachmentClassification.entries, form.classification, { it.toDisplayString() }, { form = form.copy(classification = it) })
+            FormField(form.key, { form = form.copy(key = it) }, i18n.text("text.4702cf978b67"), error = errors["key"], hint = i18n.text("text.08d801a474bf"))
+            EnumPicker(i18n.text("text.3868d2843d59"), CustomFieldType.entries, form.fieldType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(fieldType = it) })
+            FormField(form.value, { form = form.copy(value = it) }, i18n.text("text.3b50ed0e6ec2"), error = errors["value"])
+            EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, form.classification, { it.toDisplayString(i18n = i18n) }, { form = form.copy(classification = it) })
         }
     }
 }
 
 @Composable
 fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
     var tab by remember { mutableStateOf(0) }
     var feed by remember { mutableStateOf<EditTarget<PowerFeed>?>(null) }
     var poe by remember { mutableStateOf<EditTarget<PoeMapping>?>(null) }
     var badge by remember { mutableStateOf<EditTarget<DocumentBadge>?>(null) }
-    fun del(name: String, msg: String, op: (Project) -> Project) = confirm(ConfirmRequest("Eliminare «$name»?", "L'elemento verrà eliminato dal progetto.") { vm.edit(msg, op) })
+    fun del(name: String, msg: String, op: (Project) -> Project) = confirm(ConfirmRequest(i18n.text("text.e36c23dfb086", name), i18n.text("text.072043981f03")) { vm.edit(msg, op) })
 
     AppScaffold(
-        "Alimentazione", onBack = { vm.back() }, snackbarHost = snackbar,
+        i18n.text("text.acedc1948e5f"), onBack = { vm.back() }, snackbarHost = snackbar,
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = {
                 when (tab) { 0 -> feed = EditTarget(null); 1 -> poe = EditTarget(null); else -> badge = EditTarget(null) }
-            }, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Aggiungi") })
+            }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.84cbef7b19b8")) })
         }
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            SubTabs(listOf("Alimentazioni (${project.powerFeeds.size})", "PoE (${project.poeMappings.size})", "Badge (${project.documentBadges.size})"), tab) { tab = it }
+            SubTabs(listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.196b8d6896ac", project.documentBadges.size)), tab) { tab = it }
             LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (tab) {
-                    0 -> entityItems(project.powerFeeds, "Nessuna alimentazione registrata.", { it.id }) { f ->
-                        ItemCard("${index.deviceName(f.deviceId)} · ${f.feedName}", listOf(
-                            (f.sourceDeviceId?.let { index.deviceName(it) } ?: f.sourceOutletDescription)?.let { "Da $it" }.orEmpty(),
-                            listOfNotNull(f.voltageVolts?.let { "$it V" }, f.loadWatts?.let { "${formatNumber(it)} W" }, f.observedRuntimeMinutes?.let { "autonomia $it min" }).joinToString(" · ")
-                        ), badge = f.feedType.toDisplayString(), onClick = { feed = EditTarget(f) },
-                            menu = listOf(MenuAction("Elimina", true) { del(f.feedName, "Alimentazione eliminata.") { ProjectEdits.deletePowerFeed(it, f.id) } }))
+                    0 -> entityItems(project.powerFeeds, i18n.text("text.90bbe6100ed6"), { it.id }) { f ->
+                        ItemCard("${index.deviceName(f.deviceId, i18n = i18n)} · ${f.feedName}", listOf(
+                            (f.sourceDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: f.sourceOutletDescription)?.let { i18n.text("text.4bc711ab248c", it) }.orEmpty(),
+                            listOfNotNull(f.voltageVolts?.let { i18n.text("text.edb2066c2a30", it) }, f.loadWatts?.let { i18n.text("text.cd49315c743a", formatNumber(it)) }, f.observedRuntimeMinutes?.let { i18n.text("text.2dc280aa0f83", it) }).joinToString(" · ")
+                        ), badge = f.feedType.toDisplayString(i18n = i18n), onClick = { feed = EditTarget(f) },
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(f.feedName, i18n.text("text.a5c30e639a4d")) { ProjectEdits.deletePowerFeed(it, f.id) } }))
                     }
-                    1 -> entityItems(project.poeMappings, "Nessuna porta PoE.", { it.id }) { p ->
-                        ItemCard(index.portLabel(p.portId), listOf(listOfNotNull(p.standard.toDisplayString(), p.allocatedPowerWatts?.let { "${formatNumber(it)} W" }).joinToString(" · ")),
-                            badge = p.role.toDisplayString(), onClick = { poe = EditTarget(p) },
-                            menu = listOf(MenuAction("Elimina", true) { del("PoE ${index.portLabel(p.portId)}", "PoE eliminato.") { ProjectEdits.deletePoeMapping(it, p.id) } }))
+                    1 -> entityItems(project.poeMappings, i18n.text("text.68cc11f03e58"), { it.id }) { p ->
+                        ItemCard(index.portLabel(p.portId), listOf(listOfNotNull(p.standard.toDisplayString(i18n = i18n), p.allocatedPowerWatts?.let { i18n.text("text.cd49315c743a", formatNumber(it)) }).joinToString(" · ")),
+                            badge = p.role.toDisplayString(i18n = i18n), onClick = { poe = EditTarget(p) },
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i18n.text("text.3685af18e07a", index.portLabel(p.portId)), i18n.text("text.a4922144c86d")) { ProjectEdits.deletePoeMapping(it, p.id) } }))
                     }
-                    else -> entityItems(project.documentBadges, "Nessun badge.", { it.id }) { b ->
-                        ItemCard(b.label, listOf(index.targetLabel(b.targetType, b.targetId)), badge = b.category.toDisplayString(),
+                    else -> entityItems(project.documentBadges, i18n.text("text.eb3e34b0bacb"), { it.id }) { b ->
+                        ItemCard(b.label, listOf(index.targetLabel(b.targetType, b.targetId, i18n = i18n)), badge = b.category.toDisplayString(i18n = i18n),
                             onClick = if (b.isDerived) null else ({ badge = EditTarget(b) }),
-                            menu = listOf(MenuAction("Elimina", true) { del(b.label, "Badge eliminato.") { ProjectEdits.deleteDocumentBadge(it, b.id) } }))
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(b.label, i18n.text("text.fc7c2dba7445")) { ProjectEdits.deleteDocumentBadge(it, b.id) } }))
                     }
                 }
             }
@@ -255,50 +261,50 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     feed?.let { t ->
         val f = t.item
         var form by remember(t) { mutableStateOf(PowerFeedForm.from(f)) }
-        val errors = form.errors()
-        EditScreen(if (f == null) "Nuova alimentazione" else "Modifica alimentazione", { feed = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (f == null) i18n.text("text.4caa90bd8cd8") else i18n.text("text.ef9307d35ec6"), { feed = null }, {
             feed = null; val saved = form.toFeed(f)
-            vm.edit("Alimentazione salvata.") { if (f == null) ProjectEdits.addPowerFeed(it, saved) else ProjectEdits.updatePowerFeed(it, saved) }
+            vm.edit(i18n.text("text.4237371feb41")) { if (f == null) ProjectEdits.addPowerFeed(it, saved) else ProjectEdits.updatePowerFeed(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            DevicePicker("Apparato alimentato *", index, form.deviceId, { form = form.copy(deviceId = it) })
-            FormField(form.feedName, { form = form.copy(feedName = it) }, "Nome linea *", error = errors["feedName"], hint = "Es. Alimentatore 1")
-            EnumPicker("Tipo", PowerFeedType.entries, form.feedType, { it.toDisplayString() }, { form = form.copy(feedType = it) })
-            DevicePicker("Sorgente (UPS / PDU)", index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, noneLabel = "Non nel progetto", error = errors["sourceDeviceId"])
-            FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, "Presa / uscita")
-            FormField(form.voltage, { form = form.copy(voltage = it) }, "Tensione (V)", error = errors["voltage"], kind = FieldKind.NUMBER)
-            FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, "Carico (W)", error = errors["loadWatts"], kind = FieldKind.DECIMAL)
-            FormField(form.loadVa, { form = form.copy(loadVa = it) }, "Carico (VA)", error = errors["loadVa"], kind = FieldKind.DECIMAL)
-            FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, "Autonomia (min)", error = errors["runtimeMinutes"], kind = FieldKind.NUMBER)
-            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
+            DevicePicker(i18n.text("text.a814bcd8ca15"), index, form.deviceId, { form = form.copy(deviceId = it) })
+            FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), error = errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
+            EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) })
+            DevicePicker(i18n.text("text.11ae92f057eb"), index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, noneLabel = i18n.text("text.65389ba5d2fd"), error = errors["sourceDeviceId"])
+            FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, i18n.text("text.cd33696ca977"))
+            FormField(form.voltage, { form = form.copy(voltage = it) }, i18n.text("text.5093ead90fce"), error = errors["voltage"], kind = FieldKind.NUMBER)
+            FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, i18n.text("text.eb98296d7970"), error = errors["loadWatts"], kind = FieldKind.DECIMAL)
+            FormField(form.loadVa, { form = form.copy(loadVa = it) }, i18n.text("text.e821b548ca4b"), error = errors["loadVa"], kind = FieldKind.DECIMAL)
+            FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, i18n.text("text.08997b56437a"), error = errors["runtimeMinutes"], kind = FieldKind.NUMBER)
+            FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
         }
     }
 
     poe?.let { t ->
         val p = t.item
         var form by remember(t) { mutableStateOf(PoeForm.from(p)) }
-        val errors = form.errors()
-        EditScreen(if (p == null) "Nuova porta PoE" else "Modifica PoE", { poe = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (p == null) i18n.text("text.129c22f2302d") else i18n.text("text.7b99bcd56c82"), { poe = null }, {
             poe = null; val saved = form.toMapping(p)
-            vm.edit("PoE salvato.") { ProjectEdits.addOrUpdatePoeMapping(it, saved) }
+            vm.edit(i18n.text("text.f22a08c0aa60")) { ProjectEdits.addOrUpdatePoeMapping(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
-            PortPicker("Porta *", index, form.portId, { form = form.copy(portId = it) }, noneLabel = null)
-            EnumPicker("Ruolo", PoeRole.entries, form.role, { it.toDisplayString() }, { form = form.copy(role = it) })
-            EnumPicker("Standard", PoeStandard.entries, form.standard, { it.toDisplayString() }, { form = form.copy(standard = it) })
-            FormField(form.watts, { form = form.copy(watts = it) }, "Potenza allocata (W)", error = errors["watts"], kind = FieldKind.DECIMAL)
+            PortPicker(i18n.text("text.57c2ec879203"), index, form.portId, { form = form.copy(portId = it) }, noneLabel = null)
+            EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) })
+            EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) })
+            FormField(form.watts, { form = form.copy(watts = it) }, i18n.text("text.548f9030240c"), error = errors["watts"], kind = FieldKind.DECIMAL)
         }
     }
 
     badge?.let { t ->
         val b = t.item
         var form by remember(t) { mutableStateOf(BadgeForm.from(b)) }
-        val errors = form.errors()
-        EditScreen(if (b == null) "Nuovo badge" else "Modifica badge", { badge = null }, {
+        val errors = form.errors(i18n = i18n)
+        EditScreen(if (b == null) i18n.text("text.66060a3a6be2") else i18n.text("text.6720d0dc04c9"), { badge = null }, {
             badge = null; val saved = form.toBadge(b, project.id)
-            vm.edit("Badge salvato.") { if (b == null) ProjectEdits.addDocumentBadge(it, saved) else ProjectEdits.updateDocumentBadge(it, saved) }
+            vm.edit(i18n.text("text.6b86c681c041")) { if (b == null) ProjectEdits.addDocumentBadge(it, saved) else ProjectEdits.updateDocumentBadge(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             TargetPicker(index, form.target, { form = form.copy(target = it) })
-            FormField(form.label, { form = form.copy(label = it) }, "Etichetta *", error = errors["label"])
-            EnumPicker("Categoria", BadgeCategory.entries, form.category, { it.toDisplayString() }, { form = form.copy(category = it) })
+            FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), error = errors["label"])
+            EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) })
         }
     }
 }

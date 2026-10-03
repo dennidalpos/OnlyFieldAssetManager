@@ -37,7 +37,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         TrashItemEntity::class,
         SyncSnapshotEntity::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -578,9 +578,21 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE racks ADD COLUMN mountingDepthMm INTEGER DEFAULT NULL")
+                db.execSQL("ALTER TABLE racks ADD COLUMN deviceModelId TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE racks ADD COLUMN mountingType TEXT DEFAULT NULL")
+                db.execSQL("ALTER TABLE device_models ADD COLUMN configurationJson TEXT NOT NULL DEFAULT '{}'")
+                db.execSQL("ALTER TABLE devices ADD COLUMN hardwareJson TEXT NOT NULL DEFAULT '{}'")
+                db.execSQL("ALTER TABLE ports ADD COLUMN hardwareJson TEXT NOT NULL DEFAULT '{}'")
+                db.execSQL("ALTER TABLE cables ADD COLUMN deviceModelId TEXT DEFAULT NULL")
+            }
+        }
+
         val ALL_MIGRATIONS = arrayOf(
             MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-            MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13,
+            MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14,
         )
     }
 }

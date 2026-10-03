@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.toComposeImageBitmap
 import org.apache.pdfbox.Loader
@@ -10,21 +12,21 @@ import javax.imageio.ImageIO
 import kotlin.math.max
 
 object PlanMedia {
-    fun pageCount(file: File): Int = Loader.loadPDF(file).use { document ->
-        if (document.isEncrypted) throw IOException("PDF protetto: usa una copia senza password")
+    fun pageCount(file: File, i18n: Messages = Messages()): Int = Loader.loadPDF(file).use { document ->
+        if (document.isEncrypted) throw IOException(i18n.text("text.7c399be6bf11"))
         document.numberOfPages
     }
-    fun validateImage(file: File) {
+    fun validateImage(file: File, i18n: Messages = Messages()) {
         org.jetbrains.skia.Data.makeFromBytes(file.readBytes()).use { data ->
             org.jetbrains.skia.Codec.makeFromData(data).use { codec ->
-                require(codec.imageInfo.width > 0 && codec.imageInfo.height > 0) { "Immagine non leggibile" }
+                require(codec.imageInfo.width > 0 && codec.imageInfo.height > 0) { i18n.text("text.dffbcd08384a") }
             }
         }
     }
-    fun image(file: File, pdf: Boolean, page: Int, maxSide: Int = 2048): ImageBitmap {
+    fun image(file: File, pdf: Boolean, page: Int, maxSide: Int = 2048, i18n: Messages = Messages()): ImageBitmap {
         if (pdf) return Loader.loadPDF(file).use { document ->
-            if (document.isEncrypted) throw IOException("PDF protetto: usa una copia senza password")
-            require(page in 0 until document.numberOfPages) { "Pagina PDF non disponibile" }
+            if (document.isEncrypted) throw IOException(i18n.text("text.7c399be6bf11"))
+            require(page in 0 until document.numberOfPages) { i18n.text("text.e24ef060c152") }
             val box = document.getPage(page).cropBox
             PDFRenderer(document).renderImage(page, maxSide.toFloat() / max(box.width, box.height)).toComposeImageBitmap()
         }

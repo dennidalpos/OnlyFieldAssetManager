@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
@@ -24,9 +26,10 @@ object DesktopDocumentManager {
     fun exportXlsx(
         project: Project,
         filterConfig: ExportFilterConfig,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        i18n: Messages = Messages()
     ) {
-        XlsxExportManager.exportXlsxToStream(project, filterConfig, outputStream)
+        XlsxExportManager.exportXlsxToStream(project, filterConfig, outputStream, i18n = i18n)
     }
 
     /**
@@ -35,9 +38,10 @@ object DesktopDocumentManager {
     fun exportMarkdown(
         project: Project,
         filterConfig: ExportFilterConfig,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        i18n: Messages = Messages()
     ) {
-        MarkdownExportManager.exportMarkdownToStream(project, filterConfig, outputStream)
+        MarkdownExportManager.exportMarkdownToStream(project, filterConfig, outputStream, i18n = i18n)
     }
 
     /** Writes the technical report as a real PDF document. Credentials are never included. */
@@ -45,23 +49,25 @@ object DesktopDocumentManager {
         project: Project,
         filterConfig: ExportFilterConfig,
         selection: ReportSelection,
-        outputStream: OutputStream
+        outputStream: OutputStream,
+        i18n: Messages = Messages()
     ) {
-        val lines = ReportContent.build(project, filterConfig, selection)
-        outputStream.use { SimplePdfWriter.write(lines, lines.first().text, it) }
+        val lines = ReportContent.build(project, filterConfig, selection, i18n = i18n)
+        outputStream.use { SimplePdfWriter.write(lines, lines.first().text, it, i18n) }
     }
 
     /** Opens the Windows print dialog and prints the same report, over as many pages as needed. */
     fun printDocumentNative(
         project: Project,
         filterConfig: ExportFilterConfig,
-        selection: ReportSelection
+        selection: ReportSelection,
+        i18n: Messages = Messages()
     ): Boolean {
-        val lines = ReportContent.build(project, filterConfig, selection)
+        val lines = ReportContent.build(project, filterConfig, selection, i18n = i18n)
         return try {
             val job = PrinterJob.getPrinterJob()
             job.setJobName("OnlyField - ${project.name}")
-            job.setPrintable(ReportPrintable(lines))
+            job.setPrintable(ReportPrintable(lines, i18n))
             if (job.printDialog()) {
                 job.print()
                 true
@@ -72,7 +78,7 @@ object DesktopDocumentManager {
     }
 
     /** Paginates [lines] with Java2D; pages are laid out once per page format. */
-    private class ReportPrintable(private val lines: List<ReportLine>) : Printable {
+    private class ReportPrintable(private val lines: List<ReportLine>, private val i18n: Messages) : Printable {
         private var pages: List<List<Pair<ReportLine, List<String>>>>? = null
 
         private fun fontOf(line: ReportLine) = when (line) {
@@ -123,7 +129,7 @@ object DesktopDocumentManager {
                 }
             }
             g.font = Font("SansSerif", Font.PLAIN, 8)
-            g.drawString("Pagina ${pageIndex + 1} di ${laidOut.size}", 0, format.imageableHeight.toInt() - 4)
+            g.drawString(i18n.text("text.5c159d205c21", pageIndex + 1, laidOut.size), 0, format.imageableHeight.toInt() - 4)
             return Printable.PAGE_EXISTS
         }
     }

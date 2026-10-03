@@ -1,12 +1,18 @@
 package com.onlyfield.assetmanager.core.onboarding
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.*
 
-enum class NewSiteStep(val title: String, val hint: String, val skippable: Boolean = false) {
-    PROJECT("Progetto", "Dai un nome al lavoro e indica il cliente."),
-    BUSINESS_UNIT("Business unit", "Aggiungi le BU del progetto. Puoi aggiungerne altre in seguito."),
-    AREA("Piani", "Scegli una BU e aggiungi piani, locali o zone. Ogni voce avrà la propria mappa."),
-    PASSWORD("Password", "Facoltativa: protegge il progetto. Puoi impostarla anche in seguito.", true),
+enum class NewSiteStep(private val titleKey: String, private val hintKey: String, val skippable: Boolean = false) {
+    PROJECT("text.b7700d71d0ce", "text.ff3e9f5e4512"),
+    BUSINESS_UNIT("text.e4de7d26b141", "text.2a085f40fe9c"),
+    AREA("text.10d0ab90b7a1", "text.f7e120035f34"),
+    PASSWORD("text.e7cf3ef4f17c", "text.dad3c0c4fb5c", true),;
+    val title: String get() = localizedTitle(Messages())
+    val hint: String get() = localizedHint(Messages())
+    fun localizedTitle(i18n: Messages): String = i18n.text(titleKey)
+    fun localizedHint(i18n: Messages): String = i18n.text(hintKey)
 }
 
 data class NewSiteDraft(
@@ -25,12 +31,12 @@ data class NewSiteWizard(val step: NewSiteStep = NewSiteStep.PROJECT, val draft:
     val isFirst get() = step == NewSiteStep.PROJECT
     val isLast get() = step == NewSiteStep.PASSWORD
     val password get() = draft.password.takeIf { it.isNotEmpty() }
-    fun errors(): Map<String, String> = buildMap {
+    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
         when (step) {
-            NewSiteStep.PROJECT -> if (draft.projectName.isBlank()) put("projectName", "Nome progetto obbligatorio")
-            NewSiteStep.BUSINESS_UNIT -> if (draft.businessUnits.isEmpty() || draft.businessUnits.any { it.name.isBlank() }) put("businessUnits", "Aggiungi almeno una BU con un nome")
-            NewSiteStep.AREA -> if (draft.businessUnits.none { it.areas.isNotEmpty() } || draft.businessUnits.any { b -> b.areas.any { it.name.isBlank() } }) put("areas", "Aggiungi almeno un piano con un nome")
-            NewSiteStep.PASSWORD -> if (draft.password != draft.passwordConfirm) put("passwordConfirm", "Le password non coincidono")
+            NewSiteStep.PROJECT -> if (draft.projectName.isBlank()) put("projectName", i18n.text("text.2eebccc90d26"))
+            NewSiteStep.BUSINESS_UNIT -> if (draft.businessUnits.isEmpty() || draft.businessUnits.any { it.name.isBlank() }) put("businessUnits", i18n.text("text.ad7c1999df92"))
+            NewSiteStep.AREA -> if (draft.businessUnits.none { it.areas.isNotEmpty() } || draft.businessUnits.any { b -> b.areas.any { it.name.isBlank() } }) put("areas", i18n.text("text.2463faba3a65"))
+            NewSiteStep.PASSWORD -> if (draft.password != draft.passwordConfirm) put("passwordConfirm", i18n.text("text.536706a96f8b"))
         }
     }
     val canProceed get() = errors().isEmpty()

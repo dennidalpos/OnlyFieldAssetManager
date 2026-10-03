@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,6 +24,8 @@ import com.onlyfield.assetmanager.ui.components.*
 
 @Composable
 fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     val issues by vm.issues.collectAsState()
     var askExportPassword by remember { mutableStateOf(false) }
@@ -44,30 +48,31 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
 
     AppScaffold(
         title = project.name,
-        subtitle = if (project.isPasswordProtected) "🔒 Protetto da password" else "Salvataggio automatico",
+        subtitle = if (project.isPasswordProtected) i18n.text("text.8c42691cd614") else i18n.text("text.b1f6bb96d793"),
         onBack = { vm.back() },
         snackbarHost = snackbar,
         busy = vm.busy,
         actions = {
-            TextButton(onClick = ::startExport) { Text("Esporta") }
+            LanguagePicker(vm)
+            TextButton(onClick = ::startExport) { Text(i18n.text("text.2c4c51a93ca7")) }
             OverflowMenu(
                 listOf(
-                    MenuAction("Importa .ofam…") { importLauncher.launch(arrayOf("*/*")) },
-                    MenuAction(if (project.isPasswordProtected) "Cambia password…" else "Proteggi con password…") { managingPassword = true },
-                    MenuAction("Chiudi progetto") { vm.closeProject() },
+                    MenuAction(i18n.text("text.a6afc0c52be6")) { importLauncher.launch(arrayOf("*/*")) },
+                    MenuAction(if (project.isPasswordProtected) i18n.text("text.e7ce0854e521") else i18n.text("text.07298c58b48f")) { managingPassword = true },
+                    MenuAction(i18n.text("text.c00df9e3726e")) { vm.closeProject() },
                 )
             )
         }
     ) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
-                Text(project.description?.ifBlank { null } ?: "Strumenti del progetto", style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { vm.navigate(Screen.Issues) }, enabled = issues.isNotEmpty()) { Text("Controllo: $errors errori · $warnings avvisi") }
+                Text(project.description?.ifBlank { null } ?: i18n.text("text.0a8a8f203dc2"), style = MaterialTheme.typography.titleMedium)
+                TextButton(onClick = { vm.navigate(Screen.Issues) }, enabled = issues.isNotEmpty()) { Text(i18n.text("text.48139e9146f0", errors, warnings)) }
             }
-            items(listOf("Inventario" to Screen.Inventory, "Rack" to Screen.Racks, "Cablaggio" to Screen.Cabling,
-                "Rete" to Screen.Network, "Alimentazione" to Screen.Power, "Allegati" to Screen.Attachments,
-                "Credenziali" to Screen.Credentials, "Modelli" to Screen.Models, "BU e piani" to Screen.Structure,
-                "Cestino" to Screen.Trash, "Documenti" to Screen.Documents)) { (label, screen) ->
+            items(listOf(i18n.text("text.a26fdd05a46b") to Screen.Inventory, i18n.text("text.4cd265c2b8c6") to Screen.Racks, i18n.text("text.3b40d8bd6081") to Screen.Cabling,
+                i18n.text("text.a0dd274e04a0") to Screen.Network, i18n.text("text.acedc1948e5f") to Screen.Power, i18n.text("text.92a776eacf2a") to Screen.Attachments,
+                i18n.text("text.52f7e6721e97") to Screen.Credentials, i18n.text("text.7351fc8f354e") to Screen.Models, i18n.text("text.caa9e153e1db") to Screen.Structure,
+                i18n.text("text.9a3a36d5fa15") to Screen.Trash, i18n.text("text.f7ac8562de3a") to Screen.Documents)) { (label, screen) ->
                 TextButton(onClick = { vm.navigate(screen) }, modifier = Modifier.fillMaxWidth()) { Text(label) }
             }
         }
@@ -77,11 +82,11 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
         var pwd by remember { mutableStateOf("") }
         AlertDialog(
             onDismissRequest = { askExportPassword = false },
-            title = { Text("Esporta pacchetto cifrato") },
+            title = { Text(i18n.text("text.e4b38d139b28")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("Il progetto è protetto: il pacchetto verrà cifrato con la password del progetto.")
-                    OutlinedTextField(pwd, { pwd = it }, label = { Text("Password del progetto") }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
+                    Text(i18n.text("text.4cca746f444e"))
+                    OutlinedTextField(pwd, { pwd = it }, label = { Text(i18n.text("text.f6a32b19c4b1")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
                 }
             },
             confirmButton = {
@@ -89,9 +94,9 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
                     askExportPassword = false
                     exportPassword = pwd
                     exportLauncher.launch("${safeFileName(project.name)}.ofam")
-                }) { Text("Scegli destinazione…") }
+                }) { Text(i18n.text("text.be66f958b50a")) }
             },
-            dismissButton = { TextButton(onClick = { askExportPassword = false }) { Text("Annulla") } }
+            dismissButton = { TextButton(onClick = { askExportPassword = false }) { Text(i18n.text("text.18c9d912a210")) } }
         )
     }
 
@@ -100,6 +105,8 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
 
 @Composable
 private fun PasswordDialog(vm: ProjectViewModel, project: Project, onClose: () -> Unit) {
+    val i18n = LocalMessages.current
+
     val protected = project.isPasswordProtected
     var current by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -114,41 +121,43 @@ private fun PasswordDialog(vm: ProjectViewModel, project: Project, onClose: () -
     )
 
     FormDialog(
-        title = if (protected) "Password del progetto" else "Proteggi con password",
+        title = if (protected) i18n.text("text.f6a32b19c4b1") else i18n.text("text.77374a369396"),
         onDismiss = onClose,
         onConfirm = {
             vm.changePassword(current, newPassword) { err -> if (err == null) onClose() else error = err }
         },
         confirmEnabled = !mismatch && (if (protected) current.isNotEmpty() else newPassword.isNotEmpty() && confirm == newPassword),
-        confirmLabel = if (protected && newPassword.isEmpty()) "Rimuovi password" else "Salva"
+        confirmLabel = if (protected && newPassword.isEmpty()) i18n.text("text.01f6d7886781") else i18n.text("text.c5997e85ae51")
     ) {
-        Text("La password protegge l'apertura del progetto e cifra i pacchetti esportati. Non è recuperabile.", style = MaterialTheme.typography.bodySmall)
-        if (protected) Pwd(current, { current = it }, "Password attuale *")
-        Pwd(newPassword, { newPassword = it }, if (protected) "Nuova password (vuota per rimuoverla)" else "Nuova password *")
-        Pwd(confirm, { confirm = it }, "Conferma nuova password", isError = mismatch)
-        if (mismatch) Text("Le password non coincidono.", color = MaterialTheme.colorScheme.error)
+        Text(i18n.text("text.4652bd354b32"), style = MaterialTheme.typography.bodySmall)
+        if (protected) Pwd(current, { current = it }, i18n.text("text.9300c9cacb41"))
+        Pwd(newPassword, { newPassword = it }, if (protected) i18n.text("text.7dc14b395c9e") else i18n.text("text.b791727eacc1"))
+        Pwd(confirm, { confirm = it }, i18n.text("text.8499e9c5410a"), isError = mismatch)
+        if (mismatch) Text(i18n.text("text.f73c1f4c5d77"), color = MaterialTheme.colorScheme.error)
         error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
     }
 }
 
 @Composable
 fun IssuesScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val index = remember(project) { ProjectIndex(project) }
     val issues by vm.issues.collectAsState()
-    AppScaffold("Controllo del progetto", onBack = { vm.back() }, snackbarHost = snackbar) { padding ->
+    AppScaffold(i18n.text("text.a590fcd25b56"), onBack = { vm.back() }, snackbarHost = snackbar) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 Text(
-                    "Gli errori strutturali indicano dati incoerenti; gli avvisi documentali informazioni mancanti. Nessuno dei due blocca il salvataggio.",
+                    i18n.text("text.98071310d496"),
                     style = MaterialTheme.typography.bodySmall
                 )
             }
             listOf(ValidationSeverity.STRUCTURAL_ERROR, ValidationSeverity.DOCUMENTARY_WARNING).forEach { severity ->
                 val list = issues.filter { it.severity == severity }
                 if (list.isNotEmpty()) {
-                    item { SectionTitle("${severity.toDisplayString()} (${list.size})") }
+                    item { SectionTitle("${severity.toDisplayString(i18n = i18n)} (${list.size})") }
                     items(list) { issue ->
-                        ItemCard(title = index.entityName(issue.targetEntityId) ?: "Progetto", details = listOf(issue.message))
+                        ItemCard(title = index.entityName(issue.targetEntityId, i18n = i18n) ?: i18n.text("text.b7700d71d0ce"), details = listOf(issue.message))
                     }
                 }
             }

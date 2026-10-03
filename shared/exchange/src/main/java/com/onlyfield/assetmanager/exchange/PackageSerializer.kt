@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.exchange
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.core.validation.ValidationIssue
@@ -76,14 +78,14 @@ object PackageSerializer {
         attachments: Map<String, ByteArray> = emptyMap(),
         password: String? = null,
         exportedEpochMs: Long = System.currentTimeMillis(),
-    ): ByteArray {
+     i18n: Messages = Messages()): ByteArray {
         val projectJsonBytes = jsonConfig.encodeToString(Project.serializer(), project).toByteArray(Charsets.UTF_8)
 
         val isEncrypted = !password.isNullOrBlank() || project.isPasswordProtected
         val effectivePassword = password?.takeIf { it.isNotBlank() }
 
         if (isEncrypted && (effectivePassword == null)) {
-            throw IllegalArgumentException("Password must be supplied for password-protected project export")
+            throw IllegalArgumentException(i18n.text("text.dbc116845925"))
         }
 
         val checksumsMap = mutableMapOf<String, String>()
@@ -167,14 +169,14 @@ object PackageSerializer {
         return baos.toByteArray()
     }
 
-    fun importPackage(zipBytes: ByteArray, password: String? = null): PackageImportResult {
+    fun importPackage(zipBytes: ByteArray, password: String? = null, i18n: Messages = Messages()): PackageImportResult {
         val issues = mutableListOf<ValidationIssue>()
 
         if (zipBytes.isEmpty()) {
             issues.add(
                 ValidationIssue(
                     code = "EMPTY_PACKAGE",
-                    message = "Il file è vuoto",
+                    message = i18n.text("text.0bbc9274b92f"),
                     severity = ValidationSeverity.STRUCTURAL_ERROR,
                 )
             )
@@ -207,7 +209,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "INVALID_ZIP_ARCHIVE",
-                    message = "Il file non è un archivio .ofam leggibile",
+                    message = i18n.text("text.0e2a1010ee48"),
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
@@ -218,7 +220,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "MISSING_MANIFEST",
-                    message = "Il file non è un pacchetto .ofam (manca il manifest)",
+                    message = i18n.text("text.11fb368e9db2"),
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
@@ -231,17 +233,17 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "INVALID_MANIFEST_JSON",
-                    message = "Manifest del pacchetto illeggibile",
+                    message = i18n.text("text.107d3cd740b8"),
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
             return PackageImportResult(null, ValidationResult(issues))
         }
 
-        if (manifest.formatVersion !in setOf("1.7", "1.8", "1.9", "1.10")) {
+        if (manifest.formatVersion !in setOf("1.7", "1.8", "1.9", "1.10", "1.11")) {
             issues += ValidationIssue(
                 code = "UNSUPPORTED_FORMAT_VERSION",
-                message = "Formato ${manifest.formatVersion} non supportato. Aggiorna l'applicazione.",
+                message = i18n.text("text.4b03253f0751", manifest.formatVersion),
                 severity = ValidationSeverity.STRUCTURAL_ERROR,
             )
             return PackageImportResult(null, ValidationResult(issues))
@@ -254,7 +256,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "MISSING_ENCRYPTED_PROJECT_DATA",
-                        message = "Pacchetto cifrato incompleto: mancano i dati del progetto",
+                        message = i18n.text("text.c834a8f16c8a"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -268,7 +270,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "PROJECT_CHECKSUM_MISMATCH",
-                        message = "Il pacchetto è danneggiato: i dati del progetto non corrispondono al controllo di integrità",
+                        message = i18n.text("text.19eba5b8423a"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -279,7 +281,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "PASSWORD_REQUIRED",
-                        message = "Il pacchetto è protetto da password. Inserire la password per importare.",
+                        message = i18n.text("text.197673fc7e3e"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -294,7 +296,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "CORRUPTED_ENCRYPTION_METADATA",
-                        message = "Pacchetto cifrato danneggiato: parametri di cifratura mancanti",
+                        message = i18n.text("text.0c97f01205a3"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -308,7 +310,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PACKAGE_PASSWORD",
-                        message = "Password errata o pacchetto protetto manomesso/troncato.",
+                        message = i18n.text("text.259f77784344"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -319,7 +321,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "MISSING_PROJECT_DATA",
-                        message = "Pacchetto incompleto: mancano i dati del progetto",
+                        message = i18n.text("text.6dfcf95f5441"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -333,7 +335,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "PROJECT_CHECKSUM_MISMATCH",
-                        message = "Il pacchetto è danneggiato: i dati del progetto non corrispondono al controllo di integrità",
+                        message = i18n.text("text.19eba5b8423a"),
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -349,7 +351,7 @@ object PackageSerializer {
                     issues.add(
                         ValidationIssue(
                             code = "ATTACHMENT_CHECKSUM_MISMATCH",
-                            message = "Allegato danneggiato: $attPath",
+                            message = i18n.text("text.493d07378487", attPath),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = attPath
                         )
@@ -367,7 +369,7 @@ object PackageSerializer {
                     issues.add(
                         ValidationIssue(
                             code = "ATTACHMENT_DECRYPTION_FAILED",
-                            message = "Impossibile decifrare l'allegato $attPath",
+                            message = i18n.text("text.b4f4848b3f66", attPath),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = attPath
                         )
@@ -382,7 +384,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "INVALID_PROJECT_JSON",
-                    message = "Dati del progetto illeggibili o di una versione non supportata",
+                    message = i18n.text("text.b64ca3d69e3a"),
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
@@ -390,7 +392,7 @@ object PackageSerializer {
         }
 
         // Validate model constraints and relationships
-        val modelValidation = ModelValidator.validateProject(project)
+        val modelValidation = ModelValidator.validateProject(project, i18n = i18n)
         issues.addAll(modelValidation.issues)
 
         val finalValidation = ValidationResult(issues)

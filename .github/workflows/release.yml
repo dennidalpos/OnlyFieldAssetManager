@@ -1,0 +1,90 @@
+name: Verify and package
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: gradle
+      - name: Install the project Android SDK
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sdkManager = Join-Path $env:ANDROID_HOME 'cmdline-tools/latest/bin/sdkmanager.bat'
+          if (!(Test-Path -LiteralPath $sdkManager)) { throw 'Android command line tools unavailable' }
+          1..100 | ForEach-Object { 'y' } | & $sdkManager --licenses
+          if ($LASTEXITCODE -ne 0) { throw "SDK licenses failed: $LASTEXITCODE" }
+          & $sdkManager 'platforms;android-37.0' 'build-tools;37.0.0' 'platform-tools'
+          if ($LASTEXITCODE -ne 0) { throw "SDK installation failed: $LASTEXITCODE" }
+      - name: Verify all JVM and Compose suites
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\gradlew.bat "-Dorg.gradle.java.home=$env:JAVA_HOME" --no-daemon --warning-mode all :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest
+          if ($LASTEXITCODE -ne 0) { throw "Verification failed: $LASTEXITCODE" }
+      - name: Build Android and Windows packages
+        run: |
+          $ErrorActionPreference = 'Stop'
+          & .\gradlew.bat "-Dorg.gradle.java.home=$env:JAVA_HOME" --no-daemon --warning-mode all :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest :pc:app:packagePortable
+          if ($LASTEXITCODE -ne 0) { throw "Build failed: $LASTEXITCODE" }
+      - name: Prepare packages and SHA-256 checksums
+        run: .\.github\scripts\prepare-release.ps1
+      - name: Upload verified packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: OnlyFieldAssetManager-packages
+          path: build/release/*
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  publish:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-2025
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: OnlyFieldAssetManager-packages
+          path: release
+      - name: Verify checksums and publish the existing tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $packages = @(Get-ChildItem -LiteralPath release -File | Where-Object Extension -In '.apk', '.zip')
+          if ($packages.Count -ne 2) { throw 'Expected one APK and one portable ZIP' }
+          $checksums = Get-Content -LiteralPath release/SHA256SUMS
+          foreach ($package in $packages) {
+            $expected = '{0}  {1}' -f (Get-FileHash -LiteralPath $package.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $package.Name
+            if ($expected -cnotin $checksums) { throw "Checksum mismatch: $($package.Name)" }
+          }
+          $assets = @($packages.FullName) + (Resolve-Path -LiteralPath release/SHA256SUMS).Path
+          & gh release create $env:RELEASE_TAG @assets --verify-tag --generate-notes --title $env:RELEASE_TAG
+          if ($LASTEXITCODE -ne 0) { throw "Release publication failed: $LASTEXITCODE" }

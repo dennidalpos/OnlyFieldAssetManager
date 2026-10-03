@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.cartography
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
@@ -34,6 +36,8 @@ enum class CartographicSource(
         attributionText = "Mappa locale importata dall'utente",
         isOnline = false
     );
+
+    fun localizedName(i18n: Messages): String = i18n.text(if (this == OPEN_TOPO_MAP) "map.source.topographic" else "map.source.local")
 
     companion object {
         fun fromId(id: String): CartographicSource =
@@ -106,7 +110,7 @@ object CartographicMapManager {
             .replace("{y}", y.toString())
     }
 
-    fun fetchTileBytes(urlStr: String, timeoutMs: Int = 3000): ByteArray {
+    fun fetchTileBytes(urlStr: String, timeoutMs: Int = 3000, i18n: Messages = Messages()): ByteArray {
         return try {
             val url = URL(urlStr)
             val connection = (url.openConnection() as HttpURLConnection).apply {
@@ -118,19 +122,19 @@ object CartographicMapManager {
             when (val code = connection.responseCode) {
                 HttpURLConnection.HTTP_OK -> connection.inputStream.use { it.readBytes() }
                 HttpURLConnection.HTTP_UNAUTHORIZED, HttpURLConnection.HTTP_FORBIDDEN ->
-                    throw OfflineMapException("Il servizio cartografico ha rifiutato la richiesta (codice $code). Riprova più tardi o importa una mappa locale.")
-                else -> throw OfflineMapException("Il servizio cartografico ha risposto con un errore (codice $code). Riprova più tardi.")
+                    throw OfflineMapException(i18n.text("text.12573340ecd6", code))
+                else -> throw OfflineMapException(i18n.text("text.e9a6f09680dc", code))
             }
         } catch (e: OfflineMapException) {
             throw e
         } catch (e: Exception) {
-            throw OfflineMapException(NO_NETWORK_MESSAGE, e)
+            throw OfflineMapException(i18n.text("map.network.android"), e)
         }
     }
 
-    fun acquireMapSnapshot(request: MapSnapshotRequest): MapSnapshotResult {
+    fun acquireMapSnapshot(request: MapSnapshotRequest, i18n: Messages = Messages()): MapSnapshotResult {
         if (!request.source.isOnline) {
-            throw IllegalArgumentException("Usa la funzione di importazione file locale per la fonte ${request.source.displayName}")
+            throw IllegalArgumentException(i18n.text("text.cc5f9553abed", request.source.localizedName(i18n)))
         }
 
         val zoom = request.zoomLevel.coerceIn(1, 17)
@@ -147,9 +151,9 @@ object CartographicMapManager {
         for (x in tileXRange) {
             for (y in tileYRange) {
                 val tileUrl = buildTileUrl(request.source, x, y, zoom)
-                val bytes = fetchTileBytes(tileUrl)
+                val bytes = fetchTileBytes(tileUrl, i18n = i18n)
                 val bitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)
-                    ?: throw OfflineMapException("Tessera cartografica corrotta da $tileUrl")
+                    ?: throw OfflineMapException(i18n.text("text.46d882bc0794", tileUrl))
                 tileBitmaps[Pair(x, y)] = bitmap
             }
         }
@@ -182,7 +186,7 @@ object CartographicMapManager {
             widthPx = gridWidth,
             heightPx = gridHeight,
             attributionText = attribution,
-            sourceName = request.source.displayName
+            sourceName = request.source.localizedName(i18n)
         )
     }
 

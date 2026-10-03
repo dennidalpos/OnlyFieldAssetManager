@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.model
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import kotlinx.serialization.Serializable
 import java.util.UUID
 import kotlin.math.hypot
@@ -52,6 +54,41 @@ object ObjectCatalog {
         ObjectType("coax-cable", "Cavo coassiale", kind = ObjectKind.CABLE, cableMedium = CableMedium.OTHER),
         ObjectType("power-cable", "Cavo alimentazione", kind = ObjectKind.CABLE, cableMedium = CableMedium.OTHER),
     )
+    fun displayName(type: ObjectType, i18n: Messages = Messages()): String {
+        if (builtins.none { it.id == type.id && it.name == type.name }) return type.name
+        return when (type.id) {
+            "switch" -> i18n.text("text.39921a740bf2")
+            "router" -> i18n.text("text.065d8e6c0bf7")
+            "modem" -> i18n.text("text.9e5b909af171")
+            "ont" -> i18n.text("text.5812b68a9926")
+            "firewall" -> i18n.text("text.f12efc4df249")
+            "access-point" -> i18n.text("text.68eddefa8c1e")
+            "wifi-controller" -> i18n.text("text.6ed43883b6e9")
+            "server" -> i18n.text("text.aef7de28d529")
+            "workstation" -> i18n.text("text.b9d0a58e17a6")
+            "nas" -> i18n.text("text.ef0d1931f1fe")
+            "san" -> i18n.text("text.8217143646e5")
+            "ip-phone" -> i18n.text("text.708463735cef")
+            "pbx" -> i18n.text("text.21d1d681e4e1")
+            "camera" -> i18n.text("text.d578291b8358")
+            "nvr" -> i18n.text("text.6324095cf2b2")
+            "access-control" -> i18n.text("text.eed2bcc354fc")
+            "sensor" -> i18n.text("text.b1e79f3cf9bb")
+            "ups" -> i18n.text("text.356479227b43")
+            "pdu" -> i18n.text("text.06128351b86c")
+            "power-supply" -> i18n.text("text.4060ef581992")
+            "rack" -> i18n.text("text.4cd265c2b8c6")
+            "patch-panel" -> i18n.text("text.e97fc26f3676")
+            "outlet" -> i18n.text("text.4803b51f3912")
+            "shelf" -> i18n.text("text.ae286ff299bb")
+            "blank-panel" -> i18n.text("text.3f0dca5e90e5")
+            "copper-cable" -> i18n.text("text.b688578fe650")
+            "fiber-cable" -> i18n.text("text.e6858e841f57")
+            "coax-cable" -> i18n.text("text.12754c12b186")
+            "power-cable" -> i18n.text("text.04e7f6b64d01")
+            else -> type.name
+        }
+    }
     fun types(project: Project) = builtins + project.objectTypes
     fun type(project: Project, id: String?) = types(project).find { it.id == id }
 }
@@ -72,16 +109,16 @@ data class MapViewport(val width: Float, val height: Float, val contentWidth: Fl
 }
 
 object ObjectMap {
-    fun cableLabel(project: Project, cable: Cable): String {
-        fun label(first: Boolean): String {
-            val device = endpoint(project, cable, first) ?: return "Ignoto / scollegato"
+    fun cableLabel(project: Project, cable: Cable, i18n: Messages = Messages()): String {
+        fun label(first: Boolean, i18n: Messages = Messages()): String {
+            val device = endpoint(project, cable, first) ?: return i18n.text("text.c5d0e28cb66f")
             val portId = if (first) cable.portAId else cable.portBId
             val port = device.ports.find { it.id == portId }
             val floor = areaId(project, device)
             val area = project.businessUnits.flatMap { areas(it) }.find { it.id == floor }
-            return device.technicalName + (port?.let { " / ${it.name}" } ?: "") + " (${area?.name ?: "senza piano"})"
+            return device.technicalName + (port?.let { " / ${it.name}" } ?: "") + " (${area?.name ?: i18n.text("text.37a8636584b2")})"
         }
-        return "${cable.codeOrLabel ?: "Cavo"}: ${label(true)} → ${label(false)}"
+        return "${cable.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${label(true, i18n = i18n)} → ${label(false, i18n = i18n)}"
     }
     fun connections(project: Project, areaId: String): List<MapConnection> {
         fun ref(cable: Cable, first: Boolean) = endpoint(project, cable, first)?.let {

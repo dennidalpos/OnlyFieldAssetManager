@@ -24,7 +24,7 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
 ## Interoperabilità e Scambio Android <-> Windows (`BidirectionalInteropTest`)
 
 1. **Contratto Pacchetto Omogeneo:**
-   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.10 (1.7–1.9 in lettura, versioni successive rifiutate).
+   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.11 (1.7–1.10 in lettura, versioni successive rifiutate).
 2. **Supporto Cifratura Completo:**
    - Supporto identico per pacchetti cifrati con password mediante PBKDF2 (100.000 iterazioni) e AES-256-GCM.
 3. **Confronto Semantico delle Versioni (`ProjectComparison`):**
@@ -51,4 +51,18 @@ Quando si importa un pacchetto dello stesso progetto, oltre a «Sostituisci» è
 
 L’autosave registra le modifiche confermate, non la bozza del form. Le azioni che cambiano contesto o chiudono l’app chiedono «Scarta» oppure «Continua a modificare». La seconda scelta mantiene bozza e progetto aperti; lock e shutdown vengono eseguiti soltanto dopo la conferma.
 
-Il cestino Windows è salvato tra le sessioni solo per progetti non protetti. Per un progetto con password resta nella sessione: la persistenza cifrata è il residuo RES-14.
+Il cestino Windows persiste nella copia locale .ofam, nella voce interna `attachments/local/trash.json`, anche nei progetti protetti. Usa la stessa cifratura del progetto, con IV distinto. Non viene estratto fra gli allegati, esportato o incluso nella base di fusione. I vecchi JSON vengono migrati e rimossi dopo il salvataggio. Una copia locale con cestino danneggiato non viene sovrascritta.
+
+Il lock viene acquisito anche dai flussi UI (apertura locale, creazione e sostituzione). Un errore mantiene la copia precedente aperta. Il marcatore .lock puo restare dopo la chiusura: non equivale a un blocco attivo.
+
+La base di fusione segue attivazione, cambio e rimozione della password, mantenendo i contenuti dell'ultimo scambio. Le sostituzioni dei due file sono individualmente atomiche: dopo un arresto fra le sostituzioni, una base con password non corrispondente viene segnalata e il merge richiede revisione completa. I fallimenti intercettati ripristinano la base precedente; nessuna copia di rollback è scritta sul disco.
+
+## Preferenza linguistica
+
+`data/settings.properties` conserva Sistema/Italiano/English/Español. Il cambio passa dalla protezione delle bozze e aggiorna validazioni e messaggi solo dopo il salvataggio della preferenza. Gli export catturano la lingua all'avvio. Vedi [09-localization.md](09-localization.md).
+
+Verifica finale Windows: i lock preesistenti sopravvivono ai tentativi falliti; file non sostituibili secondo le regole di condivisione Windows impediscono cambio password e svuotamento senza alterare UI/progetto/cestino. La base è ripristinata sul fallimento della scrittura principale; se manca all'import, l'avviso di riesame è esplicito.
+
+## Configuratore e Room 14
+
+Il configuratore usa lo stesso schema e le stesse operazioni nei due client. `.ofam` 1.11 conserva hardware, modelli e ID delle porte anche cifrati e durante la fusione. Room 13 → 14 è additiva e preceduta da checkpoint/backup cifrato; schema generato da KSP. Verificati round-trip Room e scambio normale/cifrato. [Dettagli](10-object-configurator.md).

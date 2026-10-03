@@ -1,211 +1,213 @@
 package com.onlyfield.assetmanager.core.display
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 
 /**
- * Italian, user-facing labels for domain enums, shared by the Android and Windows UIs.
+ * Localized user-facing labels for domain enums, shared by the Android and Windows UIs.
  * UIs must never show raw enum names to the user.
  */
 
-fun ObservationStatus.toDisplayString(): String = when (this) {
-    ObservationStatus.VERIFIED -> "Verificato"
-    ObservationStatus.TO_VERIFY -> "Da verificare"
-    ObservationStatus.CONFLICT -> "In conflitto"
-    ObservationStatus.NOT_DETECTED -> "Non rilevato"
+fun ObservationStatus.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    ObservationStatus.VERIFIED -> i18n.text("text.32bbb08a6f47")
+    ObservationStatus.TO_VERIFY -> i18n.text("text.ac4e0792e577")
+    ObservationStatus.CONFLICT -> i18n.text("text.820ded51c684")
+    ObservationStatus.NOT_DETECTED -> i18n.text("text.d57bb6a9696c")
 }
 
-fun EndpointStatus.toDisplayString(): String = when (this) {
-    EndpointStatus.CONNECTED -> "Collegato"
-    EndpointStatus.DETACHED_TO_VERIFY -> "Scollegato, da verificare"
-    EndpointStatus.DISCONNECTED -> "Libero"
-    EndpointStatus.UNKNOWN -> "Sconosciuto"
+fun EndpointStatus.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    EndpointStatus.CONNECTED -> i18n.text("text.67f964220772")
+    EndpointStatus.DETACHED_TO_VERIFY -> i18n.text("text.8d8fdf8e6b6d")
+    EndpointStatus.DISCONNECTED -> i18n.text("text.f9a97b4eb7a1")
+    EndpointStatus.UNKNOWN -> i18n.text("text.43d7b5eae9c8")
 }
 
-fun NumberingDirection.toDisplayString(): String = when (this) {
-    NumberingDirection.BOTTOM_TO_TOP -> "Dal basso verso l'alto"
-    NumberingDirection.TOP_TO_BOTTOM -> "Dall'alto verso il basso"
+fun NumberingDirection.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    NumberingDirection.BOTTOM_TO_TOP -> i18n.text("text.5c9d7720da2d")
+    NumberingDirection.TOP_TO_BOTTOM -> i18n.text("text.eda932f10a7d")
 }
 
-fun DeviceCategory.toDisplayString(): String = when (this) {
-    DeviceCategory.NETWORK_SWITCH -> "Switch di rete"
-    DeviceCategory.PATCH_PANEL -> "Patch panel"
-    DeviceCategory.UPS_PDU -> "UPS / PDU"
-    DeviceCategory.SERVER_STORAGE -> "Server / Storage"
-    DeviceCategory.CAMERA_NVR -> "Telecamera / NVR"
-    DeviceCategory.SHELF -> "Ripiano"
-    DeviceCategory.BLANK_PANEL -> "Pannello cieco"
-    DeviceCategory.CUSTOM -> "Altro"
+fun DeviceCategory.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    DeviceCategory.NETWORK_SWITCH -> i18n.text("text.04dddd76838e")
+    DeviceCategory.PATCH_PANEL -> i18n.text("text.e97fc26f3676")
+    DeviceCategory.UPS_PDU -> i18n.text("text.648f724a35cd")
+    DeviceCategory.SERVER_STORAGE -> i18n.text("text.17d4401e689d")
+    DeviceCategory.CAMERA_NVR -> i18n.text("text.c24db3e9dfd7")
+    DeviceCategory.SHELF -> i18n.text("text.0697cceadf3b")
+    DeviceCategory.BLANK_PANEL -> i18n.text("text.3f0dca5e90e5")
+    DeviceCategory.CUSTOM -> i18n.text("text.78f5742268e4")
 }
 
-fun PortSide.toDisplayString(): String = when (this) {
-    PortSide.FRONT -> "Fronte"
-    PortSide.REAR -> "Retro"
-    PortSide.BOTH -> "Fronte e retro"
+fun PortSide.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    PortSide.FRONT -> i18n.text("text.da8d6541cd38")
+    PortSide.REAR -> i18n.text("text.f41c7e0a6f97")
+    PortSide.BOTH -> i18n.text("text.af1c8440aca6")
 }
 
-fun RackSide.toDisplayString(): String = when (this) {
-    RackSide.FRONT -> "Fronte"
-    RackSide.REAR -> "Retro"
-    RackSide.BOTH -> "Fronte e retro"
+fun RackSide.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    RackSide.FRONT -> i18n.text("text.da8d6541cd38")
+    RackSide.REAR -> i18n.text("text.f41c7e0a6f97")
+    RackSide.BOTH -> i18n.text("text.af1c8440aca6")
 }
 
-fun MountingType.toDisplayString(): String = when (this) {
-    MountingType.RACK_MOUNT -> "A rack"
-    MountingType.VERTICAL_MOUNT -> "Verticale"
-    MountingType.SHELF_MOUNT -> "Su ripiano"
-    MountingType.OUT_OF_RACK -> "Fuori rack"
+fun MountingType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    MountingType.RACK_MOUNT -> i18n.text("text.088bed51ac75")
+    MountingType.VERTICAL_MOUNT -> i18n.text("text.332772092049")
+    MountingType.SHELF_MOUNT -> i18n.text("text.5ca8768f1bc1")
+    MountingType.OUT_OF_RACK -> i18n.text("text.da968f7d518f")
 }
 
-fun AttachmentClassification.toDisplayString(): String = when (this) {
-    AttachmentClassification.SHAREABLE -> "Condivisibile"
-    AttachmentClassification.CONFIDENTIAL -> "Riservato"
-    AttachmentClassification.REVIEW_REQUIRED -> "Da riesaminare"
+fun AttachmentClassification.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    AttachmentClassification.SHAREABLE -> i18n.text("text.4500af3e8394")
+    AttachmentClassification.CONFIDENTIAL -> i18n.text("text.dae42950d62c")
+    AttachmentClassification.REVIEW_REQUIRED -> i18n.text("text.6ed2123cae2f")
 }
 
-fun AttachmentType.toDisplayString(): String = when (this) {
-    AttachmentType.IMAGE -> "Immagine"
+fun AttachmentType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    AttachmentType.IMAGE -> i18n.text("text.850b6f310354")
     AttachmentType.PDF -> "PDF"
-    AttachmentType.DOCUMENT -> "Documento"
-    AttachmentType.OTHER -> "Altro"
+    AttachmentType.DOCUMENT -> i18n.text("text.cf4279e00d07")
+    AttachmentType.OTHER -> i18n.text("text.78f5742268e4")
 }
 
-fun AttachmentTargetType.toDisplayString(): String = when (this) {
-    AttachmentTargetType.PROJECT -> "Progetto"
-    AttachmentTargetType.RACK -> "Rack"
-    AttachmentTargetType.DEVICE -> "Apparato"
-    AttachmentTargetType.AREA -> "Piano / zona"
-    AttachmentTargetType.CABLE -> "Cavo"
+fun AttachmentTargetType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    AttachmentTargetType.PROJECT -> i18n.text("text.b7700d71d0ce")
+    AttachmentTargetType.RACK -> i18n.text("text.4cd265c2b8c6")
+    AttachmentTargetType.DEVICE -> i18n.text("text.cf301d95d32c")
+    AttachmentTargetType.AREA -> i18n.text("text.7b417b994cc4")
+    AttachmentTargetType.CABLE -> i18n.text("text.89dbe18e8407")
 }
 
-fun AnnotationType.toDisplayString(): String = when (this) {
-    AnnotationType.TEXT -> "Testo"
-    AnnotationType.ARROW -> "Freccia"
-    AnnotationType.RECTANGLE -> "Rettangolo"
-    AnnotationType.CIRCLE -> "Cerchio"
-    AnnotationType.HIGHLIGHT_ZONE -> "Zona evidenziata"
+fun AnnotationType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    AnnotationType.TEXT -> i18n.text("text.ebb9e60cfec0")
+    AnnotationType.ARROW -> i18n.text("text.36f657fcb11e")
+    AnnotationType.RECTANGLE -> i18n.text("text.77056a6dfa2c")
+    AnnotationType.CIRCLE -> i18n.text("text.3fea581550f4")
+    AnnotationType.HIGHLIGHT_ZONE -> i18n.text("text.a056b1dfee92")
 }
 
-fun PlacementTargetType.toDisplayString(): String = when (this) {
-    PlacementTargetType.RACK -> "Rack"
-    PlacementTargetType.DEVICE -> "Apparato"
+fun PlacementTargetType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    PlacementTargetType.RACK -> i18n.text("text.4cd265c2b8c6")
+    PlacementTargetType.DEVICE -> i18n.text("text.cf301d95d32c")
 }
 
-fun CredentialType.toDisplayString(): String = when (this) {
-    CredentialType.PASSWORD -> "Password"
-    CredentialType.SSH_KEY -> "Chiave SSH"
-    CredentialType.SNMP_COMMUNITY -> "Community SNMP"
-    CredentialType.OTHER -> "Altro"
+fun CredentialType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    CredentialType.PASSWORD -> i18n.text("text.e7cf3ef4f17c")
+    CredentialType.SSH_KEY -> i18n.text("text.00deae8cd541")
+    CredentialType.SNMP_COMMUNITY -> i18n.text("text.83f399bfaa21")
+    CredentialType.OTHER -> i18n.text("text.78f5742268e4")
 }
 
-fun CableMedium.toDisplayString(): String = when (this) {
-    CableMedium.ETHERNET_COPPER -> "Rame (Ethernet)"
+fun CableMedium.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    CableMedium.ETHERNET_COPPER -> i18n.text("text.93b38a860ae6")
     CableMedium.DAC -> "DAC"
     CableMedium.AOC -> "AOC"
-    CableMedium.FIBER_OVERALL -> "Fibra ottica"
-    CableMedium.CONSOLE -> "Console"
-    CableMedium.OTHER -> "Altro"
-    CableMedium.UNKNOWN -> "Sconosciuto"
+    CableMedium.FIBER_OVERALL -> i18n.text("text.3a17868d205c")
+    CableMedium.CONSOLE -> i18n.text("text.29a40861bafe")
+    CableMedium.OTHER -> i18n.text("text.78f5742268e4")
+    CableMedium.UNKNOWN -> i18n.text("text.43d7b5eae9c8")
 }
 
-fun CableOrientation.toDisplayString(): String = when (this) {
-    CableOrientation.NONE -> "Nessuna"
-    CableOrientation.A_TO_B -> "Da A verso B"
-    CableOrientation.B_TO_A -> "Da B verso A"
-    CableOrientation.BOTH -> "Bidirezionale"
+fun CableOrientation.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    CableOrientation.NONE -> i18n.text("text.f56b9cfaeb27")
+    CableOrientation.A_TO_B -> i18n.text("text.3b8ad0c22e0d")
+    CableOrientation.B_TO_A -> i18n.text("text.04a50afa0f61")
+    CableOrientation.BOTH -> i18n.text("text.33fba9b01dc3")
 }
 
-fun VlanScopeType.toDisplayString(): String = when (this) {
-    VlanScopeType.PROJECT -> "Progetto"
-    VlanScopeType.BUSINESS_UNIT -> "Business unit"
-    VlanScopeType.SITE -> "Sede"
-    VlanScopeType.DEVICE -> "Apparato"
+fun VlanScopeType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    VlanScopeType.PROJECT -> i18n.text("text.b7700d71d0ce")
+    VlanScopeType.BUSINESS_UNIT -> i18n.text("text.e4de7d26b141")
+    VlanScopeType.SITE -> i18n.text("text.f163aa3f6310")
+    VlanScopeType.DEVICE -> i18n.text("text.cf301d95d32c")
 }
 
-fun PortVlanMode.toDisplayString(): String = when (this) {
-    PortVlanMode.ACCESS -> "Access"
-    PortVlanMode.TRUNK -> "Trunk"
-    PortVlanMode.HYBRID -> "Ibrida"
-    PortVlanMode.UNTAGGED -> "Untagged"
-    PortVlanMode.TAGGED -> "Tagged"
-    PortVlanMode.UNSPECIFIED -> "Non specificata"
+fun PortVlanMode.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    PortVlanMode.ACCESS -> i18n.text("text.ec5ba0abb717")
+    PortVlanMode.TRUNK -> i18n.text("text.10c81e7cf2ea")
+    PortVlanMode.HYBRID -> i18n.text("text.d5c866a822b0")
+    PortVlanMode.UNTAGGED -> i18n.text("text.9a28cbfaf271")
+    PortVlanMode.TAGGED -> i18n.text("text.e9eda90d969f")
+    PortVlanMode.UNSPECIFIED -> i18n.text("text.0efe5beee12f")
 }
 
-fun LagMode.toDisplayString(): String = when (this) {
+fun LagMode.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     LagMode.LACP -> "LACP"
-    LagMode.STATIC -> "Statico"
-    LagMode.OTHER -> "Altro"
-    LagMode.UNSPECIFIED -> "Non specificato"
+    LagMode.STATIC -> i18n.text("text.a3899a90c9dc")
+    LagMode.OTHER -> i18n.text("text.78f5742268e4")
+    LagMode.UNSPECIFIED -> i18n.text("text.29aa7fddd7bf")
 }
 
-fun WanVpnType.toDisplayString(): String = when (this) {
+fun WanVpnType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     WanVpnType.WAN -> "WAN"
     WanVpnType.VPN -> "VPN"
-    WanVpnType.INTERNET -> "Internet"
-    WanVpnType.OTHER -> "Altro"
+    WanVpnType.INTERNET -> i18n.text("text.57e8a431deec")
+    WanVpnType.OTHER -> i18n.text("text.78f5742268e4")
 }
 
-fun CustomFieldType.toDisplayString(): String = when (this) {
-    CustomFieldType.STRING -> "Testo"
-    CustomFieldType.NUMBER -> "Numero"
-    CustomFieldType.BOOLEAN -> "Sì/No"
-    CustomFieldType.DATE -> "Data"
+fun CustomFieldType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    CustomFieldType.STRING -> i18n.text("text.ebb9e60cfec0")
+    CustomFieldType.NUMBER -> i18n.text("text.ad14784441da")
+    CustomFieldType.BOOLEAN -> i18n.text("text.47fbffad2cae")
+    CustomFieldType.DATE -> i18n.text("text.cec3a9b89b2e")
 }
 
-fun PowerFeedType.toDisplayString(): String = when (this) {
-    PowerFeedType.PRIMARY_A -> "Primaria (A)"
-    PowerFeedType.SECONDARY_B -> "Secondaria (B)"
-    PowerFeedType.UPS_BACKUP -> "UPS di backup"
-    PowerFeedType.PDU_DISTRIBUTION -> "Da PDU"
-    PowerFeedType.MAINS_DIRECT -> "Rete diretta"
-    PowerFeedType.OTHER -> "Altro"
-    PowerFeedType.UNKNOWN -> "Sconosciuta"
+fun PowerFeedType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    PowerFeedType.PRIMARY_A -> i18n.text("text.37959ecfb327")
+    PowerFeedType.SECONDARY_B -> i18n.text("text.584f9f0b938f")
+    PowerFeedType.UPS_BACKUP -> i18n.text("text.722b056b65fd")
+    PowerFeedType.PDU_DISTRIBUTION -> i18n.text("text.bfe399cfb57e")
+    PowerFeedType.MAINS_DIRECT -> i18n.text("text.930c6d2cd50e")
+    PowerFeedType.OTHER -> i18n.text("text.78f5742268e4")
+    PowerFeedType.UNKNOWN -> i18n.text("text.250d49293bbe")
 }
 
-fun PoeRole.toDisplayString(): String = when (this) {
-    PoeRole.PSE_SOURCE -> "Eroga (PSE)"
-    PoeRole.PD_SINK -> "Alimentato (PD)"
-    PoeRole.PASSIVE_INJECTOR -> "Iniettore passivo"
-    PoeRole.NONE -> "Nessuno"
+fun PoeRole.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    PoeRole.PSE_SOURCE -> i18n.text("text.3b2832bfad96")
+    PoeRole.PD_SINK -> i18n.text("text.28b16667cb5a")
+    PoeRole.PASSIVE_INJECTOR -> i18n.text("text.18b61ca94636")
+    PoeRole.NONE -> i18n.text("text.aa201262e9a7")
 }
 
-fun PoeStandard.toDisplayString(): String = when (this) {
-    PoeStandard.IEEE_802_3AF -> "802.3af (PoE)"
-    PoeStandard.IEEE_802_3AT -> "802.3at (PoE+)"
-    PoeStandard.IEEE_802_3BT -> "802.3bt (PoE++)"
-    PoeStandard.PASSIVE_24V -> "Passivo 24 V"
-    PoeStandard.PASSIVE_48V -> "Passivo 48 V"
-    PoeStandard.OTHER -> "Altro"
+fun PoeStandard.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    PoeStandard.IEEE_802_3AF -> i18n.text("text.6658e04f0146")
+    PoeStandard.IEEE_802_3AT -> i18n.text("text.1b9dadfc6c6e")
+    PoeStandard.IEEE_802_3BT -> i18n.text("text.68a3de05ed07")
+    PoeStandard.PASSIVE_24V -> i18n.text("text.a4e21471fd4f")
+    PoeStandard.PASSIVE_48V -> i18n.text("text.1ced0fe18bef")
+    PoeStandard.OTHER -> i18n.text("text.78f5742268e4")
 }
 
-fun BadgeCategory.toDisplayString(): String = when (this) {
+fun BadgeCategory.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     BadgeCategory.VLAN -> "VLAN"
-    BadgeCategory.MEDIUM -> "Mezzo"
-    BadgeCategory.POE -> "PoE"
-    BadgeCategory.UPS_DEPENDENCY -> "Dipendenza UPS"
-    BadgeCategory.COVERAGE -> "Copertura"
-    BadgeCategory.OPEN_ISSUE -> "Problema aperto"
-    BadgeCategory.FREE_LABEL -> "Etichetta libera"
+    BadgeCategory.MEDIUM -> i18n.text("text.2de5f6131596")
+    BadgeCategory.POE -> i18n.text("text.64f63dbe7bbe")
+    BadgeCategory.UPS_DEPENDENCY -> i18n.text("text.f66083a59c7f")
+    BadgeCategory.COVERAGE -> i18n.text("text.4cd0d886b40b")
+    BadgeCategory.OPEN_ISSUE -> i18n.text("text.7dce0a3c04d1")
+    BadgeCategory.FREE_LABEL -> i18n.text("text.bc2c4cb17f02")
 }
 
-fun ValidationSeverity.toDisplayString(): String = when (this) {
-    ValidationSeverity.STRUCTURAL_ERROR -> "Errore strutturale"
-    ValidationSeverity.DOCUMENTARY_WARNING -> "Avviso documentale"
+fun ValidationSeverity.toDisplayString(i18n: Messages = Messages()): String = when (this) {
+    ValidationSeverity.STRUCTURAL_ERROR -> i18n.text("text.d2799174e404")
+    ValidationSeverity.DOCUMENTARY_WARNING -> i18n.text("text.d8a8733a7084")
 }
 
 /** Target types stored as strings in [DocumentBadge], [CustomExtraField] and [TrashItem]. */
 object EntityTypeLabels {
-    fun of(type: String): String = when (type.uppercase()) {
-        "PROJECT" -> "Progetto"
-        "BUSINESS_UNIT" -> "Business unit"
-        "SITE" -> "Sede"
-        "AREA" -> "Area"
-        "RACK" -> "Rack"
-        "DEVICE" -> "Apparato"
-        "PORT" -> "Porta"
-        "CABLE" -> "Cavo"
-        "ATTACHMENT" -> "Allegato"
-        "CREDENTIAL" -> "Credenziale"
+    fun of(type: String, i18n: Messages = Messages()): String = when (type.uppercase()) {
+        "PROJECT" -> i18n.text("text.b7700d71d0ce")
+        "BUSINESS_UNIT" -> i18n.text("text.e4de7d26b141")
+        "SITE" -> i18n.text("text.f163aa3f6310")
+        "AREA" -> i18n.text("text.024dc204d7ba")
+        "RACK" -> i18n.text("text.4cd265c2b8c6")
+        "DEVICE" -> i18n.text("text.cf301d95d32c")
+        "PORT" -> i18n.text("text.946d1f8153ce")
+        "CABLE" -> i18n.text("text.89dbe18e8407")
+        "ATTACHMENT" -> i18n.text("text.59cc6c3e1526")
+        "CREDENTIAL" -> i18n.text("text.602206d4ebfc")
         else -> type.lowercase().replaceFirstChar { it.uppercase() }
     }
 }

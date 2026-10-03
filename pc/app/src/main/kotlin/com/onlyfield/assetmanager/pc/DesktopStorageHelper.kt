@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import java.awt.print.PrinterJob
 import java.io.File
 import javax.swing.JFileChooser
@@ -11,9 +13,9 @@ import javax.swing.filechooser.FileNameExtensionFilter
 object DesktopStorageHelper {
 
     fun pickDirectory(
-        title: String = "Seleziona cartella dati",
-        currentDir: File? = null
-    ): File? {
+        title: String = Messages().text("text.79762e9e52e9"),
+        currentDir: File? = null,
+        i18n: Messages = Messages()): File? {
         val chooser = JFileChooser().apply {
             dialogTitle = title
             fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
@@ -26,10 +28,10 @@ object DesktopStorageHelper {
     }
 
     fun pickOpenFile(
-        title: String = "Apri pacchetto .ofam",
-        extensionDescription: String = "Pacchetti OnlyField Asset Manager (*.ofam)",
-        vararg extensions: String = arrayOf("ofam")
-    ): File? {
+        title: String = Messages().text("text.b7ff83aeac87"),
+        extensionDescription: String = Messages().text("text.43ff8b157bf2"),
+        vararg extensions: String = arrayOf("ofam"),
+        i18n: Messages = Messages()): File? {
         val chooser = JFileChooser().apply {
             dialogTitle = title
             isMultiSelectionEnabled = false
@@ -40,11 +42,11 @@ object DesktopStorageHelper {
     }
 
     fun pickSaveFile(
-        title: String = "Esporta pacchetto .ofam",
+        title: String = Messages().text("text.505a2a51b914"),
         defaultFileName: String = "progetto.ofam",
-        extensionDescription: String = "Pacchetti OnlyField Asset Manager (*.ofam)",
-        vararg extensions: String = arrayOf("ofam")
-    ): File? {
+        extensionDescription: String = Messages().text("text.43ff8b157bf2"),
+        vararg extensions: String = arrayOf("ofam"),
+        i18n: Messages = Messages()): File? {
         val chooser = JFileChooser().apply {
             dialogTitle = title
             selectedFile = File(defaultFileName)

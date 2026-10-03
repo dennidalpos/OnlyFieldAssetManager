@@ -1,47 +1,49 @@
 package com.onlyfield.assetmanager.core.forms
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 /**
- * Field-level checks used by the desktop forms. Each function returns an Italian error message,
+ * Field-level checks used by the desktop forms. Each function returns an error in the selected language (Italian by default),
  * or null when the value is acceptable. Empty optional values are always accepted.
  */
 object FieldValidators {
 
-    fun required(text: String, what: String = "Campo"): String? =
-        if (text.isBlank()) "$what obbligatorio" else null
+    fun required(text: String, what: String? = null, i18n: Messages = Messages()): String? =
+        if (text.isBlank()) i18n.text("text.6e53f0e55bf5", what ?: i18n.text("text.45789cc13c6b")) else null
 
-    fun int(text: String, min: Int? = null, max: Int? = null, required: Boolean = false): String? {
-        if (text.isBlank()) return if (required) "Valore obbligatorio" else null
-        val value = text.trim().toIntOrNull() ?: return "Inserire un numero intero"
-        if (min != null && value < min) return "Minimo $min"
-        if (max != null && value > max) return "Massimo $max"
+    fun int(text: String, min: Int? = null, max: Int? = null, required: Boolean = false, i18n: Messages = Messages()): String? {
+        if (text.isBlank()) return if (required) i18n.text("text.ebabdc9dd33e") else null
+        val value = text.trim().toIntOrNull() ?: return i18n.text("text.698b1051bf1f")
+        if (min != null && value < min) return i18n.text("text.d745db3f66f9", min)
+        if (max != null && value > max) return i18n.text("text.9027e4e572df", max)
         return null
     }
 
-    fun decimal(text: String, min: Double? = null, max: Double? = null): String? {
+    fun decimal(text: String, min: Double? = null, max: Double? = null, i18n: Messages = Messages()): String? {
         if (text.isBlank()) return null
-        val value = parseDecimal(text) ?: return "Inserire un numero"
-        if (min != null && value < min) return "Minimo ${formatNumber(min)}"
-        if (max != null && value > max) return "Massimo ${formatNumber(max)}"
+        val value = parseDecimal(text) ?: return i18n.text("text.f88d461ec798")
+        if (min != null && value < min) return i18n.text("text.d745db3f66f9", formatNumber(min))
+        if (max != null && value > max) return i18n.text("text.9027e4e572df", formatNumber(max))
         return null
     }
 
-    fun ipv4(text: String): String? {
+    fun ipv4(text: String, i18n: Messages = Messages()): String? {
         if (text.isBlank()) return null
-        return if (isIpv4(text.trim())) null else "Indirizzo IPv4 non valido (es. 192.168.1.10)"
+        return if (isIpv4(text.trim())) null else i18n.text("text.49e1d3402a2e")
     }
 
-    fun cidr(text: String, required: Boolean = false): String? {
-        if (text.isBlank()) return if (required) "Blocco CIDR obbligatorio" else null
+    fun cidr(text: String, required: Boolean = false, i18n: Messages = Messages()): String? {
+        if (text.isBlank()) return if (required) i18n.text("text.da767adf5760") else null
         val parts = text.trim().split("/")
         val ok = parts.size == 2 && isIpv4(parts[0]) && parts[1].toIntOrNull()?.let { it in 0..32 } == true
-        return if (ok) null else "CIDR non valido (es. 10.0.0.0/24)"
+        return if (ok) null else i18n.text("text.d2eb9b980937")
     }
 
-    fun mac(text: String): String? {
+    fun mac(text: String, i18n: Messages = Messages()): String? {
         if (text.isBlank()) return null
         val ok = Regex("^([0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}$").matches(text.trim()) ||
             Regex("^([0-9A-Fa-f]{4}\\.){2}[0-9A-Fa-f]{4}$").matches(text.trim())
-        return if (ok) null else "MAC non valido (es. AA:BB:CC:DD:EE:FF)"
+        return if (ok) null else i18n.text("text.eaa6199e8b97")
     }
 
     /** Accepts both "1.5" and the Italian "1,5". */

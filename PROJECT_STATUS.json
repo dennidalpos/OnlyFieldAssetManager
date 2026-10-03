@@ -1,45 +1,45 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Nessun task implementativo attivo.",
+  "currentPhase": "Configuratore grafico CFG01 completato; restano i residui CI su tag, hardware, API 37, scratch e salvataggio Git.",
   "activeTask": null,
-  "nextSession": "Riprendere da RES-13 oppure RES-14; verificare prima tracker, roadmap e stato Git.",
+  "nextSession": "Configuratore completato: 206 test JVM/Compose verdi, APK e portable aggiornati; evidenze in roadmap.md e docs/10-object-configurator.md. Restano RES-19 (commit/push già autorizzati in precedenza, bloccati da index.lock), RES-01 (CI reale su tag, distinta autorizzazione), RES-17 (Espresso/API 37), RES-18 (scratch precedenti) e RES-13 (collaudo hardware rinviato). Nessun commit/push o collaudo hardware nella sessione del configuratore. Artefatti nuovi in mobile/app/build/outputs/apk e dist/; build/release conserva quelli della manutenzione precedente.",
   "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-01",
       "title": "Integrazione CI/CD Automation",
-      "status": "FUTURE_ENHANCEMENT",
-      "description": "Workflow GitHub Actions per pubblicazione automatizzata degli artefatti APK e ZIP portable Windows.",
+      "status": "PARTIAL",
+      "description": "Workflow tag v*/manuale e preparazione APK debug/ZIP portable/SHA-256 implementati e verificati localmente. Commit/push su main autorizzati ma bloccati da RES-19. Manca una vera esecuzione remota su tag; la creazione del tag e la pubblicazione della release richiedono autorizzazione separata.",
       "closureCriteria": "Workflow documentati, eseguiti su tag e con artefatti verificabili."
-    },
-    {
-      "id": "RES-02",
-      "title": "Localizzazione multi-lingua",
-      "status": "FUTURE_ENHANCEMENT",
-      "description": "Estensione delle stringhe UI a Inglese e Spagnolo.",
-      "closureCriteria": "Cataloghi localizzati completi e flussi principali verificati nelle lingue aggiunte."
-    },
-    {
-      "id": "RES-11",
-      "title": "Aggiornamento API deprecate della toolchain",
-      "status": "FUTURE_ENHANCEMENT",
-      "description": "Deprecazioni Gradle e createComposeRule rilevate dalla build, senza regressioni funzionali.",
-      "closureCriteria": "Build senza le deprecazioni attribuibili al progetto su una toolchain supportata."
     },
     {
       "id": "RES-13",
       "title": "Collaudo manuale di acquisizione e multitouch",
       "status": "OPEN",
-      "description": "Non verificati scatto e lettura QR con fotocamera reale, zoom/panoramica multitouch manuali e lettore USB fisico.",
+      "description": "Checklist docs/testing/hardware-checklist.md pronta; tutti gli scenari foto/QR/barcode/multitouch/lettore USB reali NON ESEGUITI. Collaudo hardware rinviato.",
       "closureCriteria": "Checklist eseguita su hardware reale e risultati registrati in roadmap e documentazione QA."
     },
     {
-      "id": "RES-14",
-      "title": "Persistenza del cestino Windows nei progetti protetti",
+      "id": "RES-17",
+      "title": "Compatibilità dei test UI Android API 37",
       "status": "OPEN",
-      "description": "Il cestino Windows dei progetti protetti resta disponibile solo nella sessione; non viene scritto in chiaro nella cartella dati.",
-      "closureCriteria": "Cestino serializzato e cifrato con il progetto, ripristinabile dopo riavvio senza esporre dati o relazioni."
+      "description": "Su emulatore API 37.1 due test Compose si arrestano in Espresso con NoSuchMethodException: android.hardware.input.InputManager.getInstance; le stesse prove passano su API 35. Toolchain conservata come richiesto.",
+      "closureCriteria": "Suite strumentale completa verde su API 37 con una versione o integrazione supportata di AndroidX Test, senza disattivare controlli."
+    },
+    {
+      "id": "RES-18",
+      "title": "Pulizia scratch della sessione bloccata dal controllo automatico",
+      "status": "OPEN",
+      "description": "Il controllo automatico ha rifiutato due comandi di rimozione dei temporanei sotto build/ con errore blocked by policy, incluso il singolo percorso verificato build/qa-system35. Emulatori arrestati. Restano immagini/AVD temporanei, strumenti di traduzione/actionlint, fixture CI e script/log della sessione; sono ignorati da Git. Preservare build/release e gli output Gradle.",
+      "closureCriteria": "Rimuovere soltanto scratch della sessione da build/ dopo verifica dei percorsi, conservando artefatti e directory Gradle; rieseguire controllo stato Git."
+    },
+    {
+      "id": "RES-19",
+      "title": "Commit e push di passaggio sessione bloccati da index.lock",
+      "status": "OPEN",
+      "description": "Due tentativi di git add falliti con Unable to create .git/index.lock: File exists. Lock presente e vuoto; nessun processo git/git-lfs rilevato durante il controllo. Possibile lock residuo, non rimosso. main locale e origin/main verificati allo stesso commit a5e9f69ca2cb55824f4fe75872751e1f00fad8d2. Commit e push già autorizzati dall'utente; operazione fermata secondo la regola dei due fallimenti consecutivi.",
+      "closureCriteria": "Risolvere il lock dopo verifica dell'assenza di operazioni Git attive, revisionare e committare le modifiche su main, eseguire push normale e verificare SHA remoto e working tree pulito."
     }
   ]
 }

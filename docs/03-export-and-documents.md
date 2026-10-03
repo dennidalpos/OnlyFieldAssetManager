@@ -1,6 +1,6 @@
 # Motori di Esportazione Documentale, Stampa e Privacy
 
-Data: 2 ottobre 2026
+Data: 3 ottobre 2026
 
 ## Motori di Esportazione
 
@@ -47,3 +47,11 @@ La mappa operativa è descritta in [08-floor-map.md](08-floor-map.md). Tipologie
    - L'utente può scegliere di escludere note ed allegati contrassegnati come riservati tramite il flag `includeConfidential`.
 3. **Prompt di Riesame (`REVIEW_REQUIRED`):**
    - Presenza di un prompt di conferma esplicito per la revisione prima dell'esportazione in caso di elementi non classificati.
+
+## Lingua dei documenti
+
+Tutti i generatori e la stampa ricevono la lingua dell'app catturata all'avvio: italiano, inglese o spagnolo. Intestazioni, etichette e nomi dei fogli sono localizzati; testi utente, codici tecnici e attribuzioni restano invariati. Le API senza lingua esplicita producono italiano. Markdown, XLSX e PDF Android comprendono anche i piani diretti della BU. PdfDocument genera PDF reali e propaga gli errori, senza documenti fittizi. Vedi [localizzazione e verifiche](09-localization.md).
+
+## Hardware e porte (contratto 1.11)
+
+XLSX comprende dimensioni, PoE e caratteristiche nell’inventario e una tabella delle porte nel foglio cablaggio. Markdown include schemi tabellari di porte e profondità esterna/utile rack. L’esportazione usa il motore condiviso di continuità; modulo ottico e connettore restano distinti. [Campi e verifiche](10-object-configurator.md).

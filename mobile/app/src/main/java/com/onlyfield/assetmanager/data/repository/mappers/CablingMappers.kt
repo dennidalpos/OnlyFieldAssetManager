@@ -33,6 +33,7 @@ internal fun toSharedPathSegment(entity: com.onlyfield.assetmanager.data.local.S
 internal fun toCableEntity(projectId: String, cable: com.onlyfield.assetmanager.core.model.Cable): com.onlyfield.assetmanager.data.local.CableEntity {
     return com.onlyfield.assetmanager.data.local.CableEntity(
         id = cable.id,
+        deviceModelId = cable.deviceModelId,
         projectId = projectId,
         codeOrLabel = cable.codeOrLabel,
         objectTypeId = cable.objectTypeId,
@@ -74,6 +75,7 @@ internal fun toCable(entity: com.onlyfield.assetmanager.data.local.CableEntity):
     } else null
 
     return com.onlyfield.assetmanager.core.model.Cable(
+        deviceModelId = entity.deviceModelId,
         id = entity.id,
         codeOrLabel = entity.codeOrLabel,
         objectTypeId = entity.objectTypeId,

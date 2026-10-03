@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.Attachment
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.TrashItem
@@ -89,22 +91,65 @@ class DesktopStorageManager(
 
     private fun syncBaseFile(projectId: String) = File(dataDir, "sync/$projectId.ofam")
 
-    /** Saved as a package so a protected project keeps its base encrypted with the same password. */
-    fun saveSyncBase(project: Project, password: String?) {
+    /** The merge base is a separate snapshot, protected with the project password. */
+    fun saveSyncBase(project: Project, password: String?) = withProjectLock(project.id) {
+        atomicWrite(syncBaseFile(project.id), PackageSerializer.exportPackage(project, password = password, i18n = i18n))
+    }
+
+    fun loadSyncBase(projectId: String, password: String?): Project? {
+        val file = syncBaseFile(projectId)
+        if (!file.isFile) return null
+        return PackageSerializer.importPackage(file.readBytes(), password, i18n = i18n).pkg?.project
+            ?: throw IllegalStateException(i18n.text("text.61c13d777659"))
+    }
+
+    private fun prepareWrite(target: File, bytes: ByteArray): File {
+        Files.createDirectories(target.parentFile.toPath())
+        val temp = Files.createTempFile(target.parentFile.toPath(), target.name, ".tmp").toFile()
+        try { temp.writeBytes(bytes); return temp } catch (e: Exception) { Files.deleteIfExists(temp.toPath()); throw e }
+    }
+
+    private fun replaceFile(temp: File, target: File) {
         try {
-            val file = syncBaseFile(project.id).apply { parentFile?.mkdirs() }
-            val tmp = File(file.path + ".tmp")
-            tmp.writeBytes(PackageSerializer.exportPackage(project, password = password))
-            java.nio.file.Files.move(tmp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING)
-        } catch (_: Exception) {
-            // Without a base the next merge simply asks about every difference.
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
+        } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
+            Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
     }
 
-    fun loadSyncBase(projectId: String, password: String?): Project? = try {
-        syncBaseFile(projectId).takeIf { it.isFile }?.let { PackageSerializer.importPackage(it.readBytes(), password).pkg?.project }
-    } catch (_: Exception) {
-        null
+    private fun atomicWrite(target: File, bytes: ByteArray) {
+        val temp = prepareWrite(target, bytes)
+        try { replaceFile(temp, target) } finally { Files.deleteIfExists(temp.toPath()) }
+    }
+
+    /** Prepare both packages before changing protection; preserve the original merge snapshot. */
+    fun changeProjectPassword(project: Project, oldPassword: String?, newPassword: String?, trashItems: List<TrashItem>) = withProjectLock(project.id) {
+        val target = File(getProjectsFolder(), "${project.id}.ofam")
+        val syncFile = syncBaseFile(project.id)
+        val oldSyncBytes = syncFile.takeIf { it.isFile }?.readBytes()
+        val base = loadSyncBase(project.id, oldPassword)
+        val local = PackageSerializer.importPackage(target.readBytes(), oldPassword, i18n = i18n).pkg
+            ?: throw IllegalStateException(i18n.text("text.42e4ee10f12f"))
+        val mainTemp = prepareWrite(target, PackageSerializer.exportPackage(project, local.attachments + (LOCAL_TRASH_ENTRY to trashBytes(trashItems)), newPassword, i18n = i18n))
+        var syncTemp: File? = null
+        var syncReplaced = false
+        try {
+            if (base != null) {
+                syncTemp = prepareWrite(syncFile, PackageSerializer.exportPackage(base.copy(isPasswordProtected = newPassword != null), password = newPassword, i18n = i18n))
+                replaceFile(syncTemp, syncFile)
+                syncReplaced = true
+            }
+            replaceFile(mainTemp, target)
+            Files.deleteIfExists(trashFile(project.id).toPath())
+        } catch (e: Exception) {
+            if (syncReplaced && oldSyncBytes != null) {
+                try { atomicWrite(syncFile, oldSyncBytes) } catch (rollback: Exception) { e.addSuppressed(rollback) }
+            }
+            throw e
+        } finally {
+            Files.deleteIfExists(mainTemp.toPath())
+            syncTemp?.let { Files.deleteIfExists(it.toPath()) }
+        }
     }
 
     /** Folder holding the files of the attachments, one sub-folder per project. */
@@ -128,24 +173,26 @@ class DesktopStorageManager(
 
     private fun trashFile(projectId: String) = File(dataDir, "trash/$projectId.json")
 
-    /** Trash of a project, persisted between sessions (only for projects without a password). */
-    fun loadTrash(projectId: String): List<TrashItem> = try {
-        trashFile(projectId).takeIf { it.isFile }
-            ?.let { trashJson.decodeFromString(ListSerializer(TrashItem.serializer()), it.readText(Charsets.UTF_8)) }
-            ?: emptyList()
-    } catch (_: Exception) {
-        emptyList()
+    var i18n: Messages = Messages()
+
+    companion object { const val LOCAL_TRASH_ENTRY = "attachments/local/trash.json" }
+
+    /** Read only local state; a corrupt archive must never become an empty trash. */
+    fun loadTrash(projectId: String, password: String? = null): List<TrashItem> {
+        val local = File(getProjectsFolder(), "$projectId.ofam")
+        val bytes = if (local.isFile) {
+            val result = PackageSerializer.importPackage(local.readBytes(), password, i18n = i18n)
+            check(result.validationResult.issues.none { it.targetEntityId == LOCAL_TRASH_ENTRY }) { i18n.text("text.72ea3e1800e5") }
+            val pkg = result.pkg ?: throw IllegalStateException(i18n.text("text.0f81b75705c7"))
+            pkg.attachments[LOCAL_TRASH_ENTRY]
+        } else null
+        val text = bytes?.toString(Charsets.UTF_8) ?: trashFile(projectId).takeIf { it.isFile }?.readText(Charsets.UTF_8) ?: return emptyList()
+        val items = trashJson.decodeFromString(ListSerializer(TrashItem.serializer()), text)
+        require(items.all { it.projectId == projectId }) { i18n.text("text.7e60756fd2ba") }
+        return items
     }
 
-    fun saveTrash(projectId: String, items: List<TrashItem>) {
-        val file = trashFile(projectId)
-        if (items.isEmpty()) {
-            file.delete()
-            return
-        }
-        file.parentFile?.mkdirs()
-        file.writeText(trashJson.encodeToString(ListSerializer(TrashItem.serializer()), items), Charsets.UTF_8)
-    }
+    private fun trashBytes(items: List<TrashItem>) = trashJson.encodeToString(ListSerializer(TrashItem.serializer()), items).toByteArray(Charsets.UTF_8)
 
     fun missingAttachments(project: Project): List<Attachment> =
         AttachmentFiles.missing(project) { attachmentFile(project.id, it) }
@@ -159,11 +206,12 @@ class DesktopStorageManager(
             channel.tryLock()
         } catch (_: java.nio.channels.OverlappingFileLockException) {
             null
-        } catch (_: Exception) {
-            null
+        } catch (e: java.io.IOException) {
+            raf.close()
+            throw e
         } ?: run {
             raf.close()
-            throw IllegalStateException("Impossibile acquisire il blocco esclusivo sul progetto $projectId: aperto da un'altra istanza.")
+            throw IllegalStateException(i18n.text("text.8bbb3adbe88a", projectId))
         }
         activeLocks[projectId] = Pair(raf, lock)
     }
@@ -172,11 +220,20 @@ class DesktopStorageManager(
         val pair = activeLocks.remove(projectId) ?: return
         try {
             pair.second.release()
+        } finally {
             pair.first.close()
-            val lockFile = File(getProjectsFolder(), "$projectId.lock")
-            if (lockFile.exists()) lockFile.delete()
-        } catch (_: Exception) {}
+        }
     }
+
+    fun ownsProjectLock(projectId: String): Boolean = activeLocks.containsKey(projectId)
+
+    private inline fun <T> withProjectLock(projectId: String, action: () -> T): T {
+        val alreadyOwned = ownsProjectLock(projectId)
+        acquireProjectLock(projectId)
+        try { return action() } finally { if (!alreadyOwned) releaseProjectLock(projectId) }
+    }
+
+    fun isLocalProjectFile(file: File): Boolean = file.canonicalFile.parentFile == getProjectsFolder().canonicalFile
 
     fun releaseAllLocks() {
         val keys = activeLocks.keys.toList()
@@ -195,7 +252,7 @@ class DesktopStorageManager(
         for (file in files) {
             try {
                 val bytes = file.readBytes()
-                val importRes = PackageSerializer.importPackage(zipBytes = bytes)
+                val importRes = PackageSerializer.importPackage(zipBytes = bytes, i18n = i18n)
                 val manifest = importRes.pkg?.manifest
                 if (manifest != null) {
                     result.add(
@@ -227,63 +284,46 @@ class DesktopStorageManager(
     fun saveProjectLocally(
         project: Project,
         password: String? = null,
-        attachments: Map<String, ByteArray> = emptyMap()
-    ): File {
+        attachments: Map<String, ByteArray> = emptyMap(),
+        trashItems: List<TrashItem>? = null
+    ): File = withProjectLock(project.id) {
         val status = checkDataDirectoryStatus()
         if (!status.isWritable) {
-            throw IllegalStateException("La cartella dati '${dataDir.absolutePath}' non è scrivibile o il supporto è stato rimosso.")
+            throw IllegalStateException(i18n.text("text.a28d4f63178f", dataDir.absolutePath))
         }
 
-        val projectsDir = getProjectsFolder()
-        val tmpDir = getTempFolder()
-
-        val bytes = PackageSerializer.exportPackage(
-            project = project,
-            attachments = attachments,
-            password = password
-        )
-
-        val tmpFile = File(tmpDir, "${project.id}_${System.currentTimeMillis()}.tmp")
-        val targetFile = File(projectsDir, "${project.id}.ofam")
-
-        try {
-            tmpFile.writeBytes(bytes)
-            Files.move(
-                tmpFile.toPath(),
-                targetFile.toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE
-            )
-        } catch (_: Exception) {
-            // Fallback if atomic move across filesystems fails
-            Files.move(
-                tmpFile.toPath(),
-                targetFile.toPath(),
-                StandardCopyOption.REPLACE_EXISTING
-            )
-        } finally {
-            if (tmpFile.exists()) tmpFile.delete()
-        }
-
-        return targetFile
+        val items = trashItems ?: loadTrash(project.id, password)
+        require(items.all { it.projectId == project.id }) { i18n.text("text.7e60756fd2ba") }
+        val targetFile = File(getProjectsFolder(), "${project.id}.ofam")
+        atomicWrite(targetFile, PackageSerializer.exportPackage(project, attachments + (LOCAL_TRASH_ENTRY to trashBytes(items)), password, i18n = i18n))
+        Files.deleteIfExists(trashFile(project.id).toPath())
+        targetFile
     }
 
     fun loadLocalProject(projectId: String, password: String? = null): PackageImportResult {
         val file = File(getProjectsFolder(), "$projectId.ofam")
         if (!file.exists()) {
-            throw IllegalArgumentException("Progetto locale non trovato: ${file.absolutePath}")
+            throw IllegalArgumentException(i18n.text("text.c5806cf5c477", file.absolutePath))
         }
+        val alreadyOwned = ownsProjectLock(projectId)
         acquireProjectLock(projectId)
-        val bytes = file.readBytes()
-        return PackageSerializer.importPackage(zipBytes = bytes, password = password)
+        try {
+            val result = PackageSerializer.importPackage(zipBytes = file.readBytes(), password = password, i18n = i18n)
+            require(result.pkg?.project?.id == null || result.pkg?.project?.id == projectId) { i18n.text("text.6c9d85161290") }
+            if (result.pkg == null && !alreadyOwned) releaseProjectLock(projectId)
+            return result
+        } catch (e: Exception) {
+            if (!alreadyOwned) releaseProjectLock(projectId)
+            throw e
+        }
     }
 
     fun importPackageFromFile(file: File, password: String? = null): PackageImportResult {
         if (!file.exists() || !file.canRead()) {
-            throw IllegalArgumentException("Impossibile leggere il file specificato: ${file.absolutePath}")
+            throw IllegalArgumentException(i18n.text("text.d60173daedb8", file.absolutePath))
         }
         val bytes = file.readBytes()
-        return PackageSerializer.importPackage(zipBytes = bytes, password = password)
+        return PackageSerializer.importPackage(zipBytes = bytes, password = password, i18n = i18n)
     }
 
     fun exportPackageToFile(
@@ -294,33 +334,16 @@ class DesktopStorageManager(
     ) {
         val parent = targetFile.parentFile ?: File(".")
         if (parent.exists() && !parent.canWrite()) {
-            throw IllegalStateException("La cartella di destinazione non è scrivibile: ${parent.absolutePath}")
+            throw IllegalStateException(i18n.text("text.d4de3136debe", parent.absolutePath))
         }
 
         val bytes = PackageSerializer.exportPackage(
             project = project,
             attachments = attachments,
-            password = password
-        )
+            password = password,
+            i18n = i18n)
 
-        val tmpFile = File(parent, "${targetFile.name}.tmp_${System.currentTimeMillis()}")
-        try {
-            tmpFile.writeBytes(bytes)
-            Files.move(
-                tmpFile.toPath(),
-                targetFile.toPath(),
-                StandardCopyOption.REPLACE_EXISTING,
-                StandardCopyOption.ATOMIC_MOVE
-            )
-        } catch (_: Exception) {
-            Files.move(
-                tmpFile.toPath(),
-                targetFile.toPath(),
-                StandardCopyOption.REPLACE_EXISTING
-            )
-        } finally {
-            if (tmpFile.exists()) tmpFile.delete()
-        }
+        atomicWrite(targetFile, bytes)
     }
 
     fun loadAndroidFixtureFile(): Project {
@@ -330,7 +353,7 @@ class DesktopStorageManager(
             File("../../fixtures/v1_sample_project.json")
         )
         val file = candidatePaths.firstOrNull { it.exists() }
-            ?: throw IllegalStateException("Fixture 'v1_sample_project.json' non trovata nei percorsi di ricerca.")
+            ?: throw IllegalStateException(i18n.text("text.25fbf87f38fe"))
 
         val jsonText = file.readText(Charsets.UTF_8)
         return PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), jsonText)

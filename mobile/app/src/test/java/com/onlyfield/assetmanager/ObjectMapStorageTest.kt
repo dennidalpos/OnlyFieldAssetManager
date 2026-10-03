@@ -13,10 +13,22 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.util.UUID
+import java.io.File
+import kotlinx.serialization.json.*
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34])
 class ObjectMapStorageTest {
+    private fun legacySchemas(): List<String> {
+        val schema = Json.parseToJsonElement(File("schemas/com.onlyfield.assetmanager.data.local.AppDatabase/13.json").readText()).jsonObject.getValue("database").jsonObject
+        return schema.getValue("entities").jsonArray.flatMap { item ->
+            val entity = item.jsonObject
+            val table = entity.getValue("tableName").jsonPrimitive.content
+            listOf(entity.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", table)) +
+                entity["indices"]?.jsonArray.orEmpty().map { it.jsonObject.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", table) }
+        }
+    }
+
     @Test fun versionTwelveRackMembershipMigratesAndTrashSurvivesSaves() = runBlocking {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val name = "containment-${UUID.randomUUID()}.db"
@@ -26,12 +38,7 @@ class ObjectMapStorageTest {
         val p = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, racks = listOf(rack),
             businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))))
         try {
-            val template = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-            val schemas = try {
-                template.openHelper.writableDatabase.query("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND type IN ('table', 'index') AND name NOT IN ('android_metadata', 'room_master_table') ORDER BY type DESC").use { c ->
-                    buildList { while (c.moveToNext()) add(c.getString(0)) }
-                }
-            } finally { template.close() }
+            val schemas = legacySchemas()
             val path = context.getDatabasePath(name).apply { parentFile!!.mkdirs() }
             android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(path, null).use { old ->
                 schemas.forEach { old.execSQL(it.replace(", `objectContainmentsJson` TEXT NOT NULL", "").replace(", `containmentMetadataJson` TEXT", "")) }
@@ -43,13 +50,13 @@ class ObjectMapStorageTest {
                 old.execSQL("INSERT INTO devices (id,businessUnitId,technicalName,rackId,positionU,heightU,rackSide,mountingType,category) VALUES (?,?,?,?,7,1,'BOTH','RACK_MOUNT','CUSTOM')", arrayOf(device.id, bu.id, device.technicalName, rack.id))
                 old.version = 12
             }
-            val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).allowMainThreadQueries().addMigrations(AppDatabase.MIGRATION_12_13).build()
+            val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).allowMainThreadQueries().addMigrations(AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14).build()
             try {
                 val repo = ProjectRepository(upgraded)
                 val actual = repo.getProjectById(p.id)!!
                 assertEquals(ObjectRef(PlacementTargetType.RACK, rack.id), ObjectHierarchy.parent(actual, ObjectRef(PlacementTargetType.DEVICE, device.id)))
                 assertEquals(7, actual.businessUnits.single().devices.single().positionU)
-                assertEquals(13, upgraded.openHelper.writableDatabase.version)
+                assertEquals(14, upgraded.openHelper.writableDatabase.version)
                 val trash = repo.moveToTrash(p.id, "RACK", rack.id)!!
                 repo.saveProject(repo.getProjectById(p.id)!!.copy(name = "Aggiornato"))
                 assertEquals(trash, repo.getTrashItems(p.id).single())
@@ -78,12 +85,7 @@ class ObjectMapStorageTest {
         val name = "migration-${UUID.randomUUID()}.db"
         val p = Project(name = "Esistente", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(Device(technicalName = "SW", serialNumber = "S123")))))
         try {
-            val template = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-            val schemas = try {
-                template.openHelper.writableDatabase.query("SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND type IN ('table', 'index') AND name NOT IN ('android_metadata', 'room_master_table') ORDER BY type DESC").use { c ->
-                    buildList { while (c.moveToNext()) add(c.getString(0)) }
-                }
-            } finally { template.close() }
+            val schemas = legacySchemas()
             val path = context.getDatabasePath(name).apply { parentFile!!.mkdirs() }
             android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(path, null).use { old ->
                 schemas.forEach { schema ->
@@ -98,12 +100,12 @@ class ObjectMapStorageTest {
                 old.execSQL("INSERT INTO devices (id,businessUnitId,technicalName,heightU,rackSide,mountingType,category,serialNumber) VALUES (?,?,?,1,'BOTH','OUT_OF_RACK','CUSTOM',?)", arrayOf(d.id, bu.id, d.technicalName, d.serialNumber))
                 old.version = 11
             }
-            val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).allowMainThreadQueries().addMigrations(AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13).build()
+            val upgraded = Room.databaseBuilder(context, AppDatabase::class.java, name).allowMainThreadQueries().addMigrations(AppDatabase.MIGRATION_11_12, AppDatabase.MIGRATION_12_13, AppDatabase.MIGRATION_13_14).build()
             try {
                 val actual = ProjectRepository(upgraded).getProjectById(p.id)!!
                 assertEquals(p, actual)
                 assertTrue(actual.objectTypes.isEmpty()); assertTrue(actual.cableRoutes.isEmpty())
-                assertEquals(13, upgraded.openHelper.writableDatabase.version)
+                assertEquals(14, upgraded.openHelper.writableDatabase.version)
             } finally { upgraded.close() }
         } finally { context.deleteDatabase(name) }
     }

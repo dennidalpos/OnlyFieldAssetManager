@@ -36,10 +36,18 @@ Rendering e anteprime usano [PdfRenderer Android](https://developer.android.com/
 
 ## Compatibilità e aggiornamento
 
-Il contratto [`.ofam` 1.10](02-domain-data-contract.md) include tipologie, gerarchia, geometrie, pagine e foto, anche cifrate. Legge 1.7–1.9 e rifiuta versioni non supportate. Aggiornare entrambe le app prima di scambiare questi dati.
+Il contratto [`.ofam` 1.11](02-domain-data-contract.md) include tipologie, gerarchia, geometrie, pagine e foto, anche cifrate. Legge 1.7–1.10 e rifiuta versioni non supportate. Aggiornare entrambe le app prima di scambiare questi dati.
 
 Android passa da Room 12 a 13 con sole aggiunte di colonne, nella transazione gestita da Room. Prima dell'aggiornamento il database SQLCipher viene aperto con la chiave dell'installazione, il WAL viene consolidato e viene creata una copia cifrata in `no_backup/onlyfield_asset_manager.db.v12.backup`. Se il backup fallisce, l'aggiornamento non parte. La copia è locale e non viene esportata: conserva la chiave protetta dal Keystore della stessa installazione.
 
 Per un ripristino tecnico, conservare anche i dati e la chiave dell'installazione, chiudere l'app e ripristinare il backup con la versione compatibile; reinstallare l'app può perdere la chiave del Keystore. Per trasferimenti tra telefoni usare l'export `.ofam`.
 
 Evidenze automatiche e controlli manuali ancora aperti: [test](05-testing-and-benchmarks.md), [roadmap](../roadmap.md) e [tracker](../PROJECT_STATUS.json).
+
+## Localizzazione
+
+I nomi originali del catalogo incorporato, i selettori e i messaggi della mappa seguono la lingua dell'app. Le tipologie personalizzate e i nomi modificati dall'utente conservano il testo inserito; immagini e attribuzioni già acquisite non cambiano. Vedi [09-localization.md](09-localization.md).
+
+## Configurazione tecnica
+
+Le schede degli oggetti usano il [configuratore comune](10-object-configurator.md): rack/U, gruppi di porte, collegamenti, modelli e campi extra. La sessione conserva sottoconfigurazioni, tipologie, contenimento, posizioni e percorsi fino al salvataggio unico del form principale.

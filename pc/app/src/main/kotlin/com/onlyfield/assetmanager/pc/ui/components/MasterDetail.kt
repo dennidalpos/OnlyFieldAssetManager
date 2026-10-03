@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui.components
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -69,14 +71,16 @@ fun MasterDetailHost(modifier: Modifier = Modifier, master: @Composable () -> Un
 /** Shares the discard guard with the window and its menus. */
 @Composable
 fun DetailChangeHost(slot: DetailSlot, content: @Composable () -> Unit) {
+    val i18n = LocalMessages.current
+
     CompositionLocalProvider(LocalDetailSlot provides slot, LocalDetailChange provides slot::requestChange) { content() }
     slot.pendingChange?.let { action ->
         AlertDialog(
             onDismissRequest = { slot.pendingChange = null },
-            title = { Text("Scartare le modifiche?") },
-            text = { Text("Le modifiche non salvate andranno perse.") },
-            confirmButton = { TextButton(onClick = { slot.change(action) }) { Text("Scarta") } },
-            dismissButton = { TextButton(onClick = { slot.pendingChange = null }) { Text("Continua a modificare") } }
+            title = { Text(i18n.text("text.80079f180a43")) },
+            text = { Text(i18n.text("text.1c197da4d332")) },
+            confirmButton = { TextButton(onClick = { slot.change(action) }) { Text(i18n.text("text.8386702d2ee2")) } },
+            dismissButton = { TextButton(onClick = { slot.pendingChange = null }) { Text(i18n.text("text.500cb3f3c51b")) } }
         )
     }
 }
@@ -88,10 +92,11 @@ fun EditPanel(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
-    confirmLabel: String = "Salva",
+    confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     width: Dp = 560.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+
     val slot = LocalDetailSlot.current
     if (slot == null) {
         FormDialog(title, onDismiss, onConfirm, confirmEnabled, confirmLabel, width, content)
@@ -127,6 +132,8 @@ private class PanelArgs(
 
 @Composable
 private fun PanelBody(args: PanelArgs, slot: DetailSlot) {
+    val i18n = LocalMessages.current
+
     val close = { slot.requestChange {} }
 
     // Wide forms (e.g. configuration text) get a wider pane.
@@ -157,8 +164,8 @@ private fun PanelBody(args: PanelArgs, slot: DetailSlot) {
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Ctrl+S salva · Esc chiude", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                TextButton(onClick = close) { Text("Annulla") }
+                Text(i18n.text("text.21357b5bfcd0"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                TextButton(onClick = close) { Text(i18n.text("text.18c9d912a210")) }
                 Button(onClick = args.onConfirm, enabled = args.confirmEnabled) { Text(args.confirmLabel) }
             }
         }

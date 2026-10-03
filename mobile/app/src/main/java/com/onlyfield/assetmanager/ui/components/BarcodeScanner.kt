@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -16,7 +18,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
@@ -27,7 +29,9 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
  * ML Kit's model is bundled in the APK, so scanning works offline.
  */
 @Composable
-fun BarcodeScanner(onCode: (String) -> Unit, onClose: () -> Unit, hint: String = "Inquadra un codice QR o a barre") {
+fun BarcodeScanner(onCode: (String) -> Unit, onClose: () -> Unit, hint: String = LocalMessages.current.text("text.75bf8546adbd")) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     var granted by remember {
@@ -71,11 +75,11 @@ fun BarcodeScanner(onCode: (String) -> Unit, onClose: () -> Unit, hint: String =
         Column(Modifier.fillMaxSize().systemBarsPadding().padding(16.dp), verticalArrangement = Arrangement.SpaceBetween) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    if (denied) "Serve il permesso della fotocamera per scansionare." else hint,
+                    if (denied) i18n.text("text.4279e55f0fca") else hint,
                     color = Color.White, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f)
                 )
             }
-            Button(onClick = onClose, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Chiudi") }
+            Button(onClick = onClose, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text(i18n.text("text.32d4079b315b")) }
         }
     }
 }

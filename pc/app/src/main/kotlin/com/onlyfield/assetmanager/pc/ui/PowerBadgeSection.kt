@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -18,11 +20,13 @@ import com.onlyfield.assetmanager.core.forms.PowerFeedForm
 
 @Composable
 fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    val i18n = LocalMessages.current
+
     val index = remember(project) { ProjectIndex(project) }
     var tab by remember { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SubTabs(
-            listOf("Alimentazioni (${project.powerFeeds.size})", "PoE (${project.poeMappings.size})", "Badge documentali (${project.documentBadges.size})"),
+            listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.605ad6ef80b0", project.documentBadges.size)),
             tab
         ) { tab = it }
         when (tab) {
@@ -35,36 +39,38 @@ fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> U
 
 @Composable
 private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    val i18n = LocalMessages.current
+
     var query by remember { mutableStateOf("") }
     var editing by remember { mutableStateOf<PowerFeed?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
-    val feeds = project.powerFeeds.filter { matchesQuery(query, it.feedName, index.deviceName(it.deviceId), index.deviceName(it.sourceDeviceId, "")) }
+    val feeds = project.powerFeeds.filter { matchesQuery(query, it.feedName, index.deviceName(it.deviceId, i18n = i18n), index.deviceName(it.sourceDeviceId, "", i18n = i18n)) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader("Alimentazioni", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca linea o apparato…") {
-            Button(onClick = { changeDetail { creating = true } }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova alimentazione") }
+        SectionHeader(i18n.text("text.21adae0b690e"), searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = i18n.text("text.2abb86128114")) {
+            Button(onClick = { changeDetail { creating = true } }, enabled = index.devices.isNotEmpty()) { Text(i18n.text("text.04585136780b")) }
         }
-        if (feeds.isEmpty()) EmptyState(if (index.devices.isEmpty()) "Crea prima gli apparati in Inventario." else "Nessuna alimentazione registrata.")
+        if (feeds.isEmpty()) EmptyState(if (index.devices.isEmpty()) i18n.text("text.0b91a2f27a41") else i18n.text("text.90bbe6100ed6"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(feeds, key = { it.id }) { f ->
-                val source = f.sourceDeviceId?.let { index.deviceName(it) } ?: f.sourceOutletDescription
+                val source = f.sourceDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: f.sourceOutletDescription
                 ItemCard(
-                    title = "${index.deviceName(f.deviceId, "Apparato mancante")} · ${f.feedName}",
-                    badge = f.feedType.toDisplayString(),
+                    title = "${index.deviceName(f.deviceId, i18n.text("text.befe1ad89357"), i18n = i18n)} · ${f.feedName}",
+                    badge = f.feedType.toDisplayString(i18n = i18n),
                     details = listOf(
-                        source?.let { "Da $it" }.orEmpty(),
+                        source?.let { i18n.text("text.4bc711ab248c", it) }.orEmpty(),
                         listOfNotNull(
-                            f.voltageVolts?.let { "$it V" },
-                            f.loadWatts?.let { "${trim(it)} W" },
-                            f.loadVa?.let { "${trim(it)} VA" },
-                            f.observedRuntimeMinutes?.let { "autonomia $it min" }
+                            f.voltageVolts?.let { i18n.text("text.edb2066c2a30", it) },
+                            f.loadWatts?.let { i18n.text("text.cd49315c743a", trim(it)) },
+                            f.loadVa?.let { i18n.text("text.1df071e9be6a", trim(it)) },
+                            f.observedRuntimeMinutes?.let { i18n.text("text.2dc280aa0f83", it) }
                         ).joinToString(" · "),
                         f.notes.orEmpty()
                     )
                 ) {
                     EditButton { editing = f }
-                    DeleteButton(f.feedName, onDelete = { onProjectUpdated(ProjectEdits.deletePowerFeed(project, f.id), "Alimentazione eliminata.") })
+                    DeleteButton(f.feedName, onDelete = { onProjectUpdated(ProjectEdits.deletePowerFeed(project, f.id), i18n.text("text.a5c30e639a4d")) })
                 }
             }
         }
@@ -73,59 +79,61 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
     if (creating || editing != null) {
         val f = editing
         var form by remember(LocalDetailSlot.current?.editorVersion, f) { mutableStateOf(PowerFeedForm.from(f)) }
-        val errors = form.errors()
+        val errors = form.errors(i18n = i18n)
         EditPanel(
-            title = if (f == null) "Nuova alimentazione" else "Modifica alimentazione",
+            title = if (f == null) i18n.text("text.4caa90bd8cd8") else i18n.text("text.ef9307d35ec6"),
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toFeed(f)
                 creating = false; editing = null
-                onProjectUpdated(if (f == null) ProjectEdits.addPowerFeed(project, saved) else ProjectEdits.updatePowerFeed(project, saved), "Alimentazione salvata.")
+                onProjectUpdated(if (f == null) ProjectEdits.addPowerFeed(project, saved) else ProjectEdits.updatePowerFeed(project, saved), i18n.text("text.4237371feb41"))
             },
             width = 640.dp
         ) {
-            DevicePicker("Apparato alimentato *", index, form.deviceId, { form = form.copy(deviceId = it) }, error = errors["deviceId"])
+            DevicePicker(i18n.text("text.a814bcd8ca15"), index, form.deviceId, { form = form.copy(deviceId = it) }, error = errors["deviceId"])
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(form.feedName, { form = form.copy(feedName = it) }, "Nome linea *", Modifier.weight(1.3f), errors["feedName"], hint = "Es. Alimentatore 1")
-                EnumPicker("Tipo", PowerFeedType.entries, form.feedType, { it.toDisplayString() }, { form = form.copy(feedType = it) }, Modifier.weight(1f))
+                FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), Modifier.weight(1.3f), errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
+                EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) }, Modifier.weight(1f))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DevicePicker("Sorgente (UPS / PDU)", index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, Modifier.weight(1f),
-                    noneLabel = "Non nel progetto", error = errors["sourceDeviceId"])
-                FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, "Presa / uscita", Modifier.weight(1f), hint = "Es. PDU-A presa 5")
+                DevicePicker(i18n.text("text.11ae92f057eb"), index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, Modifier.weight(1f),
+                    noneLabel = i18n.text("text.65389ba5d2fd"), error = errors["sourceDeviceId"])
+                FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, i18n.text("text.cd33696ca977"), Modifier.weight(1f), hint = i18n.text("text.e8d9aee3669c"))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(form.voltage, { form = form.copy(voltage = it) }, "Tensione (V)", Modifier.weight(1f), errors["voltage"])
-                FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, "Carico (W)", Modifier.weight(1f), errors["loadWatts"])
-                FormField(form.loadVa, { form = form.copy(loadVa = it) }, "Carico (VA)", Modifier.weight(1f), errors["loadVa"])
-                FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, "Autonomia (min)", Modifier.weight(1f), errors["runtimeMinutes"])
+                FormField(form.voltage, { form = form.copy(voltage = it) }, i18n.text("text.5093ead90fce"), Modifier.weight(1f), errors["voltage"])
+                FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, i18n.text("text.eb98296d7970"), Modifier.weight(1f), errors["loadWatts"])
+                FormField(form.loadVa, { form = form.copy(loadVa = it) }, i18n.text("text.e821b548ca4b"), Modifier.weight(1f), errors["loadVa"])
+                FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, i18n.text("text.08997b56437a"), Modifier.weight(1f), errors["runtimeMinutes"])
             }
-            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
+            FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
         }
     }
 }
 
 @Composable
 private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    val i18n = LocalMessages.current
+
     var editing by remember { mutableStateOf<PoeMapping?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader("Power over Ethernet", subtitle = "Porte che erogano o ricevono alimentazione PoE") {
-            Button(onClick = { changeDetail { creating = true } }, enabled = index.ports.isNotEmpty()) { Text("+ Nuova porta PoE") }
+        SectionHeader(i18n.text("text.b4f1378ac2dd"), subtitle = i18n.text("text.07b3cd2501fb")) {
+            Button(onClick = { changeDetail { creating = true } }, enabled = index.ports.isNotEmpty()) { Text(i18n.text("text.b5aeb95142a5")) }
         }
-        if (project.poeMappings.isEmpty()) EmptyState(if (index.ports.isEmpty()) "Aggiungi prima le porte agli apparati." else "Nessuna porta PoE registrata.")
+        if (project.poeMappings.isEmpty()) EmptyState(if (index.ports.isEmpty()) i18n.text("text.411098441beb") else i18n.text("text.0c1e677a5476"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.poeMappings, key = { it.id }) { poe ->
                 ItemCard(
-                    title = index.portLabel(poe.portId, "Porta mancante"),
-                    badge = poe.role.toDisplayString(),
-                    details = listOf(listOfNotNull(poe.standard.toDisplayString(), poe.allocatedPowerWatts?.let { "${trim(it)} W" }).joinToString(" · "), poe.notes.orEmpty())
+                    title = index.portLabel(poe.portId, i18n.text("text.3ee4399caf53")),
+                    badge = poe.role.toDisplayString(i18n = i18n),
+                    details = listOf(listOfNotNull(poe.standard.toDisplayString(i18n = i18n), poe.allocatedPowerWatts?.let { i18n.text("text.cd49315c743a", trim(it)) }).joinToString(" · "), poe.notes.orEmpty())
                 ) {
                     EditButton { editing = poe }
-                    DeleteButton("PoE ${index.portLabel(poe.portId)}", onDelete = { onProjectUpdated(ProjectEdits.deletePoeMapping(project, poe.id), "Mappatura PoE eliminata.") })
+                    DeleteButton(i18n.text("text.3685af18e07a", index.portLabel(poe.portId)), onDelete = { onProjectUpdated(ProjectEdits.deletePoeMapping(project, poe.id), i18n.text("text.4e9f5d77e309")) })
                 }
             }
         }
@@ -134,51 +142,53 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
     if (creating || editing != null) {
         val poe = editing
         var form by remember(LocalDetailSlot.current?.editorVersion, poe) { mutableStateOf(PoeForm.from(poe)) }
-        val errors = form.errors()
+        val errors = form.errors(i18n = i18n)
         val existingOnPort = project.poeMappings.find { it.portId == form.portId && it.id != poe?.id }
         EditPanel(
-            title = if (poe == null) "Nuova porta PoE" else "Modifica porta PoE",
+            title = if (poe == null) i18n.text("text.129c22f2302d") else i18n.text("text.a1a41a98a32c"),
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toMapping(poe)
                 creating = false; editing = null
-                onProjectUpdated(ProjectEdits.addOrUpdatePoeMapping(project, saved), "Mappatura PoE salvata.")
+                onProjectUpdated(ProjectEdits.addOrUpdatePoeMapping(project, saved), i18n.text("text.f9730fd8963f"))
             },
             width = 600.dp
         ) {
-            PortPicker("Porta *", index, form.portId, { form = form.copy(portId = it) }, noneLabel = null, error = errors["portId"])
-            if (existingOnPort != null) Text("La porta ha già una mappatura PoE: verrà sostituita.", color = MaterialTheme.colorScheme.tertiary)
+            PortPicker(i18n.text("text.57c2ec879203"), index, form.portId, { form = form.copy(portId = it) }, noneLabel = null, error = errors["portId"])
+            if (existingOnPort != null) Text(i18n.text("text.2d099536dd33"), color = MaterialTheme.colorScheme.tertiary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EnumPicker("Ruolo", PoeRole.entries, form.role, { it.toDisplayString() }, { form = form.copy(role = it) }, Modifier.weight(1f))
-                EnumPicker("Standard", PoeStandard.entries, form.standard, { it.toDisplayString() }, { form = form.copy(standard = it) }, Modifier.weight(1f))
+                EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) }, Modifier.weight(1f))
+                EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) }, Modifier.weight(1f))
             }
-            FormField(form.watts, { form = form.copy(watts = it) }, "Potenza allocata (W)", error = errors["watts"])
-            FormField(form.notes, { form = form.copy(notes = it) }, "Note")
+            FormField(form.watts, { form = form.copy(watts = it) }, i18n.text("text.548f9030240c"), error = errors["watts"])
+            FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"))
         }
     }
 }
 
 @Composable
 private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    val i18n = LocalMessages.current
+
     var editing by remember { mutableStateOf<DocumentBadge?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        SectionHeader("Badge documentali", subtitle = "Etichette che compaiono nei documenti esportati") {
-            Button(onClick = { changeDetail { creating = true } }) { Text("+ Nuovo badge") }
+        SectionHeader(i18n.text("text.d3154f7a9686"), subtitle = i18n.text("text.c965e24a18f4")) {
+            Button(onClick = { changeDetail { creating = true } }) { Text(i18n.text("text.5e9867b48f83")) }
         }
-        if (project.documentBadges.isEmpty()) EmptyState("Nessun badge.", actionLabel = "+ Nuovo badge", onAction = { creating = true })
+        if (project.documentBadges.isEmpty()) EmptyState(i18n.text("text.eb3e34b0bacb"), actionLabel = i18n.text("text.5e9867b48f83"), onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.documentBadges, key = { it.id }) { b ->
                 ItemCard(
                     title = b.label,
-                    badge = b.category.toDisplayString(),
-                    details = listOf(index.targetLabel(b.targetType, b.targetId), if (b.isDerived) "Generato automaticamente" else "", b.notes.orEmpty())
+                    badge = b.category.toDisplayString(i18n = i18n),
+                    details = listOf(index.targetLabel(b.targetType, b.targetId, i18n = i18n), if (b.isDerived) i18n.text("text.1e564953491e") else "", b.notes.orEmpty())
                 ) {
                     if (!b.isDerived) EditButton { editing = b }
-                    DeleteButton(b.label, onDelete = { onProjectUpdated(ProjectEdits.deleteDocumentBadge(project, b.id), "Badge eliminato.") })
+                    DeleteButton(b.label, onDelete = { onProjectUpdated(ProjectEdits.deleteDocumentBadge(project, b.id), i18n.text("text.fc7c2dba7445")) })
                 }
             }
         }
@@ -187,24 +197,24 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
     if (creating || editing != null) {
         val b = editing
         var form by remember(LocalDetailSlot.current?.editorVersion, b) { mutableStateOf(BadgeForm.from(b)) }
-        val errors = form.errors()
+        val errors = form.errors(i18n = i18n)
         EditPanel(
-            title = if (b == null) "Nuovo badge" else "Modifica badge",
+            title = if (b == null) i18n.text("text.66060a3a6be2") else i18n.text("text.6720d0dc04c9"),
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toBadge(b, project.id)
                 creating = false; editing = null
-                onProjectUpdated(if (b == null) ProjectEdits.addDocumentBadge(project, saved) else ProjectEdits.updateDocumentBadge(project, saved), "Badge salvato.")
+                onProjectUpdated(if (b == null) ProjectEdits.addDocumentBadge(project, saved) else ProjectEdits.updateDocumentBadge(project, saved), i18n.text("text.6b86c681c041"))
             },
             width = 620.dp
         ) {
             TargetPicker(index, form.target, { form = form.copy(target = it) }, errors["target"])
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(form.label, { form = form.copy(label = it) }, "Etichetta *", Modifier.weight(1.3f), errors["label"])
-                EnumPicker("Categoria", BadgeCategory.entries, form.category, { it.toDisplayString() }, { form = form.copy(category = it) }, Modifier.weight(1f))
+                FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), Modifier.weight(1.3f), errors["label"])
+                EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) }, Modifier.weight(1f))
             }
-            FormField(form.notes, { form = form.copy(notes = it) }, "Note")
+            FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"))
         }
     }
 }

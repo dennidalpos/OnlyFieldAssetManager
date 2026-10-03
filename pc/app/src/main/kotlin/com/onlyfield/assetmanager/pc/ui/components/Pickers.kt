@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui.components
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
@@ -27,11 +29,13 @@ fun <T> OptionPicker(
     modifier: Modifier = Modifier,
     optionDetail: ((T) -> String?)? = null,
     noneLabel: String? = null,
-    placeholder: String = "Seleziona…",
+    placeholder: String = LocalMessages.current.text("text.60d6013749f3"),
     supportingText: String? = null,
     isError: Boolean = false,
     enabled: Boolean = true,
 ) {
+    val i18n = LocalMessages.current
+
     val markDirty = LocalMarkDirty.current
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -84,7 +88,7 @@ fun <T> OptionPicker(
                 OutlinedTextField(
                     value = query,
                     onValueChange = { query = it },
-                    placeholder = { Text("Cerca…") },
+                    placeholder = { Text(i18n.text("text.30109da716dd")) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)
                 )
@@ -98,7 +102,7 @@ fun <T> OptionPicker(
             }
             if (filtered.isEmpty()) {
                 DropdownMenuItem(
-                    text = { Text(if (options.isEmpty()) "Nessun elemento disponibile" else "Nessun risultato") },
+                    text = { Text(if (options.isEmpty()) i18n.text("text.0391aa0b5565") else i18n.text("text.0af987882e51")) },
                     onClick = {},
                     enabled = false
                 )

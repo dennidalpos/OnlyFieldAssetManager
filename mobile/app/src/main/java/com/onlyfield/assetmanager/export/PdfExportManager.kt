@@ -1,5 +1,9 @@
 package com.onlyfield.assetmanager.export
 
+import com.onlyfield.assetmanager.core.display.toDisplayString
+
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.RectF
@@ -28,26 +32,12 @@ object PdfExportManager {
         devicesInRack: List<Device>,
         unmountedDevices: List<Device>,
         outputStream: OutputStream,
-    ) {
-        val pdfDoc = try { PdfDocument() } catch (_: Throwable) { null }
-        if (pdfDoc == null) {
-            outputStream.use { stream ->
-                stream.write("%PDF-1.4 Mock PDF Output for Rack ${rack.name}\n".toByteArray(Charsets.UTF_8))
-                stream.flush()
-            }
-            return
-        }
+        i18n: Messages = Messages()) {
+        val pdfDoc = PdfDocument()
 
         try {
             val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 at 72 DPI
-            val page = try { pdfDoc.startPage(pageInfo) } catch (e: Throwable) { null }
-            if (page == null) {
-                outputStream.use { stream ->
-                    stream.write("%PDF-1.4 Fallback PDF Output for Rack ${rack.name}\n".toByteArray(Charsets.UTF_8))
-                    stream.flush()
-                }
-                return
-            }
+            val page = pdfDoc.startPage(pageInfo)
 
             val canvas = page.canvas
 
@@ -67,7 +57,7 @@ object PdfExportManager {
             textPaint.color = Color.WHITE
             textPaint.textSize = 16f
             textPaint.isFakeBoldText = true
-            canvas.drawText("Scheda Rack — ${rack.name}", 40f, y + 28f, textPaint)
+            canvas.drawText(i18n.text("text.f24b33e201a1", rack.name), 40f, y + 28f, textPaint)
 
             y += 60f
 
@@ -78,11 +68,11 @@ object PdfExportManager {
             val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY)
             val dateStr = sdf.format(Date())
 
-            canvas.drawText("Progetto: ${project.name}", 30f, y, textPaint)
-            canvas.drawText("Altezza: ${rack.heightU} U", 300f, y, textPaint)
+            canvas.drawText(i18n.text("text.c9cbbfd9ed3d", project.name), 30f, y, textPaint)
+            canvas.drawText(i18n.text("text.01c4d3f4fffb", rack.heightU), 300f, y, textPaint)
             y += 15f
-            canvas.drawText("Data Report: $dateStr", 30f, y, textPaint)
-            canvas.drawText("Profondità: ${rack.depthMm ?: "-"} mm", 300f, y, textPaint)
+            canvas.drawText(i18n.text("text.4339a839c0fc", dateStr), 30f, y, textPaint)
+            canvas.drawText(i18n.text("text.c8b4873bee3b", rack.depthMm ?: "-"), 300f, y, textPaint)
 
             y += 30f
 
@@ -183,7 +173,7 @@ object PdfExportManager {
             textPaint.color = Color.BLACK
             textPaint.textSize = 10f
             textPaint.isFakeBoldText = true
-            canvas.drawText("Elenco Apparati nel Rack (${devicesInRack.size})", tableX, tableY - 8f, textPaint)
+            canvas.drawText(i18n.text("text.ac7f2dbf5993", devicesInRack.size), tableX, tableY - 8f, textPaint)
 
             // Table Header
             paint.color = Color.rgb(240, 240, 240)
@@ -192,10 +182,10 @@ object PdfExportManager {
 
             textPaint.textSize = 8f
             textPaint.isFakeBoldText = true
-            canvas.drawText("Pos. U", tableX + 4f, tableY + 12f, textPaint)
-            canvas.drawText("Nome Tecnico", tableX + 45f, tableY + 12f, textPaint)
-            canvas.drawText("Lato", tableX + 160f, tableY + 12f, textPaint)
-            canvas.drawText("Porte", tableX + 210f, tableY + 12f, textPaint)
+            canvas.drawText(i18n.text("text.c048ae78b322"), tableX + 4f, tableY + 12f, textPaint)
+            canvas.drawText(i18n.text("text.29caae5fe1e7"), tableX + 45f, tableY + 12f, textPaint)
+            canvas.drawText(i18n.text("text.22ab4cafea0c"), tableX + 160f, tableY + 12f, textPaint)
+            canvas.drawText(i18n.text("text.2edfc95a3c46"), tableX + 210f, tableY + 12f, textPaint)
 
             tableY += 20f
             textPaint.isFakeBoldText = false
@@ -203,7 +193,7 @@ object PdfExportManager {
             for (dev in devicesInRack.sortedByDescending { it.positionU ?: 0 }) {
                 canvas.drawText("U${dev.positionU ?: "-"}", tableX + 4f, tableY + 12f, textPaint)
                 canvas.drawText(dev.technicalName.take(20), tableX + 45f, tableY + 12f, textPaint)
-                canvas.drawText(dev.rackSide.name, tableX + 160f, tableY + 12f, textPaint)
+                canvas.drawText(dev.rackSide.toDisplayString(i18n), tableX + 160f, tableY + 12f, textPaint)
                 canvas.drawText(dev.ports.size.toString(), tableX + 210f, tableY + 12f, textPaint)
 
                 paint.color = Color.LTGRAY
@@ -219,13 +209,8 @@ object PdfExportManager {
             outputStream.use { stream ->
                 pdfDoc.writeTo(stream)
             }
-        } catch (e: Throwable) {
-            outputStream.use { stream ->
-                stream.write("%PDF-1.4 Error Fallback PDF Output for Rack ${rack.name}\n".toByteArray(Charsets.UTF_8))
-                stream.flush()
-            }
         } finally {
-            try { pdfDoc.close() } catch (e: Throwable) {}
+            pdfDoc.close()
         }
     }
 
@@ -237,27 +222,18 @@ object PdfExportManager {
         project: Project,
         filterConfig: ExportFilterConfig,
         selection: ReportSelection,
-        outputStream: OutputStream
-    ) {
-        val pdfDoc = try { PdfDocument() } catch (_: Throwable) { null }
-        if (pdfDoc == null) {
-            outputStream.use { stream ->
-                stream.write("%PDF-1.4 Mock Composite PDF Output for ${project.name}\n".toByteArray(Charsets.UTF_8))
-                stream.flush()
-            }
-            return
-        }
+        outputStream: OutputStream,
+        i18n: Messages = Messages()) {
+        val pdfDoc = PdfDocument()
 
         try {
             val filteredDevices = project.businessUnits
                 .filter { filterConfig.selectedBusinessUnitId == null || it.id == filterConfig.selectedBusinessUnitId }
-                .flatMap { bu ->
-                    bu.sites.filter { filterConfig.selectedSiteId == null || it.id == filterConfig.selectedSiteId }
-                        .flatMap { site ->
-                            site.areas.filter { filterConfig.selectedAreaId == null || it.id == filterConfig.selectedAreaId }
-                                .flatMap { area -> bu.devices.filter { it.areaId == area.id } }
-                        } + bu.devices.filter { it.siteId == null && it.areaId == null }
-                }
+                .flatMap { bu -> bu.devices.filter { device ->
+                    val siteId = device.siteId ?: bu.sites.find { site -> site.areas.any { it.id == device.areaId } }?.id
+                    (filterConfig.selectedSiteId == null || siteId == filterConfig.selectedSiteId) &&
+                        (filterConfig.selectedAreaId == null || device.areaId == filterConfig.selectedAreaId)
+                } }
                 .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
                 .distinctBy { it.id }
 
@@ -284,11 +260,11 @@ object PdfExportManager {
                 textPaint.color = Color.WHITE
                 textPaint.textSize = 18f
                 textPaint.isFakeBoldText = true
-                canvas.drawText(filterConfig.titleOverride ?: "Report Documentale Infrastruttura", 45f, y + 28f, textPaint)
+                canvas.drawText(filterConfig.titleOverride ?: i18n.text("text.40ceb13eaea5"), 45f, y + 28f, textPaint)
 
                 textPaint.textSize = 11f
                 textPaint.isFakeBoldText = false
-                canvas.drawText("Progetto: ${project.name}", 45f, y + 48f, textPaint)
+                canvas.drawText(i18n.text("text.c9cbbfd9ed3d", project.name), 45f, y + 48f, textPaint)
 
                 y += 80f
 
@@ -297,11 +273,11 @@ object PdfExportManager {
 
                 textPaint.color = Color.BLACK
                 textPaint.textSize = 10f
-                canvas.drawText("Compilatore: ${filterConfig.authorName}", 35f, y, textPaint)
-                canvas.drawText("Data Generazione: $dateStr", 300f, y, textPaint)
+                canvas.drawText(i18n.text("text.0ea77b6420df", filterConfig.authorName), 35f, y, textPaint)
+                canvas.drawText(i18n.text("text.ddaa8218e575", dateStr), 300f, y, textPaint)
                 y += 18f
-                canvas.drawText("Filtro BU/Sede/Area: ${filterConfig.selectedBusinessUnitId ?: "Tutte"}", 35f, y, textPaint)
-                canvas.drawText("Contenuti Riservati: ${if (filterConfig.includeConfidential) "Inclusi" else "Esclusi"}", 300f, y, textPaint)
+                canvas.drawText(i18n.text("text.54c2933191f6", filterConfig.selectedBusinessUnitId ?: i18n.text("text.8497975606d6")), 35f, y, textPaint)
+                canvas.drawText(i18n.text("text.44f131081b2d", if (filterConfig.includeConfidential) i18n.text("text.b3186dc0586e") else i18n.text("text.0c2690153ac8")), 300f, y, textPaint)
 
                 y += 35f
 
@@ -318,7 +294,7 @@ object PdfExportManager {
                 textPaint.color = Color.rgb(24, 76, 120)
                 textPaint.textSize = 12f
                 textPaint.isFakeBoldText = true
-                canvas.drawText("Indicatori Chiave dell'Infrastruttura (KPI)", 45f, y + 20f, textPaint)
+                canvas.drawText(i18n.text("text.8679e4cb849b"), 45f, y + 20f, textPaint)
 
                 textPaint.color = Color.BLACK
                 textPaint.textSize = 10f
@@ -326,28 +302,28 @@ object PdfExportManager {
 
                 val openIssues = filteredDevices.count { it.observation?.status == ObservationStatus.TO_VERIFY || it.observation?.status == ObservationStatus.CONFLICT }
 
-                canvas.drawText("• Apparati in Ambito: ${filteredDevices.size}", 45f, y + 45f, textPaint)
-                canvas.drawText("• Armadi Rack: ${project.racks.size}", 280f, y + 45f, textPaint)
-                canvas.drawText("• Cavi / Collegamenti: ${project.cables.size}", 45f, y + 65f, textPaint)
-                canvas.drawText("• VLAN Registrate: ${project.vlans.size}", 280f, y + 65f, textPaint)
-                canvas.drawText("• Avvisi / Elementi da Verificare: $openIssues", 45f, y + 85f, textPaint)
+                canvas.drawText(i18n.text("text.46f30e92b9c4", filteredDevices.size), 45f, y + 45f, textPaint)
+                canvas.drawText(i18n.text("text.f70e0fdb83c5", project.racks.size), 280f, y + 45f, textPaint)
+                canvas.drawText(i18n.text("text.2a47e0afd9c5", project.cables.size), 45f, y + 65f, textPaint)
+                canvas.drawText(i18n.text("text.a197c01d82e1", project.vlans.size), 280f, y + 65f, textPaint)
+                canvas.drawText(i18n.text("text.62bbfb1e07f1", openIssues), 45f, y + 85f, textPaint)
 
                 y += 130f
 
                 // Table of Contents
                 textPaint.textSize = 12f
                 textPaint.isFakeBoldText = true
-                canvas.drawText("Sezioni del Documento", 35f, y, textPaint)
+                canvas.drawText(i18n.text("text.d764b2e1bfed"), 35f, y, textPaint)
                 y += 20f
 
                 textPaint.textSize = 10f
                 textPaint.isFakeBoldText = false
-                if (selection.includeInventoryTable) { canvas.drawText("[X] Sezione 1: Tabella Inventario Apparati", 45f, y, textPaint); y += 18f }
-                if (selection.includeRackCards) { canvas.drawText("[X] Sezione 2: Schede e Prospetti Armadi Rack", 45f, y, textPaint); y += 18f }
-                if (selection.includeCablingAndPorts) { canvas.drawText("[X] Sezione 3: Cablaggio e Collegamenti Fisici", 45f, y, textPaint); y += 18f }
-                if (selection.includeLogicalNetwork) { canvas.drawText("[X] Sezione 4: Rete Logica, Subnet e VLAN", 45f, y, textPaint); y += 18f }
-                if (selection.includePowerAndBadges) { canvas.drawText("[X] Sezione 5: Alimentazione e Badge Documentali", 45f, y, textPaint); y += 18f }
-                if (selection.includeNotesAndAttachments) { canvas.drawText("[X] Sezione 6: Note, Osservazioni e Allegati", 45f, y, textPaint); y += 18f }
+                if (selection.includeInventoryTable) { canvas.drawText(i18n.text("text.de5ddf03b157"), 45f, y, textPaint); y += 18f }
+                if (selection.includeRackCards) { canvas.drawText(i18n.text("text.b10589659b2f"), 45f, y, textPaint); y += 18f }
+                if (selection.includeCablingAndPorts) { canvas.drawText(i18n.text("text.d6ca39b21683"), 45f, y, textPaint); y += 18f }
+                if (selection.includeLogicalNetwork) { canvas.drawText(i18n.text("text.454ad4a7351a"), 45f, y, textPaint); y += 18f }
+                if (selection.includePowerAndBadges) { canvas.drawText(i18n.text("text.d96349382a35"), 45f, y, textPaint); y += 18f }
+                if (selection.includeNotesAndAttachments) { canvas.drawText(i18n.text("text.ab6767f4e650"), 45f, y, textPaint); y += 18f }
 
                 pdfDoc.finishPage(page1)
             }
@@ -365,7 +341,7 @@ object PdfExportManager {
                     var y = 40f
                     textPaint.textSize = 14f
                     textPaint.isFakeBoldText = true
-                    canvas.drawText("Sezione 1: Inventario Apparati", 35f, y, textPaint)
+                    canvas.drawText(i18n.text("text.334e5b0cffff"), 35f, y, textPaint)
                     y += 25f
 
                     // Table Header
@@ -375,24 +351,24 @@ object PdfExportManager {
 
                     textPaint.textSize = 8f
                     textPaint.isFakeBoldText = true
-                    canvas.drawText("Nome Tecnico", 40f, y + 13f, textPaint)
-                    canvas.drawText("IP Address", 160f, y + 13f, textPaint)
-                    canvas.drawText("Categoria", 260f, y + 13f, textPaint)
-                    canvas.drawText("Rack / Pos.", 370f, y + 13f, textPaint)
-                    canvas.drawText("Stato", 480f, y + 13f, textPaint)
+                    canvas.drawText(i18n.text("text.29caae5fe1e7"), 40f, y + 13f, textPaint)
+                    canvas.drawText(i18n.text("text.3c3de0c91c5f"), 160f, y + 13f, textPaint)
+                    canvas.drawText(i18n.text("text.54276aa0307f"), 260f, y + 13f, textPaint)
+                    canvas.drawText(i18n.text("text.6f4d3bf19ead"), 370f, y + 13f, textPaint)
+                    canvas.drawText(i18n.text("text.5d788017bfe4"), 480f, y + 13f, textPaint)
 
                     y += 22f
                     textPaint.isFakeBoldText = false
 
                     for (dev in filteredDevices) {
-                        val rackName = project.racks.find { it.id == dev.rackId }?.name ?: "Fuori Rack"
-                        val rackPos = if (dev.rackId != null) "$rackName U${dev.positionU ?: "-"}" else "Fuori Rack"
+                        val rackName = project.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
+                        val rackPos = if (dev.rackId != null) i18n.text("text.5e7c17bc3374", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
 
                         canvas.drawText(dev.technicalName.take(20), 40f, y + 12f, textPaint)
                         canvas.drawText(dev.ipAddress ?: "-", 160f, y + 12f, textPaint)
-                        canvas.drawText(dev.category.name, 260f, y + 12f, textPaint)
+                        canvas.drawText(dev.category.toDisplayString(i18n), 260f, y + 12f, textPaint)
                         canvas.drawText(rackPos, 370f, y + 12f, textPaint)
-                        canvas.drawText(dev.observation?.status?.name ?: "VERIFIED", 480f, y + 12f, textPaint)
+                        canvas.drawText((dev.observation?.status ?: com.onlyfield.assetmanager.core.model.ObservationStatus.VERIFIED).toDisplayString(i18n), 480f, y + 12f, textPaint)
 
                         paint.color = Color.LTGRAY
                         paint.strokeWidth = 0.5f
@@ -406,7 +382,7 @@ object PdfExportManager {
                         y += 15f
                         textPaint.textSize = 11f
                         textPaint.isFakeBoldText = true
-                        canvas.drawText("Sezione 6: Allegati & Attribuzioni Cartografiche", 35f, y, textPaint)
+                        canvas.drawText(i18n.text("text.b0b59b565f62"), 35f, y, textPaint)
                         y += 18f
 
                         textPaint.textSize = 8f
@@ -426,13 +402,8 @@ object PdfExportManager {
             outputStream.use { stream ->
                 pdfDoc.writeTo(stream)
             }
-        } catch (e: Throwable) {
-            outputStream.use { stream ->
-                stream.write("%PDF-1.4 Error Fallback Composite PDF Output for ${project.name}\n".toByteArray(Charsets.UTF_8))
-                stream.flush()
-            }
         } finally {
-            try { pdfDoc.close() } catch (_: Throwable) {}
+            pdfDoc.close()
         }
     }
 }

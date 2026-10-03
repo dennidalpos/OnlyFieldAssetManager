@@ -65,13 +65,13 @@ Data aggiornamento: 3 ottobre 2026
 Il tracker `PROJECT_STATUS.json` contiene soltanto attività e residui aperti. Evidenze di completamento nelle sezioni precedenti e nel registro manutenzione.
 - **RES-01 (Integrazione CI/CD Automation)**: Aggiunta opzionale di workflow GitHub Actions per la pubblicazione automatica di `app-debug.apk` e dell'eseguibile Windows Desktop ad ogni tag release.
 - **RES-02 (Localizzazione Multi-lingua)**: Espansione del dizionario stringhe da Italiano a Inglese/Spagnolo per mercati internazionali.
-- **RES-11 (Toolchain)**: deprecazioni preesistenti: proprietà Gradle `by tasks.registering` (`pc/app/build.gradle.kts:68`, rimozione prevista in Gradle 10) e `createComposeRule` v1 nei test UI. Build verde; aggiornamento futuro.
+- **RES-11 chiuso**: deprecazioni eliminate; evidenze nella manutenzione successiva.
 
 ## Note per la prossima sessione
 
 - Stato storico del 03/10/2026: RES-08, MAP01 e MAP02 completati; evidenze successive sono registrate sotto. Nessun commit o push è eseguito da questa attività.
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Residui correnti: RES-13 per collaudo manuale hardware, RES-14 per cestino cifrato Windows; RES-01/02/11 sono miglioramenti futuri.
+- Residui nello stato storico sopra: RES-13 (collaudo hardware rinviato), RES-01 (CI su tag) e RES-02 (localizzazione allora in corso). Per lo stato corrente consultare `PROJECT_STATUS.json` e le evidenze successive.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
 
 ## Manutenzione dopo v1.1
@@ -115,3 +115,73 @@ Contratto `.ofam` 1.10, lettura 1.7–1.9; Room 13 con migrazione 12 → 13 e ba
 ## RES-12 — Consolidamento documentazione e tracker (3 ottobre 2026)
 
 Contenuti validi del piano A00–W05 trasferiti in `plan.md` e documenti di dominio; aggiornati contratto 1.10, storage, UX, QA e release. Ritirato il piano storico e corretti i riferimenti. Il tracker contiene soltanto lavoro aperto: RES-13 per prove hardware manuali, RES-14 per cestino Windows cifrato, più miglioramenti futuri RES-01/02/11.
+
+## RES-15 — Blocco concorrente Windows (3 ottobre 2026)
+
+La UI acquisisce il lock prima di aprire, creare o sostituire la copia locale; la lettura locale avviene sotto blocco. Una seconda istanza non puo sovrascriverla. Apertura fallita e password errata preservano il progetto precedente e rilasciano i nuovi blocchi. I file .lock restano come marcatori: solo il lock del sistema operativo determina l'occupazione. Verifica: `:pc:app:test --tests "*WorkingCopyLockTest" --tests "*DesktopStorageTest" --tests "*DesktopAppStateTest"`, BUILD SUCCESSFUL, 14 test.
+
+## RES-16 — Password e base di fusione (3 ottobre 2026)
+
+Cambio password: pacchetti preparati prima delle sostituzioni, base originale ricifrata senza aggiornarne i contenuti, rollback della base su errore del salvataggio principale e pulizia dei temporanei. La UI cambia password soltanto dopo il successo. Una base danneggiata blocca il cambio; una base indisponibile al merge mostra un avviso e richiede revisione completa. Verifica: `:pc:app:test --tests "*PasswordRotationTest" --tests "*WorkingCopyLockTest" --tests "*DesktopAppStateTest"`, BUILD SUCCESSFUL, 8 test.
+
+## RES-14 — Cestino Windows cifrato (3 ottobre 2026)
+
+Cestino incluso nella voce interna `attachments/local/trash.json` della copia locale .ofam: cifrato insieme al progetto e salvato con una singola sostituzione atomica. Vecchi JSON migrati e rimossi dopo il salvataggio. Ripristino e undo conservano gerarchia e montaggio; corruzione segnalata senza sovrascrivere. Export e basi di fusione escludono il cestino. Verifica: `:pc:app:test`, BUILD SUCCESSFUL, 67 test Windows.
+
+## RES-11 — Deprecazioni eliminate (3 ottobre 2026)
+
+Registrazione esplicita di assemblePortable, MasterDetailTest migrato alla API Compose v2 e dipendenze desktop dichiarate direttamente: Material3 1.9.0 e ui-test-junit4 1.12.1, senza aggiornare versioni risolte. Riferimenti architetturali aggiornati a Compose 1.12.1. Verifica: `:pc:app:test :pc:app:packagePortable --warning-mode all`, BUILD SUCCESSFUL, 67 test; nessuna deprecazione rilevata. Le normali segnalazioni Kotlin nel core/export sono trattate nella localizzazione dei relativi file.
+
+## RES-02 — Localizzazione (3 ottobre 2026)
+
+Sistema/Italiano/English/Español persistenti su entrambe le app; 1490 chiavi per catalogo, UTF-8 e MessageFormat nel core. Tradotti UI, validazioni, etichette di dominio, PDF/XLSX/Markdown, QR e stampa; lingua catturata all'avvio dell'export, testi utente e codici conservati, segreti esclusi. Protezione delle bozze al cambio lingua Windows; selettore Android fuori dagli editor. Corrette omissioni dei piani diretti nei report e rimossi PDF fittizi di ripiego.
+
+Verifica: `:shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest :pc:app:packagePortable --warning-mode all`, BUILD SUCCESSFUL; 178 test (48 core, 34 exchange, 70 Windows, 26 Android JVM), zero fallimenti. Emulatore temporaneo API 35: suite completa via AndroidJUnitRunner, OK (7 tests), con estrazione del testo dei PDF nelle tre lingue e controllo dei segreti. API 37.1: PDF e migrazioni passano, due test UI si arrestano prima delle asserzioni per `InputManager.getInstance` in Espresso; residuo RES-17. Nessuna prova hardware manuale. [Dettagli](docs/09-localization.md).
+
+## RES-01 — CI implementata, criterio remoto aperto (3 ottobre 2026)
+
+Workflow Windows su tag v* e avvio manuale, JDK 21/SDK 37.0, override del percorso JDK personale, suite prima di APK debug/ZIP portable/checksum. Azioni ufficiali fissate a SHA; permessi distinti, exit code espliciti, data/ rifiutata nello ZIP. Avvio manuale solo artefatti; pubblicazione su tag dopo verifica dei checksum.
+
+Verifiche locali: actionlint 1.7.12 e PSScriptAnalyzer senza segnalazioni; script con APK/ZIP reali e SHA-256 validi; tre rifiuti attesi per APK/ZIP mancanti e ZIP contenente dati. Wrapper con override JDK: BUILD SUCCESSFUL. Non osservata alcuna esecuzione GitHub Actions su tag: RES-01 mantenuto PARTIAL. [Procedura e fonti](docs/06-release-and-delivery.md).
+
+## RES-13 — Checklist hardware pronta, collaudo rinviato (3 ottobre 2026)
+
+Preparata [checklist hardware](docs/testing/hardware-checklist.md) con dispositivo, sistema, versione app, scenario, esito ed evidenza per foto, QR/barcode, pinch/panoramica e lettore USB. Tutte le righe sono NON ESEGUITO; nessuna connessione di telefono costituisce collaudo. RES-13 resta aperto.
+
+## RES-17 — Espresso su API 37 (3 ottobre 2026)
+
+La suite completa su emulatore API 37.1 esegue 7 casi: 5 passano (PDF e migrazioni), FloorGestureNativeTest e LocalizedUiTest si fermano in Espresso prima delle asserzioni con `NoSuchMethodException: android.hardware.input.InputManager.getInstance []`. Le stesse 7 prove passano su API 35. Registrata incompatibilità del runner, senza aggiornare toolchain o disabilitare test; criterio aperto: suite completa verde su API 37. [Implementazione AndroidX Test](https://github.com/android/android-test/blob/main/espresso/core/java/androidx/test/espresso/base/InputManagerEventInjectionStrategy.java).
+
+## Verifica finale della manutenzione (3 ottobre 2026)
+
+Revisione finale: un'apertura fallita preserva anche un lock già posseduto prima del tentativo; una base di fusione mancante mostra esplicitamente la necessità del riesame. Le prove Windows impediscono realmente la sostituzione del file con NOSHARE_DELETE: cambio password annullato, base ripristinata, cestino e progetto conservati, temporanei rimossi. Localizzate anche le classificazioni degli allegati nel Markdown; rimossi import inutilizzati nei file modificati. Cataloghi finali: 1491 chiavi per lingua.
+
+Ultima verifica: `:shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest :pc:app:packagePortable --warning-mode all`, BUILD SUCCESSFUL, 181 test (48 core, 34 exchange, 73 Windows, 26 Android JVM), nessun fallimento o test saltato; nessuna deprecazione rilevata. I 7 test nativi API 35 sono stati eseguiti prima delle ultime correzioni limitate a Windows e Markdown e della pulizia degli import. API 37 mantiene il limite Espresso RES-17.
+
+## RES-18 — Pulizia scratch bloccata (3 ottobre 2026)
+
+Controllo automatico: due rifiuti `blocked by policy` sui comandi PowerShell di rimozione dei temporanei, prima sui percorsi esplicitamente elencati e verificati sotto build/, poi sul solo percorso build/qa-system35. Nessun file cancellato da questi tentativi; operazione fermata dopo il secondo rifiuto, motivo ulteriore non fornito. Emulatori API 35 e 37.1 già arrestati.
+
+Da pulire: build/actionlint, ci-fixtures, l10n-tools, qa-avd, qa-system35, translation-models, translation-tools e script/cataloghi intermedi/log di questa sessione nel solo build/. Sono ignorati da Git. Conservare build/release (APK/ZIP/SHA256SUMS verificati), reports, tmp e wix311 e gli output dei moduli. Il tracker mantiene RES-18 aperto per questa pulizia.
+
+## Passaggio di sessione (3 ottobre 2026)
+
+L'utente ha autorizzato il salvataggio con commit e push su `main`. RES-15/16/14/11/02 sono conclusi con le evidenze sopra; restano RES-01, RES-13, RES-17, RES-18 e il blocco operativo RES-19. La prossima sessione deve prima completare il salvataggio Git già autorizzato, poi può riprendere da Espresso/API 37 e dai residui di pulizia; il collaudo hardware resta rinviato e l'esecuzione CI su tag richiede una distinta autorizzazione.
+
+Riletti i report dell'ultima verifica: 181 test JVM/Compose, zero fallimenti, errori o casi saltati; nessuna modifica al codice dopo la build finale. Conservati APK, ZIP e checksum in `build/release`, esclusi dal commit insieme agli scratch ignorati. Il push su `main` non avvia il workflow di release, configurato soltanto per tag `v*` e avvio manuale.
+
+## RES-19 — Salvataggio Git bloccato (3 ottobre 2026)
+
+Locale e remoto verificati su `main` allo stesso commit `a5e9f69ca2cb55824f4fe75872751e1f00fad8d2`. Due tentativi di staging falliti con `fatal: Unable to create 'D:/GITHUB/OnlyFieldAssetManager/.git/index.lock': File exists.` Il lock rilevato è vuoto; nessun processo `git` o `git-lfs` rilevato al controllo, quindi potrebbe essere residuo. Operazione fermata secondo la regola dei due fallimenti consecutivi; il lock non è stato rimosso. Modifiche e documentazione salvate nei file, nessun commit o push eseguito. Riprendere la richiesta già autorizzata dopo risoluzione del blocco; non creare tag né pubblicare release.
+
+## CFG01 — Configuratore grafico completato (3 ottobre 2026)
+
+Configuratore Compose comune da mappa, inventario e rack: schemi parametrici, gruppi di porte, pannelli fronte/retro, scheda porta dedicata con ritorno all’oggetto, selettori dalle porte reali e disponibili, modelli di rack/apparati/cavi e sessioni annidate. `ConnectionGraph` sostituisce il tracciatore Android: disponibilità, combo, continuità censita, cicli e conflitti, anche fra riferimenti legacy e cavi discordanti. Passaggi personalizzati assegnati solo ad attacchi liberi; destinazioni e passaggi sconosciuti salvabili.
+
+Room 14 e `.ofam` 1.11, lettura 1.7–1.10, export hardware/porte, ID conservati e rimozioni collegate esplicite. Le sessioni conservano anche tipologie, contenimento, posizioni, percorsi e modifiche ai riferimenti VLAN/PoE/LAG. Corrette la segnalazione delle modifiche ai contenitori UI e la prova di scorrimento annidato: conferma di scarto delle bozze preservata su entrambe le app. Gli editor sostituiti sono stati rimossi; modifiche preesistenti nel checkout conservate.
+
+Verifica finale: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest :pc:app:packagePortable --console=plain --warning-mode all`, BUILD SUCCESSFUL. **206 test**: 64 core, 37 exchange, 77 Windows, 28 Android JVM; zero fallimenti/errori/test saltati e nessuna deprecazione rilevata. APK debug, APK delle prove native e ZIP/EXE portable prodotti. Ulteriore verifica Android dopo l’allineamento dei default JSON fra schema Room e migrazione: suite e compilazione ripetute, BUILD SUCCESSFUL. Le fixture di migrazione 11/12 usano lo schema 13 salvato, indipendente dallo schema corrente. Ultima verifica dei moduli UI dopo la pulizia degli editor sostituiti: BUILD SUCCESSFUL; conteggi invariati. Link locali, tracker JSON, chiavi delle tre lingue e `git diff --check`: OK.
+
+Scenari coperti: 24 rame + 4 SFP, clic/destinazione/ritorno/salvataggio, catena due pannelli+cavallotto, disponibilità/ignoti/cicli/combo/conflitti, modelli senza dati privati, aggiornamento esplicito e personalizzazioni, migrazione 13→14, round-trip normale/cifrato, fusione ed export. `ConfiguratorUndoTest` salva e riapre una configurazione composta rack+due switch+cavo e la annulla con un unico comando.
+
+Nessuna prova manuale su hardware reale né esecuzione del runner Android in questa sessione: RES-13 e RES-17 restano aperti. Nessun commit/push eseguito; residui preesistenti conservati. [Descrizione e fonti](docs/10-object-configurator.md).

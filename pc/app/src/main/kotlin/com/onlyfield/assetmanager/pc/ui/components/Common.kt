@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui.components
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -21,7 +23,7 @@ import androidx.compose.ui.unit.dp
 data class ConfirmRequest(
     val title: String,
     val message: String,
-    val confirmLabel: String = "Elimina",
+    val confirmLabel: String? = null,
     val destructive: Boolean = true,
     val onConfirm: () -> Unit,
 )
@@ -31,6 +33,8 @@ val LocalConfirm = staticCompositionLocalOf<(ConfirmRequest) -> Unit> { { it.onC
 
 @Composable
 fun ConfirmHost(content: @Composable () -> Unit) {
+    val i18n = LocalMessages.current
+
     var pending by remember { mutableStateOf<ConfirmRequest?>(null) }
     CompositionLocalProvider(LocalConfirm provides { pending = it }) {
         content()
@@ -47,9 +51,9 @@ fun ConfirmHost(content: @Composable () -> Unit) {
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError
                     ) else ButtonDefaults.buttonColors()
-                ) { Text(req.confirmLabel) }
+                ) { Text(req.confirmLabel ?: i18n.text("text.7efe336bd548")) }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Annulla") } }
+            dismissButton = { TextButton(onClick = { pending = null }) { Text(i18n.text("text.18c9d912a210")) } }
         )
     }
 }
@@ -63,10 +67,12 @@ fun FormDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
-    confirmLabel: String = "Salva",
+    confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     width: androidx.compose.ui.unit.Dp = 560.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val i18n = LocalMessages.current
+
     AlertDialog(
         onDismissRequest = onDismiss,
         modifier = Modifier.width(width),
@@ -79,7 +85,7 @@ fun FormDialog(
             )
         },
         confirmButton = { Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Annulla") } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("text.18c9d912a210")) } }
     )
 }
 
@@ -130,7 +136,7 @@ fun SectionHeader(
     subtitle: String? = null,
     searchQuery: String? = null,
     onSearchChange: ((String) -> Unit)? = null,
-    searchPlaceholder: String = "Cerca…",
+    searchPlaceholder: String = LocalMessages.current.text("text.30109da716dd"),
     /** Enter in the search box; USB barcode readers type the code and press Enter. */
     onSearchSubmit: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
@@ -209,20 +215,24 @@ fun Tag(text: String, container: androidx.compose.ui.graphics.Color = MaterialTh
 
 @Composable
 fun EditButton(onClick: () -> Unit) {
+    val i18n = LocalMessages.current
+
     val changeDetail = LocalDetailChange.current
-    TextButton(onClick = { changeDetail(onClick) }) { Text("Modifica") }
+    TextButton(onClick = { changeDetail(onClick) }) { Text(i18n.text("text.49e493ba9d9c")) }
 }
 
 /** Delete action that always asks for confirmation first. */
 @Composable
-fun DeleteButton(itemName: String, onDelete: () -> Unit, label: String = "Elimina", message: String? = null) {
+fun DeleteButton(itemName: String, onDelete: () -> Unit, label: String = LocalMessages.current.text("text.7efe336bd548"), message: String? = null) {
+    val i18n = LocalMessages.current
+
     val confirm = LocalConfirm.current
     TextButton(
         onClick = {
             confirm(
                 ConfirmRequest(
-                    title = "$label «$itemName»?",
-                    message = message ?: "L'elemento verrà eliminato definitivamente dal progetto.",
+                    title = i18n.text("text.ab0928009332", label, itemName),
+                    message = message ?: i18n.text("text.b5f4e725fbe1"),
                     confirmLabel = label,
                     onConfirm = onDelete
                 )

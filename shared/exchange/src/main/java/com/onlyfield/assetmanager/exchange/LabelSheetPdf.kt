@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.exchange
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
@@ -31,17 +33,17 @@ object LabelSheetPdf {
     private val winAnsi: Charset = Charset.forName("windows-1252")
 
     /** Labels for every device, rack and labelled cable of the project. */
-    fun labelsFor(project: Project): List<QrLabel> {
+    fun labelsFor(project: Project, i18n: Messages = Messages()): List<QrLabel> {
         val index = ProjectIndex(project)
         val devices = index.devices.map { d ->
             QrLabel(LabelCode(project.id, LabelCode.Type.DEVICE, d.id), d.technicalName,
-                listOfNotNull(d.physicalLabel, d.areaId?.let { index.areaName(it) }).joinToString(" · ").ifBlank { "Apparato" })
+                listOfNotNull(d.physicalLabel, d.areaId?.let { index.areaName(it) }).joinToString(" · ").ifBlank { i18n.text("text.cf301d95d32c") })
         }
         val racks = project.racks.map { r ->
-            QrLabel(LabelCode(project.id, LabelCode.Type.RACK, r.id), r.name, "Rack · ${index.areaName(r.areaId, "nessuna area")}")
+            QrLabel(LabelCode(project.id, LabelCode.Type.RACK, r.id), r.name, i18n.text("labels.rack", index.areaName(r.areaId, i18n.text("text.1abc7243c3dd"))))
         }
         val cables = project.cables.filter { !it.codeOrLabel.isNullOrBlank() }.map { c ->
-            QrLabel(LabelCode(project.id, LabelCode.Type.CABLE, c.id), c.codeOrLabel!!, "Cavo · ${index.portLabel(c.portAId)} - ${index.portLabel(c.portBId)}")
+            QrLabel(LabelCode(project.id, LabelCode.Type.CABLE, c.id), c.codeOrLabel!!, i18n.text("labels.cable", index.portLabel(c.portAId), index.portLabel(c.portBId)))
         }
         return devices + racks + cables
     }

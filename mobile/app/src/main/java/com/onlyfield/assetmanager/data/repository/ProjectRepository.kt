@@ -1,37 +1,19 @@
 package com.onlyfield.assetmanager.data.repository
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.data.repository.mappers.*
-import androidx.room.withTransaction
 import com.onlyfield.assetmanager.core.model.Device
-import com.onlyfield.assetmanager.core.model.DeviceModel
 import com.onlyfield.assetmanager.core.model.Project
-import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.data.local.AppDatabase
-import com.onlyfield.assetmanager.data.local.AreaEntity
-import com.onlyfield.assetmanager.data.local.BusinessUnitEntity
-import com.onlyfield.assetmanager.data.local.CredentialEntity
-import com.onlyfield.assetmanager.exchange.AttachmentFiles
-import com.onlyfield.assetmanager.data.local.DeviceEntity
-import com.onlyfield.assetmanager.data.local.DeviceModelEntity
-import com.onlyfield.assetmanager.data.local.PortEntity
 import android.content.Context
-import android.print.PrintManager
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.data.local.ProjectEntity
-import com.onlyfield.assetmanager.data.local.RackEntity
-import com.onlyfield.assetmanager.data.local.SiteEntity
-import com.onlyfield.assetmanager.exchange.DeviceModelSerializer
-import com.onlyfield.assetmanager.exchange.MarkdownExportManager
 import com.onlyfield.assetmanager.exchange.PackageImportResult
-import com.onlyfield.assetmanager.exchange.PackageSerializer
 import com.onlyfield.assetmanager.exchange.PasswordHasher
 import com.onlyfield.assetmanager.exchange.ProjectComparison
-import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
 import com.onlyfield.assetmanager.exchange.ProjectPackage
-import com.onlyfield.assetmanager.exchange.XlsxExportManager
-import com.onlyfield.assetmanager.export.PdfExportManager
-import com.onlyfield.assetmanager.export.ProjectPrintDocumentAdapter
 import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 import java.io.OutputStream
@@ -53,7 +35,7 @@ data class PackageImportEvaluation(
 
 /**
  * Entry point of the Android data layer. Each area lives in its own class
- * (ProjectStore, DocumentExports, PackageExchange, InventorySearch, TrashOperations, CableTracer).
+ * (ProjectStore, DocumentExports, PackageExchange, InventorySearch, TrashOperations).
  */
 class ProjectRepository(
     private val db: AppDatabase,
@@ -138,30 +120,30 @@ class ProjectRepository(
 
     // --- Documents ---
 
-    suspend fun exportRackPdfToStream(projectId: String, rackId: String, outputStream: OutputStream) =
-        documents.exportRackPdfToStream(projectId, rackId, outputStream)
+    suspend fun exportRackPdfToStream(projectId: String, rackId: String, outputStream: OutputStream, i18n: Messages = Messages()) =
+        documents.exportRackPdfToStream(projectId, rackId, outputStream, i18n = i18n)
 
-    suspend fun exportXlsxToStream(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream) =
-        documents.exportXlsxToStream(projectId, filterConfig, outputStream)
+    suspend fun exportXlsxToStream(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream, i18n: Messages = Messages()) =
+        documents.exportXlsxToStream(projectId, filterConfig, outputStream, i18n = i18n)
 
-    suspend fun exportMarkdownToStream(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream) =
-        documents.exportMarkdownToStream(projectId, filterConfig, outputStream)
+    suspend fun exportMarkdownToStream(projectId: String, filterConfig: ExportFilterConfig, outputStream: OutputStream, i18n: Messages = Messages()) =
+        documents.exportMarkdownToStream(projectId, filterConfig, outputStream, i18n = i18n)
 
-    suspend fun exportCompositePdfToStream(projectId: String, filterConfig: ExportFilterConfig, selection: ReportSelection, outputStream: OutputStream) =
-        documents.exportCompositePdfToStream(projectId, filterConfig, selection, outputStream)
+    suspend fun exportCompositePdfToStream(projectId: String, filterConfig: ExportFilterConfig, selection: ReportSelection, outputStream: OutputStream, i18n: Messages = Messages()) =
+        documents.exportCompositePdfToStream(projectId, filterConfig, selection, outputStream, i18n = i18n)
 
-    suspend fun printProjectDocument(context: Context, projectId: String, filterConfig: ExportFilterConfig, selection: ReportSelection) =
-        documents.printProjectDocument(context, projectId, filterConfig, selection)
+    suspend fun printProjectDocument(context: Context, projectId: String, filterConfig: ExportFilterConfig, selection: ReportSelection, i18n: Messages = Messages()) =
+        documents.printProjectDocument(context, projectId, filterConfig, selection, i18n = i18n)
 
     // --- Packages and attachments ---
 
-    suspend fun exportProjectPackage(projectId: String, password: String? = null) = exchange.exportProjectPackage(projectId, password)
+    suspend fun exportProjectPackage(projectId: String, password: String? = null, i18n: Messages = Messages()) = exchange.exportProjectPackage(projectId, password, i18n = i18n)
 
-    suspend fun exportProjectPackageToStream(projectId: String, outputStream: OutputStream, password: String? = null) =
-        exchange.exportProjectPackageToStream(projectId, outputStream, password)
+    suspend fun exportProjectPackageToStream(projectId: String, outputStream: OutputStream, password: String? = null, i18n: Messages = Messages()) =
+        exchange.exportProjectPackageToStream(projectId, outputStream, password, i18n = i18n)
 
-    suspend fun evaluateImportPackage(inputStream: InputStream, password: String? = null, currentProjectId: String? = null) =
-        exchange.evaluateImportPackage(inputStream, password, currentProjectId)
+    suspend fun evaluateImportPackage(inputStream: InputStream, password: String? = null, currentProjectId: String? = null, i18n: Messages = Messages()) =
+        exchange.evaluateImportPackage(inputStream, password, currentProjectId, i18n = i18n)
 
     suspend fun importProjectPackage(pkg: ProjectPackage) = exchange.importProjectPackage(pkg)
 
@@ -209,9 +191,9 @@ class ProjectRepository(
 
     // --- Search and cabling ---
 
-    suspend fun searchInventory(projectId: String, query: String) = search.searchInventory(projectId, query)
+    suspend fun searchInventory(projectId: String, query: String, i18n: Messages = Messages()) = search.searchInventory(projectId, query, i18n = i18n)
 
-    fun traceCableChain(project: Project, startPortId: String) = CableTracer.trace(project, startPortId)
+    fun traceCableChain(project: Project, startPortId: String, i18n: Messages = Messages()) = com.onlyfield.assetmanager.core.model.ConnectionGraph(project).trace(startPortId, i18n = i18n)
 
     // --- Trash and device operations ---
 
@@ -221,16 +203,16 @@ class ProjectRepository(
 
     suspend fun deleteTrashItemPermanently(trashId: String) = trash.deleteTrashItemPermanently(trashId)
 
-    suspend fun moveToTrash(projectId: String, itemType: String, itemId: String) = trash.moveToTrash(projectId, itemType, itemId)
+    suspend fun moveToTrash(projectId: String, itemType: String, itemId: String, i18n: Messages = Messages()) = trash.moveToTrash(projectId, itemType, itemId, i18n = i18n)
 
-    suspend fun restoreFromTrash(projectId: String, trashId: String) = trash.restoreFromTrash(projectId, trashId)
+    suspend fun restoreFromTrash(projectId: String, trashId: String, i18n: Messages = Messages()) = trash.restoreFromTrash(projectId, trashId, i18n = i18n)
 
-    suspend fun replaceDevice(projectId: String, oldDeviceId: String, newTechnicalName: String, newCategory: com.onlyfield.assetmanager.core.model.DeviceCategory) =
-        trash.replaceDevice(projectId, oldDeviceId, newTechnicalName, newCategory)
+    suspend fun replaceDevice(projectId: String, oldDeviceId: String, newTechnicalName: String, newCategory: com.onlyfield.assetmanager.core.model.DeviceCategory, i18n: Messages = Messages()) =
+        trash.replaceDevice(projectId, oldDeviceId, newTechnicalName, newCategory, i18n = i18n)
 
-    suspend fun mergeDevices(projectId: String, survivingDeviceId: String, duplicateDeviceId: String, choices: com.onlyfield.assetmanager.core.model.MergeDataChoices) =
-        trash.mergeDevices(projectId, survivingDeviceId, duplicateDeviceId, choices)
+    suspend fun mergeDevices(projectId: String, survivingDeviceId: String, duplicateDeviceId: String, choices: com.onlyfield.assetmanager.core.model.MergeDataChoices, i18n: Messages = Messages()) =
+        trash.mergeDevices(projectId, survivingDeviceId, duplicateDeviceId, choices, i18n = i18n)
 
-    suspend fun batchEditDevices(projectId: String, deviceIds: List<String>, changes: com.onlyfield.assetmanager.core.model.BatchDeviceChanges) =
-        trash.batchEditDevices(projectId, deviceIds, changes)
+    suspend fun batchEditDevices(projectId: String, deviceIds: List<String>, changes: com.onlyfield.assetmanager.core.model.BatchDeviceChanges, i18n: Messages = Messages()) =
+        trash.batchEditDevices(projectId, deviceIds, changes, i18n = i18n)
 }

@@ -42,6 +42,9 @@ data class Rack(
     val numberingDirection: NumberingDirection = NumberingDirection.BOTTOM_TO_TOP,
     val depthMm: Int? = null,
     val notes: String? = null,
+    val mountingDepthMm: Int? = null,
+    val deviceModelId: String? = null,
+    val mountingType: String? = null,
 )
 
 @Serializable
@@ -71,6 +74,12 @@ data class PortTemplate(
     val side: PortSide = PortSide.FRONT,
     val isCombo: Boolean = false,
     val mediaType: String? = null,
+    val connector: String? = null,
+    val speed: String? = null,
+    val role: String = "DATA",
+    val poeStandard: PoeStandard? = null,
+    val pairedSides: Boolean = false,
+    val comboGroup: String? = null,
 )
 
 @Serializable
@@ -83,6 +92,12 @@ data class DeviceModel(
     val defaultHeightU: Int = 1,
     val portTemplates: List<PortTemplate> = emptyList(),
     val notes: String? = null,
+    val kind: ObjectKind = ObjectKind.DEVICE,
+    val objectTypeId: String? = null,
+    val hardware: HardwareSpec = HardwareSpec(),
+    val rackDefaults: RackDefaults? = null,
+    val cableDefaults: CableDefaults? = null,
+    val extraFields: List<ModelField> = emptyList(),
 )
 
 @Serializable
@@ -109,6 +124,7 @@ data class Port(
     val connectedPortId: String? = null,
     val endpointStatus: EndpointStatus = EndpointStatus.DISCONNECTED,
     val observation: Observation? = null,
+    val hardware: PortHardware = PortHardware(),
 )
 
 @Serializable
@@ -133,6 +149,7 @@ data class Device(
     /** Manufacturer serial (contract 1.8); absent in 1.7 packages. */
     val serialNumber: String? = null,
     val objectTypeId: String? = null,
+    val hardware: HardwareSpec = HardwareSpec(),
 )
 
 @Serializable
@@ -314,6 +331,7 @@ data class Cable(
     val deviceAId: String? = null,
     val deviceBId: String? = null,
     val objectTypeId: String? = null,
+    val deviceModelId: String? = null,
 )
 
 @Serializable

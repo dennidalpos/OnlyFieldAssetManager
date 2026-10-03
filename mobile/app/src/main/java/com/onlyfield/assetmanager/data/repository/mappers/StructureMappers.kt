@@ -57,6 +57,9 @@ internal fun toRackEntity(projectId: String, rack: Rack): RackEntity {
         heightU = rack.heightU,
         numberingDirection = rack.numberingDirection.name,
         depthMm = rack.depthMm,
+        mountingDepthMm = rack.mountingDepthMm,
+        deviceModelId = rack.deviceModelId,
+        mountingType = rack.mountingType,
         notes = rack.notes,
     )
 }
@@ -69,6 +72,9 @@ internal fun toRack(entity: RackEntity): Rack {
         heightU = entity.heightU,
         numberingDirection = try { NumberingDirection.valueOf(entity.numberingDirection) } catch (_: Exception) { NumberingDirection.BOTTOM_TO_TOP },
         depthMm = entity.depthMm,
+        mountingDepthMm = entity.mountingDepthMm,
+        deviceModelId = entity.deviceModelId,
+        mountingType = entity.mountingType,
         notes = entity.notes,
     )
 }
@@ -84,15 +90,13 @@ internal fun toDeviceModelEntity(projectId: String, model: DeviceModel): DeviceM
         defaultHeightU = model.defaultHeightU,
         portTemplatesJson = mapperJson.encodeToString(model.portTemplates),
         notes = model.notes,
+        configurationJson = mapperJson.encodeToString(model),
     )
 }
 
 internal fun toDeviceModel(entity: DeviceModelEntity): DeviceModel {
-    val templates = try {
-        mapperJson.decodeFromString<List<PortTemplate>>(entity.portTemplatesJson)
-    } catch (_: Exception) {
-        emptyList()
-    }
+    if (entity.configurationJson != "{}") return mapperJson.decodeFromString<DeviceModel>(entity.configurationJson)
+    val templates = mapperJson.decodeFromString<List<PortTemplate>>(entity.portTemplatesJson)
     return DeviceModel(
         id = entity.id,
         name = entity.name,
@@ -184,6 +188,7 @@ internal fun toDeviceEntity(buId: String, device: Device): DeviceEntity {
         deviceModelId = device.deviceModelId,
         category = device.category.name,
         objectTypeId = device.objectTypeId,
+        hardwareJson = mapperJson.encodeToString(device.hardware),
         serialNumber = device.serialNumber
     )
 }
@@ -199,6 +204,7 @@ internal fun toPortEntity(port: Port): PortEntity {
         obsSource = port.observation?.source,
         obsTimestampEpochMs = port.observation?.timestampEpochMs,
         obsStatus = port.observation?.status?.name,
+        hardwareJson = mapperJson.encodeToString(port.hardware),
         obsNotes = port.observation?.notes
     )
 }
@@ -289,6 +295,7 @@ internal fun toProject(
                     name = portEnt.name,
                     label = portEnt.label,
                     connectedPortId = portEnt.connectedPortId,
+                    hardware = mapperJson.decodeFromString<com.onlyfield.assetmanager.core.model.PortHardware>(portEnt.hardwareJson),
                     endpointStatus = try { EndpointStatus.valueOf(portEnt.endpointStatus) } catch (_: Exception) { EndpointStatus.DISCONNECTED },
                     observation = obs
                 )
@@ -323,6 +330,7 @@ internal fun toProject(
                 category = try { DeviceCategory.valueOf(devEnt.category) } catch (_: Exception) { DeviceCategory.CUSTOM },
                 objectTypeId = devEnt.objectTypeId,
                 serialNumber = devEnt.serialNumber,
+                hardware = mapperJson.decodeFromString<com.onlyfield.assetmanager.core.model.HardwareSpec>(devEnt.hardwareJson),
             )
         }
 

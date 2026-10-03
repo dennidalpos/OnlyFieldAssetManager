@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.ui
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -21,16 +24,18 @@ import com.onlyfield.assetmanager.ui.theme.OnlyFieldTheme
 /** Root of the UI: routes the current [Screen], shows snackbars and the import flow. */
 @Composable
 fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
+    val i18n = LocalMessages.current
+
     val snackbar = remember { SnackbarHostState() }
     val project by vm.project.collectAsState()
     val importState by vm.importState.collectAsState()
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(i18n.locale) {
         vm.messages.collect { msg ->
             snackbar.currentSnackbarData?.dismiss()
             val result = snackbar.showSnackbar(
                 message = msg.text,
-                actionLabel = if (msg.undo != null) "Annulla" else null,
+                actionLabel = if (msg.undo != null) i18n.text("action.undo") else null,
                 withDismissAction = msg.isError,
                 duration = if (msg.isError) SnackbarDuration.Long else SnackbarDuration.Short
             )
@@ -77,6 +82,8 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
 
 @Composable
 private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     when (state) {
         null -> Unit
@@ -84,22 +91,22 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
             var password by remember(state) { mutableStateOf("") }
             AlertDialog(
                 onDismissRequest = vm::cancelImport,
-                title = { Text("Pacchetto protetto") },
+                title = { Text(i18n.text("text.9c4199f65693")) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Inserisci la password con cui è stato esportato il progetto.")
+                        Text(i18n.text("text.5d37a89596b4"))
                         OutlinedTextField(
-                            value = password, onValueChange = { password = it }, label = { Text("Password") },
+                            value = password, onValueChange = { password = it }, label = { Text(i18n.text("text.e7cf3ef4f17c")) },
                             visualTransformation = PasswordVisualTransformation(), singleLine = true,
                             isError = state.wrongPassword,
-                            supportingText = if (state.wrongPassword) { { Text("Password errata, riprova.") } } else null
+                            supportingText = if (state.wrongPassword) { { Text(i18n.text("text.972b256c2416")) } } else null
                         )
                     }
                 },
                 confirmButton = {
-                    TextButton(enabled = password.isNotEmpty(), onClick = { vm.startImport(context.contentResolver, state.uri, password) }) { Text("Apri") }
+                    TextButton(enabled = password.isNotEmpty(), onClick = { vm.startImport(context.contentResolver, state.uri, password) }) { Text(i18n.text("text.12abcf9ee7d6")) }
                 },
-                dismissButton = { TextButton(onClick = vm::cancelImport) { Text("Annulla") } }
+                dismissButton = { TextButton(onClick = vm::cancelImport) { Text(i18n.text("text.18c9d912a210")) } }
             )
         }
         is ImportState.Review -> {
@@ -108,57 +115,57 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
             val sameProjectExists = comparison?.currentProjectId != null
             AlertDialog(
                 onDismissRequest = vm::cancelImport,
-                title = { Text(if (sameProjectExists) "Sostituire la copia sul dispositivo?" else "Importare il progetto?") },
+                title = { Text(if (sameProjectExists) i18n.text("text.bce1e2ff7206") else i18n.text("text.6a8f2c033f77")) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(pkg.project.name, fontWeight = FontWeight.SemiBold)
-                        Text("${pkg.project.businessUnits.sumOf { it.devices.size }} apparati · ${pkg.project.racks.size} rack · ${pkg.project.cables.size} cavi")
+                        Text(i18n.text("text.6d23c6d3c065", pkg.project.businessUnits.sumOf { it.devices.size }, pkg.project.racks.size, pkg.project.cables.size))
                         comparison?.let { c ->
-                            Text(comparisonLabel(c.status.name))
+                            Text(comparisonLabel(c.status.name, i18n = i18n))
                             c.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         }
-                        if (sameProjectExists) Text("«Sostituisci» usa solo il pacchetto. «Unisci» tiene le modifiche di entrambe le copie e chiede cosa fare quando lo stesso elemento è cambiato in tutte e due.", style = MaterialTheme.typography.bodySmall)
+                        if (sameProjectExists) Text(i18n.text("text.260e5b89f7f2"), style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 confirmButton = {
                     Row {
-                        if (sameProjectExists && comparison?.status?.name != "IDENTICAL") TextButton(onClick = vm::startMerge) { Text("Unisci…") }
-                        TextButton(onClick = vm::confirmImport) { Text(if (sameProjectExists) "Sostituisci" else "Importa") }
+                        if (sameProjectExists && comparison.status.name != "IDENTICAL") TextButton(onClick = vm::startMerge) { Text(i18n.text("text.6f5114885bfc")) }
+                        TextButton(onClick = vm::confirmImport) { Text(if (sameProjectExists) i18n.text("text.3260dc474cbc") else i18n.text("text.4f01aabad5cf")) }
                     }
                 },
-                dismissButton = { TextButton(onClick = vm::cancelImport) { Text("Annulla") } }
+                dismissButton = { TextButton(onClick = vm::cancelImport) { Text(i18n.text("text.18c9d912a210")) } }
             )
         }
         is ImportState.Merging -> {
             val conflict = state.current ?: return
             AlertDialog(
                 onDismissRequest = {},
-                title = { Text("Conflitto ${state.choices.size + 1} di ${state.result.conflicts.size}") },
+                title = { Text(i18n.text("text.e81e208100f0", state.choices.size + 1, state.result.conflicts.size)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                         Text("${conflict.kindLabel}: ${conflict.name}", fontWeight = FontWeight.SemiBold)
-                        Text(conflict.description)
-                        conflict.differences().forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
-                        if (state.result.autoApplied > 0) Text("${state.result.autoApplied} modifiche senza conflitto verranno applicate da sole.", style = MaterialTheme.typography.bodySmall)
+                        Text(conflict.localizedDescription(i18n))
+                        conflict.differences(i18n = i18n).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                        if (state.result.autoApplied > 0) Text(i18n.text("text.cdaed04f8505", state.result.autoApplied), style = MaterialTheme.typography.bodySmall)
                     }
                 },
                 confirmButton = {
                     Row {
-                        TextButton(onClick = { vm.chooseMergeSide(MergeSide.LOCAL) }) { Text("Tieni mio") }
-                        TextButton(onClick = { vm.chooseMergeSide(MergeSide.INCOMING) }) { Text("Tieni importato") }
+                        TextButton(onClick = { vm.chooseMergeSide(MergeSide.LOCAL) }) { Text(i18n.text("text.1527bc9e78ef")) }
+                        TextButton(onClick = { vm.chooseMergeSide(MergeSide.INCOMING) }) { Text(i18n.text("text.b4c64eaa84c7")) }
                     }
                 },
-                dismissButton = { TextButton(onClick = vm::cancelImport) { Text("Annulla unione") } }
+                dismissButton = { TextButton(onClick = vm::cancelImport) { Text(i18n.text("text.5b99d7ce433a")) } }
             )
         }
     }
 }
 
-private fun comparisonLabel(status: String) = when (status) {
-    "IDENTICAL" -> "Identico alla copia presente"
-    "NEWER_REVISION" -> "Il pacchetto è più recente della copia presente"
-    "OLDER_REVISION" -> "Attenzione: il pacchetto è meno recente della copia presente"
-    "DIVERGENT" -> "Le due copie sono state modificate separatamente"
-    "DIFFERENT_PROJECT" -> "Nuovo progetto"
+private fun comparisonLabel(status: String, i18n: Messages = Messages()) = when (status) {
+    "IDENTICAL" -> i18n.text("text.be8e1a19f13b")
+    "NEWER_REVISION" -> i18n.text("text.027cffc88743")
+    "OLDER_REVISION" -> i18n.text("text.9f2c4053d145")
+    "DIVERGENT" -> i18n.text("text.ebf3f84d3433")
+    "DIFFERENT_PROJECT" -> i18n.text("text.6d8d966eabaf")
     else -> status
 }

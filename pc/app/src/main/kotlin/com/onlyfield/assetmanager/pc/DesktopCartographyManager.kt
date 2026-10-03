@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import java.awt.Color
 import java.awt.Font
 import java.awt.image.BufferedImage
@@ -31,10 +33,10 @@ object DesktopCartographyManager {
     const val NO_NETWORK_MESSAGE = "Mappa non scaricata: nessuna connessione o servizio cartografico non raggiungibile. Riprova quando sei connesso; gli allegati locali restano disponibili."
 
     /** OSM tile coordinates within the supported raster range. */
-    fun lonLatToTileCoord(lon: Double, lat: Double, zoom: Int): TileCoord {
-        require(lon.isFinite() && lon in -180.0..180.0) { "Longitudine non valida." }
-        require(lat.isFinite() && lat in -85.0..85.0) { "Latitudine non valida." }
-        require(zoom in 1..17) { "Zoom supportato: da 1 a 17." }
+    fun lonLatToTileCoord(lon: Double, lat: Double, zoom: Int, i18n: Messages = Messages()): TileCoord {
+        require(lon.isFinite() && lon in -180.0..180.0) { i18n.text("text.cfbcb1936a29") }
+        require(lat.isFinite() && lat in -85.0..85.0) { i18n.text("text.674222655d0c") }
+        require(zoom in 1..17) { i18n.text("text.207444f4a3a9") }
         val n = 2.0.pow(zoom)
         val x = ((lon + 180.0) / 360.0 * n).toInt().coerceIn(0, n.toInt() - 1)
         val latRad = Math.toRadians(lat)
@@ -50,7 +52,7 @@ object DesktopCartographyManager {
             .replace("{y}", tile.y.toString())
     }
 
-    fun fetchTileBytes(url: String, timeoutMs: Int = 5000): ByteArray {
+    fun fetchTileBytes(url: String, timeoutMs: Int = 5000, i18n: Messages = Messages()): ByteArray {
         val connection = (URI.create(url).toURL().openConnection() as HttpURLConnection).apply {
             connectTimeout = timeoutMs
             readTimeout = timeoutMs
@@ -59,30 +61,35 @@ object DesktopCartographyManager {
         try {
             val code = connection.responseCode
             if (code != HttpURLConnection.HTTP_OK) {
-                throw MapDownloadException("Mappa non scaricata: il servizio ha risposto con codice $code. Riprova più tardi o importa una mappa locale.")
+                throw MapDownloadException(i18n.text("text.8840f5cda2a7", code))
             }
             return connection.inputStream.use { input ->
                 val bytes = input.readNBytes(2 * 1024 * 1024 + 1)
-                if (bytes.size > 2 * 1024 * 1024) throw MapDownloadException("Tessera cartografica troppo grande.")
+                if (bytes.size > 2 * 1024 * 1024) throw MapDownloadException(i18n.text("text.63bc51f297f4"))
                 bytes
             }
         } catch (e: MapDownloadException) {
             throw e
         } catch (e: IOException) {
-            throw MapDownloadException(NO_NETWORK_MESSAGE, e)
+            throw MapDownloadException(i18n.text("map.network.desktop"), e)
         } finally {
             connection.disconnect()
         }
     }
 
     /** Nine tiles, downloaded only on request, with attribution in the PNG. */
+    fun acquireMapSnapshot(lon: Double, lat: Double, zoom: Int, fetchTile: ((String) -> ByteArray)? = null): DesktopMapSnapshot =
+        acquireMapSnapshot(lon, lat, zoom, Messages(), fetchTile)
+
     fun acquireMapSnapshot(
         lon: Double,
         lat: Double,
         zoom: Int,
-        fetchTile: (String) -> ByteArray = { fetchTileBytes(it) },
+        i18n: Messages,
+        fetchTile: ((String) -> ByteArray)? = null
     ): DesktopMapSnapshot {
-        val center = lonLatToTileCoord(lon, lat, zoom)
+        val fetch = fetchTile ?: { url: String -> fetchTileBytes(url, i18n = i18n) }
+        val center = lonLatToTileCoord(lon, lat, zoom, i18n = i18n)
         val source = DesktopMapSource.OPEN_TOPO_MAP
         val tileCount = 1 shl zoom
         val image = BufferedImage(768, 800, BufferedImage.TYPE_INT_RGB)
@@ -93,11 +100,11 @@ object DesktopCartographyManager {
                     Math.floorMod(center.x + column - 1, tileCount),
                     (center.y + row - 1).coerceIn(0, tileCount - 1), zoom
                 )
-                val bytes = fetchTile(getTileUrl(source, tile))
+                val bytes = fetch(getTileUrl(source, tile))
                 val bitmap = ImageIO.read(ByteArrayInputStream(bytes))
-                    ?: throw MapDownloadException("Il servizio ha restituito una tessera non valida.")
+                    ?: throw MapDownloadException(i18n.text("text.1b8c268d5010"))
                 if (bitmap.width != 256 || bitmap.height != 256) {
-                    throw MapDownloadException("Dimensioni della tessera cartografica non valide.")
+                    throw MapDownloadException(i18n.text("text.31677e1f659a"))
                 }
                 graphics.drawImage(bitmap, column * 256, row * 256, null)
             }
@@ -110,7 +117,7 @@ object DesktopCartographyManager {
             graphics.dispose()
         }
         val output = ByteArrayOutputStream()
-        check(ImageIO.write(image, "png", output)) { "Impossibile creare la mappa PNG." }
+        check(ImageIO.write(image, "png", output)) { i18n.text("text.67b5aa03bb6a") }
         return DesktopMapSnapshot(output.toByteArray(), source.attribution)
     }
 }

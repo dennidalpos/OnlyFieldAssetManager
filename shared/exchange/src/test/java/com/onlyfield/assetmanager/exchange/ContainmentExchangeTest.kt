@@ -17,7 +17,7 @@ class ContainmentExchangeTest {
         val p = ObjectHierarchy.normalize(initial)
         val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(p, password = "dummy-password"), "dummy-password")
         assertTrue(result.validationResult.isValid)
-        assertEquals("1.10", result.pkg!!.manifest.formatVersion)
+        assertEquals("1.11", result.pkg!!.manifest.formatVersion)
         assertEquals(p.objectContainments, result.pkg!!.project.objectContainments)
         assertEquals(4, result.pkg!!.project.businessUnits.single().devices.single().positionU)
         val legacy = PackageSerializer.importPackage(PackageSerializer.exportPackage(initial))

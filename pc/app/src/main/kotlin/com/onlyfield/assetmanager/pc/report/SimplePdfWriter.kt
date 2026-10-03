@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.report
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
@@ -55,7 +57,7 @@ object SimplePdfWriter {
         return out.toByteArray()
     }
 
-    fun write(lines: List<ReportLine>, title: String, out: OutputStream) {
+    fun write(lines: List<ReportLine>, title: String, out: OutputStream, i18n: Messages = Messages()) {
         // Lay out lines into pages of content streams.
         val pages = mutableListOf<ByteArrayOutputStream>()
         var page = ByteArrayOutputStream().also { pages += it }
@@ -83,7 +85,7 @@ object SimplePdfWriter {
         // Page numbers in the footer.
         pages.forEachIndexed { i, p ->
             p.write("BT /F1 8 Tf $MARGIN 30 Td (".toByteArray(Charsets.US_ASCII))
-            p.write(escape("$title — pagina ${i + 1} di ${pages.size}"))
+            p.write(escape(i18n.text("text.657bcc42ca8e", title, i + 1, pages.size)))
             p.write(") Tj ET\n".toByteArray(Charsets.US_ASCII))
         }
 

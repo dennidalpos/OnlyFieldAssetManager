@@ -7,7 +7,7 @@ Data aggiornamento: 3 ottobre 2026
 Editor offline per tecnici di networking e telecomunicazioni.
 
 - **`shared/core/`**: Modello di dominio, regole di validazione, senza dipendenze Android UI.
-- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.10 (legge 1.7–1.9), fusione all'import, etichette QR, cifratura AES-GCM, OpenXML XLSX, Markdown.
+- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.11 (legge 1.7–1.10), fusione all'import, etichette QR, cifratura AES-GCM, OpenXML XLSX, Markdown.
 - **`mobile/app/`**: App Android 14+ Jetpack Compose, Room DB, fotocamera, mappe offline, stampa.
 - **`pc/app/`**: Editor Windows 11 x64 Compose Desktop, storage esplicito, salvataggio atomico e blocco `.lock`.
 
@@ -30,7 +30,7 @@ Editor offline per tecnici di networking e telecomunicazioni.
 - **A13 [COMPLETATO]**: Pilota Android (100 apparati), benchmarking e consegna contratto v1.7.
 
 ### Fase Windows (W00–W05) — COMPLETATA (6/6)
-- **W00 [COMPLETATO]**: Configurazione `:pc:app`, Compose Desktop 1.7.3, JDK 21 e integrazione shared core/exchange.
+- **W00 [COMPLETATO]**: Configurazione `:pc:app`, Compose Desktop 1.12.1, JDK 21 e integrazione shared core/exchange.
 - **W01 [COMPLETATO]**: Storage Desktop, salvataggio atomico, blocco concorrente `.lock`, dialoghi password e verifica fixtures Android.
 - **W02 [COMPLETATO]**: Adattamento UI Desktop (mouse/tastiera), vista rack elevation 2D, modelli, planimetrie canvas, media, cestino e modifiche batch.
 - **W03 [COMPLETATO]**: Porting Desktop di cablaggio fisico, percorsi condivisi, permutazioni, rete logica, VLAN, CIDR subnet, SVI L3, LAG, WAN/VPN, videosorveglianza, configurazioni, campi extra, alimentazione A/B, PoE e badge documentali.
@@ -87,3 +87,9 @@ Il contratto 1.10 include relazioni e proprietà dei contenitori, anche cifrate.
 Il prodotto resta offline-first: nessun server, sincronizzazione automatica, merge automatico o cloud obbligatorio. Identificativi stabili, osservazioni con fonte/data, errori strutturali distinti dagli avvisi documentali, allegati originali, export manuali PDF/XLSX/Markdown e esclusione dei segreti rimangono requisiti applicati. Modelli di apparato sono definizioni separate dalle istanze; mapping di pannelli, rete logica, alimentazione e percorsi di cavo restano documentali e non generano inferenze.
 
 I limiti verificati e il lavoro non completato sono nel tracker; la roadmap conserva la cronologia e le prove. Il precedente piano per step A00–W05 è stato ritirato perché sostituito da questo piano e dai documenti di dominio.
+
+## 7. Configuratore grafico degli oggetti
+
+Piano approvato: configuratore condiviso Android/Windows, disegno tecnico parametrico, rack → apparato → porta → collegamento → destinazione, gruppi rame/fibra/console/management/alimentazione, pannelli fronte/retro con passaggi espliciti, attacchi liberi e combo, catene tra rack e cavallotti. Verde significa percorso censito completo; nessuna misura di traffico. Modelli circoscritti al progetto per tutte le famiglie, selezione separata dal nome e aggiornamento delle istanze soltanto tramite applicazione esplicita con anteprima e scelta sulle rimozioni collegate.
+
+Persistenza Room 14, migrazione additiva con backup cifrato; `.ofam` 1.11 legge 1.7–1.10. Nessuna inferenza sui lati dei progetti precedenti. Operazioni annidate salvate con un’unica modifica annullabile; preset integrati con i valori del progetto. Implementazione e fonti in [docs/10-object-configurator.md](docs/10-object-configurator.md); prove del clic/destinazione/salvataggio e della protezione delle bozze superate. Le evidenze finali restano nella roadmap.

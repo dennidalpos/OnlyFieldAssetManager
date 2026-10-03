@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.edit
 
+import com.onlyfield.assetmanager.core.i18n.Messages
+
 import com.onlyfield.assetmanager.core.model.*
 import kotlinx.serialization.json.Json
 import java.util.UUID
@@ -80,7 +82,7 @@ object ProjectEdits {
         )
     }
 
-    fun updateDevice(project: Project, updatedDevice: Device): Project {
+    fun updateDevice(project: Project, updatedDevice: Device, i18n: Messages = Messages()): Project {
         val previous = project.businessUnits.flatMap { it.devices }.find { it.id == updatedDevice.id }
         val updatedBus = project.businessUnits.map { bu ->
             val hasDev = bu.devices.any { it.id == updatedDevice.id }
@@ -95,10 +97,10 @@ object ProjectEdits {
             businessUnits = updatedBus,
             updatedEpochMs = System.currentTimeMillis()
         )
-        return if (previous?.rackId != updatedDevice.rackId) ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, updatedDevice.id), updatedDevice.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) }) else ObjectHierarchy.synchronize(result)
+        return if (previous?.rackId != updatedDevice.rackId) ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, updatedDevice.id), updatedDevice.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) }, i18n = i18n) else ObjectHierarchy.synchronize(result)
     }
 
-    fun deleteDeviceToTrash(project: Project, deviceId: String): Pair<Project, TrashItem?> {
+    fun deleteDeviceToTrash(project: Project, deviceId: String, i18n: Messages = Messages()): Pair<Project, TrashItem?> {
         val deviceBU = project.businessUnits.find { bu -> bu.devices.any { it.id == deviceId } }
             ?: return Pair(project, null)
         val device = deviceBU.devices.find { it.id == deviceId } ?: return Pair(project, null)
@@ -117,10 +119,10 @@ object ProjectEdits {
                     portAId = if (affectedPortIds.contains(cable.portAId)) null else cable.portAId,
                     portBId = if (affectedPortIds.contains(cable.portBId)) null else cable.portBId,
                     observation = Observation(
-                        source = "System Trash",
+                        source = i18n.text("text.d8d551a2ac65"),
                         timestampEpochMs = System.currentTimeMillis(),
                         status = ObservationStatus.TO_VERIFY,
-                        notes = "Estremità scollegata per eliminazione apparato '${device.technicalName}'"
+                        notes = i18n.text("text.049cd5acb246", device.technicalName)
                     )
                 )
             } else {
@@ -134,7 +136,7 @@ object ProjectEdits {
             itemId = deviceId,
             displayName = device.technicalName,
             serializedJson = jsonStr,
-            affectedReferencesSummary = "Porte: ${device.ports.size}, Cavi scollegati: $updatedCablesCount"
+            affectedReferencesSummary = i18n.text("text.0a039cbd68d3", device.ports.size, updatedCablesCount)
         )
 
         val updatedBus = project.businessUnits.map { bu ->
@@ -162,8 +164,8 @@ object ProjectEdits {
     fun batchEditDevices(
         project: Project,
         deviceIds: List<String>,
-        changes: BatchDeviceChanges
-    ): Project {
+        changes: BatchDeviceChanges,
+        i18n: Messages = Messages()): Project {
         if (deviceIds.isEmpty()) return project
 
         val deviceIdSet = deviceIds.toSet()
@@ -192,7 +194,7 @@ object ProjectEdits {
             businessUnits = updatedBus,
             updatedEpochMs = System.currentTimeMillis()
         )
-        if (changes.updateRackId) for (id in deviceIds) result = ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, id), changes.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) })
+        if (changes.updateRackId) for (id in deviceIds) result = ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, id), changes.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) }, i18n = i18n)
         return ObjectHierarchy.synchronize(result)
     }
 
@@ -200,9 +202,9 @@ object ProjectEdits {
         project: Project,
         oldDeviceId: String,
         newTechnicalName: String,
-        newCategory: DeviceCategory
-    ): Pair<Project, TrashItem?> {
-        val (projAfterTrash, trashItem) = deleteDeviceToTrash(project, oldDeviceId)
+        newCategory: DeviceCategory,
+        i18n: Messages = Messages()): Pair<Project, TrashItem?> {
+        val (projAfterTrash, trashItem) = deleteDeviceToTrash(project, oldDeviceId, i18n = i18n)
         if (trashItem == null) return Pair(project, null)
 
         val oldDevice = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
@@ -229,8 +231,8 @@ object ProjectEdits {
         project: Project,
         survivingDeviceId: String,
         duplicateDeviceId: String,
-        choices: MergeDataChoices
-    ): Pair<Project, TrashItem?> {
+        choices: MergeDataChoices,
+        i18n: Messages = Messages()): Pair<Project, TrashItem?> {
         if (survivingDeviceId == duplicateDeviceId) return Pair(project, null)
 
         var survivingDev: Device? = null
@@ -271,8 +273,8 @@ object ProjectEdits {
             ports = mergedPorts
         )
 
-        val projWithUpdated = updateDevice(project, updatedSurviving)
-        return deleteDeviceToTrash(projWithUpdated, duplicateDeviceId)
+        val projWithUpdated = updateDevice(project, updatedSurviving, i18n = i18n)
+        return deleteDeviceToTrash(projWithUpdated, duplicateDeviceId, i18n = i18n)
     }
 
     fun addPortToDevice(project: Project, deviceId: String, portName: String, label: String? = null): Project {
@@ -304,9 +306,9 @@ object ProjectEdits {
         val updatedBus = project.businessUnits.map { bu ->
             val updatedDevs = bu.devices.map { dev ->
                 if (dev.id == deviceId) {
-                    dev.copy(ports = dev.ports.filterNot { it.id == portId })
+                    dev.copy(ports = dev.ports.filterNot { it.id == portId }.map { if (it.connectedPortId == portId) it.copy(connectedPortId = null, endpointStatus = EndpointStatus.DETACHED_TO_VERIFY) else it })
                 } else {
-                    dev
+                    dev.copy(ports = dev.ports.map { if (it.connectedPortId == portId) it.copy(connectedPortId = null, endpointStatus = EndpointStatus.DETACHED_TO_VERIFY) else it })
                 }
             }
             bu.copy(devices = updatedDevs)
@@ -318,7 +320,8 @@ object ProjectEdits {
                     deviceAId = if (cable.portAId == portId) deviceId else cable.deviceAId,
                     deviceBId = if (cable.portBId == portId) deviceId else cable.deviceBId,
                     portAId = if (cable.portAId == portId) null else cable.portAId,
-                    portBId = if (cable.portBId == portId) null else cable.portBId
+                    portBId = if (cable.portBId == portId) null else cable.portBId,
+                    observation = (cable.observation ?: Observation("Port removal", System.currentTimeMillis())).copy(status = ObservationStatus.TO_VERIFY)
                 )
             } else {
                 cable
@@ -328,6 +331,16 @@ object ProjectEdits {
         return project.copy(
             businessUnits = updatedBus,
             cables = updatedCables,
+            panelMappings = project.panelMappings.mapNotNull { m ->
+                when {
+                    m.portAId == portId -> m.portBId?.takeUnless { it == portId }?.let { m.copy(portAId = it, portBId = null, isUnknownPassage = true) }
+                    m.portBId == portId -> m.copy(portBId = null, isUnknownPassage = true)
+                    else -> m
+                }
+            },
+            portVlanMemberships = project.portVlanMemberships.filterNot { it.portId == portId },
+            poeMappings = project.poeMappings.filterNot { it.portId == portId },
+            lagGroups = project.lagGroups.map { it.copy(memberPortIds = it.memberPortIds - portId) },
             updatedEpochMs = System.currentTimeMillis()
         )
     }
@@ -349,7 +362,7 @@ object ProjectEdits {
         ))
     }
 
-    fun deleteRackToTrash(project: Project, rackId: String): Pair<Project, TrashItem?> {
+    fun deleteRackToTrash(project: Project, rackId: String, i18n: Messages = Messages()): Pair<Project, TrashItem?> {
         val rack = project.racks.find { it.id == rackId } ?: return Pair(project, null)
         val jsonStr = jsonSerializer.encodeToString(Rack.serializer(), rack)
 
@@ -371,7 +384,7 @@ object ProjectEdits {
             itemId = rackId,
             displayName = rack.name,
             serializedJson = jsonStr,
-            affectedReferencesSummary = "Apparati dislocati dal rack: ${devicesInRack.size}"
+            affectedReferencesSummary = i18n.text("text.62a5d83cfe5e", devicesInRack.size)
         )
 
         val updatedProject = project.copy(
@@ -409,52 +422,18 @@ object ProjectEdits {
         )
     }
 
-    fun generatePortsFromTemplates(model: DeviceModel, deviceId: String): List<Port> {
-        val ports = mutableListOf<Port>()
-        for (tmpl in model.portTemplates) {
-            for (i in 0 until tmpl.portCount) {
-                val num = tmpl.startNumber + i
-                val portName = "${tmpl.namePrefix}$num"
-                ports.add(
-                    Port(
-                        id = UUID.randomUUID().toString(),
-                        deviceId = deviceId,
-                        name = portName,
-                        label = if (tmpl.isCombo) "Combo $portName" else null
-                    )
-                )
-            }
-        }
-        return ports
+    fun generatePortsFromTemplates(model: DeviceModel, deviceId: String, i18n: Messages = Messages()): List<Port> {
+        return com.onlyfield.assetmanager.core.forms.HardwareConfigurator.ports(model.portTemplates, deviceId)
     }
 
-    fun applyModelToDevice(project: Project, deviceId: String, modelId: String): Project {
+    fun applyModelToDevice(project: Project, deviceId: String, modelId: String, i18n: Messages = Messages()): Project {
         val model = project.deviceModels.find { it.id == modelId } ?: return project
-        val generatedPorts = generatePortsFromTemplates(model, deviceId)
-
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedDevs = bu.devices.map { dev ->
-                if (dev.id == deviceId) {
-                    dev.copy(
-                        deviceModelId = model.id,
-                        category = model.category,
-                        heightU = model.defaultHeightU,
-                        ports = if (dev.ports.isEmpty()) generatedPorts else dev.ports
-                    )
-                } else {
-                    dev
-                }
-            }
-            bu.copy(devices = updatedDevs)
-        }
-
-        return project.copy(
-            businessUnits = updatedBus,
-            updatedEpochMs = System.currentTimeMillis()
-        )
+        require(model.kind == ObjectKind.DEVICE)
+        val device = project.businessUnits.flatMap { it.devices }.find { it.id == deviceId } ?: return project
+        return com.onlyfield.assetmanager.core.forms.HardwareConfigurator.configure(project, device.copy(
+            deviceModelId = model.id, category = model.category, heightU = model.defaultHeightU,
+            hardware = model.hardware.copy(portGroups = model.portTemplates)))
     }
-
-    // --- ATTACHMENTS & FLOORPLANS ---
 
     fun addAttachment(project: Project, attachment: Attachment): Project {
         return project.copy(
@@ -552,7 +531,7 @@ object ProjectEdits {
 
     // --- TRASH RESTORE ---
 
-    fun restoreFromTrash(project: Project, trashItem: TrashItem): Project {
+    fun restoreFromTrash(project: Project, trashItem: TrashItem, i18n: Messages = Messages()): Project {
         val restored = when (trashItem.itemType.uppercase()) {
             "DEVICE" -> {
                 val device = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
@@ -565,7 +544,7 @@ object ProjectEdits {
             }
             else -> project
         }
-        return ObjectHierarchy.restore(restored, trashItem)
+        return ObjectHierarchy.restore(restored, trashItem, i18n = i18n)
     }
 
     // --- CABLING & PHYSICAL PATHS (W03) ---

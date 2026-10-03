@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.pc.LocalMessages
+
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,7 +16,6 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.pc.ui.components.*
-import com.onlyfield.assetmanager.core.forms.DeviceForm
 import com.onlyfield.assetmanager.core.scan.CodeLookup
 import com.onlyfield.assetmanager.core.scan.CodeMatch
 
@@ -24,6 +25,8 @@ fun InventorySection(
     onProjectUpdated: (Project, String) -> Unit,
     onTrashItemCreated: (TrashItem) -> Unit
 ) {
+    val i18n = LocalMessages.current
+
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
 
@@ -52,56 +55,56 @@ fun InventorySection(
 
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader(
-            title = "Inventario apparati",
-            subtitle = "${filtered.size} di ${index.devices.size} apparati",
+            title = i18n.text("text.dae8f6194460"),
+            subtitle = i18n.text("text.e9f37f3828d1", filtered.size, index.devices.size),
             searchQuery = query,
             onSearchChange = { query = it },
-            searchPlaceholder = "Cerca nome, etichetta, IP, MAC, seriale…",
+            searchPlaceholder = i18n.text("text.ddf4aaf4dd0a"),
             onSearchSubmit = {
                 // Exact code (e.g. from a USB reader): open the device it identifies.
-                when (val match = CodeLookup.find(index, query)) {
+                when (val match = CodeLookup.find(index, query, i18n = i18n)) {
                     is CodeMatch.DeviceMatch -> changeDetail { editing = match.device }
                     is CodeMatch.PortMatch -> changeDetail { portsOf = match.port.device.id }
                     else -> Unit
                 }
             }
         ) {
-            Button(onClick = { changeDetail { creating = true } }, enabled = project.businessUnits.isNotEmpty()) { Text("+ Nuovo apparato") }
+            Button(onClick = { changeDetail { creating = true } }, enabled = project.businessUnits.isNotEmpty()) { Text(i18n.text("text.8650e4573818")) }
         }
 
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             OptionPicker(
-                label = "Categoria",
+                label = i18n.text("text.54276aa0307f"),
                 options = DeviceCategory.entries,
                 selected = categoryFilter,
-                optionLabel = { it.toDisplayString() },
+                optionLabel = { it.toDisplayString(i18n = i18n) },
                 onSelected = { categoryFilter = it },
-                noneLabel = "Tutte le categorie",
+                noneLabel = i18n.text("text.d67bee20ea14"),
                 modifier = Modifier.width(240.dp)
             )
             OptionPicker(
-                label = "Area",
+                label = i18n.text("text.024dc204d7ba"),
                 options = index.areas,
                 selected = areaFilter,
                 optionLabel = { it.name },
                 onSelected = { areaFilter = it },
-                noneLabel = "Tutte le aree",
+                noneLabel = i18n.text("text.4c852ffc6db0"),
                 modifier = Modifier.width(240.dp)
             )
             Spacer(Modifier.weight(1f))
             if (selectedIds.isNotEmpty()) {
-                Text("${selectedIds.size} selezionati", fontWeight = FontWeight.SemiBold)
-                OutlinedButton(onClick = { changeDetail { showBatch = true } }) { Text("Modifica in blocco…") }
-                TextButton(onClick = { selectedIds = emptySet() }) { Text("Deseleziona") }
+                Text(i18n.text("text.a3de97a5039a", selectedIds.size), fontWeight = FontWeight.SemiBold)
+                OutlinedButton(onClick = { changeDetail { showBatch = true } }) { Text(i18n.text("text.12fea36b47a9")) }
+                TextButton(onClick = { selectedIds = emptySet() }) { Text(i18n.text("text.a4918611156f")) }
             } else if (filtered.isNotEmpty()) {
-                TextButton(onClick = { selectedIds = filtered.map { it.id }.toSet() }) { Text("Seleziona tutti") }
+                TextButton(onClick = { selectedIds = filtered.map { it.id }.toSet() }) { Text(i18n.text("text.0e5b81f76ba6")) }
             }
         }
 
         when {
-            project.businessUnits.isEmpty() -> EmptyState("Crea prima una business unit nella sezione Progetto.")
-            index.devices.isEmpty() -> EmptyState("Nessun apparato nel progetto.", actionLabel = "+ Nuovo apparato", onAction = { creating = true })
-            filtered.isEmpty() -> EmptyState("Nessun apparato corrisponde ai filtri.", actionLabel = "Azzera filtri", onAction = {
+            project.businessUnits.isEmpty() -> EmptyState(i18n.text("text.d07b43aa8cb1"))
+            index.devices.isEmpty() -> EmptyState(i18n.text("text.acc21f707eb1"), actionLabel = i18n.text("text.8650e4573818"), onAction = { creating = true })
+            filtered.isEmpty() -> EmptyState(i18n.text("text.4e750f66126c"), actionLabel = i18n.text("text.c4483e052140"), onAction = {
                 query = ""; categoryFilter = null; areaFilter = null
             })
             else -> LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -109,16 +112,16 @@ fun InventorySection(
                     val bu = index.businessUnitOf(dev.id)
                     val location = listOfNotNull(
                         bu?.name,
-                        dev.areaId?.let { index.areaName(it, "area mancante") },
-                        dev.rackId?.let { "Rack ${index.rackName(it)}" + (dev.positionU?.let { u -> " · U$u" } ?: "") }
+                        dev.areaId?.let { index.areaName(it, i18n.text("text.8b721ed0312b")) },
+                        dev.rackId?.let { i18n.text("text.f5ba7982ad75", index.rackName(it)) + (dev.positionU?.let { u -> i18n.text("text.60c93506e0bf", u) } ?: "") }
                     ).joinToString(" › ")
-                    val network = listOfNotNull(dev.ipAddress?.let { "IP $it" }, dev.macAddress?.let { "MAC $it" }, dev.physicalLabel?.let { "Etichetta $it" })
+                    val network = listOfNotNull(dev.ipAddress?.let { i18n.text("text.ef7dea7beb29", it) }, dev.macAddress?.let { i18n.text("text.98503a17d766", it) }, dev.physicalLabel?.let { i18n.text("text.7ef850a6b73f", it) })
                         .joinToString(" · ")
                     var menuOpen by remember { mutableStateOf(false) }
                     ItemCard(
                         title = dev.technicalName + (dev.alias?.let { " ($it)" } ?: ""),
-                        badge = dev.category.toDisplayString(),
-                        details = listOf(location, network, "${dev.ports.size} porte · ${dev.observation?.status?.toDisplayString() ?: "Da verificare"}"),
+                        badge = dev.category.toDisplayString(i18n = i18n),
+                        details = listOf(location, network, i18n.text("text.010018b28736", dev.ports.size, dev.observation?.status?.toDisplayString(i18n = i18n) ?: i18n.text("text.ac4e0792e577"))),
                         leading = {
                             Checkbox(
                                 checked = dev.id in selectedIds,
@@ -126,31 +129,31 @@ fun InventorySection(
                             )
                         }
                     ) {
-                        TextButton(onClick = { changeDetail { portsOf = dev.id } }) { Text("Porte") }
+                        TextButton(onClick = { changeDetail { portsOf = dev.id } }) { Text(i18n.text("text.2edfc95a3c46")) }
                         EditButton { editing = dev }
                         Box {
-                            TextButton(onClick = { menuOpen = true }) { Text("Altro ▾") }
+                            TextButton(onClick = { menuOpen = true }) { Text(i18n.text("text.9cc22637b4a3")) }
                             DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
-                                DropdownMenuItem(text = { Text("Sostituisci con nuovo apparato…") }, onClick = { menuOpen = false; changeDetail { replaceTarget = dev } })
+                                DropdownMenuItem(text = { Text(i18n.text("text.475df7909caf")) }, onClick = { menuOpen = false; changeDetail { replaceTarget = dev } })
                                 DropdownMenuItem(
-                                    text = { Text("Unisci un duplicato…") },
+                                    text = { Text(i18n.text("text.99f9d71d6d8e")) },
                                     enabled = index.devices.size > 1,
                                     onClick = { menuOpen = false; changeDetail { mergeTarget = dev } }
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
-                                    text = { Text("Sposta nel cestino", color = MaterialTheme.colorScheme.error) },
+                                    text = { Text(i18n.text("text.dd41b3275173"), color = MaterialTheme.colorScheme.error) },
                                     onClick = {
                                         menuOpen = false
                                         confirm(
                                             ConfirmRequest(
-                                                title = "Spostare «${dev.technicalName}» nel cestino?",
-                                                message = "I cavi collegati alle sue porte verranno scollegati. Potrai ripristinarlo dal Cestino finché l'applicazione resta aperta.",
-                                                confirmLabel = "Sposta nel cestino"
+                                                title = i18n.text("text.87fc0efddabf", dev.technicalName),
+                                                message = i18n.text("text.f509b29b1f58"),
+                                                confirmLabel = i18n.text("text.dd41b3275173")
                                             ) {
-                                                val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id)
+                                                val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id, i18n = i18n)
                                                 trashItem?.let(onTrashItemCreated)
-                                                onProjectUpdated(updated, "«${dev.technicalName}» spostato nel cestino.")
+                                                onProjectUpdated(updated, i18n.text("text.4e2629d50c9b", dev.technicalName))
                                             }
                                         )
                                     }
@@ -166,7 +169,6 @@ fun InventorySection(
     if (creating || editing != null) {
         DeviceDialog(
             project = project,
-            index = index,
             device = editing,
             onDismiss = { creating = false; editing = null },
             onSave = { updated, message -> creating = false; editing = null; onProjectUpdated(updated, message) }
@@ -174,36 +176,36 @@ fun InventorySection(
     }
 
     portsOf?.let { id ->
-        index.device(id)?.let { dev -> PortsDialog(project, index, dev, onProjectUpdated) { portsOf = null } }
+        index.device(id)?.let { dev -> DeviceDialog(project, dev, { portsOf = null }, onProjectUpdated) }
             ?: run { portsOf = null }
     }
 
     replaceTarget?.let { dev ->
         ReplaceDialog(dev, onDismiss = { replaceTarget = null }) { name, category ->
-            val (updated, trashItem) = ProjectEdits.replaceDevice(project, dev.id, name, category)
+            val (updated, trashItem) = ProjectEdits.replaceDevice(project, dev.id, name, category, i18n = i18n)
             replaceTarget = null
             trashItem?.let(onTrashItemCreated)
-            onProjectUpdated(updated, "«${dev.technicalName}» sostituito da «$name».")
+            onProjectUpdated(updated, i18n.text("text.6dafb91fca82", dev.technicalName, name))
         }
     }
 
     mergeTarget?.let { survivor ->
         MergeDialog(index, survivor, onDismiss = { mergeTarget = null }) { duplicateId, choices ->
-            val duplicateName = index.deviceName(duplicateId)
-            val (updated, trashItem) = ProjectEdits.mergeDevices(project, survivor.id, duplicateId, choices)
+            val duplicateName = index.deviceName(duplicateId, i18n = i18n)
+            val (updated, trashItem) = ProjectEdits.mergeDevices(project, survivor.id, duplicateId, choices, i18n = i18n)
             mergeTarget = null
             trashItem?.let(onTrashItemCreated)
-            onProjectUpdated(updated, "«$duplicateName» unito in «${survivor.technicalName}».")
+            onProjectUpdated(updated, i18n.text("text.83e8fd9fecb8", duplicateName, survivor.technicalName))
         }
     }
 
     if (showBatch) {
         BatchEditDialog(project, index, selectedIds, onDismiss = { showBatch = false }) { changes ->
             val count = selectedIds.size
-            val updated = ProjectEdits.batchEditDevices(project, selectedIds.toList(), changes)
+            val updated = ProjectEdits.batchEditDevices(project, selectedIds.toList(), changes, i18n = i18n)
             showBatch = false
             selectedIds = emptySet()
-            onProjectUpdated(updated, "Modifica applicata a $count apparati.")
+            onProjectUpdated(updated, i18n.text("text.d57904b4d677", count))
         }
     }
 }
@@ -211,206 +213,58 @@ fun InventorySection(
 @Composable
 private fun DeviceDialog(
     project: Project,
-    index: ProjectIndex,
     device: Device?,
     onDismiss: () -> Unit,
     onSave: (Project, String) -> Unit,
 ) {
-    val initialBu = device?.let { index.businessUnitOf(it.id)?.id } ?: project.businessUnits.singleOrNull()?.id
-    var form by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(DeviceForm.from(device, initialBu)) }
-    val rack = index.rack(form.rackId)
-    val errors = form.errors(rack?.heightU)
-    val buAreas = project.businessUnits.find { it.id == form.businessUnitId }
-        ?.let { bu -> bu.areas + bu.sites.flatMap { it.areas } } ?: index.areas
-
-    EditPanel(
-        title = if (device == null) "Nuovo apparato" else "Modifica «${device.technicalName}»",
-        onDismiss = onDismiss,
-        confirmEnabled = errors.isEmpty(),
-        onConfirm = {
-            val saved = form.toDevice(device, source = "Editor Windows")
-            val updated = if (device == null) ProjectEdits.addDevice(project, requireNotNull(form.businessUnitId), saved)
-            else ProjectEdits.updateDevice(project, saved)
-            onSave(updated, if (device == null) "Apparato «${saved.technicalName}» creato." else "Apparato «${saved.technicalName}» aggiornato.")
-        },
-        width = 680.dp
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormField(form.technicalName, { form = form.copy(technicalName = it) }, "Nome tecnico *", Modifier.weight(1f), errors["technicalName"])
-            EnumPicker("Categoria", DeviceCategory.entries, form.category, { it.toDisplayString() }, { form = form.copy(category = it) }, Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormField(form.physicalLabel, { form = form.copy(physicalLabel = it) }, "Etichetta fisica", Modifier.weight(1f))
-            FormField(form.alias, { form = form.copy(alias = it) }, "Alias", Modifier.weight(1f))
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, "Indirizzo IP", Modifier.weight(1f), errors["ipAddress"])
-            FormField(form.macAddress, { form = form.copy(macAddress = it) }, "Indirizzo MAC", Modifier.weight(1f), errors["macAddress"])
-        }
-        FormField(form.serialNumber, { form = form.copy(serialNumber = it) }, "Numero di serie", hint = "Con il lettore USB: clic nel campo e leggi il codice")
-
-        Text("Posizione", fontWeight = FontWeight.SemiBold)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OptionPicker(
-                label = "Business unit *",
-                options = project.businessUnits,
-                selected = project.businessUnits.find { it.id == form.businessUnitId },
-                optionLabel = { it.name },
-                onSelected = { form = form.copy(businessUnitId = it?.id, areaId = null) },
-                enabled = device == null,
-                supportingText = if (device != null) "Non modificabile dopo la creazione" else errors["businessUnitId"],
-                isError = errors.containsKey("businessUnitId"),
-                modifier = Modifier.weight(1f)
-            )
-            OptionPicker(
-                label = "Area",
-                options = buAreas,
-                selected = index.area(form.areaId),
-                optionLabel = { it.name },
-                optionDetail = { it.floor?.let { f -> "Piano $f" } },
-                onSelected = { form = form.copy(areaId = it?.id) },
-                noneLabel = "Nessuna area",
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OptionPicker(
-                label = "Rack",
-                options = project.racks,
-                selected = rack,
-                optionLabel = { it.name },
-                optionDetail = { "${it.heightU}U · ${index.areaName(it.areaId, "nessuna area")}" },
-                onSelected = {
-                    form = form.copy(
-                        rackId = it?.id,
-                        mountingType = if (it == null) MountingType.OUT_OF_RACK else if (form.mountingType == MountingType.OUT_OF_RACK) MountingType.RACK_MOUNT else form.mountingType
-                    )
-                },
-                noneLabel = "Fuori rack",
-                modifier = Modifier.weight(1.4f)
-            )
-            FormField(
-                form.positionU, { form = form.copy(positionU = it) }, "Posizione U", Modifier.weight(0.8f), errors["positionU"],
-                hint = rack?.let { "1–${it.heightU}" }
-            )
-            FormField(form.heightU, { form = form.copy(heightU = it) }, "Altezza (U) *", Modifier.weight(0.8f), errors["heightU"])
-        }
-        if (form.rackId != null) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EnumPicker("Lato rack", RackSide.entries, form.rackSide, { it.toDisplayString() }, { form = form.copy(rackSide = it) }, Modifier.weight(1f))
-                EnumPicker("Montaggio", MountingType.entries, form.mountingType, { it.toDisplayString() }, { form = form.copy(mountingType = it) }, Modifier.weight(1f))
-            }
-        }
-        if (project.deviceModels.isNotEmpty()) {
-            OptionPicker(
-                label = "Modello",
-                options = project.deviceModels,
-                selected = project.deviceModels.find { it.id == form.deviceModelId },
-                optionLabel = { it.name },
-                optionDetail = { listOfNotNull(it.brand, it.modelNumber).joinToString(" ") },
-                onSelected = { form = form.copy(deviceModelId = it?.id) },
-                noneLabel = "Nessun modello"
-            )
-        }
-
-        Text("Rilievo", fontWeight = FontWeight.SemiBold)
-        EnumPicker("Stato del rilievo", ObservationStatus.entries, form.observationStatus, { it.toDisplayString() }, { form = form.copy(observationStatus = it) })
-        FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false, minLines = 2)
+    val i18n = LocalMessages.current
+    var draft by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forDevice(project, device)) }
+    EditPanel(title = i18n.text("config.title"), onDismiss = onDismiss,
+        confirmEnabled = draft.errors(project, i18n).isEmpty(), width = 800.dp,
+        onConfirm = { onSave(draft.apply(project, i18n), i18n.text("config.title")) }) {
+        ObjectFields(project, draft) { draft = it }
     }
 }
 
 @Composable
-private fun PortsDialog(
-    project: Project,
-    index: ProjectIndex,
-    device: Device,
-    onProjectUpdated: (Project, String) -> Unit,
-    onDismiss: () -> Unit,
-) {
-    var name by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
-    var label by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
-    val duplicate = device.ports.any { it.name.equals(name.trim(), ignoreCase = true) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.width(620.dp),
-        title = { Text("Porte di «${device.technicalName}»") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
-                    FormField(name, { name = it }, "Nome porta", Modifier.weight(1f), error = if (duplicate) "Porta già presente" else null, hint = "Es. Gi1/0/1")
-                    FormField(label, { label = it }, "Etichetta", Modifier.weight(1f))
-                    Button(
-                        enabled = name.isNotBlank() && !duplicate,
-                        modifier = Modifier.padding(top = 8.dp),
-                        onClick = {
-                            onProjectUpdated(ProjectEdits.addPortToDevice(project, device.id, name.trim(), label.trim().ifBlank { null }), "Porta «${name.trim()}» aggiunta.")
-                            name = ""; label = ""
-                        }
-                    ) { Text("Aggiungi") }
-                }
-                if (device.ports.isEmpty()) {
-                    EmptyState("Nessuna porta. Aggiungile qui o applica un modello con template porte.")
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        items(device.ports, key = { it.id }) { port ->
-                            val cable = project.cables.find { it.portAId == port.id || it.portBId == port.id }
-                            val peer = cable?.let { if (it.portAId == port.id) it.portBId else it.portAId }
-                            ItemCard(
-                                title = port.name,
-                                details = listOf(
-                                    port.label?.let { "Etichetta $it" }.orEmpty(),
-                                    if (cable != null) "Collegata a ${index.portLabel(peer, "estremità libera")}" else "Libera"
-                                )
-                            ) {
-                                DeleteButton(port.name, onDelete = {
-                                    onProjectUpdated(ProjectEdits.deletePortFromDevice(project, device.id, port.id), "Porta «${port.name}» eliminata.")
-                                }, message = if (cable != null) "La porta è collegata a un cavo, che resterà con un'estremità libera." else null)
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { Button(onClick = onDismiss) { Text("Fine") } }
-    )
-}
-
-@Composable
 private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (String, DeviceCategory) -> Unit) {
+    val i18n = LocalMessages.current
+
     var name by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
     var category by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(device.category) }
     EditPanel(
-        title = "Sostituisci «${device.technicalName}»",
+        title = i18n.text("text.db1d35f100ab", device.technicalName),
         onDismiss = onDismiss,
         onConfirm = { onConfirm(name.trim(), category) },
         confirmEnabled = name.isNotBlank(),
-        confirmLabel = "Sostituisci",
+        confirmLabel = i18n.text("text.3260dc474cbc"),
         width = 520.dp
     ) {
-        Text("Il nuovo apparato eredita area, rack e posizione U dell'attuale, che viene spostato nel cestino. I cavi collegati alle vecchie porte restano con un'estremità libera.")
-        FormField(name, { name = it }, "Nome del nuovo apparato *")
-        EnumPicker("Categoria", DeviceCategory.entries, category, { it.toDisplayString() }, { category = it })
+        Text(i18n.text("text.dc43498aef85"))
+        FormField(name, { name = it }, i18n.text("text.9d9ce7aec419"))
+        EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, category, { it.toDisplayString(i18n = i18n) }, { category = it })
     }
 }
 
 @Composable
 private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> Unit, onConfirm: (String, MergeDataChoices) -> Unit) {
+    val i18n = LocalMessages.current
+
     val candidates = index.devices.filter { it.id != survivor.id }
     var duplicate by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf<Device?>(null) }
     var choices by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(MergeDataChoices()) }
 
     EditPanel(
-        title = "Unisci un duplicato in «${survivor.technicalName}»",
+        title = i18n.text("text.8622418bc21e", survivor.technicalName),
         onDismiss = onDismiss,
         onConfirm = { duplicate?.let { onConfirm(it.id, choices) } },
         confirmEnabled = duplicate != null,
-        confirmLabel = "Unisci",
+        confirmLabel = i18n.text("text.c442a0f989e0"),
         width = 600.dp
     ) {
-        Text("L'apparato duplicato viene spostato nel cestino dopo aver trasferito i dati scelti.")
+        Text(i18n.text("text.7f27c2f83658"))
         OptionPicker(
-            label = "Apparato duplicato *",
+            label = i18n.text("text.505c57b1f96f"),
             options = candidates,
             selected = duplicate,
             optionLabel = { it.technicalName },
@@ -418,15 +272,15 @@ private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> 
             onSelected = { duplicate = it }
         )
         duplicate?.let { dup ->
-            Text("Usa dal duplicato:", fontWeight = FontWeight.SemiBold)
-            LabeledCheckbox(choices.useAliasFromDuplicate, { choices = choices.copy(useAliasFromDuplicate = it) }, "Alias (${dup.alias ?: "vuoto"})")
-            LabeledCheckbox(choices.useTechnicalNameFromDuplicate, { choices = choices.copy(useTechnicalNameFromDuplicate = it) }, "Nome tecnico («${dup.technicalName}»)")
-            LabeledCheckbox(choices.usePhysicalLabelFromDuplicate, { choices = choices.copy(usePhysicalLabelFromDuplicate = it) }, "Etichetta fisica (${dup.physicalLabel ?: "vuota"})")
-            LabeledCheckbox(choices.useIpFromDuplicate, { choices = choices.copy(useIpFromDuplicate = it) }, "Indirizzo IP (${dup.ipAddress ?: "vuoto"})")
-            LabeledCheckbox(choices.useMacFromDuplicate, { choices = choices.copy(useMacFromDuplicate = it) }, "Indirizzo MAC (${dup.macAddress ?: "vuoto"})")
-            LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, "Posizione (sede e area)")
+            Text(i18n.text("text.ba17b5a14990"), fontWeight = FontWeight.SemiBold)
+            LabeledCheckbox(choices.useAliasFromDuplicate, { choices = choices.copy(useAliasFromDuplicate = it) }, i18n.text("text.2feff34b895f", dup.alias ?: "vuoto"))
+            LabeledCheckbox(choices.useTechnicalNameFromDuplicate, { choices = choices.copy(useTechnicalNameFromDuplicate = it) }, i18n.text("text.f056df92d232", dup.technicalName))
+            LabeledCheckbox(choices.usePhysicalLabelFromDuplicate, { choices = choices.copy(usePhysicalLabelFromDuplicate = it) }, i18n.text("text.6c6b0e8c59a2", dup.physicalLabel ?: "vuota"))
+            LabeledCheckbox(choices.useIpFromDuplicate, { choices = choices.copy(useIpFromDuplicate = it) }, i18n.text("text.e22da0229a30", dup.ipAddress ?: "vuoto"))
+            LabeledCheckbox(choices.useMacFromDuplicate, { choices = choices.copy(useMacFromDuplicate = it) }, i18n.text("text.c893c36f0a38", dup.macAddress ?: "vuoto"))
+            LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, i18n.text("text.6d44f00413d7"))
             Text("Trasferisci:", fontWeight = FontWeight.SemiBold)
-            LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, "Porte (${dup.ports.size})")
+            LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, i18n.text("text.625d94dac5fc", dup.ports.size))
         }
     }
 }
@@ -439,15 +293,17 @@ private fun BatchEditDialog(
     onDismiss: () -> Unit,
     onApply: (BatchDeviceChanges) -> Unit,
 ) {
+    val i18n = LocalMessages.current
+
     var changes by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH, mountingType = MountingType.RACK_MOUNT)) }
     val any = changes.updateCategory || changes.updateAreaId || changes.updateRackId || changes.updateMountingType || changes.updateObservationNotes
 
     EditPanel(
-        title = "Modifica in blocco",
+        title = i18n.text("text.48263b4ad8ed"),
         onDismiss = onDismiss,
         onConfirm = { onApply(changes) },
         confirmEnabled = any,
-        confirmLabel = "Applica a ${selectedIds.size} apparati",
+        confirmLabel = i18n.text("text.635382b11942", selectedIds.size),
         width = 600.dp
     ) {
         Text(
@@ -455,16 +311,16 @@ private fun BatchEditDialog(
             style = MaterialTheme.typography.bodySmall,
             maxLines = 3
         )
-        Text("Spunta i campi da sovrascrivere:", fontWeight = FontWeight.SemiBold)
-        LabeledCheckbox(changes.updateCategory, { changes = changes.copy(updateCategory = it) }, "Categoria")
-        if (changes.updateCategory) EnumPicker("Categoria", DeviceCategory.entries, changes.category ?: DeviceCategory.CUSTOM, { it.toDisplayString() }, { changes = changes.copy(category = it) })
-        LabeledCheckbox(changes.updateAreaId, { changes = changes.copy(updateAreaId = it) }, "Area")
-        if (changes.updateAreaId) OptionPicker("Area", index.areas, index.area(changes.areaId), { it.name }, { changes = changes.copy(areaId = it?.id) }, noneLabel = "Nessuna area")
-        LabeledCheckbox(changes.updateRackId, { changes = changes.copy(updateRackId = it) }, "Rack")
-        if (changes.updateRackId) OptionPicker("Rack", project.racks, index.rack(changes.rackId), { it.name }, { changes = changes.copy(rackId = it?.id) }, noneLabel = "Fuori rack")
-        LabeledCheckbox(changes.updateMountingType, { changes = changes.copy(updateMountingType = it) }, "Tipo di montaggio")
-        if (changes.updateMountingType) EnumPicker("Montaggio", MountingType.entries, changes.mountingType ?: MountingType.RACK_MOUNT, { it.toDisplayString() }, { changes = changes.copy(mountingType = it) })
-        LabeledCheckbox(changes.updateObservationNotes, { changes = changes.copy(updateObservationNotes = it) }, "Note di rilievo")
-        if (changes.updateObservationNotes) FormField(changes.observationNotes.orEmpty(), { changes = changes.copy(observationNotes = it) }, "Note", singleLine = false)
+        Text(i18n.text("text.4b100c535572"), fontWeight = FontWeight.SemiBold)
+        LabeledCheckbox(changes.updateCategory, { changes = changes.copy(updateCategory = it) }, i18n.text("text.54276aa0307f"))
+        if (changes.updateCategory) EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, changes.category ?: DeviceCategory.CUSTOM, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(category = it) })
+        LabeledCheckbox(changes.updateAreaId, { changes = changes.copy(updateAreaId = it) }, i18n.text("text.024dc204d7ba"))
+        if (changes.updateAreaId) OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, index.area(changes.areaId), { it.name }, { changes = changes.copy(areaId = it?.id) }, noneLabel = i18n.text("text.0eb949b8ab9b"))
+        LabeledCheckbox(changes.updateRackId, { changes = changes.copy(updateRackId = it) }, i18n.text("text.4cd265c2b8c6"))
+        if (changes.updateRackId) OptionPicker(i18n.text("text.4cd265c2b8c6"), project.racks, index.rack(changes.rackId), { it.name }, { changes = changes.copy(rackId = it?.id) }, noneLabel = i18n.text("text.da968f7d518f"))
+        LabeledCheckbox(changes.updateMountingType, { changes = changes.copy(updateMountingType = it) }, i18n.text("text.6a0a9db35cde"))
+        if (changes.updateMountingType) EnumPicker(i18n.text("text.d3a2e8299422"), MountingType.entries, changes.mountingType ?: MountingType.RACK_MOUNT, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(mountingType = it) })
+        LabeledCheckbox(changes.updateObservationNotes, { changes = changes.copy(updateObservationNotes = it) }, i18n.text("text.b8320c85f325"))
+        if (changes.updateObservationNotes) FormField(changes.observationNotes.orEmpty(), { changes = changes.copy(observationNotes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
     }
 }

@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -27,9 +29,11 @@ fun EditScreen(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
-    confirmLabel: String = "Salva",
+    confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     content: @Composable ColumnScope.() -> Unit,
 ) {
+    val i18n = LocalMessages.current
+
     var dirty by remember { mutableStateOf(false) }
     var askDiscard by remember { mutableStateOf(false) }
     val close = { if (dirty) askDiscard = true else onDismiss() }
@@ -42,7 +46,7 @@ fun EditScreen(
             topBar = {
                 TopAppBar(
                     title = { Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-                    navigationIcon = { IconButton(onClick = close) { Icon(Icons.Default.Close, contentDescription = "Annulla") } },
+                    navigationIcon = { IconButton(onClick = close) { Icon(Icons.Default.Close, contentDescription = i18n.text("text.18c9d912a210")) } },
                     actions = { TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } }
                 )
             }
@@ -60,10 +64,10 @@ fun EditScreen(
     if (askDiscard) {
         AlertDialog(
             onDismissRequest = { askDiscard = false },
-            title = { Text("Scartare le modifiche?") },
-            text = { Text("Le modifiche non salvate andranno perse.") },
-            confirmButton = { TextButton(onClick = { askDiscard = false; onDismiss() }) { Text("Scarta") } },
-            dismissButton = { TextButton(onClick = { askDiscard = false }) { Text("Continua a modificare") } }
+            title = { Text(i18n.text("text.80079f180a43")) },
+            text = { Text(i18n.text("text.1c197da4d332")) },
+            confirmButton = { TextButton(onClick = { askDiscard = false; onDismiss() }) { Text(i18n.text("text.8386702d2ee2")) } },
+            dismissButton = { TextButton(onClick = { askDiscard = false }) { Text(i18n.text("text.500cb3f3c51b")) } }
         )
     }
 }

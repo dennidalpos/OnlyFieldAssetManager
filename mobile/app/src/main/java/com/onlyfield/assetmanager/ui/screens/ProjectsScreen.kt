@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.ui.LocalMessages
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -20,6 +22,8 @@ import com.onlyfield.assetmanager.ui.components.*
 
 @Composable
 fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
     val context = LocalContext.current
     val confirm = LocalConfirm.current
     val projects by vm.projects.collectAsState()
@@ -32,14 +36,14 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 
     AppScaffold(
         title = "OnlyField Asset Manager",
-        subtitle = "Progetti su questo dispositivo",
+        subtitle = i18n.text("text.3d46bfbe7868"),
         onBack = null,
         snackbarHost = snackbar,
         busy = vm.busy,
-        actions = { TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Text("Importa .ofam") } },
+        actions = { LanguagePicker(vm); TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Text(i18n.text("text.a53503bbd801")) } },
         floatingActionButton = {
             if (projects.isNotEmpty()) {
-                ExtendedFloatingActionButton(onClick = vm::startNewSite, icon = { Icon(Icons.Default.Add, null) }, text = { Text("Nuovo sito") })
+                ExtendedFloatingActionButton(onClick = vm::startNewSite, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.ac667fe865c9")) })
             }
         }
     ) { padding ->
@@ -59,22 +63,22 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
             item(key = "continue") {
                 val last = projects.first()
                 Button(onClick = { open(last) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                    Text("Continua: «${last.name}»", style = MaterialTheme.typography.titleMedium)
+                    Text(i18n.text("text.d5555c9b8e0b", last.name), style = MaterialTheme.typography.titleMedium)
                 }
             }
             item(key = "header") {
-                Text("Tutti i progetti", style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+                Text(i18n.text("text.8102b2c0ceb4"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
             }
             items(projects, key = { it.id }) { p ->
                 ItemCard(
                     title = p.name,
-                    badge = if (p.isPasswordProtected) "🔒 Protetto" else null,
-                    details = listOf(p.description.orEmpty(), "Modificato ${formatDateTime(p.updatedEpochMs)}"),
+                    badge = if (p.isPasswordProtected) i18n.text("text.a73763f25907") else null,
+                    details = listOf(p.description.orEmpty(), i18n.text("text.c95c16b49c20", formatDateTime(p.updatedEpochMs))),
                     onClick = { open(p) },
                     menu = listOf(
-                        MenuAction("Rinomina") { renaming = p },
-                        MenuAction("Elimina", destructive = true) {
-                            confirm(ConfirmRequest("Eliminare «${p.name}»?", "Il progetto e tutti i suoi dati verranno eliminati da questo dispositivo. Esporta prima un pacchetto .ofam se ti serve una copia.") {
+                        MenuAction(i18n.text("text.98b79b084f23")) { renaming = p },
+                        MenuAction(i18n.text("text.7efe336bd548"), destructive = true) {
+                            confirm(ConfirmRequest(i18n.text("text.e36c23dfb086", p.name), i18n.text("text.548a4a17a081")) {
                                 vm.deleteProject(p.id)
                             })
                         }
@@ -86,8 +90,8 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 
     renaming?.let { p ->
         var name by remember(p) { mutableStateOf(p.name) }
-        FormDialog("Rinomina progetto", { renaming = null }, { renaming = null; vm.renameProject(p.id, name) }, confirmEnabled = name.isNotBlank()) {
-            FormField(name, { name = it }, "Nome *")
+        FormDialog(i18n.text("text.62e351b7ecb0"), { renaming = null }, { renaming = null; vm.renameProject(p.id, name) }, confirmEnabled = name.isNotBlank()) {
+            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
         }
     }
 
@@ -96,20 +100,20 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
         var wrong by remember(p) { mutableStateOf(false) }
         AlertDialog(
             onDismissRequest = { unlocking = null },
-            title = { Text("«${p.name}» è protetto") },
+            title = { Text(i18n.text("text.dc30ca04bf34", p.name)) },
             text = {
                 OutlinedTextField(
-                    value = password, onValueChange = { password = it; wrong = false }, label = { Text("Password") },
+                    value = password, onValueChange = { password = it; wrong = false }, label = { Text(i18n.text("text.e7cf3ef4f17c")) },
                     visualTransformation = PasswordVisualTransformation(), singleLine = true, isError = wrong,
-                    supportingText = if (wrong) { { Text("Password errata.") } } else null
+                    supportingText = if (wrong) { { Text(i18n.text("text.c409f4b96322")) } } else null
                 )
             },
             confirmButton = {
                 TextButton(enabled = password.isNotEmpty(), onClick = {
                     vm.openProtectedProject(p.id, password) { wrong = true }
-                }) { Text("Apri") }
+                }) { Text(i18n.text("text.12abcf9ee7d6")) }
             },
-            dismissButton = { TextButton(onClick = { unlocking = null }) { Text("Annulla") } }
+            dismissButton = { TextButton(onClick = { unlocking = null }) { Text(i18n.text("text.18c9d912a210")) } }
         )
     }
 }
@@ -117,21 +121,23 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 /** First launch: the two ways to get a project onto the phone. */
 @Composable
 private fun StartActions(onNewSite: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
+    val i18n = LocalMessages.current
+
     Column(
         modifier.fillMaxSize().padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
-        Text("Benvenuto", style = MaterialTheme.typography.headlineMedium)
+        Text(i18n.text("text.adb53755cdc3"), style = MaterialTheme.typography.headlineMedium)
         Text(
-            "Censisci un sito partendo da zero, oppure apri il progetto che hai ricevuto dal PC o da un collega.",
+            i18n.text("text.55f623cd4bf4"),
             style = MaterialTheme.typography.bodyLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Button(onClick = onNewSite, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
-            Text("Inizia un nuovo sito", style = MaterialTheme.typography.titleMedium)
+            Text(i18n.text("text.7559294aebf8"), style = MaterialTheme.typography.titleMedium)
         }
         OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
-            Text("Apri un pacchetto ricevuto (.ofam)", style = MaterialTheme.typography.titleMedium)
+            Text(i18n.text("text.b93f2228bcd7"), style = MaterialTheme.typography.titleMedium)
         }
     }
 }
