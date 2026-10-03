@@ -61,4 +61,4 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
 - Unica decisione aperta: RES-07 (permesso di rete per le mappe su Android oppure rimozione definitiva).
-- Il repository locale non ha un remote configurato: aggiungere `origin` prima del push.
+- Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
