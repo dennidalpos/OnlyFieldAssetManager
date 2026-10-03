@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.core.validation
 
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
 import kotlinx.serialization.Serializable
 import java.util.UUID
@@ -32,19 +33,19 @@ object ModelValidator {
         val seenIds = mutableSetOf<String>()
 
         // 1. Project ID validity
-        checkUuid("INVALID_PROJECT_UUID", project.id, "Project ID is not a valid UUID", issues)
-        trackId(project.id, "DUPLICATE_PROJECT_ID", "Duplicate project ID: ${project.id}", seenIds, issues)
+        checkUuid("INVALID_PROJECT_UUID", project.id, "Identificativo non valido (progetto)", issues)
+        trackId(project.id, "DUPLICATE_PROJECT_ID", "Identificativo duplicato (progetto): ${project.id}", seenIds, issues)
 
         // Validate Racks
         val racksById = mutableMapOf<String, Rack>()
         for (rack in project.racks) {
-            checkUuid("INVALID_RACK_UUID", rack.id, "Rack ID is not a valid UUID", issues)
-            trackId(rack.id, "DUPLICATE_RACK_ID", "Duplicate Rack ID: ${rack.id}", seenIds, issues)
+            checkUuid("INVALID_RACK_UUID", rack.id, "Identificativo non valido (rack)", issues)
+            trackId(rack.id, "DUPLICATE_RACK_ID", "Identificativo duplicato (rack): ${rack.id}", seenIds, issues)
             if (rack.heightU <= 0) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_RACK_HEIGHT",
-                        message = "Rack '${rack.name}' heightU must be greater than 0",
+                        message = "Rack '${rack.name}': l'altezza deve essere maggiore di 0",
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = rack.id
                     )
@@ -55,8 +56,8 @@ object ModelValidator {
 
         // Validate DeviceModels
         for (model in project.deviceModels) {
-            checkUuid("INVALID_MODEL_UUID", model.id, "DeviceModel ID is not a valid UUID", issues)
-            trackId(model.id, "DUPLICATE_MODEL_ID", "Duplicate DeviceModel ID: ${model.id}", seenIds, issues)
+            checkUuid("INVALID_MODEL_UUID", model.id, "Identificativo non valido (modello)", issues)
+            trackId(model.id, "DUPLICATE_MODEL_ID", "Identificativo duplicato (modello): ${model.id}", seenIds, issues)
         }
 
         val allPorts = mutableMapOf<String, Port>()
@@ -64,38 +65,38 @@ object ModelValidator {
 
         // Traverse Business Units
         for (bu in project.businessUnits) {
-            checkUuid("INVALID_BU_UUID", bu.id, "Business Unit ID is not a valid UUID", issues)
-            trackId(bu.id, "DUPLICATE_BU_ID", "Duplicate Business Unit ID: ${bu.id}", seenIds, issues)
+            checkUuid("INVALID_BU_UUID", bu.id, "Identificativo non valido (business unit)", issues)
+            trackId(bu.id, "DUPLICATE_BU_ID", "Identificativo duplicato (business unit): ${bu.id}", seenIds, issues)
 
             // Traverse Sites
             for (site in bu.sites) {
-                checkUuid("INVALID_SITE_UUID", site.id, "Site ID is not a valid UUID", issues)
-                trackId(site.id, "DUPLICATE_SITE_ID", "Duplicate Site ID: ${site.id}", seenIds, issues)
+                checkUuid("INVALID_SITE_UUID", site.id, "Identificativo non valido (sede)", issues)
+                trackId(site.id, "DUPLICATE_SITE_ID", "Identificativo duplicato (sede): ${site.id}", seenIds, issues)
 
                 for (area in site.areas) {
-                    checkUuid("INVALID_AREA_UUID", area.id, "Area ID is not a valid UUID", issues)
-                    trackId(area.id, "DUPLICATE_AREA_ID", "Duplicate Area ID: ${area.id}", seenIds, issues)
+                    checkUuid("INVALID_AREA_UUID", area.id, "Identificativo non valido (area)", issues)
+                    trackId(area.id, "DUPLICATE_AREA_ID", "Identificativo duplicato (area): ${area.id}", seenIds, issues)
                 }
             }
 
             // Traverse BU Direct Areas
             for (area in bu.areas) {
-                checkUuid("INVALID_AREA_UUID", area.id, "Area ID is not a valid UUID", issues)
-                trackId(area.id, "DUPLICATE_AREA_ID", "Duplicate Area ID: ${area.id}", seenIds, issues)
+                checkUuid("INVALID_AREA_UUID", area.id, "Identificativo non valido (area)", issues)
+                trackId(area.id, "DUPLICATE_AREA_ID", "Identificativo duplicato (area): ${area.id}", seenIds, issues)
             }
 
             // Collect Devices
             for (device in bu.devices) {
                 allDevices.add(bu.id to device)
-                checkUuid("INVALID_DEVICE_UUID", device.id, "Device ID is not a valid UUID", issues)
-                trackId(device.id, "DUPLICATE_DEVICE_ID", "Duplicate Device ID: ${device.id}", seenIds, issues)
+                checkUuid("INVALID_DEVICE_UUID", device.id, "Identificativo non valido (apparato)", issues)
+                trackId(device.id, "DUPLICATE_DEVICE_ID", "Identificativo duplicato (apparato): ${device.id}", seenIds, issues)
 
                 // Unpositioned device check (Documentary warning)
                 if ((device.siteId == null) && (device.areaId == null) && (device.rackId == null)) {
                     issues.add(
                         ValidationIssue(
                             code = "UNPOSITIONED_DEVICE",
-                            message = "Device '${device.technicalName}' has no site, area, or rack assigned",
+                            message = "Apparato '${device.technicalName}' senza sede, area o rack",
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -109,7 +110,7 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "INVALID_RACK_REFERENCE",
-                                message = "Device '${device.technicalName}' references non-existent Rack '$rackId'",
+                                message = "Apparato '${device.technicalName}' riferisce un rack non esistente",
                                 severity = ValidationSeverity.STRUCTURAL_ERROR,
                                 targetEntityId = device.id
                             )
@@ -121,7 +122,7 @@ object ModelValidator {
                                 issues.add(
                                     ValidationIssue(
                                         code = "RACK_U_OUT_OF_BOUNDS",
-                                        message = "Device '${device.technicalName}' position U$pos-$topU exceeds Rack '${rack.name}' height (U${rack.heightU})",
+                                        message = "Apparato '${device.technicalName}' in U$pos-$topU supera l'altezza del rack '${rack.name}' (${rack.heightU}U)",
                                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                         targetEntityId = device.id
                                     )
@@ -138,7 +139,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "UNVERIFIED_DEVICE_OBSERVATION",
-                            message = "Device '${device.technicalName}' observation status is ${device.observation.status}",
+                            message = "Apparato '${device.technicalName}': rilievo ${device.observation.status.toDisplayString().lowercase()}",
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -147,14 +148,14 @@ object ModelValidator {
 
                 // Collect Ports
                 for (port in device.ports) {
-                    checkUuid("INVALID_PORT_UUID", port.id, "Port ID is not a valid UUID", issues)
-                    trackId(port.id, "DUPLICATE_PORT_ID", "Duplicate Port ID: ${port.id}", seenIds, issues)
+                    checkUuid("INVALID_PORT_UUID", port.id, "Identificativo non valido (porta)", issues)
+                    trackId(port.id, "DUPLICATE_PORT_ID", "Identificativo duplicato (porta): ${port.id}", seenIds, issues)
 
                     if (port.deviceId != device.id) {
                         issues.add(
                             ValidationIssue(
                                 code = "PORT_DEVICE_MISMATCH",
-                                message = "Port '${port.id}' deviceId '${port.deviceId}' does not match parent device '${device.id}'",
+                                message = "Porta '${port.name}' associata a un apparato diverso da '${device.technicalName}'",
                                 severity = ValidationSeverity.STRUCTURAL_ERROR,
                                 targetEntityId = port.id
                             )
@@ -167,7 +168,7 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "DETACHED_PORT_ENDPOINT",
-                                message = "Port '${port.name}' on device '${device.technicalName}' marked detached for verification",
+                                message = "Porta '${port.name}' di '${device.technicalName}' scollegata, da verificare",
                                 severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                 targetEntityId = port.id
                             )
@@ -199,7 +200,7 @@ object ModelValidator {
                         issues.add(
                             ValidationIssue(
                                 code = "RACK_SLOT_OVERLAP",
-                                message = "Device '${d1.technicalName}' (U$pos1Start-$pos1End) overlaps with '${d2.technicalName}' (U$pos2Start-$pos2End) in Rack '$rackName'",
+                                message = "Nel rack '$rackName' l'apparato '${d1.technicalName}' (U$pos1Start-$pos1End) si sovrappone a '${d2.technicalName}' (U$pos2Start-$pos2End)",
                                 severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                 targetEntityId = d1.id
                             )
@@ -217,7 +218,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "BROKEN_PORT_CONNECTION",
-                            message = "Port '${port.id}' connects to non-existent port '$targetPortId'",
+                            message = "Porta '${port.name}' collegata a una porta non esistente",
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = port.id
                         )
@@ -238,7 +239,7 @@ object ModelValidator {
                     issues.add(
                         ValidationIssue(
                             code = "DUPLICATE_DEVICE_NAME_IN_BU",
-                            message = "Duplicate technical name '${device.technicalName}' in Business Unit $buId",
+                            message = "Nome tecnico '${device.technicalName}' usato da più apparati",
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
@@ -254,7 +255,7 @@ object ModelValidator {
                             issues.add(
                                 ValidationIssue(
                                     code = "DUPLICATE_IP_IN_BU",
-                                    message = "Duplicate IP address '$ip' in Business Unit $buId",
+                                    message = "Indirizzo IP '$ip' usato da più apparati",
                                     severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                     targetEntityId = device.id
                                 )
@@ -269,14 +270,14 @@ object ModelValidator {
 
         // Validate Credentials
         for (cred in project.credentials) {
-            checkUuid("INVALID_CREDENTIAL_UUID", cred.id, "Credential ID is not a valid UUID", issues)
-            trackId(cred.id, "DUPLICATE_CREDENTIAL_ID", "Duplicate Credential ID: ${cred.id}", seenIds, issues)
+            checkUuid("INVALID_CREDENTIAL_UUID", cred.id, "Identificativo non valido (credenziale)", issues)
+            trackId(cred.id, "DUPLICATE_CREDENTIAL_ID", "Identificativo duplicato (credenziale): ${cred.id}", seenIds, issues)
 
             if (cred.username.isBlank()) {
                 issues.add(
                     ValidationIssue(
                         code = "BLANK_CREDENTIAL_USERNAME",
-                        message = "Credential '${cred.id}' has a blank username",
+                        message = "Credenziale senza nome utente",
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = cred.id
                     )
@@ -287,8 +288,8 @@ object ModelValidator {
         // Validate Attachments
         val attachmentsById = project.attachments.associateBy { it.id }
         for (att in project.attachments) {
-            checkUuid("INVALID_ATTACHMENT_UUID", att.id, "Attachment ID is not a valid UUID", issues)
-            trackId(att.id, "DUPLICATE_ATTACHMENT_ID", "Duplicate Attachment ID: ${att.id}", seenIds, issues)
+            checkUuid("INVALID_ATTACHMENT_UUID", att.id, "Identificativo non valido (allegato)", issues)
+            trackId(att.id, "DUPLICATE_ATTACHMENT_ID", "Identificativo duplicato (allegato): ${att.id}", seenIds, issues)
 
             if (att.classification == com.onlyfield.assetmanager.core.model.AttachmentClassification.REVIEW_REQUIRED) {
                 issues.add(
@@ -343,14 +344,14 @@ object ModelValidator {
         val allDeviceIds = allDevices.map { it.second.id }.toSet()
         val allRackIds = racksById.keys
         for (placement in project.floorplanPlacements) {
-            checkUuid("INVALID_PLACEMENT_UUID", placement.id, "Placement ID is not a valid UUID", issues)
-            trackId(placement.id, "DUPLICATE_PLACEMENT_ID", "Duplicate Placement ID: ${placement.id}", seenIds, issues)
+            checkUuid("INVALID_PLACEMENT_UUID", placement.id, "Identificativo non valido (posizionamento)", issues)
+            trackId(placement.id, "DUPLICATE_PLACEMENT_ID", "Identificativo duplicato (posizionamento): ${placement.id}", seenIds, issues)
 
             if (!allAreaIds.contains(placement.areaId)) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PLACEMENT_AREA",
-                        message = "Placement '${placement.id}' riferisce area non esistente '${placement.areaId}'",
+                        message = "Posizionamento su planimetria riferito a un'area non esistente",
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = placement.id
                     )
@@ -365,7 +366,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_PLACEMENT_TARGET",
-                        message = "Placement '${placement.id}' riferisce destinazione non esistente '${placement.targetId}'",
+                        message = "Posizionamento su planimetria riferito a un elemento non esistente",
                         severity = ValidationSeverity.STRUCTURAL_ERROR,
                         targetEntityId = placement.id
                     )
@@ -376,7 +377,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "PLACEMENT_OUT_OF_BOUNDS",
-                        message = "Placement '${placement.id}' ha coordinate fuori dai limiti (0.0..1.0)",
+                        message = "Posizionamento su planimetria con coordinate fuori dai limiti",
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = placement.id
                     )
@@ -386,8 +387,8 @@ object ModelValidator {
 
         // Validate Annotations
         for (ann in project.annotations) {
-            checkUuid("INVALID_ANNOTATION_UUID", ann.id, "Annotation ID is not a valid UUID", issues)
-            trackId(ann.id, "DUPLICATE_ANNOTATION_ID", "Duplicate Annotation ID: ${ann.id}", seenIds, issues)
+            checkUuid("INVALID_ANNOTATION_UUID", ann.id, "Identificativo non valido (annotazione)", issues)
+            trackId(ann.id, "DUPLICATE_ANNOTATION_ID", "Identificativo duplicato (annotazione): ${ann.id}", seenIds, issues)
 
             if (!allAreaIds.contains(ann.areaId)) {
                 issues.add(
@@ -417,8 +418,8 @@ object ModelValidator {
         val cableCountBySegmentId = mutableMapOf<String, Int>()
 
         for (segment in project.sharedPathSegments) {
-            checkUuid("INVALID_PATH_SEGMENT_UUID", segment.id, "SharedPathSegment ID non è un UUID valido", issues)
-            trackId(segment.id, "DUPLICATE_PATH_SEGMENT_ID", "ID SharedPathSegment duplicato: ${segment.id}", seenIds, issues)
+            checkUuid("INVALID_PATH_SEGMENT_UUID", segment.id, "Identificativo non valido (percorso condiviso)", issues)
+            trackId(segment.id, "DUPLICATE_PATH_SEGMENT_ID", "Identificativo duplicato (percorso condiviso): ${segment.id}", seenIds, issues)
 
             segment.sourceAreaId?.let { sAreaId ->
                 if (!allAreaIds.contains(sAreaId)) {
@@ -449,8 +450,8 @@ object ModelValidator {
 
         // Validate Cables
         for (cable in project.cables) {
-            checkUuid("INVALID_CABLE_UUID", cable.id, "Cable ID non è un UUID valido", issues)
-            trackId(cable.id, "DUPLICATE_CABLE_ID", "ID Cavo duplicato: ${cable.id}", seenIds, issues)
+            checkUuid("INVALID_CABLE_UUID", cable.id, "Identificativo non valido (cavo)", issues)
+            trackId(cable.id, "DUPLICATE_CABLE_ID", "Identificativo duplicato (cavo): ${cable.id}", seenIds, issues)
 
             if (cable.portAId == null || cable.portBId == null) {
                 issues.add(
@@ -510,7 +511,7 @@ object ModelValidator {
                 issues.add(
                     ValidationIssue(
                         code = "UNVERIFIED_CABLE",
-                        message = "Stato osservazione cavo '${cable.codeOrLabel ?: cable.id}' è ${cable.observation.status}",
+                        message = "Cavo '${cable.codeOrLabel ?: cable.id}': rilievo ${cable.observation.status.toDisplayString().lowercase()}",
                         severity = ValidationSeverity.DOCUMENTARY_WARNING,
                         targetEntityId = cable.id
                     )
@@ -538,8 +539,8 @@ object ModelValidator {
 
         // Validate PanelMappings
         for (mapping in project.panelMappings) {
-            checkUuid("INVALID_PANEL_MAPPING_UUID", mapping.id, "PanelMapping ID non è un UUID valido", issues)
-            trackId(mapping.id, "DUPLICATE_PANEL_MAPPING_ID", "ID PanelMapping duplicato: ${mapping.id}", seenIds, issues)
+            checkUuid("INVALID_PANEL_MAPPING_UUID", mapping.id, "Identificativo non valido (permutazione)", issues)
+            trackId(mapping.id, "DUPLICATE_PANEL_MAPPING_ID", "Identificativo duplicato (permutazione): ${mapping.id}", seenIds, issues)
 
             if (!allPorts.containsKey(mapping.portAId)) {
                 issues.add(
@@ -582,8 +583,8 @@ object ModelValidator {
         val knownVlanIds = project.vlans.map { it.vlanId }.toSet()
 
         for (vlan in project.vlans) {
-            checkUuid("INVALID_VLAN_UUID", vlan.id, "VLAN ID non è un UUID valido", issues)
-            trackId(vlan.id, "DUPLICATE_VLAN_ID", "ID VLAN duplicato: ${vlan.id}", seenIds, issues)
+            checkUuid("INVALID_VLAN_UUID", vlan.id, "Identificativo non valido (VLAN)", issues)
+            trackId(vlan.id, "DUPLICATE_VLAN_ID", "Identificativo duplicato (VLAN): ${vlan.id}", seenIds, issues)
 
             if (vlan.vlanId !in 1..4094) {
                 issues.add(
@@ -614,8 +615,8 @@ object ModelValidator {
 
         // Validate Subnets
         for (subnet in project.subnets) {
-            checkUuid("INVALID_SUBNET_UUID", subnet.id, "Subnet ID non è un UUID valido", issues)
-            trackId(subnet.id, "DUPLICATE_SUBNET_ID", "ID Subnet duplicato: ${subnet.id}", seenIds, issues)
+            checkUuid("INVALID_SUBNET_UUID", subnet.id, "Identificativo non valido (subnet)", issues)
+            trackId(subnet.id, "DUPLICATE_SUBNET_ID", "Identificativo duplicato (subnet): ${subnet.id}", seenIds, issues)
 
             if (subnet.cidrBlock.isBlank() || !subnet.cidrBlock.contains("/")) {
                 issues.add(
@@ -631,8 +632,8 @@ object ModelValidator {
 
         // Validate Port VLAN Memberships
         for (membership in project.portVlanMemberships) {
-            checkUuid("INVALID_PORT_VLAN_MEMBERSHIP_UUID", membership.id, "PortVlanMembership ID non è un UUID valido", issues)
-            trackId(membership.id, "DUPLICATE_PORT_VLAN_MEMBERSHIP_ID", "ID Membership duplicato: ${membership.id}", seenIds, issues)
+            checkUuid("INVALID_PORT_VLAN_MEMBERSHIP_UUID", membership.id, "Identificativo non valido (appartenenza VLAN)", issues)
+            trackId(membership.id, "DUPLICATE_PORT_VLAN_MEMBERSHIP_ID", "Identificativo duplicato (appartenenza VLAN): ${membership.id}", seenIds, issues)
 
             if (!allPorts.containsKey(membership.portId)) {
                 issues.add(
@@ -674,8 +675,8 @@ object ModelValidator {
 
         // Validate Logical Interfaces
         for (l3Int in project.logicalInterfaces) {
-            checkUuid("INVALID_LOGICAL_INTERFACE_UUID", l3Int.id, "LogicalInterface ID non è un UUID valido", issues)
-            trackId(l3Int.id, "DUPLICATE_LOGICAL_INTERFACE_ID", "ID LogicalInterface duplicato: ${l3Int.id}", seenIds, issues)
+            checkUuid("INVALID_LOGICAL_INTERFACE_UUID", l3Int.id, "Identificativo non valido (interfaccia logica)", issues)
+            trackId(l3Int.id, "DUPLICATE_LOGICAL_INTERFACE_ID", "Identificativo duplicato (interfaccia logica): ${l3Int.id}", seenIds, issues)
 
             if (!allDeviceIds.contains(l3Int.deviceId)) {
                 issues.add(
@@ -691,8 +692,8 @@ object ModelValidator {
 
         // Validate LAG Groups
         for (lag in project.lagGroups) {
-            checkUuid("INVALID_LAG_GROUP_UUID", lag.id, "LagGroup ID non è un UUID valido", issues)
-            trackId(lag.id, "DUPLICATE_LAG_GROUP_ID", "ID LagGroup duplicato: ${lag.id}", seenIds, issues)
+            checkUuid("INVALID_LAG_GROUP_UUID", lag.id, "Identificativo non valido (gruppo LAG)", issues)
+            trackId(lag.id, "DUPLICATE_LAG_GROUP_ID", "Identificativo duplicato (gruppo LAG): ${lag.id}", seenIds, issues)
 
             if (!allDeviceIds.contains(lag.deviceId)) {
                 issues.add(
@@ -721,8 +722,8 @@ object ModelValidator {
 
         // Validate Device Configurations
         for (config in project.deviceConfigurations) {
-            checkUuid("INVALID_DEVICE_CONFIG_UUID", config.id, "DeviceConfiguration ID non è un UUID valido", issues)
-            trackId(config.id, "DUPLICATE_DEVICE_CONFIG_ID", "ID DeviceConfiguration duplicato: ${config.id}", seenIds, issues)
+            checkUuid("INVALID_DEVICE_CONFIG_UUID", config.id, "Identificativo non valido (configurazione)", issues)
+            trackId(config.id, "DUPLICATE_DEVICE_CONFIG_ID", "Identificativo duplicato (configurazione): ${config.id}", seenIds, issues)
 
             if (!allDeviceIds.contains(config.deviceId)) {
                 issues.add(
@@ -751,8 +752,8 @@ object ModelValidator {
 
         // Validate WAN/VPN Connections
         for (conn in project.wanVpnConnections) {
-            checkUuid("INVALID_WAN_VPN_UUID", conn.id, "WanVpnConnection ID non è un UUID valido", issues)
-            trackId(conn.id, "DUPLICATE_WAN_VPN_ID", "ID WanVpnConnection duplicato: ${conn.id}", seenIds, issues)
+            checkUuid("INVALID_WAN_VPN_UUID", conn.id, "Identificativo non valido (connessione WAN/VPN)", issues)
+            trackId(conn.id, "DUPLICATE_WAN_VPN_ID", "Identificativo duplicato (connessione WAN/VPN): ${conn.id}", seenIds, issues)
 
             conn.localEndpointDeviceId?.let { devId ->
                 if (!allDeviceIds.contains(devId)) {
@@ -783,8 +784,8 @@ object ModelValidator {
 
         // Validate Video Surveillance Mappings
         for (video in project.videoSurveillanceMappings) {
-            checkUuid("INVALID_VIDEO_MAPPING_UUID", video.id, "VideoSurveillanceMapping ID non è un UUID valido", issues)
-            trackId(video.id, "DUPLICATE_VIDEO_MAPPING_ID", "ID VideoSurveillanceMapping duplicato: ${video.id}", seenIds, issues)
+            checkUuid("INVALID_VIDEO_MAPPING_UUID", video.id, "Identificativo non valido (videosorveglianza)", issues)
+            trackId(video.id, "DUPLICATE_VIDEO_MAPPING_ID", "Identificativo duplicato (videosorveglianza): ${video.id}", seenIds, issues)
 
             if (!allDeviceIds.contains(video.cameraDeviceId)) {
                 issues.add(
@@ -813,8 +814,8 @@ object ModelValidator {
 
         // Validate Custom Extra Fields
         for (field in project.customExtraFields) {
-            checkUuid("INVALID_CUSTOM_FIELD_UUID", field.id, "CustomExtraField ID non è un UUID valido", issues)
-            trackId(field.id, "DUPLICATE_CUSTOM_FIELD_ID", "ID CustomExtraField duplicato: ${field.id}", seenIds, issues)
+            checkUuid("INVALID_CUSTOM_FIELD_UUID", field.id, "Identificativo non valido (campo extra)", issues)
+            trackId(field.id, "DUPLICATE_CUSTOM_FIELD_ID", "Identificativo duplicato (campo extra): ${field.id}", seenIds, issues)
 
             if (field.classification == com.onlyfield.assetmanager.core.model.AttachmentClassification.REVIEW_REQUIRED) {
                 issues.add(
@@ -832,8 +833,8 @@ object ModelValidator {
         val allPortIds = allDevices.flatMap { it.second.ports }.map { it.id }.toSet()
         val powerFeedsByDevice = project.powerFeeds.groupBy { it.deviceId }
         for (feed in project.powerFeeds) {
-            checkUuid("INVALID_POWER_FEED_UUID", feed.id, "PowerFeed ID non è un UUID valido", issues)
-            trackId(feed.id, "DUPLICATE_POWER_FEED_ID", "ID PowerFeed duplicato: ${feed.id}", seenIds, issues)
+            checkUuid("INVALID_POWER_FEED_UUID", feed.id, "Identificativo non valido (alimentazione)", issues)
+            trackId(feed.id, "DUPLICATE_POWER_FEED_ID", "Identificativo duplicato (alimentazione): ${feed.id}", seenIds, issues)
 
             if (!allDeviceIds.contains(feed.deviceId)) {
                 issues.add(
@@ -919,8 +920,8 @@ object ModelValidator {
 
         // Validate PoE Mappings
         for (poe in project.poeMappings) {
-            checkUuid("INVALID_POE_MAPPING_UUID", poe.id, "PoeMapping ID non è un UUID valido", issues)
-            trackId(poe.id, "DUPLICATE_POE_MAPPING_ID", "ID PoeMapping duplicato: ${poe.id}", seenIds, issues)
+            checkUuid("INVALID_POE_MAPPING_UUID", poe.id, "Identificativo non valido (mappatura PoE)", issues)
+            trackId(poe.id, "DUPLICATE_POE_MAPPING_ID", "Identificativo duplicato (mappatura PoE): ${poe.id}", seenIds, issues)
 
             if (!allPortIds.contains(poe.portId)) {
                 issues.add(
@@ -936,8 +937,8 @@ object ModelValidator {
 
         // Validate Document Badges
         for (badge in project.documentBadges) {
-            checkUuid("INVALID_DOCUMENT_BADGE_UUID", badge.id, "DocumentBadge ID non è un UUID valido", issues)
-            trackId(badge.id, "DUPLICATE_DOCUMENT_BADGE_ID", "ID DocumentBadge duplicato: ${badge.id}", seenIds, issues)
+            checkUuid("INVALID_DOCUMENT_BADGE_UUID", badge.id, "Identificativo non valido (badge)", issues)
+            trackId(badge.id, "DUPLICATE_DOCUMENT_BADGE_ID", "Identificativo duplicato (badge): ${badge.id}", seenIds, issues)
         }
 
         return ValidationResult(issues)
@@ -1053,7 +1054,7 @@ object ModelValidator {
                             com.onlyfield.assetmanager.core.model.DocumentBadge(
                                 targetType = targetType,
                                 targetId = targetId,
-                                label = "QUESTIONE APERTA: ${device.observation.status}",
+                                label = "Questione aperta: ${device.observation.status.toDisplayString().lowercase()}",
                                 category = com.onlyfield.assetmanager.core.model.BadgeCategory.OPEN_ISSUE,
                                 isDerived = true
                             )
@@ -1105,7 +1106,7 @@ object ModelValidator {
             issues.add(
                 ValidationIssue(
                     code = "CANNOT_MERGE_SAME_DEVICE",
-                    message = "Surviving device ID and duplicate device ID must be distinct",
+                    message = "L'apparato da mantenere e il duplicato devono essere diversi",
                     severity = ValidationSeverity.STRUCTURAL_ERROR,
                     targetEntityId = survivingDeviceId
                 )

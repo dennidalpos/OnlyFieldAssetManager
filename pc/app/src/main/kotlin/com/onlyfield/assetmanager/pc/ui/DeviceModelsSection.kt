@@ -1,328 +1,165 @@
 package com.onlyfield.assetmanager.pc.ui
 
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
-import java.util.UUID
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.FieldValidators
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeviceModelsSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showAddEditModelDialog by remember { mutableStateOf(false) }
-    var editingModel by remember { mutableStateOf<DeviceModel?>(null) }
+fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    val index = remember(project) { ProjectIndex(project) }
+    var query by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<DeviceModel?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var applying by remember { mutableStateOf<DeviceModel?>(null) }
+    val models = project.deviceModels.filter { matchesQuery(query, it.name, it.brand, it.modelNumber) }
 
-    var showApplyModelDialog by remember { mutableStateOf(false) }
-    var applyTargetModel by remember { mutableStateOf<DeviceModel?>(null) }
-
-    val allDevices = remember(project) {
-        project.businessUnits.flatMap { it.devices }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(
+            "Modelli di apparato",
+            subtitle = "Modelli riutilizzabili: categoria, altezza e porte generate automaticamente",
+            searchQuery = query,
+            onSearchChange = { query = it },
+            searchPlaceholder = "Cerca modello, marca, codice…"
         ) {
-            Text(
-                text = "Catalogo Modelli Apparati (${project.deviceModels.size})",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-
-            Button(onClick = {
-                editingModel = null
-                showAddEditModelDialog = true
-            }) {
-                Text("+ Nuovo Modello")
-            }
+            Button(onClick = { creating = true }) { Text("+ Nuovo modello") }
         }
-
-        if (project.deviceModels.isEmpty()) {
-            EmptyStateCard(
-                message = "Nessun modello di apparato definito nel progetto.",
-                actionLabel = "+ Nuovo Modello",
-                onAction = {
-                    editingModel = null
-                    showAddEditModelDialog = true
-                }
-            )
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.deviceModels) { model ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(model.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                                Text("Marca: ${model.brand ?: "—"} | Codice Modello: ${model.modelNumber ?: "—"}")
-                                Text("Categoria: ${model.category.name} | Altezza default: ${model.defaultHeightU}U")
-
-                                if (model.portTemplates.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Template Porte:", style = MaterialTheme.typography.labelMedium)
-                                    model.portTemplates.forEach { tmpl ->
-                                        Text("• Prefix: '${tmpl.namePrefix}' | N. Porte: ${tmpl.portCount} (Da ${tmpl.startNumber})", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                }
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Button(onClick = {
-                                    applyTargetModel = model
-                                    showApplyModelDialog = true
-                                }) {
-                                    Text("Applica ad Apparato", fontSize = 11.sp)
-                                }
-
-                                OutlinedButton(onClick = {
-                                    editingModel = model
-                                    showAddEditModelDialog = true
-                                }) {
-                                    Text("Modifica", fontSize = 11.sp)
-                                }
-
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.deleteDeviceModel(project, model.id)
-                                        onProjectUpdated(updated, "Modello '${model.name}' rimosso.")
-                                    }
-                                ) {
-                                    Text("Elimina", fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // Add/Edit Model Dialog
-    if (showAddEditModelDialog) {
-        val m = editingModel
-        var name by remember { mutableStateOf(m?.name ?: "") }
-        var brand by remember { mutableStateOf(m?.brand ?: "") }
-        var modelNumber by remember { mutableStateOf(m?.modelNumber ?: "") }
-        var category by remember { mutableStateOf(m?.category ?: DeviceCategory.NETWORK_SWITCH) }
-        var defaultHeightUText by remember { mutableStateOf(m?.defaultHeightU?.toString() ?: "1") }
-
-        // Port Template fields
-        var portTemplates by remember { mutableStateOf(m?.portTemplates ?: emptyList()) }
-        var prefixInput by remember { mutableStateOf("Gi1/0/") }
-        var countInput by remember { mutableStateOf("24") }
-
-        AlertDialog(
-            onDismissRequest = { showAddEditModelDialog = false },
-            title = { Text(if (m == null) "Nuovo Modello Apparato" else "Modifica Modello: ${m.name}") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nome Modello *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
+        if (models.isEmpty()) {
+            EmptyState(if (project.deviceModels.isEmpty()) "Nessun modello definito." else "Nessun modello corrisponde alla ricerca.",
+                actionLabel = "+ Nuovo modello".takeIf { project.deviceModels.isEmpty() }, onAction = { creating = true })
+        } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(models, key = { it.id }) { m ->
+                val usage = index.devices.count { it.deviceModelId == m.id }
+                ItemCard(
+                    title = m.name,
+                    badge = m.category.toDisplayString(),
+                    details = listOf(
+                        listOfNotNull(m.brand, m.modelNumber, "${m.defaultHeightU}U").joinToString(" · "),
+                        m.portTemplates.joinToString(", ") { "${it.portCount}× ${it.namePrefix}${it.startNumber}…" }.ifBlank { "Nessun template porte" },
+                        "Usato da $usage apparati"
                     )
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = brand,
-                            onValueChange = { brand = it },
-                            label = { Text("Marca / Produttore") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = modelNumber,
-                            onValueChange = { modelNumber = it },
-                            label = { Text("Codice Modello") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        var catExp by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedButton(onClick = { catExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Categoria: ${category.name}")
-                            }
-                            DropdownMenu(expanded = catExp, onDismissRequest = { catExp = false }) {
-                                DeviceCategory.entries.forEach { c ->
-                                    DropdownMenuItem(text = { Text(c.name) }, onClick = { category = c; catExp = false })
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = defaultHeightUText,
-                            onValueChange = { defaultHeightUText = it },
-                            label = { Text("Altezza U Default") },
-                            modifier = Modifier.weight(0.5f),
-                            singleLine = true
-                        )
-                    }
-
-                    Divider()
-                    Text("Template Generazione Porte:", fontWeight = FontWeight.Bold)
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        OutlinedTextField(
-                            value = prefixInput,
-                            onValueChange = { prefixInput = it },
-                            label = { Text("Prefisso (es. Gi1/0/)") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = countInput,
-                            onValueChange = { countInput = it },
-                            label = { Text("N. Porte") },
-                            modifier = Modifier.weight(0.5f),
-                            singleLine = true
-                        )
-                        Button(
-                            enabled = prefixInput.isNotBlank() && countInput.toIntOrNull() != null,
-                            onClick = {
-                                val cnt = countInput.toIntOrNull() ?: 1
-                                portTemplates = portTemplates + PortTemplate(namePrefix = prefixInput.trim(), portCount = cnt)
-                            }
-                        ) {
-                            Text("+ Aggiungi")
-                        }
-                    }
-
-                    portTemplates.forEachIndexed { idx, tmpl ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(6.dp).fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("• ${tmpl.portCount} porte con prefisso '${tmpl.namePrefix}'")
-                                TextButton(onClick = { portTemplates = portTemplates.filterIndexed { i, _ -> i != idx } }) {
-                                    Text("Rimuovi", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = name.isNotBlank(),
-                    onClick = {
-                        val hU = defaultHeightUText.toIntOrNull() ?: 1
-                        val newModel = DeviceModel(
-                            id = m?.id ?: UUID.randomUUID().toString(),
-                            name = name.trim(),
-                            brand = brand.ifBlank { null },
-                            modelNumber = modelNumber.ifBlank { null },
-                            category = category,
-                            defaultHeightU = hU,
-                            portTemplates = portTemplates
-                        )
-
-                        val updated = if (m == null) {
-                            com.onlyfield.assetmanager.pc.DesktopDomainLogic.addDeviceModel(project, newModel)
-                        } else {
-                            com.onlyfield.assetmanager.pc.DesktopDomainLogic.updateDeviceModel(project, newModel)
-                        }
-
-                        showAddEditModelDialog = false
-                        onProjectUpdated(updated, "Modello '${newModel.name}' salvato.")
-                    }
                 ) {
-                    Text("Salva")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showAddEditModelDialog = false }) {
-                    Text("Annulla")
+                    TextButton(onClick = { applying = m }, enabled = index.devices.isNotEmpty()) { Text("Applica…") }
+                    EditButton { editing = m }
+                    DeleteButton(m.name, onDelete = { onProjectUpdated(ProjectEdits.deleteDeviceModel(project, m.id), "Modello «${m.name}» eliminato.") },
+                        message = if (usage > 0) "$usage apparati fanno riferimento a questo modello; manterranno i propri dati." else null)
                 }
             }
-        )
+        }
     }
 
-    // Apply Model to Device Dialog
-    if (showApplyModelDialog) {
-        val tmplModel = applyTargetModel
-        if (tmplModel != null) {
-            var selectedDeviceId by remember { mutableStateOf(allDevices.firstOrNull()?.id ?: "") }
+    if (creating || editing != null) {
+        ModelDialog(editing, onDismiss = { creating = false; editing = null }) { saved, isNew ->
+            creating = false; editing = null
+            onProjectUpdated(if (isNew) ProjectEdits.addDeviceModel(project, saved) else ProjectEdits.updateDeviceModel(project, saved), "Modello «${saved.name}» salvato.")
+        }
+    }
 
-            AlertDialog(
-                onDismissRequest = { showApplyModelDialog = false },
-                title = { Text("Applica Modello: ${tmplModel.name}") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Seleziona l'apparato a cui applicare categoria, altezza U e porte dal modello:")
+    applying?.let { model ->
+        var deviceId by remember(model) { mutableStateOf<String?>(null) }
+        val device = index.device(deviceId)
+        FormDialog(
+            title = "Applica «${model.name}»",
+            onDismiss = { applying = null },
+            onConfirm = {
+                applying = null
+                onProjectUpdated(ProjectEdits.applyModelToDevice(project, deviceId!!, model.id), "Modello «${model.name}» applicato a «${device?.technicalName}».")
+            },
+            confirmEnabled = deviceId != null,
+            confirmLabel = "Applica",
+            width = 520.dp
+        ) {
+            Text("Imposta categoria (${model.category.toDisplayString()}) e altezza (${model.defaultHeightU}U) dell'apparato.")
+            DevicePicker("Apparato *", index, deviceId, { deviceId = it })
+            device?.let {
+                Text(
+                    if (it.ports.isEmpty()) "Verranno create ${model.portTemplates.sumOf { t -> t.portCount }} porte dal modello."
+                    else "L'apparato ha già ${it.ports.size} porte: non verranno modificate.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+        }
+    }
+}
 
-                        var devExp by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { devExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                val dName = allDevices.find { it.id == selectedDeviceId }?.technicalName ?: "Seleziona Apparato"
-                                Text(dName)
-                            }
-                            DropdownMenu(expanded = devExp, onDismissRequest = { devExp = false }) {
-                                allDevices.forEach { dev ->
-                                    DropdownMenuItem(text = { Text("${dev.technicalName} (${dev.category.name})") }, onClick = { selectedDeviceId = dev.id; devExp = false })
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        enabled = selectedDeviceId.isNotBlank(),
-                        onClick = {
-                            val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.applyModelToDevice(project, selectedDeviceId, tmplModel.id)
-                            showApplyModelDialog = false
-                            val targetDev = allDevices.find { it.id == selectedDeviceId }
-                            onProjectUpdated(updated, "Modello '${tmplModel.name}' applicato ad apparato '${targetDev?.technicalName}'.")
-                        }
-                    ) {
-                        Text("Applica Modello")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { showApplyModelDialog = false }) {
-                        Text("Annulla")
-                    }
-                }
+@Composable
+private fun ModelDialog(model: DeviceModel?, onDismiss: () -> Unit, onSave: (DeviceModel, Boolean) -> Unit) {
+    var name by remember { mutableStateOf(model?.name.orEmpty()) }
+    var brand by remember { mutableStateOf(model?.brand.orEmpty()) }
+    var modelNumber by remember { mutableStateOf(model?.modelNumber.orEmpty()) }
+    var category by remember { mutableStateOf(model?.category ?: DeviceCategory.NETWORK_SWITCH) }
+    var height by remember { mutableStateOf(model?.defaultHeightU?.toString() ?: "1") }
+    var templates by remember { mutableStateOf(model?.portTemplates.orEmpty()) }
+
+    var prefix by remember { mutableStateOf("") }
+    var start by remember { mutableStateOf("1") }
+    var count by remember { mutableStateOf("") }
+    var side by remember { mutableStateOf(PortSide.FRONT) }
+
+    val heightError = FieldValidators.int(height, 1, 60, required = true)
+    val countError = FieldValidators.int(count, 1, 512)
+    val startError = FieldValidators.int(start, 0, 9999, required = true)
+
+    FormDialog(
+        title = if (model == null) "Nuovo modello" else "Modifica «${model.name}»",
+        onDismiss = onDismiss,
+        confirmEnabled = name.isNotBlank() && heightError == null,
+        onConfirm = {
+            val saved = (model ?: DeviceModel(name = name.trim())).copy(
+                name = name.trim(),
+                brand = brand.trim().ifBlank { null },
+                modelNumber = modelNumber.trim().ifBlank { null },
+                category = category,
+                defaultHeightU = height.trim().toInt(),
+                portTemplates = templates
             )
+            onSave(saved, model == null)
+        },
+        width = 640.dp
+    ) {
+        FormField(name, { name = it }, "Nome *", hint = "Es. Switch 48 porte PoE")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormField(brand, { brand = it }, "Marca", Modifier.weight(1f))
+            FormField(modelNumber, { modelNumber = it }, "Codice modello", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            EnumPicker("Categoria", DeviceCategory.entries, category, { it.toDisplayString() }, { category = it }, Modifier.weight(1.4f))
+            FormField(height, { height = it }, "Altezza (U) *", Modifier.weight(0.6f), heightError)
+        }
+
+        Text("Porte generate", fontWeight = FontWeight.SemiBold)
+        templates.forEachIndexed { i, t ->
+            ItemCard(
+                title = "${t.portCount} porte: ${t.namePrefix}${t.startNumber} … ${t.namePrefix}${t.startNumber + t.portCount - 1}",
+                details = listOf(t.side.toDisplayString())
+            ) {
+                TextButton(onClick = { templates = templates.filterIndexed { j, _ -> j != i } }) { Text("Rimuovi") }
+            }
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+            FormField(prefix, { prefix = it }, "Prefisso", Modifier.weight(1f), hint = "Es. Gi1/0/")
+            FormField(start, { start = it }, "Da n°", Modifier.weight(0.5f), startError)
+            FormField(count, { count = it }, "Quante", Modifier.weight(0.5f), countError)
+            EnumPicker("Lato", PortSide.entries, side, { it.toDisplayString() }, { side = it }, Modifier.weight(0.8f))
+            OutlinedButton(
+                enabled = prefix.isNotBlank() && count.isNotBlank() && countError == null && startError == null,
+                modifier = Modifier.padding(top = 8.dp),
+                onClick = {
+                    templates = templates + PortTemplate(namePrefix = prefix.trim(), startNumber = start.trim().toInt(), portCount = count.trim().toInt(), side = side)
+                    prefix = ""; count = ""; start = "1"
+                }
+            ) { Text("Aggiungi") }
         }
     }
 }

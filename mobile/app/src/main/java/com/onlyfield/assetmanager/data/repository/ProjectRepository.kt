@@ -9,6 +9,7 @@ import com.onlyfield.assetmanager.data.local.AppDatabase
 import com.onlyfield.assetmanager.data.local.AreaEntity
 import com.onlyfield.assetmanager.data.local.BusinessUnitEntity
 import com.onlyfield.assetmanager.data.local.CredentialEntity
+import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.data.local.DeviceEntity
 import com.onlyfield.assetmanager.data.local.DeviceModelEntity
 import com.onlyfield.assetmanager.data.local.PortEntity
@@ -49,6 +50,8 @@ data class PackageImportEvaluation(
 
 class ProjectRepository(
     private val db: AppDatabase,
+    /** Folder holding attachment files (`<root>/<projectId>/<attachmentId>/<name>`); null in tests without storage. */
+    private val attachmentsRoot: java.io.File? = null,
 ) {
     private val projectDao = db.projectDao()
     private val inventoryDao = db.inventoryDao()
@@ -437,8 +440,21 @@ class ProjectRepository(
 
     suspend fun exportProjectPackage(projectId: String, password: String? = null): ByteArray? {
         val project = getProjectById(projectId) ?: return null
-        return PackageSerializer.exportPackage(project, password = password)
+        val files = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
+        return PackageSerializer.exportPackage(project, attachments = files, password = password)
     }
+
+    /** Local file of an attachment, also accepting the older `filesDir`-relative path. */
+    fun attachmentFile(projectId: String, attachment: com.onlyfield.assetmanager.core.model.Attachment): java.io.File? {
+        val root = attachmentsRoot ?: return null
+        val canonical = AttachmentFiles.localFile(root, projectId, attachment)
+        if (canonical.isFile) return canonical
+        return root.parentFile?.let { java.io.File(it, attachment.relativePath) }?.takeIf { attachment.relativePath.isNotBlank() && it.isFile }
+    }
+
+    fun attachmentsRoot(): java.io.File? = attachmentsRoot
+
+    fun missingAttachments(project: Project) = AttachmentFiles.missing(project) { attachmentFile(project.id, it) }
 
     suspend fun exportProjectPackageToStream(
         projectId: String,
@@ -479,8 +495,14 @@ class ProjectRepository(
     }
 
     suspend fun importProjectPackage(pkg: ProjectPackage): Boolean {
+        attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
         saveProject(pkg.project)
         return true
+    }
+
+    /** Deletes the project and, through cascading foreign keys, everything it contains. */
+    suspend fun deleteProject(projectId: String) {
+        projectDao.deleteProjectById(projectId)
     }
 
     suspend fun renameProject(projectId: String, newName: String) {

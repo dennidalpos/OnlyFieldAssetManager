@@ -1,6 +1,5 @@
 package com.onlyfield.assetmanager.pc.ui
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -15,121 +14,130 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
-import java.util.UUID
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.RackForm
+import com.onlyfield.assetmanager.core.forms.RackLayout
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RackSection(
     project: Project,
     onProjectUpdated: (Project, String) -> Unit,
     onTrashItemCreated: (TrashItem) -> Unit
 ) {
+    val index = remember(project) { ProjectIndex(project) }
+    val confirm = LocalConfirm.current
+    var query by remember { mutableStateOf("") }
     var selectedRackId by remember { mutableStateOf(project.racks.firstOrNull()?.id) }
-    var rackSideView by remember { mutableStateOf(RackSide.FRONT) }
+    var side by remember { mutableStateOf(RackSide.FRONT) }
+    var editing by remember { mutableStateOf<Rack?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var placing by remember { mutableStateOf(false) }
 
-    // Dialogs
-    var showAddEditRackDialog by remember { mutableStateOf(false) }
-    var editingRack by remember { mutableStateOf<Rack?>(null) }
+    val racks = project.racks.filter { matchesQuery(query, it.name, index.areaName(it.areaId, "")) }
+    val selected = index.rack(selectedRackId) ?: racks.firstOrNull()
 
-    val selectedRack = remember(project, selectedRackId) {
-        project.racks.find { it.id == selectedRackId } ?: project.racks.firstOrNull()
-    }
-
-    val allDevicesInProject = remember(project) {
-        project.businessUnits.flatMap { it.devices }
-    }
-
-    val devicesInSelectedRack = remember(allDevicesInProject, selectedRack) {
-        if (selectedRack == null) emptyList()
-        else allDevicesInProject.filter { it.rackId == selectedRack.id }
-    }
-
-    val unassignedDevices = remember(allDevicesInProject) {
-        allDevicesInProject.filter { it.rackId == null }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(
+            "Rack",
+            subtitle = "${project.racks.size} rack",
+            searchQuery = query,
+            onSearchChange = { query = it },
+            searchPlaceholder = "Cerca rack o area…"
         ) {
-            // Racks List Panel
-            Card(
-                modifier = Modifier.width(320.dp).fillMaxHeight(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Column(modifier = Modifier.padding(12.dp).fillMaxSize()) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+            Button(onClick = { creating = true }) { Text("+ Nuovo rack") }
+        }
+
+        if (project.racks.isEmpty()) {
+            EmptyState("Nessun rack nel progetto.", actionLabel = "+ Nuovo rack", onAction = { creating = true })
+            return@Column
+        }
+
+        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(modifier = Modifier.width(300.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(racks, key = { it.id }) { rack ->
+                    val isSelected = rack.id == selected?.id
+                    val used = RackLayout.usedUnits(rack, index.devices)
+                    Card(
+                        modifier = Modifier.fillMaxWidth()
+                            .border(if (isSelected) 2.dp else 0.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(12.dp))
+                            .clickable { selectedRackId = rack.id },
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
+                        )
                     ) {
-                        Text("Armadi Rack (${project.racks.size})", fontWeight = FontWeight.Bold)
-                        Button(onClick = {
-                            editingRack = null
-                            showAddEditRackDialog = true
-                        }) {
-                            Text("+ Nuovo")
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(rack.name, fontWeight = FontWeight.SemiBold)
+                            Text("${index.areaName(rack.areaId, "Nessuna area")} · $used/${rack.heightU}U occupate", style = MaterialTheme.typography.bodySmall)
                         }
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (project.racks.isEmpty()) {
-                        EmptyStateCard(
-                            message = "Nessun armadio rack presente.",
-                            actionLabel = "+ Nuovo",
-                            onAction = {
-                                editingRack = null
-                                showAddEditRackDialog = true
+            selected?.let { rack ->
+                val inRack = index.devices.filter { it.rackId == rack.id }
+                val unplaced = inRack.filter { it.positionU == null }
+                Card(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(rack.name, style = MaterialTheme.typography.titleLarge)
+                                Text(
+                                    "${rack.heightU}U · numerazione ${rack.numberingDirection.toDisplayString().lowercase()}" +
+                                        (rack.depthMm?.let { " · profondità $it mm" } ?: ""),
+                                    style = MaterialTheme.typography.bodySmall
+                                )
                             }
-                        )
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(project.racks) { rack ->
-                                val isSelected = rack.id == selectedRack?.id
-                                val devCount = allDevicesInProject.count { it.rackId == rack.id }
-
-                                Card(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .border(
-                                            width = if (isSelected) 2.dp else 1.dp,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable { selectedRackId = rack.id },
-                                    colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f) else MaterialTheme.colorScheme.surface
+                            SingleChoiceSegmentedButtonRow {
+                                listOf(RackSide.FRONT, RackSide.REAR).forEachIndexed { i, s ->
+                                    SegmentedButton(selected = side == s, onClick = { side = s }, shape = SegmentedButtonDefaults.itemShape(i, 2)) {
+                                        Text(s.toDisplayString())
+                                    }
+                                }
+                            }
+                            Button(onClick = { placing = true }) { Text("Colloca apparato…") }
+                            EditButton { editing = rack }
+                            DeleteButton(rack.name, label = "Sposta nel cestino", message = "Gli apparati montati verranno segnati come fuori rack.", onDelete = {
+                                val (updated, trashItem) = ProjectEdits.deleteRackToTrash(project, rack.id)
+                                trashItem?.let(onTrashItemCreated)
+                                onProjectUpdated(updated, "Rack «${rack.name}» spostato nel cestino.")
+                            })
+                        }
+                        Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            RackElevation(rack, inRack, side, Modifier.weight(1.3f).fillMaxHeight())
+                            Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text("Apparati nel rack (${inRack.size})", fontWeight = FontWeight.SemiBold)
+                                if (unplaced.isNotEmpty()) {
+                                    Text(
+                                        "${unplaced.size} senza posizione U: modificali per collocarli.",
+                                        color = MaterialTheme.colorScheme.tertiary,
+                                        style = MaterialTheme.typography.bodySmall
                                     )
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Text(rack.name, fontWeight = FontWeight.Bold)
-                                        Text("Altezza: ${rack.heightU}U | Apparati: $devCount", style = MaterialTheme.typography.bodySmall)
-                                        Text("Direzione: ${rack.numberingDirection}", style = MaterialTheme.typography.labelSmall)
-
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
-                                            horizontalArrangement = Arrangement.End,
-                                            verticalAlignment = Alignment.CenterVertically
+                                }
+                                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    items(inRack.sortedByDescending { it.positionU ?: 0 }, key = { it.id }) { dev ->
+                                        ItemCard(
+                                            title = dev.technicalName,
+                                            details = listOf(
+                                                (dev.positionU?.let { "U$it" } ?: "Posizione non indicata") + " · ${dev.heightU}U · ${dev.rackSide.toDisplayString()}"
+                                            )
                                         ) {
                                             TextButton(onClick = {
-                                                editingRack = rack
-                                                showAddEditRackDialog = true
-                                            }) {
-                                                Text("Modifica", fontSize = 11.sp)
-                                            }
-                                            TextButton(onClick = {
-                                                val (updated, trashItem) = com.onlyfield.assetmanager.pc.DesktopDomainLogic.deleteRackToTrash(project, rack.id)
-                                                if (trashItem != null) onTrashItemCreated(trashItem)
-                                                onProjectUpdated(updated, "Rack '${rack.name}' spostato nel cestino.")
-                                            }) {
-                                                Text("Elimina", fontSize = 11.sp, color = MaterialTheme.colorScheme.error)
-                                            }
+                                                confirm(
+                                                    ConfirmRequest(
+                                                        "Togliere «${dev.technicalName}» dal rack?",
+                                                        "L'apparato resta nell'inventario come fuori rack.",
+                                                        confirmLabel = "Togli dal rack",
+                                                        destructive = false
+                                                    ) {
+                                                        val moved = dev.copy(rackId = null, positionU = null, mountingType = MountingType.OUT_OF_RACK)
+                                                        onProjectUpdated(ProjectEdits.updateDevice(project, moved), "«${dev.technicalName}» tolto dal rack.")
+                                                    }
+                                                )
+                                            }) { Text("Togli") }
                                         }
                                     }
                                 }
@@ -137,293 +145,123 @@ fun RackSection(
                         }
                     }
                 }
-            }
 
-            // Visual Rack Elevation Layout Preview
-            Card(
-                modifier = Modifier.weight(1f).fillMaxHeight(),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                if (selectedRack == null) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Seleziona o crea un armadio rack per visualizzare il layout U.")
-                    }
-                } else {
-                    Column(modifier = Modifier.padding(16.dp).fillMaxSize()) {
-                        // Rack Header Controls
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text(
-                                    text = "Vista Prospetto: ${selectedRack.name} (${selectedRack.heightU}U)",
-                                    style = MaterialTheme.typography.titleLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text("Occupazione: ${devicesInSelectedRack.sumOf { it.heightU }}U su ${selectedRack.heightU}U")
-                            }
-
-                            SingleChoiceSegmentedButtonRow {
-                                SegmentedButton(
-                                    selected = rackSideView == RackSide.FRONT,
-                                    onClick = { rackSideView = RackSide.FRONT },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                                ) {
-                                    Text("Fronte (FRONT)")
-                                }
-                                SegmentedButton(
-                                    selected = rackSideView == RackSide.REAR,
-                                    onClick = { rackSideView = RackSide.REAR },
-                                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                                ) {
-                                    Text("Retro (REAR)")
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Visual Slots Column
-                        val heightU = selectedRack.heightU
-                        val slots = remember(heightU, selectedRack.numberingDirection) {
-                            if (selectedRack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) {
-                                (heightU downTo 1).toList()
-                            } else {
-                                (1..heightU).toList()
-                            }
-                        }
-
-                        Row(modifier = Modifier.fillMaxSize()) {
-                            // 2D Elevation View
-                            Card(
-                                modifier = Modifier.weight(1.5f).fillMaxHeight(),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
-                            ) {
-                                LazyColumn(
-                                    modifier = Modifier.padding(12.dp).fillMaxSize(),
-                                    verticalArrangement = Arrangement.spacedBy(2.dp)
-                                ) {
-                                    items(slots) { uNum ->
-                                        // Find device starting or occupying uNum
-                                        val mountedDev = devicesInSelectedRack.find { dev ->
-                                            val pos = dev.positionU ?: return@find false
-                                            val sideMatch = dev.rackSide == RackSide.BOTH || dev.rackSide == rackSideView
-                                            sideMatch && uNum >= pos && uNum < (pos + dev.heightU)
-                                        }
-
-                                        if (mountedDev != null) {
-                                            val isStartU = mountedDev.positionU == uNum
-                                            Surface(
-                                                modifier = Modifier.fillMaxWidth().height(28.dp),
-                                                color = getCategoryColor(mountedDev.category),
-                                                shape = RoundedCornerShape(2.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(
-                                                        text = "U$uNum",
-                                                        fontWeight = FontWeight.Bold,
-                                                        fontSize = 11.sp,
-                                                        color = Color.White
-                                                    )
-                                                    Text(
-                                                        text = if (isStartU) "${mountedDev.technicalName} [${mountedDev.category.name}]" else "↑ (${mountedDev.technicalName})",
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        fontSize = 12.sp,
-                                                        color = Color.White
-                                                    )
-                                                }
-                                            }
-                                        } else {
-                                            Surface(
-                                                modifier = Modifier.fillMaxWidth().height(24.dp),
-                                                color = Color(0xFF2B2B2B),
-                                                shape = RoundedCornerShape(2.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 8.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text("U$uNum", fontSize = 10.sp, color = Color.Gray)
-                                                    Text("[ Libero ]", fontSize = 10.sp, color = Color.DarkGray)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-
-                            Spacer(modifier = Modifier.width(12.dp))
-
-                            // Rack Devices Management Side Panel
-                            Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                                Text("Apparati In Questo Rack (${devicesInSelectedRack.size})", fontWeight = FontWeight.Bold)
-                                Spacer(modifier = Modifier.height(6.dp))
-
-                                LazyColumn(modifier = Modifier.weight(1f)) {
-                                    items(devicesInSelectedRack) { dev ->
-                                        Card(
-                                            modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween,
-                                                verticalAlignment = Alignment.CenterVertically
-                                            ) {
-                                                Column {
-                                                    Text(dev.technicalName, fontWeight = FontWeight.Bold)
-                                                    Text("Posizione: U${dev.positionU ?: "N/D"} (${dev.heightU}U)", style = MaterialTheme.typography.bodySmall)
-                                                }
-                                                OutlinedButton(onClick = {
-                                                    val unassignDev = dev.copy(rackId = null, positionU = null)
-                                                    val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.updateDevice(project, unassignDev)
-                                                    onProjectUpdated(updated, "Dislocato '${dev.technicalName}' dal rack.")
-                                                }) {
-                                                    Text("Rimuovi", fontSize = 11.sp)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text("Assegna Apparato Non Collocato:", fontWeight = FontWeight.Bold)
-
-                                if (unassignedDevices.isEmpty()) {
-                                    Text("Tutti gli apparati sono già collocati.", style = MaterialTheme.typography.bodySmall)
-                                } else {
-                                    var assignExp by remember { mutableStateOf(false) }
-                                    Box {
-                                        OutlinedButton(onClick = { assignExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                            Text("Seleziona apparato da inserire...")
-                                        }
-                                        DropdownMenu(expanded = assignExp, onDismissRequest = { assignExp = false }) {
-                                            unassignedDevices.forEach { dev ->
-                                                DropdownMenuItem(
-                                                    text = { Text("${dev.technicalName} (${dev.heightU}U)") },
-                                                    onClick = {
-                                                        assignExp = false
-                                                        val assigned = dev.copy(rackId = selectedRack.id, positionU = 1)
-                                                        val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.updateDevice(project, assigned)
-                                                        onProjectUpdated(updated, "Apparato '${dev.technicalName}' collocato in '${selectedRack.name}'.")
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                if (placing) {
+                    PlaceDeviceDialog(rack, index, side, onDismiss = { placing = false }) { device, startU, placeSide ->
+                        placing = false
+                        val placed = device.copy(
+                            rackId = rack.id, positionU = startU, rackSide = placeSide,
+                            mountingType = if (device.mountingType == MountingType.OUT_OF_RACK) MountingType.RACK_MOUNT else device.mountingType
+                        )
+                        onProjectUpdated(ProjectEdits.updateDevice(project, placed), "«${device.technicalName}» collocato in ${rack.name} a U$startU.")
                     }
                 }
             }
         }
     }
 
-    // Add/Edit Rack Dialog
-    if (showAddEditRackDialog) {
-        val r = editingRack
-        var name by remember { mutableStateOf(r?.name ?: "") }
-        var heightUText by remember { mutableStateOf(r?.heightU?.toString() ?: "42") }
-        var numDir by remember { mutableStateOf(r?.numberingDirection ?: NumberingDirection.BOTTOM_TO_TOP) }
-        var notes by remember { mutableStateOf(r?.notes ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showAddEditRackDialog = false },
-            title = { Text(if (r == null) "Nuovo Armadio Rack" else "Modifica Rack: ${r.name}") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nome Armadio Rack *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = heightUText,
-                        onValueChange = { heightUText = it },
-                        label = { Text("Altezza totale (Unità U) *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Numerazione U:")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        RadioButton(
-                            selected = numDir == NumberingDirection.BOTTOM_TO_TOP,
-                            onClick = { numDir = NumberingDirection.BOTTOM_TO_TOP }
-                        )
-                        Text("Dal Basso in Alto")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        RadioButton(
-                            selected = numDir == NumberingDirection.TOP_TO_BOTTOM,
-                            onClick = { numDir = NumberingDirection.TOP_TO_BOTTOM }
-                        )
-                        Text("Dall'Alto in Basso")
-                    }
-
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Note") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = name.isNotBlank(),
-                    onClick = {
-                        val hU = heightUText.toIntOrNull() ?: 42
-                        val newRack = Rack(
-                            id = r?.id ?: UUID.randomUUID().toString(),
-                            name = name.trim(),
-                            heightU = hU,
-                            numberingDirection = numDir,
-                            notes = notes.ifBlank { null }
-                        )
-
-                        val updated = if (r == null) {
-                            com.onlyfield.assetmanager.pc.DesktopDomainLogic.addRack(project, newRack)
-                        } else {
-                            com.onlyfield.assetmanager.pc.DesktopDomainLogic.updateRack(project, newRack)
-                        }
-
-                        showAddEditRackDialog = false
-                        onProjectUpdated(updated, "Armadio rack '${newRack.name}' salvato.")
-                    }
-                ) {
-                    Text("Salva")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showAddEditRackDialog = false }) {
-                    Text("Annulla")
-                }
-            }
-        )
+    if (creating || editing != null) {
+        RackDialog(index, editing, onDismiss = { creating = false; editing = null }) { saved, isNew ->
+            creating = false; editing = null
+            val updated = if (isNew) ProjectEdits.addRack(project, saved) else ProjectEdits.updateRack(project, saved)
+            if (isNew) selectedRackId = saved.id
+            onProjectUpdated(updated, "Rack «${saved.name}» salvato.")
+        }
     }
 }
 
-private fun getCategoryColor(category: DeviceCategory): Color {
-    return when (category) {
-        DeviceCategory.NETWORK_SWITCH -> Color(0xFF1565C0)
-        DeviceCategory.PATCH_PANEL -> Color(0xFF2E7D32)
-        DeviceCategory.UPS_PDU -> Color(0xFFD84315)
-        DeviceCategory.SERVER_STORAGE -> Color(0xFF6A1B9A)
-        DeviceCategory.CAMERA_NVR -> Color(0xFF00838F)
-        DeviceCategory.SHELF -> Color(0xFF424242)
-        DeviceCategory.BLANK_PANEL -> Color(0xFF37474F)
-        DeviceCategory.CUSTOM -> Color(0xFF5D4037)
+@Composable
+private fun RackElevation(rack: Rack, devices: List<Device>, side: RackSide, modifier: Modifier) {
+    val slots = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) (rack.heightU downTo 1).toList() else (1..rack.heightU).toList()
+    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF202124))) {
+        LazyColumn(modifier = Modifier.padding(10.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            items(slots) { u ->
+                val dev = devices.find { d ->
+                    val pos = d.positionU ?: return@find false
+                    (d.rackSide == RackSide.BOTH || d.rackSide == side) && u >= pos && u < pos + d.heightU
+                }
+                Surface(
+                    modifier = Modifier.fillMaxWidth().height(24.dp),
+                    color = dev?.let { categoryColor(it.category) } ?: Color(0xFF303134),
+                    shape = RoundedCornerShape(2.dp)
+                ) {
+                    Row(modifier = Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text("U$u", fontSize = 10.sp, color = Color(0xFFBDC1C6), modifier = Modifier.width(36.dp))
+                        if (dev != null) {
+                            val top = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) dev.positionU!! + dev.heightU - 1 else dev.positionU!!
+                            if (u == top) Text("${dev.technicalName} · ${dev.category.toDisplayString()}", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaceDeviceDialog(rack: Rack, index: ProjectIndex, initialSide: RackSide, onDismiss: () -> Unit, onPlace: (Device, Int, RackSide) -> Unit) {
+    val candidates = index.devices.filter { it.rackId != rack.id || it.positionU == null }
+    var device by remember { mutableStateOf<Device?>(null) }
+    var side by remember { mutableStateOf(initialSide) }
+    var start by remember { mutableStateOf<Int?>(null) }
+    val free = device?.let { RackLayout.freeStartPositions(rack, index.devices, it.heightU, side, it.id) } ?: emptyList()
+    LaunchedEffect(device, side) { start = free.firstOrNull() }
+
+    FormDialog(
+        title = "Colloca apparato in «${rack.name}»",
+        onDismiss = onDismiss,
+        onConfirm = { onPlace(device!!, start!!, side) },
+        confirmEnabled = device != null && start != null,
+        confirmLabel = "Colloca",
+        width = 540.dp
+    ) {
+        OptionPicker(
+            label = "Apparato *",
+            options = candidates,
+            selected = device,
+            optionLabel = { it.technicalName },
+            optionDetail = { d -> "${d.heightU}U · " + (d.rackId?.let { "ora in ${index.rackName(it)}" } ?: "fuori rack") },
+            onSelected = { device = it }
+        )
+        EnumPicker("Lato", RackSide.entries, side, { it.toDisplayString() }, { side = it })
+        if (device != null) {
+            if (free.isEmpty()) {
+                Text("Non c'è spazio libero per ${device!!.heightU}U su questo lato.", color = MaterialTheme.colorScheme.error)
+            } else {
+                OptionPicker(
+                    label = "Posizione iniziale (U più bassa)",
+                    options = free,
+                    selected = start,
+                    optionLabel = { "U$it" + if (device!!.heightU > 1) "–U${it + device!!.heightU - 1}" else "" },
+                    onSelected = { start = it },
+                    supportingText = "Sono elencate solo le posizioni libere"
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RackDialog(index: ProjectIndex, rack: Rack?, onDismiss: () -> Unit, onSave: (Rack, Boolean) -> Unit) {
+    var form by remember(rack) { mutableStateOf(RackForm.from(rack)) }
+    val errors = form.errors()
+    val tallestDevice = rack?.let { r -> index.devices.filter { it.rackId == r.id && it.positionU != null }.maxOfOrNull { it.positionU!! + it.heightU - 1 } }
+    val shrinkError = tallestDevice?.let { top -> form.heightU.toIntOrNull()?.takeIf { it < top }?.let { "Ci sono apparati fino a U$top" } }
+
+    FormDialog(
+        title = if (rack == null) "Nuovo rack" else "Modifica «${rack.name}»",
+        onDismiss = onDismiss,
+        onConfirm = { onSave(form.toRack(rack), rack == null) },
+        confirmEnabled = errors.isEmpty() && shrinkError == null,
+        width = 520.dp
+    ) {
+        FormField(form.name, { form = form.copy(name = it) }, "Nome *", error = errors["name"])
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormField(form.heightU, { form = form.copy(heightU = it) }, "Altezza (U) *", Modifier.weight(1f), errors["heightU"] ?: shrinkError)
+            FormField(form.depthMm, { form = form.copy(depthMm = it) }, "Profondità (mm)", Modifier.weight(1f), errors["depthMm"])
+        }
+        EnumPicker("Numerazione U", NumberingDirection.entries, form.numberingDirection, { it.toDisplayString() }, { form = form.copy(numberingDirection = it) })
+        OptionPicker("Area", index.areas, index.area(form.areaId), { it.name }, { form = form.copy(areaId = it?.id) }, noneLabel = "Nessuna area")
+        FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false, minLines = 2)
     }
 }

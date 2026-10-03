@@ -1,805 +1,458 @@
 package com.onlyfield.assetmanager.pc.ui
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
-import java.util.UUID
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.DeviceForm
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun InventorySection(
     project: Project,
     onProjectUpdated: (Project, String) -> Unit,
     onTrashItemCreated: (TrashItem) -> Unit
 ) {
-    var searchQuery by remember { mutableStateOf("") }
-    var selectedCategoryFilter by remember { mutableStateOf<DeviceCategory?>(null) }
-    var selectedAreaFilter by remember { mutableStateOf<String?>(null) }
+    val index = remember(project) { ProjectIndex(project) }
+    val confirm = LocalConfirm.current
 
-    // Dialog states
-    var showAddEditDeviceDialog by remember { mutableStateOf(false) }
-    var editingDevice by remember { mutableStateOf<Device?>(null) }
+    var query by remember { mutableStateOf("") }
+    var categoryFilter by remember { mutableStateOf<DeviceCategory?>(null) }
+    var areaFilter by remember { mutableStateOf<Area?>(null) }
+    var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
-    var showPortsDialog by remember { mutableStateOf(false) }
-    var portTargetDevice by remember { mutableStateOf<Device?>(null) }
+    var editing by remember { mutableStateOf<Device?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    var portsOf by remember { mutableStateOf<String?>(null) }
+    var replaceTarget by remember { mutableStateOf<Device?>(null) }
+    var mergeTarget by remember { mutableStateOf<Device?>(null) }
+    var showBatch by remember { mutableStateOf(false) }
 
-    var showReplaceDialog by remember { mutableStateOf(false) }
-    var replaceTargetDevice by remember { mutableStateOf<Device?>(null) }
-
-    var showMergeDialog by remember { mutableStateOf(false) }
-    var mergeSurvivingDevice by remember { mutableStateOf<Device?>(null) }
-
-    // Multi-select for Batch Edit
-    var selectedDeviceIds by remember { mutableStateOf(setOf<String>()) }
-    var showBatchEditDialog by remember { mutableStateOf(false) }
-
-    val allAreas = remember(project) {
-        project.businessUnits.flatMap { bu ->
-            bu.areas + bu.sites.flatMap { it.areas }
-        }.distinctBy { it.id }
-    }
-
-    val allDevicesWithBu = remember(project) {
-        project.businessUnits.flatMap { bu ->
-            bu.devices.map { dev -> Pair(bu, dev) }
+    val filtered = remember(index, query, categoryFilter, areaFilter) {
+        index.devices.filter { d ->
+            matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress) &&
+                (categoryFilter == null || d.category == categoryFilter) &&
+                (areaFilter == null || d.areaId == areaFilter?.id)
         }
     }
+    // Drop selections of devices that no longer exist.
+    LaunchedEffect(index) { selectedIds = selectedIds.filter { index.device(it) != null }.toSet() }
 
-    val filteredDevices = remember(allDevicesWithBu, searchQuery, selectedCategoryFilter, selectedAreaFilter) {
-        allDevicesWithBu.filter { (_, dev) ->
-            val matchQuery = searchQuery.isBlank() ||
-                    dev.technicalName.contains(searchQuery, ignoreCase = true) ||
-                    (dev.physicalLabel ?: "").contains(searchQuery, ignoreCase = true) ||
-                    (dev.alias ?: "").contains(searchQuery, ignoreCase = true) ||
-                    (dev.ipAddress ?: "").contains(searchQuery, ignoreCase = true) ||
-                    (dev.macAddress ?: "").contains(searchQuery, ignoreCase = true)
-
-            val matchCategory = selectedCategoryFilter == null || dev.category == selectedCategoryFilter
-            val matchArea = selectedAreaFilter == null || dev.areaId == selectedAreaFilter
-
-            matchQuery && matchCategory && matchArea
-        }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Filters & Search Bar
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SectionHeader(
+            title = "Inventario apparati",
+            subtitle = "${filtered.size} di ${index.devices.size} apparati",
+            searchQuery = query,
+            onSearchChange = { query = it },
+            searchPlaceholder = "Cerca nome, etichetta, IP, MAC…"
         ) {
-            Row(
-                modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { searchQuery = it },
-                    label = { Text("Cerca apparato (Nome, IP, MAC, Label...)") },
-                    modifier = Modifier.weight(1f),
-                    singleLine = true
-                )
+            Button(onClick = { creating = true }, enabled = project.businessUnits.isNotEmpty()) { Text("+ Nuovo apparato") }
+        }
 
-                // Category Filter Dropdown
-                var catDropdownExpanded by remember { mutableStateOf(false) }
-                Box {
-                    OutlinedButton(onClick = { catDropdownExpanded = true }) {
-                        Text(selectedCategoryFilter?.name ?: "Tutte le Categorie")
-                    }
-                    DropdownMenu(
-                        expanded = catDropdownExpanded,
-                        onDismissRequest = { catDropdownExpanded = false }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text("Tutte le Categorie") },
-                            onClick = {
-                                selectedCategoryFilter = null
-                                catDropdownExpanded = false
-                            }
-                        )
-                        DeviceCategory.entries.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat.name) },
-                                onClick = {
-                                    selectedCategoryFilter = cat
-                                    catDropdownExpanded = false
-                                }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            OptionPicker(
+                label = "Categoria",
+                options = DeviceCategory.entries,
+                selected = categoryFilter,
+                optionLabel = { it.toDisplayString() },
+                onSelected = { categoryFilter = it },
+                noneLabel = "Tutte le categorie",
+                modifier = Modifier.width(240.dp)
+            )
+            OptionPicker(
+                label = "Area",
+                options = index.areas,
+                selected = areaFilter,
+                optionLabel = { it.name },
+                onSelected = { areaFilter = it },
+                noneLabel = "Tutte le aree",
+                modifier = Modifier.width(240.dp)
+            )
+            Spacer(Modifier.weight(1f))
+            if (selectedIds.isNotEmpty()) {
+                Text("${selectedIds.size} selezionati", fontWeight = FontWeight.SemiBold)
+                OutlinedButton(onClick = { showBatch = true }) { Text("Modifica in blocco…") }
+                TextButton(onClick = { selectedIds = emptySet() }) { Text("Deseleziona") }
+            } else if (filtered.isNotEmpty()) {
+                TextButton(onClick = { selectedIds = filtered.map { it.id }.toSet() }) { Text("Seleziona tutti") }
+            }
+        }
+
+        when {
+            project.businessUnits.isEmpty() -> EmptyState("Crea prima una business unit nella sezione Progetto.")
+            index.devices.isEmpty() -> EmptyState("Nessun apparato nel progetto.", actionLabel = "+ Nuovo apparato", onAction = { creating = true })
+            filtered.isEmpty() -> EmptyState("Nessun apparato corrisponde ai filtri.", actionLabel = "Azzera filtri", onAction = {
+                query = ""; categoryFilter = null; areaFilter = null
+            })
+            else -> LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(filtered, key = { it.id }) { dev ->
+                    val bu = index.businessUnitOf(dev.id)
+                    val location = listOfNotNull(
+                        bu?.name,
+                        dev.areaId?.let { index.areaName(it, "area mancante") },
+                        dev.rackId?.let { "Rack ${index.rackName(it)}" + (dev.positionU?.let { u -> " · U$u" } ?: "") }
+                    ).joinToString(" › ")
+                    val network = listOfNotNull(dev.ipAddress?.let { "IP $it" }, dev.macAddress?.let { "MAC $it" }, dev.physicalLabel?.let { "Etichetta $it" })
+                        .joinToString(" · ")
+                    var menuOpen by remember { mutableStateOf(false) }
+                    ItemCard(
+                        title = dev.technicalName + (dev.alias?.let { " ($it)" } ?: ""),
+                        badge = dev.category.toDisplayString(),
+                        details = listOf(location, network, "${dev.ports.size} porte · ${dev.observation?.status?.toDisplayString() ?: "Da verificare"}"),
+                        leading = {
+                            Checkbox(
+                                checked = dev.id in selectedIds,
+                                onCheckedChange = { selectedIds = if (it) selectedIds + dev.id else selectedIds - dev.id }
                             )
                         }
-                    }
-                }
-
-                // Area Filter Dropdown
-                var areaDropdownExpanded by remember { mutableStateOf(false) }
-                Box {
-                    OutlinedButton(onClick = { areaDropdownExpanded = true }) {
-                        val areaName = allAreas.find { it.id == selectedAreaFilter }?.name ?: "Tutte le Aree"
-                        Text(areaName)
-                    }
-                    DropdownMenu(
-                        expanded = areaDropdownExpanded,
-                        onDismissRequest = { areaDropdownExpanded = false }
                     ) {
-                        DropdownMenuItem(
-                            text = { Text("Tutte le Aree") },
-                            onClick = {
-                                selectedAreaFilter = null
-                                areaDropdownExpanded = false
+                        TextButton(onClick = { portsOf = dev.id }) { Text("Porte") }
+                        EditButton { editing = dev }
+                        Box {
+                            TextButton(onClick = { menuOpen = true }) { Text("Altro ▾") }
+                            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                                DropdownMenuItem(text = { Text("Sostituisci con nuovo apparato…") }, onClick = { menuOpen = false; replaceTarget = dev })
+                                DropdownMenuItem(
+                                    text = { Text("Unisci un duplicato…") },
+                                    enabled = index.devices.size > 1,
+                                    onClick = { menuOpen = false; mergeTarget = dev }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Sposta nel cestino", color = MaterialTheme.colorScheme.error) },
+                                    onClick = {
+                                        menuOpen = false
+                                        confirm(
+                                            ConfirmRequest(
+                                                title = "Spostare «${dev.technicalName}» nel cestino?",
+                                                message = "I cavi collegati alle sue porte verranno scollegati. Potrai ripristinarlo dal Cestino finché l'applicazione resta aperta.",
+                                                confirmLabel = "Sposta nel cestino"
+                                            ) {
+                                                val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id)
+                                                trashItem?.let(onTrashItemCreated)
+                                                onProjectUpdated(updated, "«${dev.technicalName}» spostato nel cestino.")
+                                            }
+                                        )
+                                    }
+                                )
                             }
-                        )
-                        allAreas.forEach { area ->
-                            DropdownMenuItem(
-                                text = { Text(area.name) },
-                                onClick = {
-                                    selectedAreaFilter = area.id
-                                    areaDropdownExpanded = false
-                                }
-                            )
                         }
-                    }
-                }
-
-                Button(onClick = {
-                    editingDevice = null
-                    showAddEditDeviceDialog = true
-                }) {
-                    Text("+ Nuovo Apparato")
-                }
-
-                if (selectedDeviceIds.isNotEmpty()) {
-                    Button(
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary),
-                        onClick = { showBatchEditDialog = true }
-                    ) {
-                        Text("Modifica in Blocco (${selectedDeviceIds.size})")
                     }
                 }
             }
         }
+    }
 
-        // Devices List Table
-        Card(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Column(modifier = Modifier.padding(12.dp).fillMaxSize()) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "Apparati Trovati (${filteredDevices.size} di ${allDevicesWithBu.size})",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+    if (creating || editing != null) {
+        DeviceDialog(
+            project = project,
+            index = index,
+            device = editing,
+            onDismiss = { creating = false; editing = null },
+            onSave = { updated, message -> creating = false; editing = null; onProjectUpdated(updated, message) }
+        )
+    }
+
+    portsOf?.let { id ->
+        index.device(id)?.let { dev -> PortsDialog(project, index, dev, onProjectUpdated) { portsOf = null } }
+            ?: run { portsOf = null }
+    }
+
+    replaceTarget?.let { dev ->
+        ReplaceDialog(dev, onDismiss = { replaceTarget = null }) { name, category ->
+            val (updated, trashItem) = ProjectEdits.replaceDevice(project, dev.id, name, category)
+            replaceTarget = null
+            trashItem?.let(onTrashItemCreated)
+            onProjectUpdated(updated, "«${dev.technicalName}» sostituito da «$name».")
+        }
+    }
+
+    mergeTarget?.let { survivor ->
+        MergeDialog(index, survivor, onDismiss = { mergeTarget = null }) { duplicateId, choices ->
+            val duplicateName = index.deviceName(duplicateId)
+            val (updated, trashItem) = ProjectEdits.mergeDevices(project, survivor.id, duplicateId, choices)
+            mergeTarget = null
+            trashItem?.let(onTrashItemCreated)
+            onProjectUpdated(updated, "«$duplicateName» unito in «${survivor.technicalName}».")
+        }
+    }
+
+    if (showBatch) {
+        BatchEditDialog(project, index, selectedIds, onDismiss = { showBatch = false }) { changes ->
+            val count = selectedIds.size
+            val updated = ProjectEdits.batchEditDevices(project, selectedIds.toList(), changes)
+            showBatch = false
+            selectedIds = emptySet()
+            onProjectUpdated(updated, "Modifica applicata a $count apparati.")
+        }
+    }
+}
+
+@Composable
+private fun DeviceDialog(
+    project: Project,
+    index: ProjectIndex,
+    device: Device?,
+    onDismiss: () -> Unit,
+    onSave: (Project, String) -> Unit,
+) {
+    val initialBu = device?.let { index.businessUnitOf(it.id)?.id } ?: project.businessUnits.singleOrNull()?.id
+    var form by remember(device) { mutableStateOf(DeviceForm.from(device, initialBu)) }
+    val rack = index.rack(form.rackId)
+    val errors = form.errors(rack?.heightU)
+    val buAreas = project.businessUnits.find { it.id == form.businessUnitId }
+        ?.let { bu -> bu.areas + bu.sites.flatMap { it.areas } } ?: index.areas
+
+    FormDialog(
+        title = if (device == null) "Nuovo apparato" else "Modifica «${device.technicalName}»",
+        onDismiss = onDismiss,
+        confirmEnabled = errors.isEmpty(),
+        onConfirm = {
+            val saved = form.toDevice(device, source = "Editor Windows")
+            val updated = if (device == null) ProjectEdits.addDevice(project, requireNotNull(form.businessUnitId), saved)
+            else ProjectEdits.updateDevice(project, saved)
+            onSave(updated, if (device == null) "Apparato «${saved.technicalName}» creato." else "Apparato «${saved.technicalName}» aggiornato.")
+        },
+        width = 680.dp
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormField(form.technicalName, { form = form.copy(technicalName = it) }, "Nome tecnico *", Modifier.weight(1f), errors["technicalName"])
+            EnumPicker("Categoria", DeviceCategory.entries, form.category, { it.toDisplayString() }, { form = form.copy(category = it) }, Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormField(form.physicalLabel, { form = form.copy(physicalLabel = it) }, "Etichetta fisica", Modifier.weight(1f))
+            FormField(form.alias, { form = form.copy(alias = it) }, "Alias", Modifier.weight(1f))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, "Indirizzo IP", Modifier.weight(1f), errors["ipAddress"])
+            FormField(form.macAddress, { form = form.copy(macAddress = it) }, "Indirizzo MAC", Modifier.weight(1f), errors["macAddress"])
+        }
+
+        Text("Posizione", fontWeight = FontWeight.SemiBold)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OptionPicker(
+                label = "Business unit *",
+                options = project.businessUnits,
+                selected = project.businessUnits.find { it.id == form.businessUnitId },
+                optionLabel = { it.name },
+                onSelected = { form = form.copy(businessUnitId = it?.id, areaId = null) },
+                enabled = device == null,
+                supportingText = if (device != null) "Non modificabile dopo la creazione" else errors["businessUnitId"],
+                isError = errors.containsKey("businessUnitId"),
+                modifier = Modifier.weight(1f)
+            )
+            OptionPicker(
+                label = "Area",
+                options = buAreas,
+                selected = index.area(form.areaId),
+                optionLabel = { it.name },
+                optionDetail = { it.floor?.let { f -> "Piano $f" } },
+                onSelected = { form = form.copy(areaId = it?.id) },
+                noneLabel = "Nessuna area",
+                modifier = Modifier.weight(1f)
+            )
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OptionPicker(
+                label = "Rack",
+                options = project.racks,
+                selected = rack,
+                optionLabel = { it.name },
+                optionDetail = { "${it.heightU}U · ${index.areaName(it.areaId, "nessuna area")}" },
+                onSelected = {
+                    form = form.copy(
+                        rackId = it?.id,
+                        mountingType = if (it == null) MountingType.OUT_OF_RACK else if (form.mountingType == MountingType.OUT_OF_RACK) MountingType.RACK_MOUNT else form.mountingType
                     )
-                    if (selectedDeviceIds.isNotEmpty()) {
-                        TextButton(onClick = { selectedDeviceIds = emptySet() }) {
-                            Text("Deseleziona tutti")
+                },
+                noneLabel = "Fuori rack",
+                modifier = Modifier.weight(1.4f)
+            )
+            FormField(
+                form.positionU, { form = form.copy(positionU = it) }, "Posizione U", Modifier.weight(0.8f), errors["positionU"],
+                hint = rack?.let { "1–${it.heightU}" }
+            )
+            FormField(form.heightU, { form = form.copy(heightU = it) }, "Altezza (U) *", Modifier.weight(0.8f), errors["heightU"])
+        }
+        if (form.rackId != null) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EnumPicker("Lato rack", RackSide.entries, form.rackSide, { it.toDisplayString() }, { form = form.copy(rackSide = it) }, Modifier.weight(1f))
+                EnumPicker("Montaggio", MountingType.entries, form.mountingType, { it.toDisplayString() }, { form = form.copy(mountingType = it) }, Modifier.weight(1f))
+            }
+        }
+        if (project.deviceModels.isNotEmpty()) {
+            OptionPicker(
+                label = "Modello",
+                options = project.deviceModels,
+                selected = project.deviceModels.find { it.id == form.deviceModelId },
+                optionLabel = { it.name },
+                optionDetail = { listOfNotNull(it.brand, it.modelNumber).joinToString(" ") },
+                onSelected = { form = form.copy(deviceModelId = it?.id) },
+                noneLabel = "Nessun modello"
+            )
+        }
+
+        Text("Rilievo", fontWeight = FontWeight.SemiBold)
+        EnumPicker("Stato del rilievo", ObservationStatus.entries, form.observationStatus, { it.toDisplayString() }, { form = form.copy(observationStatus = it) })
+        FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false, minLines = 2)
+    }
+}
+
+@Composable
+private fun PortsDialog(
+    project: Project,
+    index: ProjectIndex,
+    device: Device,
+    onProjectUpdated: (Project, String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    var name by remember { mutableStateOf("") }
+    var label by remember { mutableStateOf("") }
+    val duplicate = device.ports.any { it.name.equals(name.trim(), ignoreCase = true) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        modifier = Modifier.width(620.dp),
+        title = { Text("Porte di «${device.technicalName}»") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.Top) {
+                    FormField(name, { name = it }, "Nome porta", Modifier.weight(1f), error = if (duplicate) "Porta già presente" else null, hint = "Es. Gi1/0/1")
+                    FormField(label, { label = it }, "Etichetta", Modifier.weight(1f))
+                    Button(
+                        enabled = name.isNotBlank() && !duplicate,
+                        modifier = Modifier.padding(top = 8.dp),
+                        onClick = {
+                            onProjectUpdated(ProjectEdits.addPortToDevice(project, device.id, name.trim(), label.trim().ifBlank { null }), "Porta «${name.trim()}» aggiunta.")
+                            name = ""; label = ""
                         }
-                    }
+                    ) { Text("Aggiungi") }
                 }
-
-                if (filteredDevices.isEmpty()) {
-                    EmptyStateCard(
-                        message = "Nessun apparato corrisponde ai filtri selezionati.",
-                        actionLabel = "+ Nuovo Apparato",
-                        onAction = {
-                            editingDevice = null
-                            showAddEditDeviceDialog = true
-                        }
-                    )
+                if (device.ports.isEmpty()) {
+                    EmptyState("Nessuna porta. Aggiungile qui o applica un modello con template porte.")
                 } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        items(filteredDevices) { (bu, dev) ->
-                            val isSelected = selectedDeviceIds.contains(dev.id)
-                            val areaName = allAreas.find { it.id == dev.areaId }?.name ?: "Non assegnata"
-                            val rackName = project.racks.find { it.id == dev.rackId }?.name ?: "Fuori Rack"
-
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .border(
-                                        width = if (isSelected) 2.dp else 1.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
-                                        shape = RoundedCornerShape(8.dp)
-                                    ),
-                                colors = CardDefaults.cardColors(
-                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f) else MaterialTheme.colorScheme.surfaceVariant
+                    LazyColumn(modifier = Modifier.heightIn(max = 360.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        items(device.ports, key = { it.id }) { port ->
+                            val cable = project.cables.find { it.portAId == port.id || it.portBId == port.id }
+                            val peer = cable?.let { if (it.portAId == port.id) it.portBId else it.portAId }
+                            ItemCard(
+                                title = port.name,
+                                details = listOf(
+                                    port.label?.let { "Etichetta $it" }.orEmpty(),
+                                    if (cable != null) "Collegata a ${index.portLabel(peer, "estremità libera")}" else "Libera"
                                 )
                             ) {
-                                Row(
-                                    modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Checkbox(
-                                        checked = isSelected,
-                                        onCheckedChange = { checked ->
-                                            selectedDeviceIds = if (checked) selectedDeviceIds + dev.id else selectedDeviceIds - dev.id
-                                        }
-                                    )
-
-                                    Column(modifier = Modifier.weight(1.5f).padding(horizontal = 8.dp)) {
-                                        Text(
-                                            text = dev.technicalName,
-                                            fontWeight = FontWeight.Bold,
-                                            style = MaterialTheme.typography.titleSmall
-                                        )
-                                        Text(
-                                            text = "Label: ${dev.physicalLabel ?: "—"} | Alias: ${dev.alias ?: "—"}",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                        Text(
-                                            text = "IP: ${dev.ipAddress ?: "—"} | MAC: ${dev.macAddress ?: "—"}",
-                                            style = MaterialTheme.typography.bodySmall
-                                        )
-                                    }
-
-                                    Column(modifier = Modifier.weight(1.2f).padding(horizontal = 8.dp)) {
-                                        Surface(
-                                            color = MaterialTheme.colorScheme.secondaryContainer,
-                                            shape = RoundedCornerShape(4.dp)
-                                        ) {
-                                            Text(
-                                                text = dev.category.toDisplayString(),
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                                style = MaterialTheme.typography.labelSmall
-                                            )
-                                        }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text("BU: ${bu.name} | Area: $areaName", style = MaterialTheme.typography.bodySmall)
-                                        Text("Rack: $rackName ${dev.positionU?.let { "(U$it, ${dev.heightU}U)" } ?: ""}", style = MaterialTheme.typography.bodySmall)
-                                    }
-
-                                    Column(modifier = Modifier.weight(0.8f)) {
-                                        Text("Porte: ${dev.ports.size}", fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodySmall)
-                                        Text("Stato: ${dev.observation?.status?.name ?: "N/D"}", style = MaterialTheme.typography.bodySmall)
-                                    }
-
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(onClick = {
-                                            portTargetDevice = dev
-                                            showPortsDialog = true
-                                        }) {
-                                            Text("Porte (${dev.ports.size})", fontSize = 11.sp)
-                                        }
-
-                                        OutlinedButton(onClick = {
-                                            editingDevice = dev
-                                            showAddEditDeviceDialog = true
-                                        }) {
-                                            Text("Modifica", fontSize = 11.sp)
-                                        }
-
-                                        OutlinedButton(onClick = {
-                                            replaceTargetDevice = dev
-                                            showReplaceDialog = true
-                                        }) {
-                                            Text("Sostituisci", fontSize = 11.sp)
-                                        }
-
-                                        OutlinedButton(onClick = {
-                                            mergeSurvivingDevice = dev
-                                            showMergeDialog = true
-                                        }) {
-                                            Text("Unisci", fontSize = 11.sp)
-                                        }
-
-                                        Button(
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            onClick = {
-                                                val (updated, trashItem) = com.onlyfield.assetmanager.pc.DesktopDomainLogic.deleteDeviceToTrash(project, dev.id)
-                                                if (trashItem != null) onTrashItemCreated(trashItem)
-                                                onProjectUpdated(updated, "Apparato '${dev.technicalName}' spostato nel cestino.")
-                                            }
-                                        ) {
-                                            Text("Elimina", fontSize = 11.sp)
-                                        }
-                                    }
-                                }
+                                DeleteButton(port.name, onDelete = {
+                                    onProjectUpdated(ProjectEdits.deletePortFromDevice(project, device.id, port.id), "Porta «${port.name}» eliminata.")
+                                }, message = if (cable != null) "La porta è collegata a un cavo, che resterà con un'estremità libera." else null)
                             }
                         }
                     }
                 }
             }
-        }
+        },
+        confirmButton = { Button(onClick = onDismiss) { Text("Fine") } }
+    )
+}
+
+@Composable
+private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (String, DeviceCategory) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var category by remember { mutableStateOf(device.category) }
+    FormDialog(
+        title = "Sostituisci «${device.technicalName}»",
+        onDismiss = onDismiss,
+        onConfirm = { onConfirm(name.trim(), category) },
+        confirmEnabled = name.isNotBlank(),
+        confirmLabel = "Sostituisci",
+        width = 520.dp
+    ) {
+        Text("Il nuovo apparato eredita area, rack e posizione U dell'attuale, che viene spostato nel cestino. I cavi collegati alle vecchie porte restano con un'estremità libera.")
+        FormField(name, { name = it }, "Nome del nuovo apparato *")
+        EnumPicker("Categoria", DeviceCategory.entries, category, { it.toDisplayString() }, { category = it })
     }
+}
 
-    // Add/Edit Device Dialog
-    if (showAddEditDeviceDialog) {
-        val dev = editingDevice
-        val buList = project.businessUnits
-        var selectedBuId by remember { mutableStateOf(buList.find { bu -> bu.devices.any { it.id == dev?.id } }?.id ?: buList.firstOrNull()?.id ?: "") }
-        var technicalName by remember { mutableStateOf(dev?.technicalName ?: "") }
-        var physicalLabel by remember { mutableStateOf(dev?.physicalLabel ?: "") }
-        var alias by remember { mutableStateOf(dev?.alias ?: "") }
-        var ipAddress by remember { mutableStateOf(dev?.ipAddress ?: "") }
-        var macAddress by remember { mutableStateOf(dev?.macAddress ?: "") }
-        var category by remember { mutableStateOf(dev?.category ?: DeviceCategory.NETWORK_SWITCH) }
-        var selectedAreaId by remember { mutableStateOf(dev?.areaId ?: allAreas.firstOrNull()?.id) }
-        var selectedRackId by remember { mutableStateOf(dev?.rackId) }
-        var positionUText by remember { mutableStateOf(dev?.positionU?.toString() ?: "") }
-        var heightUText by remember { mutableStateOf(dev?.heightU?.toString() ?: "1") }
-        var mountingType by remember { mutableStateOf(dev?.mountingType ?: MountingType.RACK_MOUNT) }
-        var notesText by remember { mutableStateOf(dev?.observation?.notes ?: "") }
+@Composable
+private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> Unit, onConfirm: (String, MergeDataChoices) -> Unit) {
+    val candidates = index.devices.filter { it.id != survivor.id }
+    var duplicate by remember { mutableStateOf<Device?>(null) }
+    var choices by remember { mutableStateOf(MergeDataChoices()) }
 
-        AlertDialog(
-            onDismissRequest = { showAddEditDeviceDialog = false },
-            title = { Text(if (dev == null) "Nuovo Apparato" else "Modifica Apparato: ${dev.technicalName}") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = technicalName,
-                            onValueChange = { technicalName = it },
-                            label = { Text("Nome Tecnico *") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = physicalLabel,
-                            onValueChange = { physicalLabel = it },
-                            label = { Text("Etichetta Fisica") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = alias,
-                            onValueChange = { alias = it },
-                            label = { Text("Alias") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = ipAddress,
-                            onValueChange = { ipAddress = it },
-                            label = { Text("Indirizzo IP") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = macAddress,
-                            onValueChange = { macAddress = it },
-                            label = { Text("Indirizzo MAC") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        // Category Dropdown
-                        var catExp by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedButton(onClick = { catExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                Text("Categoria: ${category.name}")
-                            }
-                            DropdownMenu(expanded = catExp, onDismissRequest = { catExp = false }) {
-                                DeviceCategory.entries.forEach { c ->
-                                    DropdownMenuItem(text = { Text(c.name) }, onClick = { category = c; catExp = false })
-                                }
-                            }
-                        }
-
-                        // Area Dropdown
-                        var areaExp by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedButton(onClick = { areaExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                val aName = allAreas.find { it.id == selectedAreaId }?.name ?: "Seleziona Area"
-                                Text("Area: $aName")
-                            }
-                            DropdownMenu(expanded = areaExp, onDismissRequest = { areaExp = false }) {
-                                allAreas.forEach { a ->
-                                    DropdownMenuItem(text = { Text(a.name) }, onClick = { selectedAreaId = a.id; areaExp = false })
-                                }
-                            }
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        // Rack Dropdown
-                        var rackExp by remember { mutableStateOf(false) }
-                        Box(modifier = Modifier.weight(1f)) {
-                            OutlinedButton(onClick = { rackExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                val rName = project.racks.find { it.id == selectedRackId }?.name ?: "Fuori Rack"
-                                Text("Rack: $rName")
-                            }
-                            DropdownMenu(expanded = rackExp, onDismissRequest = { rackExp = false }) {
-                                DropdownMenuItem(text = { Text("Fuori Rack") }, onClick = { selectedRackId = null; rackExp = false })
-                                project.racks.forEach { r ->
-                                    DropdownMenuItem(text = { Text(r.name) }, onClick = { selectedRackId = r.id; rackExp = false })
-                                }
-                            }
-                        }
-
-                        OutlinedTextField(
-                            value = positionUText,
-                            onValueChange = { positionUText = it },
-                            label = { Text("Posizione U") },
-                            modifier = Modifier.weight(0.5f),
-                            singleLine = true
-                        )
-
-                        OutlinedTextField(
-                            value = heightUText,
-                            onValueChange = { heightUText = it },
-                            label = { Text("Altezza U") },
-                            modifier = Modifier.weight(0.5f),
-                            singleLine = true
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = notesText,
-                        onValueChange = { notesText = it },
-                        label = { Text("Note di Osservazione") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = technicalName.isNotBlank(),
-                    onClick = {
-                        val posU = positionUText.toIntOrNull()
-                        val hU = heightUText.toIntOrNull() ?: 1
-
-                        val newDevice = Device(
-                            id = dev?.id ?: UUID.randomUUID().toString(),
-                            technicalName = technicalName.trim(),
-                            physicalLabel = physicalLabel.ifBlank { null },
-                            alias = alias.ifBlank { null },
-                            ipAddress = ipAddress.ifBlank { null },
-                            macAddress = macAddress.ifBlank { null },
-                            category = category,
-                            areaId = selectedAreaId,
-                            rackId = selectedRackId,
-                            positionU = posU,
-                            heightU = hU,
-                            mountingType = mountingType,
-                            ports = dev?.ports ?: emptyList(),
-                            observation = Observation("DesktopUI", System.currentTimeMillis(), notes = notesText.ifBlank { null })
-                        )
-
-                        val updatedProj = if (dev == null) {
-                            com.onlyfield.assetmanager.pc.DesktopDomainLogic.addDevice(project, selectedBuId, newDevice)
-                        } else {
-                            com.onlyfield.assetmanager.pc.DesktopDomainLogic.updateDevice(project, newDevice)
-                        }
-
-                        showAddEditDeviceDialog = false
-                        onProjectUpdated(updatedProj, if (dev == null) "Aggiunto apparato '${newDevice.technicalName}'." else "Aggiornato apparato '${newDevice.technicalName}'.")
-                    }
-                ) {
-                    Text("Salva")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showAddEditDeviceDialog = false }) {
-                    Text("Annulla")
-                }
-            }
+    FormDialog(
+        title = "Unisci un duplicato in «${survivor.technicalName}»",
+        onDismiss = onDismiss,
+        onConfirm = { duplicate?.let { onConfirm(it.id, choices) } },
+        confirmEnabled = duplicate != null,
+        confirmLabel = "Unisci",
+        width = 600.dp
+    ) {
+        Text("L'apparato duplicato viene spostato nel cestino dopo aver trasferito i dati scelti.")
+        OptionPicker(
+            label = "Apparato duplicato *",
+            options = candidates,
+            selected = duplicate,
+            optionLabel = { it.technicalName },
+            optionDetail = { listOfNotNull(it.ipAddress, index.areaName(it.areaId, "")).joinToString(" · ") },
+            onSelected = { duplicate = it }
         )
-    }
-
-    // Ports Dialog
-    if (showPortsDialog) {
-        val targetDev = portTargetDevice
-        if (targetDev != null) {
-            var newPortName by remember { mutableStateOf("") }
-            var newPortLabel by remember { mutableStateOf("") }
-
-            val currentDevState = project.businessUnits.flatMap { it.devices }.find { it.id == targetDev.id } ?: targetDev
-
-            AlertDialog(
-                onDismissRequest = { showPortsDialog = false },
-                title = { Text("Gestione Porte: ${currentDevState.technicalName}") },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().heightIn(max = 450.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            OutlinedTextField(
-                                value = newPortName,
-                                onValueChange = { newPortName = it },
-                                label = { Text("Nome Porta (es. Gi1/0/1)") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            OutlinedTextField(
-                                value = newPortLabel,
-                                onValueChange = { newPortLabel = it },
-                                label = { Text("Etichetta") },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true
-                            )
-                            Button(
-                                enabled = newPortName.isNotBlank(),
-                                onClick = {
-                                    val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.addPortToDevice(
-                                        project, currentDevState.id, newPortName.trim(), newPortLabel.ifBlank { null }
-                                    )
-                                    newPortName = ""
-                                    newPortLabel = ""
-                                    onProjectUpdated(updated, "Porta aggiunta a '${currentDevState.technicalName}'.")
-                                }
-                            ) {
-                                Text("+ Aggiungi")
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Porte Esistenti (${currentDevState.ports.size}):", fontWeight = FontWeight.Bold)
-
-                        LazyColumn(modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp)) {
-                            items(currentDevState.ports) { port ->
-                                Card(
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 2.dp),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text(port.name, fontWeight = FontWeight.Bold)
-                                            port.label?.let { Text("Etichetta: $it", style = MaterialTheme.typography.bodySmall) }
-                                        }
-                                        Button(
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            onClick = {
-                                                val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.deletePortFromDevice(
-                                                    project, currentDevState.id, port.id
-                                                )
-                                                onProjectUpdated(updated, "Porta '${port.name}' rimossa.")
-                                            }
-                                        ) {
-                                            Text("Elimina", fontSize = 10.sp)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(onClick = { showPortsDialog = false }) {
-                        Text("Chiudi")
-                    }
-                }
-            )
+        duplicate?.let { dup ->
+            Text("Usa dal duplicato:", fontWeight = FontWeight.SemiBold)
+            LabeledCheckbox(choices.useAliasFromDuplicate, { choices = choices.copy(useAliasFromDuplicate = it) }, "Alias (${dup.alias ?: "vuoto"})")
+            LabeledCheckbox(choices.useTechnicalNameFromDuplicate, { choices = choices.copy(useTechnicalNameFromDuplicate = it) }, "Nome tecnico («${dup.technicalName}»)")
+            LabeledCheckbox(choices.usePhysicalLabelFromDuplicate, { choices = choices.copy(usePhysicalLabelFromDuplicate = it) }, "Etichetta fisica (${dup.physicalLabel ?: "vuota"})")
+            LabeledCheckbox(choices.useIpFromDuplicate, { choices = choices.copy(useIpFromDuplicate = it) }, "Indirizzo IP (${dup.ipAddress ?: "vuoto"})")
+            LabeledCheckbox(choices.useMacFromDuplicate, { choices = choices.copy(useMacFromDuplicate = it) }, "Indirizzo MAC (${dup.macAddress ?: "vuoto"})")
+            LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, "Posizione (sede e area)")
+            Text("Trasferisci:", fontWeight = FontWeight.SemiBold)
+            LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, "Porte (${dup.ports.size})")
         }
     }
+}
 
-    // Replace Device Dialog
-    if (showReplaceDialog) {
-        val targetDev = replaceTargetDevice
-        if (targetDev != null) {
-            var newTechName by remember { mutableStateOf("${targetDev.technicalName}-REPLACEMENT") }
-            var newCat by remember { mutableStateOf(targetDev.category) }
+@Composable
+private fun BatchEditDialog(
+    project: Project,
+    index: ProjectIndex,
+    selectedIds: Set<String>,
+    onDismiss: () -> Unit,
+    onApply: (BatchDeviceChanges) -> Unit,
+) {
+    var changes by remember { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH, mountingType = MountingType.RACK_MOUNT)) }
+    val any = changes.updateCategory || changes.updateAreaId || changes.updateRackId || changes.updateMountingType || changes.updateObservationNotes
 
-            AlertDialog(
-                onDismissRequest = { showReplaceDialog = false },
-                title = { Text("Sostituisci Apparato: ${targetDev.technicalName}") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("L'apparato attuale verrà spostato nel cestino. Un nuovo apparato verrà creato ereditando posizione e collocazione.")
-                        OutlinedTextField(
-                            value = newTechName,
-                            onValueChange = { newTechName = it },
-                            label = { Text("Nuovo Nome Tecnico *") },
-                            modifier = Modifier.fillMaxWidth(),
-                            singleLine = true
-                        )
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        enabled = newTechName.isNotBlank(),
-                        onClick = {
-                            val (updated, trashItem) = com.onlyfield.assetmanager.pc.DesktopDomainLogic.replaceDevice(
-                                project, targetDev.id, newTechName.trim(), newCat
-                            )
-                            showReplaceDialog = false
-                            if (trashItem != null) onTrashItemCreated(trashItem)
-                            onProjectUpdated(updated, "Sostituito '${targetDev.technicalName}' con '$newTechName'.")
-                        }
-                    ) {
-                        Text("Esegui Sostituzione")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { showReplaceDialog = false }) {
-                        Text("Annulla")
-                    }
-                }
-            )
-        }
-    }
-
-    // Merge Devices Dialog
-    if (showMergeDialog) {
-        val survDev = mergeSurvivingDevice
-        if (survDev != null) {
-            val candidateDuplicates = allDevicesWithBu.map { it.second }.filter { it.id != survDev.id }
-            var selectedDuplicateId by remember { mutableStateOf(candidateDuplicates.firstOrNull()?.id ?: "") }
-            var useNameFromDup by remember { mutableStateOf(false) }
-
-            AlertDialog(
-                onDismissRequest = { showMergeDialog = false },
-                title = { Text("Unisci Duplicato in: ${survDev.technicalName}") },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("Seleziona l'apparato duplicato da unire e rimuovere:")
-
-                        var dupExp by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { dupExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                val dName = candidateDuplicates.find { it.id == selectedDuplicateId }?.technicalName ?: "Seleziona Duplicato"
-                                Text(dName)
-                            }
-                            DropdownMenu(expanded = dupExp, onDismissRequest = { dupExp = false }) {
-                                candidateDuplicates.forEach { c ->
-                                    DropdownMenuItem(text = { Text(c.technicalName) }, onClick = { selectedDuplicateId = c.id; dupExp = false })
-                                }
-                            }
-                        }
-
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = useNameFromDup, onCheckedChange = { useNameFromDup = it })
-                            Text("Usa il nome dell'apparato duplicato per il superstite")
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        enabled = selectedDuplicateId.isNotBlank(),
-                        onClick = {
-                            val choices = MergeDataChoices(useTechnicalNameFromDuplicate = useNameFromDup, mergePorts = true)
-                            val (updated, trashItem) = com.onlyfield.assetmanager.pc.DesktopDomainLogic.mergeDevices(
-                                project, survDev.id, selectedDuplicateId, choices
-                            )
-                            showMergeDialog = false
-                            if (trashItem != null) onTrashItemCreated(trashItem)
-                            onProjectUpdated(updated, "Apparati uniti con successo in '${survDev.technicalName}'.")
-                        }
-                    ) {
-                        Text("Esegui Fusione")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { showMergeDialog = false }) {
-                        Text("Annulla")
-                    }
-                }
-            )
-        }
-    }
-
-    // Batch Edit Dialog
-    if (showBatchEditDialog) {
-        var updateCat by remember { mutableStateOf(false) }
-        var batchCat by remember { mutableStateOf(DeviceCategory.NETWORK_SWITCH) }
-        var updateArea by remember { mutableStateOf(false) }
-        var batchAreaId by remember { mutableStateOf<String?>(allAreas.firstOrNull()?.id) }
-        var updateRack by remember { mutableStateOf(false) }
-        var batchRackId by remember { mutableStateOf<String?>(null) }
-
-        AlertDialog(
-            onDismissRequest = { showBatchEditDialog = false },
-            title = { Text("Modifica in Blocco (${selectedDeviceIds.size} Apparati)") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = updateCat, onCheckedChange = { updateCat = it })
-                        Text("Aggiorna Categoria")
-                    }
-                    if (updateCat) {
-                        var catExp by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { catExp = true }) { Text(batchCat.name) }
-                            DropdownMenu(expanded = catExp, onDismissRequest = { catExp = false }) {
-                                DeviceCategory.entries.forEach { c ->
-                                    DropdownMenuItem(text = { Text(c.name) }, onClick = { batchCat = c; catExp = false })
-                                }
-                            }
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = updateArea, onCheckedChange = { updateArea = it })
-                        Text("Aggiorna Area")
-                    }
-                    if (updateArea) {
-                        var areaExp by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { areaExp = true }) {
-                                val aName = allAreas.find { it.id == batchAreaId }?.name ?: "Seleziona Area"
-                                Text(aName)
-                            }
-                            DropdownMenu(expanded = areaExp, onDismissRequest = { areaExp = false }) {
-                                allAreas.forEach { a ->
-                                    DropdownMenuItem(text = { Text(a.name) }, onClick = { batchAreaId = a.id; areaExp = false })
-                                }
-                            }
-                        }
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = updateRack, onCheckedChange = { updateRack = it })
-                        Text("Aggiorna Rack")
-                    }
-                    if (updateRack) {
-                        var rackExp by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { rackExp = true }) {
-                                val rName = project.racks.find { it.id == batchRackId }?.name ?: "Fuori Rack"
-                                Text(rName)
-                            }
-                            DropdownMenu(expanded = rackExp, onDismissRequest = { rackExp = false }) {
-                                DropdownMenuItem(text = { Text("Fuori Rack") }, onClick = { batchRackId = null; rackExp = false })
-                                project.racks.forEach { r ->
-                                    DropdownMenuItem(text = { Text(r.name) }, onClick = { batchRackId = r.id; rackExp = false })
-                                }
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val changes = BatchDeviceChanges(
-                        updateCategory = updateCat,
-                        category = if (updateCat) batchCat else null,
-                        updateAreaId = updateArea,
-                        areaId = if (updateArea) batchAreaId else null,
-                        updateRackId = updateRack,
-                        rackId = if (updateRack) batchRackId else null
-                    )
-
-                    val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.batchEditDevices(project, selectedDeviceIds.toList(), changes)
-                    showBatchEditDialog = false
-                    val count = selectedDeviceIds.size
-                    selectedDeviceIds = emptySet()
-                    onProjectUpdated(updated, "Applicate modifiche in blocco a $count apparati.")
-                }) {
-                    Text("Applica Modifiche")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showBatchEditDialog = false }) {
-                    Text("Annulla")
-                }
-            }
+    FormDialog(
+        title = "Modifica in blocco",
+        onDismiss = onDismiss,
+        onConfirm = { onApply(changes) },
+        confirmEnabled = any,
+        confirmLabel = "Applica a ${selectedIds.size} apparati",
+        width = 600.dp
+    ) {
+        Text(
+            selectedIds.mapNotNull { index.device(it)?.technicalName }.sorted().joinToString(", "),
+            style = MaterialTheme.typography.bodySmall,
+            maxLines = 3
         )
+        Text("Spunta i campi da sovrascrivere:", fontWeight = FontWeight.SemiBold)
+        LabeledCheckbox(changes.updateCategory, { changes = changes.copy(updateCategory = it) }, "Categoria")
+        if (changes.updateCategory) EnumPicker("Categoria", DeviceCategory.entries, changes.category ?: DeviceCategory.CUSTOM, { it.toDisplayString() }, { changes = changes.copy(category = it) })
+        LabeledCheckbox(changes.updateAreaId, { changes = changes.copy(updateAreaId = it) }, "Area")
+        if (changes.updateAreaId) OptionPicker("Area", index.areas, index.area(changes.areaId), { it.name }, { changes = changes.copy(areaId = it?.id) }, noneLabel = "Nessuna area")
+        LabeledCheckbox(changes.updateRackId, { changes = changes.copy(updateRackId = it) }, "Rack")
+        if (changes.updateRackId) OptionPicker("Rack", project.racks, index.rack(changes.rackId), { it.name }, { changes = changes.copy(rackId = it?.id) }, noneLabel = "Fuori rack")
+        LabeledCheckbox(changes.updateMountingType, { changes = changes.copy(updateMountingType = it) }, "Tipo di montaggio")
+        if (changes.updateMountingType) EnumPicker("Montaggio", MountingType.entries, changes.mountingType ?: MountingType.RACK_MOUNT, { it.toDisplayString() }, { changes = changes.copy(mountingType = it) })
+        LabeledCheckbox(changes.updateObservationNotes, { changes = changes.copy(updateObservationNotes = it) }, "Note di rilievo")
+        if (changes.updateObservationNotes) FormField(changes.observationNotes.orEmpty(), { changes = changes.copy(observationNotes = it) }, "Note", singleLine = false)
     }
 }

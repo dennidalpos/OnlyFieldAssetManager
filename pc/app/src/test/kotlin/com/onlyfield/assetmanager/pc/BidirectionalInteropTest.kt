@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.exchange.ComparisonStatus
@@ -217,7 +218,7 @@ class BidirectionalInteropTest {
             technicalName = "SRV-WIN-01",
             category = DeviceCategory.SERVER_STORAGE
         )
-        val modifiedProj = DesktopDomainLogic.addDevice(importedProj, importedProj.businessUnits[0].id, newDev)
+        val modifiedProj = ProjectEdits.addDevice(importedProj, importedProj.businessUnits[0].id, newDev)
         val targetLocalFile = storageManager.saveProjectLocally(modifiedProj)
         assertTrue("Local atomic save target file should exist", targetLocalFile.exists())
 

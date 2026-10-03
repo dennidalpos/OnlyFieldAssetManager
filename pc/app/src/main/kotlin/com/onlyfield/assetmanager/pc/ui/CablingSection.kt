@@ -5,627 +5,268 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
-import com.onlyfield.assetmanager.pc.DesktopDomainLogic
-import java.util.UUID
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.CableForm
+import com.onlyfield.assetmanager.core.forms.PanelMappingForm
+import com.onlyfield.assetmanager.core.forms.SharedPathForm
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CablingSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var subTab by remember { mutableStateOf(0) } // 0 = Cavi Fisici, 1 = Percorsi Condivisi, 2 = Permutazioni / Pannelli
-
-    // All available ports across project devices for dropdowns
-    val allPorts = remember(project) {
-        project.businessUnits.flatMap { bu ->
-            bu.devices.flatMap { dev ->
-                dev.ports.map { port ->
-                    Triple(port, dev, bu)
-                }
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Sub-tabs
-        TabRow(selectedTabIndex = subTab) {
-            Tab(selected = subTab == 0, onClick = { subTab = 0 }) {
-                Text("🔌 Cavi Fisici (${project.cables.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 1, onClick = { subTab = 1 }) {
-                Text("🛣️ Percorsi Condivisi (${project.sharedPathSegments.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 2, onClick = { subTab = 2 }) {
-                Text("🔀 Mapping Pannelli (${project.panelMappings.size})", modifier = Modifier.padding(10.dp))
-            }
-        }
-
-        when (subTab) {
-            0 -> CablesSubSection(project, allPorts, onProjectUpdated)
-            1 -> SharedPathsSubSection(project, onProjectUpdated)
-            2 -> PanelMappingsSubSection(project, allPorts, onProjectUpdated)
+fun CablingSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    val index = remember(project) { ProjectIndex(project) }
+    var tab by remember { mutableStateOf(0) }
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SubTabs(
+            listOf("Cavi (${project.cables.size})", "Percorsi (${project.sharedPathSegments.size})", "Permutazioni (${project.panelMappings.size})"),
+            tab
+        ) { tab = it }
+        when (tab) {
+            0 -> CablesTab(project, index, onProjectUpdated)
+            1 -> PathsTab(project, index, onProjectUpdated)
+            2 -> MappingsTab(project, index, onProjectUpdated)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+/** Picker over every port of the project, labelled "Apparato › Porta". */
 @Composable
-private fun CablesSubSection(
-    project: Project,
-    allPorts: List<Triple<Port, Device, BusinessUnit>>,
-    onProjectUpdated: (Project, String) -> Unit
+fun PortPicker(
+    label: String,
+    index: ProjectIndex,
+    selectedId: String?,
+    onSelected: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+    noneLabel: String? = "Non collegata",
+    error: String? = null,
+    busyPortIds: Set<String> = emptySet(),
 ) {
-    var showDialog by remember { mutableStateOf(false) }
-    var editingCable by remember { mutableStateOf<Cable?>(null) }
+    OptionPicker(
+        label = label,
+        options = index.ports,
+        selected = index.port(selectedId),
+        optionLabel = { "${it.device.technicalName} › ${it.port.name}" },
+        optionDetail = { ref ->
+            listOfNotNull(ref.port.label, if (ref.port.id in busyPortIds) "già collegata" else null, index.areaName(ref.device.areaId, "").ifBlank { null })
+                .joinToString(" · ")
+        },
+        onSelected = { onSelected(it?.port?.id) },
+        noneLabel = noneLabel,
+        isError = error != null,
+        supportingText = error ?: if (index.ports.isEmpty()) "Nessuna porta: aggiungile dagli apparati in Inventario" else null,
+        modifier = modifier
+    )
+}
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Elenco Cavi di Collegamento", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = {
-                editingCable = null
-                showDialog = true
-            }) {
-                Text("+ Nuovo Cavo")
-            }
-        }
-
-        if (project.cables.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nessun cavo censito nel progetto.")
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.cables) { cable ->
-                    val portAInfo = allPorts.find { it.first.id == cable.portAId }
-                    val portBInfo = allPorts.find { it.first.id == cable.portBId }
-
-                    val textA = if (portAInfo != null) "${portAInfo.second.technicalName}:${portAInfo.first.name}" else "— Non collegato —"
-                    val textB = if (portBInfo != null) "${portBInfo.second.technicalName}:${portBInfo.first.name}" else "— Non collegato —"
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = "Cavo: ${(cable.codeOrLabel ?: "Senza Codice").ifBlank { "Senza Codice" }} [ID: ${cable.id.take(8)}]",
-                                    fontWeight = FontWeight.Bold,
-                                    style = MaterialTheme.typography.titleSmall
-                                )
-                                Text("Da: $textA  ➡️  A: $textB")
-                                Text("Mezzo: ${cable.medium.name} | Connettori: ${cable.connectorA ?: "—"} / ${cable.connectorB ?: "—"} | Lunghezza: ${cable.lengthValue ?: "—"} ${cable.lengthUnit ?: "m"}")
-                                if (!cable.color.isNullOrBlank()) Text("Colore: ${cable.color}")
-                                if (!cable.notes.isNullOrBlank()) Text("Note: ${cable.notes}", style = MaterialTheme.typography.bodySmall)
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = {
-                                    editingCable = cable
-                                    showDialog = true
-                                }) {
-                                    Text("Modifica", fontSize = 11.sp)
-                                }
-
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        val updated = DesktopDomainLogic.deleteCable(project, cable.id)
-                                        onProjectUpdated(updated, "Cavo rimosso.")
-                                    }
-                                ) {
-                                    Text("Elimina", fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+@Composable
+private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<Cable?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    val cables = project.cables.filter {
+        matchesQuery(query, it.codeOrLabel, it.color, index.portLabel(it.portAId), index.portLabel(it.portBId))
     }
 
-    if (showDialog) {
-        val c = editingCable
-        var codeOrLabel by remember { mutableStateOf(c?.codeOrLabel ?: "") }
-        var selectedPortAId by remember { mutableStateOf(c?.portAId ?: "") }
-        var selectedPortBId by remember { mutableStateOf(c?.portBId ?: "") }
-        var medium by remember { mutableStateOf(c?.medium ?: CableMedium.ETHERNET_COPPER) }
-        var connectorA by remember { mutableStateOf(c?.connectorA ?: "") }
-        var connectorB by remember { mutableStateOf(c?.connectorB ?: "") }
-        var color by remember { mutableStateOf(c?.color ?: "") }
-        var lengthValueText by remember { mutableStateOf(c?.lengthValue?.toString() ?: "") }
-        var notes by remember { mutableStateOf(c?.notes ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(if (c == null) "Nuovo Cavo" else "Modifica Cavo") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 480.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Cavi", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca codice, apparato, porta…") {
+            Button(onClick = { creating = true }) { Text("+ Nuovo cavo") }
+        }
+        if (cables.isEmpty()) {
+            EmptyState(if (project.cables.isEmpty()) "Nessun cavo censito." else "Nessun cavo corrisponde alla ricerca.",
+                actionLabel = "+ Nuovo cavo".takeIf { project.cables.isEmpty() }, onAction = { creating = true })
+        } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(cables, key = { it.id }) { cable ->
+                ItemCard(
+                    title = cable.codeOrLabel ?: "Cavo senza codice",
+                    badge = cable.medium.toDisplayString(),
+                    details = listOf(
+                        "${index.portLabel(cable.portAId, "estremità A libera")}  ⇄  ${index.portLabel(cable.portBId, "estremità B libera")}",
+                        listOfNotNull(
+                            cable.lengthValue?.let { "${formatLength(it)} ${cable.lengthUnit ?: "m"}" },
+                            cable.color,
+                            cable.observedSpeed?.let { "velocità $it" },
+                            cable.sharedPathSegmentIds.takeIf { it.isNotEmpty() }?.let { "${it.size} percorsi" }
+                        ).joinToString(" · "),
+                        cable.notes.orEmpty()
+                    )
                 ) {
-                    OutlinedTextField(
-                        value = codeOrLabel,
-                        onValueChange = { codeOrLabel = it },
-                        label = { Text("Codice / Etichetta Cavo") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    // Port A Dropdown / Selector
-                    OutlinedTextField(
-                        value = selectedPortAId,
-                        onValueChange = { selectedPortAId = it },
-                        label = { Text("ID Porta A (opzionale)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true,
-                        supportingText = { Text("Puoi incollare l'ID porta o inserirlo dall'inventario") }
-                    )
-
-                    // Port B Dropdown / Selector
-                    OutlinedTextField(
-                        value = selectedPortBId,
-                        onValueChange = { selectedPortBId = it },
-                        label = { Text("ID Porta B (opzionale)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Text("Mezzo Trasmissivo:")
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        CableMedium.entries.take(4).forEach { m ->
-                            FilterChip(
-                                selected = medium == m,
-                                onClick = { medium = m },
-                                label = { Text(m.name, fontSize = 10.sp) }
-                            )
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = connectorA,
-                            onValueChange = { connectorA = it },
-                            label = { Text("Connettore A") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = connectorB,
-                            onValueChange = { connectorB = it },
-                            label = { Text("Connettore B") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(
-                            value = color,
-                            onValueChange = { color = it },
-                            label = { Text("Colore Cavo") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = lengthValueText,
-                            onValueChange = { lengthValueText = it },
-                            label = { Text("Lunghezza (m)") },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
-                        )
-                    }
-
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Note Cavo") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
+                    EditButton { editing = cable }
+                    DeleteButton(cable.codeOrLabel ?: "cavo", onDelete = { onProjectUpdated(ProjectEdits.deleteCable(project, cable.id), "Cavo eliminato.") })
                 }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val len = lengthValueText.toDoubleOrNull()
-                    val newCable = Cable(
-                        id = c?.id ?: UUID.randomUUID().toString(),
-                        codeOrLabel = codeOrLabel.ifBlank { null },
-                        portAId = selectedPortAId.ifBlank { null },
-                        portBId = selectedPortBId.ifBlank { null },
-                        medium = medium,
-                        connectorA = connectorA.ifBlank { null },
-                        connectorB = connectorB.ifBlank { null },
-                        color = color.ifBlank { null },
-                        lengthValue = len,
-                        notes = notes.ifBlank { null }
-                    )
-
-                    val updated = if (c == null) {
-                        DesktopDomainLogic.addCable(project, newCable)
-                    } else {
-                        DesktopDomainLogic.updateCable(project, newCable)
-                    }
-                    onProjectUpdated(updated, "Cavo salvato.")
-                    showDialog = false
-                }) {
-                    Text("Salva")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Annulla") }
             }
-        )
+        }
+    }
+
+    if (creating || editing != null) {
+        val cable = editing
+        var form by remember(cable) { mutableStateOf(CableForm.from(cable)) }
+        val errors = form.errors()
+        val busy = project.cables.filter { it.id != cable?.id }.flatMap { listOfNotNull(it.portAId, it.portBId) }.toSet()
+        val busyError = { id: String? -> if (id != null && id in busy) "Porta già usata da un altro cavo" else null }
+
+        FormDialog(
+            title = if (cable == null) "Nuovo cavo" else "Modifica cavo",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty() && busyError(form.portAId) == null && busyError(form.portBId) == null,
+            onConfirm = {
+                val saved = form.toCable(cable)
+                creating = false; editing = null
+                onProjectUpdated(if (cable == null) ProjectEdits.addCable(project, saved) else ProjectEdits.updateCable(project, saved), "Cavo salvato.")
+            },
+            width = 680.dp
+        ) {
+            FormField(form.codeOrLabel, { form = form.copy(codeOrLabel = it) }, "Codice / etichetta")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PortPicker("Estremità A", index, form.portAId, { form = form.copy(portAId = it) }, Modifier.weight(1f), error = busyError(form.portAId), busyPortIds = busy)
+                PortPicker("Estremità B", index, form.portBId, { form = form.copy(portBId = it) }, Modifier.weight(1f), error = errors["portBId"] ?: busyError(form.portBId), busyPortIds = busy)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EnumPicker("Mezzo", CableMedium.entries, form.medium, { it.toDisplayString() }, { form = form.copy(medium = it) }, Modifier.weight(1f))
+                EnumPicker("Orientamento", CableOrientation.entries, form.orientation, { it.toDisplayString() }, { form = form.copy(orientation = it) }, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.connectorA, { form = form.copy(connectorA = it) }, "Connettore A", Modifier.weight(1f), hint = "Es. RJ45, LC")
+                FormField(form.connectorB, { form = form.copy(connectorB = it) }, "Connettore B", Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.lengthValue, { form = form.copy(lengthValue = it) }, "Lunghezza (m)", Modifier.weight(1f), errors["lengthValue"])
+                FormField(form.color, { form = form.copy(color = it) }, "Colore", Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.nominalCharacteristics, { form = form.copy(nominalCharacteristics = it) }, "Caratteristiche nominali", Modifier.weight(1f), hint = "Es. Cat6A, OM4")
+                FormField(form.observedSpeed, { form = form.copy(observedSpeed = it) }, "Velocità rilevata", Modifier.weight(1f), hint = "Es. 1 Gbps")
+            }
+            if (project.sharedPathSegments.isNotEmpty()) {
+                Text("Percorsi attraversati", fontWeight = FontWeight.SemiBold)
+                project.sharedPathSegments.forEach { seg ->
+                    LabeledCheckbox(seg.id in form.sharedPathSegmentIds, { checked ->
+                        form = form.copy(sharedPathSegmentIds = if (checked) form.sharedPathSegmentIds + seg.id else form.sharedPathSegmentIds - seg.id)
+                    }, seg.name)
+                }
+            }
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false, minLines = 2)
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun SharedPathsSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var editingSegment by remember { mutableStateOf<SharedPathSegment?>(null) }
+private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<SharedPathSegment?>(null) }
+    var creating by remember { mutableStateOf(false) }
 
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Percorsi Condivisi e Canalizzazioni", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = {
-                editingSegment = null
-                showDialog = true
-            }) {
-                Text("+ Nuovo Percorso")
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Percorsi condivisi", subtitle = "Canaline, dorsali e passaggi attraversati dai cavi") {
+            Button(onClick = { creating = true }) { Text("+ Nuovo percorso") }
         }
-
         if (project.sharedPathSegments.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nessuna tratta / percorso condiviso definito.")
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.sharedPathSegments) { seg ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(seg.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                                Text("Descrizione: ${(seg.description ?: "—").ifBlank { "—" }}")
-                                Text("Capacità Massima Cavi: ${seg.capacityMaxCables ?: "Illimitata"}")
-                                if (!seg.notes.isNullOrBlank()) Text("Note: ${seg.notes}", style = MaterialTheme.typography.bodySmall)
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = {
-                                    editingSegment = seg
-                                    showDialog = true
-                                }) {
-                                    Text("Modifica", fontSize = 11.sp)
-                                }
-
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        val updated = DesktopDomainLogic.deleteSharedPathSegment(project, seg.id)
-                                        onProjectUpdated(updated, "Percorso rimosso.")
-                                    }
-                                ) {
-                                    Text("Elimina", fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
+            EmptyState("Nessun percorso definito.", actionLabel = "+ Nuovo percorso", onAction = { creating = true })
+        } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.sharedPathSegments, key = { it.id }) { seg ->
+                val used = project.cables.count { seg.id in it.sharedPathSegmentIds }
+                ItemCard(
+                    title = seg.name,
+                    details = listOf(
+                        "${index.areaName(seg.sourceAreaId, "?")} → ${index.areaName(seg.targetAreaId, "?")}",
+                        "$used cavi" + (seg.capacityMaxCables?.let { " su $it" } ?: ""),
+                        seg.description.orEmpty()
+                    ),
+                    badge = seg.capacityMaxCables?.takeIf { used > it }?.let { "Oltre capacità" }
+                ) {
+                    EditButton { editing = seg }
+                    DeleteButton(seg.name, onDelete = { onProjectUpdated(ProjectEdits.deleteSharedPathSegment(project, seg.id), "Percorso eliminato.") })
                 }
             }
         }
     }
 
-    if (showDialog) {
-        val s = editingSegment
-        var name by remember { mutableStateOf(s?.name ?: "") }
-        var description by remember { mutableStateOf(s?.description ?: "") }
-        var maxCablesText by remember { mutableStateOf(s?.capacityMaxCables?.toString() ?: "") }
-        var notes by remember { mutableStateOf(s?.notes ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(if (s == null) "Nuovo Percorso Condiviso" else "Modifica Percorso") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = name,
-                        onValueChange = { name = it },
-                        label = { Text("Nome Tratta / Canalina") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = { Text("Descrizione Percorso") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = maxCablesText,
-                        onValueChange = { maxCablesText = it },
-                        label = { Text("Capacità Massima Cavi (opzionale)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Note") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = name.isNotBlank(),
-                    onClick = {
-                        val cap = maxCablesText.toIntOrNull()
-                        val newSeg = SharedPathSegment(
-                            id = s?.id ?: UUID.randomUUID().toString(),
-                            name = name,
-                            description = description.ifBlank { null },
-                            capacityMaxCables = cap,
-                            notes = notes.ifBlank { null }
-                        )
-
-                        val updated = if (s == null) {
-                            DesktopDomainLogic.addSharedPathSegment(project, newSeg)
-                        } else {
-                            DesktopDomainLogic.updateSharedPathSegment(project, newSeg)
-                        }
-                        onProjectUpdated(updated, "Percorso condiviso salvato.")
-                        showDialog = false
-                    }
-                ) {
-                    Text("Salva")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Annulla") }
+    if (creating || editing != null) {
+        val seg = editing
+        var form by remember(seg) { mutableStateOf(SharedPathForm.from(seg)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (seg == null) "Nuovo percorso" else "Modifica percorso",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toSegment(seg)
+                creating = false; editing = null
+                onProjectUpdated(if (seg == null) ProjectEdits.addSharedPathSegment(project, saved) else ProjectEdits.updateSharedPathSegment(project, saved), "Percorso salvato.")
             }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PanelMappingsSubSection(
-    project: Project,
-    allPorts: List<Triple<Port, Device, BusinessUnit>>,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var editingMapping by remember { mutableStateOf<PanelMapping?>(null) }
-
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Mapping Mappature Permutatori e Pannelli", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = {
-                editingMapping = null
-                showDialog = true
-            }) {
-                Text("+ Nuova Permutazione")
+            FormField(form.name, { form = form.copy(name = it) }, "Nome *", error = errors["name"], hint = "Es. Dorsale piano 1")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OptionPicker("Da area", index.areas, index.area(form.sourceAreaId), { it.name }, { form = form.copy(sourceAreaId = it?.id) }, Modifier.weight(1f), noneLabel = "Non indicata")
+                OptionPicker("A area", index.areas, index.area(form.targetAreaId), { it.name }, { form = form.copy(targetAreaId = it?.id) }, Modifier.weight(1f), noneLabel = "Non indicata")
             }
+            FormField(form.capacityMaxCables, { form = form.copy(capacityMaxCables = it) }, "Capacità massima (cavi)", error = errors["capacityMaxCables"])
+            FormField(form.description, { form = form.copy(description = it) }, "Descrizione")
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
         }
-
-        if (project.panelMappings.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nessuna permutazione / mapping pannello definito.")
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.panelMappings) { map ->
-                    val portA = allPorts.find { it.first.id == map.portAId }
-                    val portB = allPorts.find { it.first.id == map.portBId }
-
-                    val labelA = portA?.let { "${it.second.technicalName}:${it.first.name}" } ?: map.portAId
-                    val labelB = portB?.let { "${it.second.technicalName}:${it.first.name}" } ?: (map.portBId ?: "— Nessuna —")
-
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("Permutazione Tipo: ${map.mappingType}", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                                Text("Porta A: $labelA  ↔️  Porta B: $labelB")
-                                if (map.isUnknownPassage) Text("⚠️ Passaggio sconosciuto / Sotto-traccia", color = MaterialTheme.colorScheme.error)
-                                if (!map.notes.isNullOrBlank()) Text("Note: ${map.notes}", style = MaterialTheme.typography.bodySmall)
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = {
-                                    editingMapping = map
-                                    showDialog = true
-                                }) {
-                                    Text("Modifica", fontSize = 11.sp)
-                                }
-
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        val updated = DesktopDomainLogic.deletePanelMapping(project, map.id)
-                                        onProjectUpdated(updated, "Permutazione rimossa.")
-                                    }
-                                ) {
-                                    Text("Elimina", fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showDialog) {
-        val m = editingMapping
-        var portAId by remember { mutableStateOf(m?.portAId ?: "") }
-        var portBId by remember { mutableStateOf(m?.portBId ?: "") }
-        var mappingType by remember { mutableStateOf(m?.mappingType ?: "CROSS_CONNECT") }
-        var isUnknownPassage by remember { mutableStateOf(m?.isUnknownPassage ?: false) }
-        var notes by remember { mutableStateOf(m?.notes ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(if (m == null) "Nuova Permutazione" else "Modifica Permutazione") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 400.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedTextField(
-                        value = portAId,
-                        onValueChange = { portAId = it },
-                        label = { Text("ID Porta A") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = portBId,
-                        onValueChange = { portBId = it },
-                        label = { Text("ID Porta B (opzionale)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = mappingType,
-                        onValueChange = { mappingType = it },
-                        label = { Text("Tipo Mappatura (es. CROSS_CONNECT, PATCH_PANEL)") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Checkbox(
-                            checked = isUnknownPassage,
-                            onCheckedChange = { isUnknownPassage = it }
-                        )
-                        Text("Passaggio sconosciuto / Tratta non ispezionabile")
-                    }
-
-                    OutlinedTextField(
-                        value = notes,
-                        onValueChange = { notes = it },
-                        label = { Text("Note") },
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = portAId.isNotBlank(),
-                    onClick = {
-                        val newMapping = PanelMapping(
-                            id = m?.id ?: UUID.randomUUID().toString(),
-                            portAId = portAId,
-                            portBId = portBId.ifBlank { null },
-                            mappingType = mappingType,
-                            isUnknownPassage = isUnknownPassage,
-                            notes = notes.ifBlank { null }
-                        )
-
-                        val updated = if (m == null) {
-                            DesktopDomainLogic.addPanelMapping(project, newMapping)
-                        } else {
-                            DesktopDomainLogic.updatePanelMapping(project, newMapping)
-                        }
-                        onProjectUpdated(updated, "Mapping pannello salvato.")
-                        showDialog = false
-                    }
-                ) {
-                    Text("Salva")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDialog = false }) { Text("Annulla") }
-            }
-        )
     }
 }
+
+@Composable
+private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<PanelMapping?>(null) }
+    var creating by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Permutazioni", subtitle = "Collegamenti interni tra porte di patch panel (fronte ↔ retro)") {
+            Button(onClick = { creating = true }) { Text("+ Nuova permutazione") }
+        }
+        if (project.panelMappings.isEmpty()) {
+            EmptyState("Nessuna permutazione definita.", actionLabel = "+ Nuova permutazione", onAction = { creating = true })
+        } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.panelMappings, key = { it.id }) { m ->
+                ItemCard(
+                    title = "${index.portLabel(m.portAId, "porta mancante")}  ⇄  ${index.portLabel(m.portBId, "nessuna")}",
+                    details = listOf(mappingTypeLabel(m.mappingType), m.notes.orEmpty()),
+                    badge = if (m.isUnknownPassage) "Passaggio non ispezionabile" else null
+                ) {
+                    EditButton { editing = m }
+                    DeleteButton("permutazione", onDelete = { onProjectUpdated(ProjectEdits.deletePanelMapping(project, m.id), "Permutazione eliminata.") })
+                }
+            }
+        }
+    }
+
+    if (creating || editing != null) {
+        val m = editing
+        var form by remember(m) { mutableStateOf(PanelMappingForm.from(m)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (m == null) "Nuova permutazione" else "Modifica permutazione",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toMapping(m)
+                creating = false; editing = null
+                onProjectUpdated(if (m == null) ProjectEdits.addPanelMapping(project, saved) else ProjectEdits.updatePanelMapping(project, saved), "Permutazione salvata.")
+            },
+            width = 640.dp
+        ) {
+            PortPicker("Porta A *", index, form.portAId, { form = form.copy(portAId = it) }, noneLabel = null, error = errors["portAId"])
+            PortPicker("Porta B", index, form.portBId, { form = form.copy(portBId = it) }, noneLabel = "Nessuna", error = errors["portBId"])
+            OptionPicker("Tipo", MAPPING_TYPES, form.mappingType, ::mappingTypeLabel, { it?.let { t -> form = form.copy(mappingType = t) } })
+            LabeledCheckbox(form.isUnknownPassage, { form = form.copy(isUnknownPassage = it) }, "Passaggio sconosciuto o non ispezionabile")
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
+        }
+    }
+}
+
+private val MAPPING_TYPES = listOf("CROSS_CONNECT", "PATCH_PANEL", "INTERCONNECT", "OTHER")
+
+private fun mappingTypeLabel(type: String) = when (type) {
+    "CROSS_CONNECT" -> "Cross-connect"
+    "PATCH_PANEL" -> "Patch panel"
+    "INTERCONNECT" -> "Interconnessione"
+    "OTHER" -> "Altro"
+    else -> type
+}
+
+private fun formatLength(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString().replace('.', ',')

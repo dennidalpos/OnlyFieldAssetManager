@@ -1,15 +1,67 @@
-package com.onlyfield.assetmanager.pc
+package com.onlyfield.assetmanager.core.edit
 
 import com.onlyfield.assetmanager.core.model.*
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
-object DesktopDomainLogic {
+/** Pure, immutable edit operations on a [Project], shared by the Android and Windows apps. */
+object ProjectEdits {
 
     private val jsonSerializer = Json {
         ignoreUnknownKeys = true
         prettyPrint = false
         encodeDefaults = true
+    }
+
+    // --- STRUCTURE (business units and areas) ---
+
+    fun addBusinessUnit(project: Project, name: String): Project = project.copy(
+        businessUnits = project.businessUnits + BusinessUnit(name = name),
+        updatedEpochMs = System.currentTimeMillis()
+    )
+
+    fun renameBusinessUnit(project: Project, buId: String, name: String): Project = project.copy(
+        businessUnits = project.businessUnits.map { if (it.id == buId) it.copy(name = name) else it },
+        updatedEpochMs = System.currentTimeMillis()
+    )
+
+    /** Deletes an empty business unit; returns null when it still contains devices or areas. */
+    fun deleteBusinessUnit(project: Project, buId: String): Project? {
+        val bu = project.businessUnits.find { it.id == buId } ?: return project
+        if (bu.devices.isNotEmpty() || bu.areas.isNotEmpty() || bu.sites.any { it.areas.isNotEmpty() }) return null
+        return project.copy(businessUnits = project.businessUnits - bu, updatedEpochMs = System.currentTimeMillis())
+    }
+
+    fun addArea(project: Project, buId: String, area: Area): Project = project.copy(
+        businessUnits = project.businessUnits.map { if (it.id == buId) it.copy(areas = it.areas + area) else it },
+        updatedEpochMs = System.currentTimeMillis()
+    )
+
+    fun updateArea(project: Project, area: Area): Project = project.copy(
+        businessUnits = project.businessUnits.map { bu ->
+            bu.copy(
+                areas = bu.areas.map { if (it.id == area.id) area else it },
+                sites = bu.sites.map { site -> site.copy(areas = site.areas.map { if (it.id == area.id) area else it }) }
+            )
+        },
+        updatedEpochMs = System.currentTimeMillis()
+    )
+
+    /** Deletes an area; returns null when devices, racks or placements still reference it. */
+    fun deleteArea(project: Project, areaId: String): Project? {
+        val inUse = project.businessUnits.any { bu -> bu.devices.any { it.areaId == areaId } } ||
+            project.racks.any { it.areaId == areaId } ||
+            project.floorplanPlacements.any { it.areaId == areaId }
+        if (inUse) return null
+        return project.copy(
+            businessUnits = project.businessUnits.map { bu ->
+                bu.copy(
+                    areas = bu.areas.filterNot { it.id == areaId },
+                    sites = bu.sites.map { site -> site.copy(areas = site.areas.filterNot { it.id == areaId }) }
+                )
+            },
+            updatedEpochMs = System.currentTimeMillis()
+        )
     }
 
     // --- DEVICES ---
@@ -445,6 +497,13 @@ object DesktopDomainLogic {
         )
     }
 
+    fun updateFloorplanPlacement(project: Project, placement: FloorplanPlacement): Project {
+        return project.copy(
+            floorplanPlacements = project.floorplanPlacements.map { if (it.id == placement.id) placement else it },
+            updatedEpochMs = System.currentTimeMillis()
+        )
+    }
+
     fun deleteFloorplanPlacement(project: Project, placementId: String): Project {
         return project.copy(
             floorplanPlacements = project.floorplanPlacements.filterNot { it.id == placementId },
@@ -720,6 +779,14 @@ object DesktopDomainLogic {
         )
     }
 
+    fun updateDeviceConfiguration(project: Project, updatedConfig: DeviceConfiguration): Project {
+        val updated = project.deviceConfigurations.map { if (it.id == updatedConfig.id) updatedConfig else it }
+        return project.copy(
+            deviceConfigurations = updated,
+            updatedEpochMs = System.currentTimeMillis()
+        )
+    }
+
     fun deleteDeviceConfiguration(project: Project, configId: String): Project {
         return project.copy(
             deviceConfigurations = project.deviceConfigurations.filterNot { it.id == configId },
@@ -730,6 +797,14 @@ object DesktopDomainLogic {
     fun addCustomExtraField(project: Project, field: CustomExtraField): Project {
         return project.copy(
             customExtraFields = project.customExtraFields + field,
+            updatedEpochMs = System.currentTimeMillis()
+        )
+    }
+
+    fun updateCustomExtraField(project: Project, updatedField: CustomExtraField): Project {
+        val updated = project.customExtraFields.map { if (it.id == updatedField.id) updatedField else it }
+        return project.copy(
+            customExtraFields = updated,
             updatedEpochMs = System.currentTimeMillis()
         )
     }

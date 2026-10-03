@@ -1,16 +1,42 @@
 {
   "projectName": "OnlyFieldAssetManager",
-  "lastUpdated": "2026-10-02",
-  "currentPhase": "Progetto Completato (A00-A13, W00-W05)",
-  "activeTask": "COMPLETED",
+  "lastUpdated": "2026-10-03",
+  "currentPhase": "Rework UX completato (A00-A13, W00-W05, U01-U02) e residui RES-03..RES-06 chiusi",
+  "activeTask": "IN_ATTESA_DECISIONE_RES-07",
   "summary": {
-    "totalTasks": 20,
-    "completedTasks": 20,
+    "totalTasks": 22,
+    "completedTasks": 22,
     "pendingTasks": 0,
     "progressPercentage": 100.0,
-    "totalPassedTests": 73
+    "totalPassedTests": 94,
+    "testsByModule": {
+      "mobile/app": 20,
+      "shared/core": 24,
+      "shared/exchange": 14,
+      "pc/app": 36
+    }
   },
+  "completedTasks": [
+    {
+      "id": "U01",
+      "title": "Rework UX Windows e programma portable con .exe in radice",
+      "date": "2026-10-03",
+      "evidence": "`:pc:app:packagePortable` -> dist/OnlyFieldAssetManager/OnlyFieldAssetManager.exe + ZIP; dati in data/ accanto all'exe; navigazione laterale, menu e scorciatoie, selettori, conferme, form che preservano i campi"
+    },
+    {
+      "id": "U02",
+      "title": "Rework UX Android",
+      "date": "2026-10-03",
+      "evidence": "Schermate dedicate con back stack nel ViewModel, Back di sistema e rotazione, CRUD apparati/porte/aree/credenziali, selettori al posto del 'primo elemento', snackbar con Annulla"
+    }
+  ],
   "remainingTasks": [],
+  "nextSessionNotes": [
+    "Audit e interventi: docs/07-ux-audit.md. Avanzamento: roadmap.md.",
+    "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
+    "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
+    "Il repository non ha un remote configurato: il push va fatto dopo aver aggiunto l'origin."
+  ],
   "residuals": [
     {
       "id": "RES-01",
@@ -23,6 +49,36 @@
       "title": "Localizzazione Multi-lingua",
       "status": "FUTURE_ENHANCEMENT",
       "description": "Estensione localizzazione stringhe UI a Inglese e Spagnolo."
+    },
+    {
+      "id": "RES-03",
+      "title": "PDF Windows non valido",
+      "status": "RESOLVED",
+      "description": "PDF reale multipagina (SimplePdfWriter) e stampa su piu' pagine con lo stesso contenuto (ReportContent)."
+    },
+    {
+      "id": "RES-04",
+      "title": "Allegati esclusi dai pacchetti .ofam",
+      "status": "RESOLVED",
+      "description": "I file degli allegati viaggiano nel pacchetto (AttachmentFiles); cifrati con AES-256-GCM nei progetti protetti (manifest.attachmentsEncrypted)."
+    },
+    {
+      "id": "RES-05",
+      "title": "Cestino Windows solo in memoria",
+      "status": "RESOLVED",
+      "description": "Cestino salvato su disco per i progetti senza password; Annulla (Ctrl+Z, 50 passi) per ogni modifica."
+    },
+    {
+      "id": "RES-06",
+      "title": "Messaggi di validazione in inglese",
+      "status": "RESOLVED",
+      "description": "Messaggi di ModelValidator e di importazione pacchetti in italiano."
+    },
+    {
+      "id": "RES-07",
+      "title": "Acquisizione mappe su Android",
+      "status": "AWAITING_DECISION",
+      "description": "Richiede rete ma il manifest non dichiara INTERNET; funzione rimossa dalla UI. Decidere: permesso di rete solo per questa funzione, oppure eliminarla e usare un'immagine come planimetria."
     }
   ]
 }

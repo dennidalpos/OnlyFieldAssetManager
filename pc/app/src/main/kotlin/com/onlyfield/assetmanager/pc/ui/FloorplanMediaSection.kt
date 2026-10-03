@@ -1,14 +1,15 @@
 package com.onlyfield.assetmanager.pc.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.ui.graphics.toComposeImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -17,590 +18,277 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.pc.DesktopCartographyManager
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.pc.DesktopMapSource
 import com.onlyfield.assetmanager.pc.DesktopStorageHelper
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.FieldValidators
 import java.io.File
-import java.util.UUID
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FloorplanMediaSection(
     project: Project,
-    onProjectUpdated: (Project, String) -> Unit
+    onProjectUpdated: (Project, String) -> Unit,
+    onAddAttachment: (File, String, AttachmentClassification) -> Unit,
+    attachmentFile: (Attachment) -> File?,
 ) {
-    var selectedTab by remember { mutableStateOf(0) }
-
-    val allAreas = remember(project) {
-        project.businessUnits.flatMap { bu ->
-            bu.areas + bu.sites.flatMap { it.areas }
-        }.distinctBy { it.id }
-    }
-
-    var showAddAttachmentDialog by remember { mutableStateOf(false) }
-    var showAddPlacementDialog by remember { mutableStateOf(false) }
-    var selectedAreaForCanvasId by remember { mutableStateOf(allAreas.firstOrNull()?.id) }
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        TabRow(selectedTabIndex = selectedTab) {
-            Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }) {
-                Text("📁 Allegati & Media (${project.attachments.size})", modifier = Modifier.padding(12.dp))
-            }
-            Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }) {
-                Text("🗺️ Planimetrie & Canvas (${project.floorplanPlacements.size})", modifier = Modifier.padding(12.dp))
-            }
-            Tab(selected = selectedTab == 2, onClick = { selectedTab = 2 }) {
-                Text("🌐 Cartografia & Mappe Raster", modifier = Modifier.padding(12.dp))
-            }
-        }
-
-        when (selectedTab) {
-            0 -> AttachmentsTabContent(
-                project = project,
-                allAreas = allAreas,
-                onAddAttachmentClick = { showAddAttachmentDialog = true },
-                onProjectUpdated = onProjectUpdated
-            )
-            1 -> FloorplansTabContent(
-                project = project,
-                allAreas = allAreas,
-                selectedAreaId = selectedAreaForCanvasId,
-                onAreaSelected = { selectedAreaForCanvasId = it },
-                onAddPlacementClick = { showAddPlacementDialog = true },
-                onProjectUpdated = onProjectUpdated
-            )
-            2 -> CartographyTabContent()
-        }
-    }
-
-    // Add Attachment Dialog
-    if (showAddAttachmentDialog) {
-        var nameInput by remember { mutableStateOf("") }
-        var classificationInput by remember { mutableStateOf(AttachmentClassification.SHAREABLE) }
-        var selectedFile by remember { mutableStateOf<File?>(null) }
-
-        AlertDialog(
-            onDismissRequest = { showAddAttachmentDialog = false },
-            title = { Text("Aggiungi Allegato Media") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    Button(onClick = {
-                        val chosen = DesktopStorageHelper.pickOpenFile("Seleziona File Media (Immagine / PDF)")
-                        if (chosen != null) {
-                            selectedFile = chosen
-                            if (nameInput.isBlank()) nameInput = chosen.nameWithoutExtension
-                        }
-                    }) {
-                        Text(selectedFile?.let { "File: ${it.name}" } ?: "Seleziona File da Disco...")
-                    }
-
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = { Text("Nome Allegato *") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    var classExp by remember { mutableStateOf(false) }
-                    Box {
-                        OutlinedButton(onClick = { classExp = true }, modifier = Modifier.fillMaxWidth()) {
-                            Text("Classificazione: ${classificationInput.name}")
-                        }
-                        DropdownMenu(expanded = classExp, onDismissRequest = { classExp = false }) {
-                            AttachmentClassification.entries.forEach { cl ->
-                                DropdownMenuItem(text = { Text(cl.name) }, onClick = { classificationInput = cl; classExp = false })
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    enabled = nameInput.isNotBlank() && selectedFile != null,
-                    onClick = {
-                        val file = selectedFile ?: return@Button
-                        val attachment = Attachment(
-                            id = UUID.randomUUID().toString(),
-                            name = nameInput.trim(),
-                            originalFileName = file.name,
-                            fileType = if (file.extension.equals("pdf", ignoreCase = true)) AttachmentType.PDF else AttachmentType.IMAGE,
-                            relativePath = "media/${file.name}",
-                            classification = classificationInput
-                        )
-
-                        val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.addAttachment(project, attachment)
-                        showAddAttachmentDialog = false
-                        onProjectUpdated(updated, "Allegato '${attachment.name}' aggiunto al progetto.")
-                    }
-                ) {
-                    Text("Aggiungi Allegato")
-                }
-            },
-            dismissButton = {
-                OutlinedButton(onClick = { showAddAttachmentDialog = false }) {
-                    Text("Annulla")
-                }
-            }
-        )
-    }
-
-    // Add Placement Dialog
-    if (showAddPlacementDialog) {
-        val selectedArea = allAreas.find { it.id == selectedAreaForCanvasId } ?: allAreas.firstOrNull()
-        if (selectedArea != null) {
-            var targetType by remember { mutableStateOf(PlacementTargetType.RACK) }
-            val racks = project.racks
-            val devices = project.businessUnits.flatMap { it.devices }
-            var selectedTargetId by remember { mutableStateOf(if (targetType == PlacementTargetType.RACK) racks.firstOrNull()?.id ?: "" else devices.firstOrNull()?.id ?: "") }
-            var xText by remember { mutableStateOf("0.5") }
-            var yText by remember { mutableStateOf("0.5") }
-
-            AlertDialog(
-                onDismissRequest = { showAddPlacementDialog = false },
-                title = { Text("Nuovo Posizionamento per '${selectedArea.name}'") },
-                text = {
-                    Column(
-                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(selected = targetType == PlacementTargetType.RACK, onClick = { targetType = PlacementTargetType.RACK; selectedTargetId = racks.firstOrNull()?.id ?: "" })
-                            Text("Armadio Rack")
-                            Spacer(modifier = Modifier.width(12.dp))
-                            RadioButton(selected = targetType == PlacementTargetType.DEVICE, onClick = { targetType = PlacementTargetType.DEVICE; selectedTargetId = devices.firstOrNull()?.id ?: "" })
-                            Text("Apparato Singolo")
-                        }
-
-                        var targetExp by remember { mutableStateOf(false) }
-                        Box {
-                            OutlinedButton(onClick = { targetExp = true }, modifier = Modifier.fillMaxWidth()) {
-                                val label = if (targetType == PlacementTargetType.RACK)
-                                    racks.find { it.id == selectedTargetId }?.name ?: "Seleziona Rack"
-                                else
-                                    devices.find { it.id == selectedTargetId }?.technicalName ?: "Seleziona Apparato"
-                                Text(label)
-                            }
-                            DropdownMenu(expanded = targetExp, onDismissRequest = { targetExp = false }) {
-                                if (targetType == PlacementTargetType.RACK) {
-                                    racks.forEach { r ->
-                                        DropdownMenuItem(text = { Text(r.name) }, onClick = { selectedTargetId = r.id; targetExp = false })
-                                    }
-                                } else {
-                                    devices.forEach { d ->
-                                        DropdownMenuItem(text = { Text(d.technicalName) }, onClick = { selectedTargetId = d.id; targetExp = false })
-                                    }
-                                }
-                            }
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedTextField(value = xText, onValueChange = { xText = it }, label = { Text("Coordinata X Ratio (0.0-1.0)") }, modifier = Modifier.weight(1f))
-                            OutlinedTextField(value = yText, onValueChange = { yText = it }, label = { Text("Coordinata Y Ratio (0.0-1.0)") }, modifier = Modifier.weight(1f))
-                        }
-                    }
-                },
-                confirmButton = {
-                    Button(
-                        enabled = selectedTargetId.isNotBlank(),
-                        onClick = {
-                            val x = xText.toFloatOrNull() ?: 0.5f
-                            val y = yText.toFloatOrNull() ?: 0.5f
-
-                            val placement = FloorplanPlacement(
-                                id = UUID.randomUUID().toString(),
-                                areaId = selectedArea.id,
-                                targetType = targetType,
-                                targetId = selectedTargetId,
-                                xRatio = x,
-                                yRatio = y
-                            )
-
-                            val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.addFloorplanPlacement(project, placement)
-                            showAddPlacementDialog = false
-                            onProjectUpdated(updated, "Posizionamento salvato su planimetria.")
-                        }
-                    ) {
-                        Text("Salva Posizionamento")
-                    }
-                },
-                dismissButton = {
-                    OutlinedButton(onClick = { showAddPlacementDialog = false }) {
-                        Text("Annulla")
-                    }
-                }
-            )
+    val index = remember(project) { ProjectIndex(project) }
+    var tab by remember { mutableStateOf(0) }
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SubTabs(listOf("Planimetrie (${project.floorplanPlacements.size})", "Allegati (${project.attachments.size})", "Coordinate geografiche"), tab) { tab = it }
+        when (tab) {
+            0 -> FloorplanTab(project, index, onProjectUpdated, attachmentFile)
+            1 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentFile)
+            2 -> CartographyTab()
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AttachmentsTabContent(
-    project: Project,
-    allAreas: List<Area>,
-    onAddAttachmentClick: () -> Unit,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Gestione Allegati Progetto", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Button(onClick = onAddAttachmentClick) {
-                Text("+ Aggiungi Allegato")
+private fun FloorplanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, attachmentFile: (Attachment) -> File?) {
+    var areaId by remember { mutableStateOf(index.areas.firstOrNull()?.id) }
+    val area = index.area(areaId)
+    var targetType by remember { mutableStateOf(PlacementTargetType.RACK) }
+    var targetId by remember { mutableStateOf<String?>(null) }
+    var movingId by remember { mutableStateOf<String?>(null) }
+
+    if (index.areas.isEmpty()) {
+        EmptyState("Crea prima un'area nella sezione Progetto › Struttura.")
+        return
+    }
+    val placements = project.floorplanPlacements.filter { it.areaId == area?.id }
+    val floorplan = project.attachments.find { it.id == area?.floorplanAttachmentId }
+    val background = remember(floorplan?.id) {
+        floorplan?.takeIf { it.fileType == AttachmentType.IMAGE }?.let(attachmentFile)?.let { f ->
+            try { org.jetbrains.skia.Image.makeFromEncoded(f.readBytes()).toComposeImageBitmap() } catch (_: Exception) { null }
+        }
+    }
+
+    fun targetName(p: FloorplanPlacement) = p.labelOverride ?: when (p.targetType) {
+        PlacementTargetType.RACK -> index.rackName(p.targetId, "Rack mancante")
+        PlacementTargetType.DEVICE -> index.deviceName(p.targetId, "Apparato mancante")
+    }
+
+    val placing = targetId != null || movingId != null
+    val hint = when {
+        movingId != null -> "Clicca sulla planimetria per spostare «${placements.find { it.id == movingId }?.let(::targetName)}»."
+        targetId != null -> "Clicca sulla planimetria nel punto in cui si trova l'elemento."
+        else -> "Scegli un rack o un apparato a destra, poi clicca sulla planimetria per posizionarlo."
+    }
+
+    Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.weight(2f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                OptionPicker("Area", index.areas, area, { it.name }, { areaId = it?.id; movingId = null }, Modifier.width(280.dp))
+                Text(
+                    floorplan?.let { "Planimetria: ${it.name}" } ?: "Nessuna planimetria associata (impostala da Allegati)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(hint, color = if (placing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant, fontWeight = if (placing) FontWeight.SemiBold else FontWeight.Normal)
+            Box(
+                modifier = Modifier.weight(1f).fillMaxWidth()
+                    .border(if (placing) 2.dp else 1.dp, if (placing) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp))
+                    .background(Color(0xFF263238), RoundedCornerShape(8.dp))
+            ) {
+                background?.let {
+                    Image(it, contentDescription = "Planimetria", contentScale = ContentScale.FillBounds, modifier = Modifier.fillMaxSize().padding(8.dp))
+                }
+                Canvas(
+                    modifier = Modifier.fillMaxSize().padding(8.dp).pointerInput(area?.id, targetId, targetType, movingId, project) {
+                        detectTapGestures { offset ->
+                            val x = (offset.x / size.width).coerceIn(0f, 1f)
+                            val y = (offset.y / size.height).coerceIn(0f, 1f)
+                            val currentArea = area ?: return@detectTapGestures
+                            val moving = placements.find { it.id == movingId }
+                            if (moving != null) {
+                                movingId = null
+                                onProjectUpdated(ProjectEdits.updateFloorplanPlacement(project, moving.copy(xRatio = x, yRatio = y)), "Posizione aggiornata.")
+                            } else targetId?.let { id ->
+                                targetId = null
+                                val placement = FloorplanPlacement(areaId = currentArea.id, targetType = targetType, targetId = id, xRatio = x, yRatio = y)
+                                onProjectUpdated(ProjectEdits.addFloorplanPlacement(project, placement), "Elemento posizionato su ${currentArea.name}.")
+                            }
+                        }
+                    }
+                ) {
+                    val grid = Color.White.copy(alpha = if (background != null) 0f else 0.08f)
+                    for (i in 0..10) {
+                        drawLine(grid, Offset(i * size.width / 10f, 0f), Offset(i * size.width / 10f, size.height))
+                        drawLine(grid, Offset(0f, i * size.height / 10f), Offset(size.width, i * size.height / 10f))
+                    }
+                    placements.forEach { p ->
+                        val c = Offset(p.xRatio * size.width, p.yRatio * size.height)
+                        val color = if (p.targetType == PlacementTargetType.RACK) Color(0xFF42A5F5) else Color(0xFF66BB6A)
+                        drawCircle(color, 12f, c)
+                        drawCircle(if (p.id == movingId) Color.Yellow else Color.White, 14f, c, style = Stroke(2f))
+                    }
+                }
+                placements.forEach { p ->
+                    // Labels are composables so they stay readable; positioned with the same ratios as the dots.
+                    BoxWithConstraints(Modifier.fillMaxSize().padding(8.dp)) {
+                        Text(
+                            targetName(p),
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            modifier = Modifier.offset(x = maxWidth * p.xRatio + 10.dp, y = maxHeight * p.yRatio - 8.dp)
+                        )
+                    }
+                }
             }
         }
 
-        if (project.attachments.isEmpty()) {
-            EmptyStateCard(
-                message = "Nessun allegato o media caricato nel progetto.",
-                actionLabel = "+ Aggiungi Allegato",
-                onAction = onAddAttachmentClick
+        Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("Posiziona elemento", fontWeight = FontWeight.SemiBold)
+            SingleChoiceSegmentedButtonRow {
+                PlacementTargetType.entries.forEachIndexed { i, t ->
+                    SegmentedButton(selected = targetType == t, onClick = { targetType = t; targetId = null }, shape = SegmentedButtonDefaults.itemShape(i, 2)) {
+                        Text(t.toDisplayString())
+                    }
+                }
+            }
+            if (targetType == PlacementTargetType.RACK) {
+                OptionPicker("Rack", project.racks, index.rack(targetId), { it.name }, { targetId = it?.id; movingId = null })
+            } else {
+                DevicePicker("Apparato", index, targetId, { targetId = it; movingId = null })
+            }
+            if (placing) TextButton(onClick = { targetId = null; movingId = null }) { Text("Annulla posizionamento") }
+
+            HorizontalDivider()
+            Text("Elementi su ${area?.name ?: "—"} (${placements.size})", fontWeight = FontWeight.SemiBold)
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                items(placements, key = { it.id }) { p ->
+                    ItemCard(title = targetName(p), badge = p.targetType.toDisplayString(), details = emptyList()) {
+                        TextButton(onClick = { movingId = p.id; targetId = null }) { Text("Sposta") }
+                        DeleteButton(targetName(p), label = "Rimuovi", message = "L'elemento viene tolto solo dalla planimetria.", onDelete = {
+                            onProjectUpdated(ProjectEdits.deleteFloorplanPlacement(project, p.id), "Elemento rimosso dalla planimetria.")
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AttachmentsTab(
+    project: Project,
+    index: ProjectIndex,
+    onProjectUpdated: (Project, String) -> Unit,
+    onAddAttachment: (File, String, AttachmentClassification) -> Unit,
+    attachmentFile: (Attachment) -> File?,
+) {
+    var adding by remember { mutableStateOf(false) }
+    var floorplanFor by remember { mutableStateOf<Attachment?>(null) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Allegati", subtitle = "Foto, planimetrie e documenti del progetto") {
+            Button(onClick = { adding = true }) { Text("+ Aggiungi allegato") }
+        }
+        if (project.attachments.isEmpty()) EmptyState("Nessun allegato.", actionLabel = "+ Aggiungi allegato", onAction = { adding = true })
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.attachments, key = { it.id }) { att ->
+                val usedBy = index.areas.filter { it.floorplanAttachmentId == att.id }.map { it.name }
+                ItemCard(
+                    title = att.name,
+                    badge = att.classification.toDisplayString(),
+                    details = listOf(
+                        "${att.fileType.toDisplayString()} · ${att.originalFileName}" + if (attachmentFile(att) == null) " · file non presente su questo PC" else "",
+                        usedBy.takeIf { it.isNotEmpty() }?.let { "Planimetria di: ${it.joinToString()}" }.orEmpty()
+                    )
+                ) {
+                    attachmentFile(att)?.let { f ->
+                        TextButton(onClick = { runCatching { java.awt.Desktop.getDesktop().open(f) } }) { Text("Apri") }
+                    }
+                    TextButton(onClick = { floorplanFor = att }, enabled = index.areas.isNotEmpty()) { Text("Usa come planimetria…") }
+                    DeleteButton(att.name, onDelete = { onProjectUpdated(ProjectEdits.deleteAttachment(project, att.id), "Allegato eliminato.") },
+                        message = if (usedBy.isNotEmpty()) "È la planimetria di ${usedBy.joinToString()}: le aree resteranno senza planimetria." else null)
+                }
+            }
+        }
+    }
+
+    if (adding) {
+        var file by remember { mutableStateOf<File?>(null) }
+        var name by remember { mutableStateOf("") }
+        var classification by remember { mutableStateOf(AttachmentClassification.SHAREABLE) }
+        FormDialog(
+            title = "Aggiungi allegato",
+            onDismiss = { adding = false },
+            confirmEnabled = file != null && name.isNotBlank(),
+            onConfirm = {
+                adding = false
+                onAddAttachment(file!!, name, classification)
+            },
+            width = 520.dp
+        ) {
+            OutlinedButton(onClick = {
+                DesktopStorageHelper.pickOpenFile(
+                    "Scegli il file da allegare", "Immagini, PDF e documenti",
+                    "jpg", "jpeg", "png", "gif", "bmp", "webp", "pdf", "doc", "docx", "xls", "xlsx", "txt", "md"
+                )?.let { file = it; if (name.isBlank()) name = it.nameWithoutExtension }
+            }) { Text(file?.let { "File: ${it.name}" } ?: "Scegli file…") }
+            FormField(name, { name = it }, "Nome *")
+            EnumPicker("Classificazione", AttachmentClassification.entries, classification, { it.toDisplayString() }, { classification = it })
+        }
+    }
+
+    floorplanFor?.let { att ->
+        var areaId by remember(att) { mutableStateOf<String?>(null) }
+        FormDialog(
+            title = "Usa «${att.name}» come planimetria",
+            onDismiss = { floorplanFor = null },
+            confirmEnabled = areaId != null,
+            confirmLabel = "Imposta",
+            onConfirm = {
+                floorplanFor = null
+                onProjectUpdated(ProjectEdits.setAreaFloorplan(project, areaId!!, att.id), "Planimetria di «${index.areaName(areaId)}» impostata.")
+            },
+            width = 460.dp
+        ) {
+            OptionPicker("Area *", index.areas, index.area(areaId), { it.name },
+                { areaId = it?.id }, optionDetail = { a -> a.floorplanAttachmentId?.let { "ha già una planimetria" } })
+        }
+    }
+}
+
+@Composable
+private fun CartographyTab() {
+    var source by remember { mutableStateOf(DesktopMapSource.OPEN_TOPO_MAP) }
+    var lat by remember { mutableStateOf("") }
+    var lon by remember { mutableStateOf("") }
+    var zoom by remember { mutableStateOf("15") }
+    val latError = FieldValidators.decimal(lat, -85.0, 85.0)
+    val lonError = FieldValidators.decimal(lon, -180.0, 180.0)
+    val zoomError = FieldValidators.int(zoom, 0, 19)
+    val latValue = FieldValidators.parseDecimal(lat)
+    val lonValue = FieldValidators.parseDecimal(lon)
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Coordinate geografiche", subtitle = "Calcolo della tessera cartografica per una posizione. La mappa non viene scaricata.")
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OptionPicker("Fonte", DesktopMapSource.entries, source, { it.displayName }, { it?.let { s -> source = s } }, Modifier.width(260.dp))
+            FormField(lat, { lat = it }, "Latitudine", Modifier.width(160.dp), latError, hint = "Es. 45,4642")
+            FormField(lon, { lon = it }, "Longitudine", Modifier.width(160.dp), lonError, hint = "Es. 9,1900")
+            FormField(zoom, { zoom = it }, "Zoom", Modifier.width(100.dp), zoomError)
+        }
+        if (latValue != null && lonValue != null && latError == null && lonError == null && zoomError == null) {
+            val tile = DesktopCartographyManager.lonLatToTileCoord(lonValue, latValue, zoom.trim().toIntOrNull() ?: 15)
+            ItemCard(
+                title = "Tessera Z${tile.zoom} / X${tile.x} / Y${tile.y}",
+                details = listOf(DesktopCartographyManager.getTileUrl(source, tile), source.attribution)
             )
         } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.attachments) { att ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(att.name, fontWeight = FontWeight.Bold)
-                                Text("File originale: ${att.originalFileName} | Tipo: ${att.fileType.name}")
-                                Text("Percorso relativo: ${att.relativePath}")
-
-                                Surface(
-                                    color = when (att.classification) {
-                                        AttachmentClassification.SHAREABLE -> MaterialTheme.colorScheme.secondaryContainer
-                                        AttachmentClassification.CONFIDENTIAL -> MaterialTheme.colorScheme.errorContainer
-                                        AttachmentClassification.REVIEW_REQUIRED -> MaterialTheme.colorScheme.tertiaryContainer
-                                    },
-                                    shape = RoundedCornerShape(4.dp),
-                                    modifier = Modifier.padding(top = 4.dp)
-                                ) {
-                                    Text(
-                                        text = "Classificazione: ${att.classification.name}",
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                }
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                var areaExp by remember { mutableStateOf(false) }
-                                Box {
-                                    OutlinedButton(onClick = { areaExp = true }) {
-                                        Text("Imposta come Planimetria", fontSize = 11.sp)
-                                    }
-                                    DropdownMenu(expanded = areaExp, onDismissRequest = { areaExp = false }) {
-                                        allAreas.forEach { area ->
-                                            DropdownMenuItem(
-                                                text = { Text("Area: ${area.name}") },
-                                                onClick = {
-                                                    areaExp = false
-                                                    val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.setAreaFloorplan(project, area.id, att.id)
-                                                    onProjectUpdated(updated, "Allegato '${att.name}' impostato come planimetria per '${area.name}'.")
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.deleteAttachment(project, att.id)
-                                        onProjectUpdated(updated, "Allegato '${att.name}' rimosso.")
-                                    }
-                                ) {
-                                    Text("Elimina", fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FloorplansTabContent(
-    project: Project,
-    allAreas: List<Area>,
-    selectedAreaId: String?,
-    onAreaSelected: (String) -> Unit,
-    onAddPlacementClick: () -> Unit,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    val selectedArea = allAreas.find { it.id == selectedAreaId } ?: allAreas.firstOrNull()
-    val floorplanAttachment = project.attachments.find { it.id == selectedArea?.floorplanAttachmentId }
-    val placementsInArea = remember(project, selectedArea) {
-        if (selectedArea == null) emptyList()
-        else project.floorplanPlacements.filter { it.areaId == selectedArea.id }
-    }
-
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Seleziona Area:", fontWeight = FontWeight.Bold)
-            var areaDropdownExpanded by remember { mutableStateOf(false) }
-            Box {
-                OutlinedButton(onClick = { areaDropdownExpanded = true }) {
-                    Text(selectedArea?.name ?: "Nessuna Area")
-                }
-                DropdownMenu(expanded = areaDropdownExpanded, onDismissRequest = { areaDropdownExpanded = false }) {
-                    allAreas.forEach { area ->
-                        DropdownMenuItem(text = { Text(area.name) }, onClick = { onAreaSelected(area.id); areaDropdownExpanded = false })
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            Button(
-                enabled = selectedArea != null,
-                onClick = onAddPlacementClick
-            ) {
-                Text("+ Nuovo Posizionamento Canvas")
-            }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxSize(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-        ) {
-            Row(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-                Card(
-                    modifier = Modifier.weight(2f).fillMaxHeight().border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFF263238))
-                ) {
-                    Column(modifier = Modifier.fillMaxSize()) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(8.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Canvas Planimetria — ${selectedArea?.name ?: "N/D"}",
-                                color = Color.White,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Text(
-                                text = if (floorplanAttachment != null) "Planimetria: ${floorplanAttachment.name}" else "Nessuna immagine associata all'area",
-                                color = Color.LightGray,
-                                fontSize = 12.sp
-                            )
-                        }
-
-                        Box(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                            Canvas(modifier = Modifier.fillMaxSize()) {
-                                val canvasWidth = size.width
-                                val canvasHeight = size.height
-
-                                val gridColor = Color.White.copy(alpha = 0.1f)
-                                for (x in 0..10) {
-                                    drawLine(gridColor, start = Offset(x * canvasWidth / 10f, 0f), end = Offset(x * canvasWidth / 10f, canvasHeight))
-                                }
-                                for (y in 0..10) {
-                                    drawLine(gridColor, start = Offset(0f, y * canvasHeight / 10f), end = Offset(canvasWidth, y * canvasHeight / 10f))
-                                }
-
-                                placementsInArea.forEach { placement ->
-                                    val px = placement.xRatio * canvasWidth
-                                    val py = placement.yRatio * canvasHeight
-                                    val color = if (placement.targetType == PlacementTargetType.RACK) Color(0xFF1976D2) else Color(0xFF388E3C)
-
-                                    drawCircle(color, radius = 16f, center = Offset(px, py))
-                                    drawCircle(Color.White, radius = 18f, center = Offset(px, py), style = Stroke(width = 2f))
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                    Text("Elementi Posizionati (${placementsInArea.size})", fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    if (placementsInArea.isEmpty()) {
-                        Text("Nessun posizionamento registrato su questa planimetria.", style = MaterialTheme.typography.bodyMedium)
-                    } else {
-                        LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(placementsInArea) { place ->
-                                val targetName = when (place.targetType) {
-                                    PlacementTargetType.RACK -> project.racks.find { it.id == place.targetId }?.name ?: place.targetId
-                                    PlacementTargetType.DEVICE -> project.businessUnits.flatMap { it.devices }.find { it.id == place.targetId }?.technicalName ?: place.targetId
-                                }
-
-                                Card(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Column {
-                                            Text("[${place.targetType.name}] $targetName", fontWeight = FontWeight.Bold)
-                                            Text("Coordinate: X=${(place.xRatio * 100).toInt()}%, Y=${(place.yRatio * 100).toInt()}%", style = MaterialTheme.typography.bodySmall)
-                                        }
-                                        Button(
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            onClick = {
-                                                val updated = com.onlyfield.assetmanager.pc.DesktopDomainLogic.deleteFloorplanPlacement(project, place.id)
-                                                onProjectUpdated(updated, "Posizionamento per '$targetName' rimosso.")
-                                            }
-                                        ) {
-                                            Text("Rimuovi", fontSize = 10.sp)
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CartographyTabContent() {
-    var selectedMapSource by remember { mutableStateOf(DesktopMapSource.OPEN_TOPO_MAP) }
-    var centerLatInput by remember { mutableStateOf("41.9028") }
-    var centerLonInput by remember { mutableStateOf("12.4964") }
-    var zoomInput by remember { mutableStateOf("15") }
-
-    Card(
-        modifier = Modifier.fillMaxSize(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(modifier = Modifier.padding(16.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Sorgente Mappa:", fontWeight = FontWeight.Bold)
-
-                var mapExp by remember { mutableStateOf(false) }
-                Box {
-                    OutlinedButton(onClick = { mapExp = true }) {
-                        Text(selectedMapSource.displayName)
-                    }
-                    DropdownMenu(expanded = mapExp, onDismissRequest = { mapExp = false }) {
-                        DesktopMapSource.entries.forEach { src ->
-                            DropdownMenuItem(
-                                text = { Text(src.displayName) },
-                                onClick = { selectedMapSource = src; mapExp = false }
-                            )
-                        }
-                    }
-                }
-
-                OutlinedTextField(
-                    value = centerLatInput,
-                    onValueChange = { centerLatInput = it },
-                    label = { Text("Latitudine") },
-                    modifier = Modifier.width(130.dp),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = centerLonInput,
-                    onValueChange = { centerLonInput = it },
-                    label = { Text("Longitudine") },
-                    modifier = Modifier.width(130.dp),
-                    singleLine = true
-                )
-
-                OutlinedTextField(
-                    value = zoomInput,
-                    onValueChange = { zoomInput = it },
-                    label = { Text("Zoom (0-19)") },
-                    modifier = Modifier.width(100.dp),
-                    singleLine = true
-                )
-            }
-
-            val latVal = centerLatInput.toDoubleOrNull() ?: 41.9028
-            val lonVal = centerLonInput.toDoubleOrNull() ?: 12.4964
-            val zoomVal = zoomInput.toIntOrNull() ?: 15
-            val tileCoord = DesktopCartographyManager.lonLatToTileCoord(lonVal, latVal, zoomVal)
-
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f).border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFF1E293B))
-            ) {
-                Box(modifier = Modifier.fillMaxSize().padding(12.dp)) {
-                    Canvas(modifier = Modifier.fillMaxSize()) {
-                        val w = size.width
-                        val h = size.height
-
-                        val gridCol = Color.White.copy(alpha = 0.15f)
-                        for (x in 0..4) {
-                            drawLine(gridCol, start = Offset(x * w / 4f, 0f), end = Offset(x * w / 4f, h))
-                        }
-                        for (y in 0..4) {
-                            drawLine(gridCol, start = Offset(0f, y * h / 4f), end = Offset(w, y * h / 4f))
-                        }
-
-                        drawCircle(Color(0xFFE11D48), radius = 18f, center = Offset(w / 2f, h / 2f))
-                        drawCircle(Color.White, radius = 20f, center = Offset(w / 2f, h / 2f), style = Stroke(width = 3f))
-                    }
-
-                    Column(
-                        modifier = Modifier.align(Alignment.TopStart).background(Color.Black.copy(alpha = 0.7f), RoundedCornerShape(4.dp)).padding(8.dp)
-                    ) {
-                        Text("📍 Coordinate Centro: Lat $latVal, Lon $lonVal", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        Text("🌐 Tile Coord: Z${tileCoord.zoom} / X${tileCoord.x} / Y${tileCoord.y}", color = Color.LightGray, fontSize = 11.sp)
-                        Text("URL Tile: ${DesktopCartographyManager.getTileUrl(selectedMapSource, tileCoord)}", color = Color.Cyan, fontSize = 10.sp)
-                    }
-
-                    Surface(
-                        modifier = Modifier.align(Alignment.BottomEnd),
-                        color = Color.Black.copy(alpha = 0.8f),
-                        shape = RoundedCornerShape(topStart = 6.dp)
-                    ) {
-                        Text(
-                            text = selectedMapSource.attribution,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            color = Color.White,
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
+            EmptyState("Inserisci latitudine e longitudine.")
         }
     }
 }

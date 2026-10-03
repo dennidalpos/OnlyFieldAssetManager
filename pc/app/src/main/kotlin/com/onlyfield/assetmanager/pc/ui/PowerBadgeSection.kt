@@ -5,397 +5,205 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
-import com.onlyfield.assetmanager.pc.DesktopDomainLogic
-import java.util.UUID
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.BadgeForm
+import com.onlyfield.assetmanager.core.forms.PoeForm
+import com.onlyfield.assetmanager.core.forms.PowerFeedForm
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PowerBadgeSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var subTab by remember { mutableStateOf(0) } // 0 = Alimentazione A/B, 1 = Mappature PoE, 2 = Badge Documentali
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        TabRow(selectedTabIndex = subTab) {
-            Tab(selected = subTab == 0, onClick = { subTab = 0 }) {
-                Text("⚡ Feeds Alimentazione A/B (${project.powerFeeds.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 1, onClick = { subTab = 1 }) {
-                Text("🔌 Mapping PoE (${project.poeMappings.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 2, onClick = { subTab = 2 }) {
-                Text("🏷️ Badge Documentali (${project.documentBadges.size})", modifier = Modifier.padding(10.dp))
-            }
-        }
-
-        when (subTab) {
-            0 -> PowerFeedsSubSection(project, onProjectUpdated)
-            1 -> PoeMappingsSubSection(project, onProjectUpdated)
-            2 -> DocumentBadgesSubSection(project, onProjectUpdated)
+fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    val index = remember(project) { ProjectIndex(project) }
+    var tab by remember { mutableStateOf(0) }
+    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        SubTabs(
+            listOf("Alimentazioni (${project.powerFeeds.size})", "PoE (${project.poeMappings.size})", "Badge documentali (${project.documentBadges.size})"),
+            tab
+        ) { tab = it }
+        when (tab) {
+            0 -> FeedsTab(project, index, onProjectUpdated)
+            1 -> PoeTab(project, index, onProjectUpdated)
+            2 -> BadgesTab(project, index, onProjectUpdated)
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun PowerFeedsSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-    var editingFeed by remember { mutableStateOf<PowerFeed?>(null) }
+private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<PowerFeed?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    val feeds = project.powerFeeds.filter { matchesQuery(query, it.feedName, index.deviceName(it.deviceId), index.deviceName(it.sourceDeviceId, "")) }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Feeds Alimentazione e Linee PDU/UPS", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = {
-                editingFeed = null
-                showDialog = true
-            }) {
-                Text("+ Nuova Alimentazione")
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Alimentazioni", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca linea o apparato…") {
+            Button(onClick = { creating = true }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova alimentazione") }
         }
-
-        if (project.powerFeeds.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nessuna linea di alimentazione registrata.")
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.powerFeeds) { feed ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text("${feed.feedName} (${feed.feedType.name})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                                Text("Apparato ID: ${feed.deviceId}")
-                                Text("Tensione: ${feed.voltageVolts ?: "230"}V | Carico: ${feed.loadWatts ?: "—"} W / ${feed.loadVa ?: "—"} VA")
-                                Text("Sorgente/Presa: ${feed.sourceOutletDescription ?: "—"} | Autonomia UPS: ${feed.observedRuntimeMinutes ?: "—"} min")
-                            }
-
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = {
-                                    editingFeed = feed
-                                    showDialog = true
-                                }) {
-                                    Text("Modifica", fontSize = 11.sp)
-                                }
-
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = {
-                                        val updated = DesktopDomainLogic.deletePowerFeed(project, feed.id)
-                                        onProjectUpdated(updated, "Alimentazione rimossa.")
-                                    }
-                                ) {
-                                    Text("Elimina", fontSize = 11.sp)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showDialog) {
-        val f = editingFeed
-        var feedName by remember { mutableStateOf(f?.feedName ?: "Linea A - UPS 1") }
-        var deviceId by remember { mutableStateOf(f?.deviceId ?: "") }
-        var feedType by remember { mutableStateOf(f?.feedType ?: PowerFeedType.PRIMARY_A) }
-        var voltageText by remember { mutableStateOf(f?.voltageVolts?.toString() ?: "230") }
-        var wattsText by remember { mutableStateOf(f?.loadWatts?.toString() ?: "") }
-        var runtimeText by remember { mutableStateOf(f?.observedRuntimeMinutes?.toString() ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(if (f == null) "Nuova Alimentazione" else "Modifica Alimentazione") },
-            text = {
-                Column(
-                    modifier = Modifier.fillMaxWidth().heightIn(max = 440.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+        if (feeds.isEmpty()) EmptyState(if (index.devices.isEmpty()) "Crea prima gli apparati in Inventario." else "Nessuna alimentazione registrata.")
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(feeds, key = { it.id }) { f ->
+                val source = f.sourceDeviceId?.let { index.deviceName(it) } ?: f.sourceOutletDescription
+                ItemCard(
+                    title = "${index.deviceName(f.deviceId, "Apparato mancante")} · ${f.feedName}",
+                    badge = f.feedType.toDisplayString(),
+                    details = listOf(
+                        source?.let { "Da $it" }.orEmpty(),
+                        listOfNotNull(
+                            f.voltageVolts?.let { "$it V" },
+                            f.loadWatts?.let { "${trim(it)} W" },
+                            f.loadVa?.let { "${trim(it)} VA" },
+                            f.observedRuntimeMinutes?.let { "autonomia $it min" }
+                        ).joinToString(" · "),
+                        f.notes.orEmpty()
+                    )
                 ) {
-                    OutlinedTextField(value = feedName, onValueChange = { feedName = it }, label = { Text("Nome Feed Alimentazione") })
-                    OutlinedTextField(value = deviceId, onValueChange = { deviceId = it }, label = { Text("ID Apparato Destinazione") })
-
-                    Text("Tipo Alimentazione:")
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        PowerFeedType.entries.take(4).forEach { t ->
-                            FilterChip(
-                                selected = feedType == t,
-                                onClick = { feedType = t },
-                                label = { Text(t.name, fontSize = 10.sp) }
-                            )
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        OutlinedTextField(value = voltageText, onValueChange = { voltageText = it }, label = { Text("Tensione (V)") }, modifier = Modifier.weight(1f))
-                        OutlinedTextField(value = wattsText, onValueChange = { wattsText = it }, label = { Text("Carico Watts") }, modifier = Modifier.weight(1f))
-                    }
-
-                    OutlinedTextField(value = runtimeText, onValueChange = { runtimeText = it }, label = { Text("Autonomia stimata (minuti)") })
+                    EditButton { editing = f }
+                    DeleteButton(f.feedName, onDelete = { onProjectUpdated(ProjectEdits.deletePowerFeed(project, f.id), "Alimentazione eliminata.") })
                 }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val newFeed = PowerFeed(
-                        id = f?.id ?: UUID.randomUUID().toString(),
-                        deviceId = deviceId.ifBlank { "DEV_UNASSIGNED" },
-                        feedName = feedName,
-                        feedType = feedType,
-                        voltageVolts = voltageText.toIntOrNull(),
-                        loadWatts = wattsText.toDoubleOrNull(),
-                        observedRuntimeMinutes = runtimeText.toIntOrNull()
-                    )
-
-                    val updated = if (f == null) DesktopDomainLogic.addPowerFeed(project, newFeed) else DesktopDomainLogic.updatePowerFeed(project, newFeed)
-                    onProjectUpdated(updated, "Alimentazione salvata.")
-                    showDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Annulla") } }
-        )
+            }
+        }
     }
-}
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun PoeMappingsSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+    if (creating || editing != null) {
+        val f = editing
+        var form by remember(f) { mutableStateOf(PowerFeedForm.from(f)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (f == null) "Nuova alimentazione" else "Modifica alimentazione",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toFeed(f)
+                creating = false; editing = null
+                onProjectUpdated(if (f == null) ProjectEdits.addPowerFeed(project, saved) else ProjectEdits.updatePowerFeed(project, saved), "Alimentazione salvata.")
+            },
+            width = 640.dp
         ) {
-            Text("Power over Ethernet (PoE) Mappings", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { showDialog = true }) {
-                Text("+ Nuovo Mapping PoE")
+            DevicePicker("Apparato alimentato *", index, form.deviceId, { form = form.copy(deviceId = it) }, error = errors["deviceId"])
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.feedName, { form = form.copy(feedName = it) }, "Nome linea *", Modifier.weight(1.3f), errors["feedName"], hint = "Es. Alimentatore 1")
+                EnumPicker("Tipo", PowerFeedType.entries, form.feedType, { it.toDisplayString() }, { form = form.copy(feedType = it) }, Modifier.weight(1f))
             }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DevicePicker("Sorgente (UPS / PDU)", index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, Modifier.weight(1f),
+                    noneLabel = "Non nel progetto", error = errors["sourceDeviceId"])
+                FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, "Presa / uscita", Modifier.weight(1f), hint = "Es. PDU-A presa 5")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.voltage, { form = form.copy(voltage = it) }, "Tensione (V)", Modifier.weight(1f), errors["voltage"])
+                FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, "Carico (W)", Modifier.weight(1f), errors["loadWatts"])
+                FormField(form.loadVa, { form = form.copy(loadVa = it) }, "Carico (VA)", Modifier.weight(1f), errors["loadVa"])
+                FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, "Autonomia (min)", Modifier.weight(1f), errors["runtimeMinutes"])
+            }
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
         }
-
-        if (project.poeMappings.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nessuna mappatura PoE definita nel progetto.")
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.poeMappings) { poe ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("Porta ID: ${poe.portId}", fontWeight = FontWeight.Bold)
-                                Text("Ruolo: ${poe.role.name} | Standard: ${poe.standard.name} | Potenza: ${poe.allocatedPowerWatts ?: "—"} W")
-                            }
-
-                            Button(
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                onClick = {
-                                    val updated = DesktopDomainLogic.deletePoeMapping(project, poe.id)
-                                    onProjectUpdated(updated, "Mapping PoE rimosso.")
-                                }
-                            ) {
-                                Text("Elimina", fontSize = 11.sp)
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    if (showDialog) {
-        var portId by remember { mutableStateOf("") }
-        var role by remember { mutableStateOf(PoeRole.PSE_SOURCE) }
-        var standard by remember { mutableStateOf(PoeStandard.IEEE_802_3AT) }
-        var wattsText by remember { mutableStateOf("30.0") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Aggiungi Mapping PoE") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = portId, onValueChange = { portId = it }, label = { Text("ID Porta") })
-
-                    Text("Ruolo PoE:")
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        PoeRole.entries.forEach { r ->
-                            FilterChip(selected = role == r, onClick = { role = r }, label = { Text(r.name, fontSize = 10.sp) })
-                        }
-                    }
-
-                    OutlinedTextField(value = wattsText, onValueChange = { wattsText = it }, label = { Text("Potenza Allocata (W)") })
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val poe = PoeMapping(
-                        id = UUID.randomUUID().toString(),
-                        portId = portId,
-                        role = role,
-                        standard = standard,
-                        allocatedPowerWatts = wattsText.toDoubleOrNull()
-                    )
-                    onProjectUpdated(DesktopDomainLogic.addOrUpdatePoeMapping(project, poe), "Mapping PoE salvato.")
-                    showDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Annulla") } }
-        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun DocumentBadgesSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
+private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<PoeMapping?>(null) }
+    var creating by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text("Badge Documentali di Progetto", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { showDialog = true }) {
-                Text("+ Nuovo Badge")
-            }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Power over Ethernet", subtitle = "Porte che erogano o ricevono alimentazione PoE") {
+            Button(onClick = { creating = true }, enabled = index.ports.isNotEmpty()) { Text("+ Nuova porta PoE") }
         }
-
-        if (project.documentBadges.isEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-            ) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Nessun badge documentale presente.")
-                }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize().weight(1f),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(project.documentBadges) { badge ->
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(12.dp).fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
-                                Text("🏷️ ${badge.label}", fontWeight = FontWeight.Bold)
-                                Text("Categoria: ${badge.category.name} | Target: ${badge.targetType} [${badge.targetId.take(8)}]")
-                                if (badge.isDerived) Text("⚙️ Badge derivato automaticamente", style = MaterialTheme.typography.bodySmall)
-                            }
-
-                            Button(
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                onClick = {
-                                    val updated = DesktopDomainLogic.deleteDocumentBadge(project, badge.id)
-                                    onProjectUpdated(updated, "Badge rimosso.")
-                                }
-                            ) {
-                                Text("Elimina", fontSize = 11.sp)
-                            }
-                        }
-                    }
+        if (project.poeMappings.isEmpty()) EmptyState(if (index.ports.isEmpty()) "Aggiungi prima le porte agli apparati." else "Nessuna porta PoE registrata.")
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.poeMappings, key = { it.id }) { poe ->
+                ItemCard(
+                    title = index.portLabel(poe.portId, "Porta mancante"),
+                    badge = poe.role.toDisplayString(),
+                    details = listOf(listOfNotNull(poe.standard.toDisplayString(), poe.allocatedPowerWatts?.let { "${trim(it)} W" }).joinToString(" · "), poe.notes.orEmpty())
+                ) {
+                    EditButton { editing = poe }
+                    DeleteButton("PoE ${index.portLabel(poe.portId)}", onDelete = { onProjectUpdated(ProjectEdits.deletePoeMapping(project, poe.id), "Mappatura PoE eliminata.") })
                 }
             }
         }
     }
 
-    if (showDialog) {
-        var label by remember { mutableStateOf("") }
-        var category by remember { mutableStateOf(BadgeCategory.FREE_LABEL) }
-        var targetType by remember { mutableStateOf("DEVICE") }
-        var targetId by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Nuovo Badge Documentale") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = label, onValueChange = { label = it }, label = { Text("Etichetta Badge") })
-                    OutlinedTextField(value = targetType, onValueChange = { targetType = it }, label = { Text("Target Type (DEVICE, RACK, PROJECT)") })
-                    OutlinedTextField(value = targetId, onValueChange = { targetId = it }, label = { Text("ID Target") })
-
-                    Text("Categoria:")
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        BadgeCategory.entries.take(4).forEach { cat ->
-                            FilterChip(selected = category == cat, onClick = { category = cat }, label = { Text(cat.name, fontSize = 10.sp) })
-                        }
-                    }
-                }
+    if (creating || editing != null) {
+        val poe = editing
+        var form by remember(poe) { mutableStateOf(PoeForm.from(poe)) }
+        val errors = form.errors()
+        val existingOnPort = project.poeMappings.find { it.portId == form.portId && it.id != poe?.id }
+        FormDialog(
+            title = if (poe == null) "Nuova porta PoE" else "Modifica porta PoE",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toMapping(poe)
+                creating = false; editing = null
+                onProjectUpdated(ProjectEdits.addOrUpdatePoeMapping(project, saved), "Mappatura PoE salvata.")
             },
-            confirmButton = {
-                Button(onClick = {
-                    val badge = DocumentBadge(
-                        id = UUID.randomUUID().toString(),
-                        targetType = targetType,
-                        targetId = targetId.ifBlank { "PROJ_GLOBAL" },
-                        label = label,
-                        category = category
-                    )
-                    onProjectUpdated(DesktopDomainLogic.addDocumentBadge(project, badge), "Badge creato.")
-                    showDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Annulla") } }
-        )
+            width = 600.dp
+        ) {
+            PortPicker("Porta *", index, form.portId, { form = form.copy(portId = it) }, noneLabel = null, error = errors["portId"])
+            if (existingOnPort != null) Text("La porta ha già una mappatura PoE: verrà sostituita.", color = MaterialTheme.colorScheme.tertiary)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                EnumPicker("Ruolo", PoeRole.entries, form.role, { it.toDisplayString() }, { form = form.copy(role = it) }, Modifier.weight(1f))
+                EnumPicker("Standard", PoeStandard.entries, form.standard, { it.toDisplayString() }, { form = form.copy(standard = it) }, Modifier.weight(1f))
+            }
+            FormField(form.watts, { form = form.copy(watts = it) }, "Potenza allocata (W)", error = errors["watts"])
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note")
+        }
     }
 }
+
+@Composable
+private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<DocumentBadge?>(null) }
+    var creating by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Badge documentali", subtitle = "Etichette che compaiono nei documenti esportati") {
+            Button(onClick = { creating = true }) { Text("+ Nuovo badge") }
+        }
+        if (project.documentBadges.isEmpty()) EmptyState("Nessun badge.", actionLabel = "+ Nuovo badge", onAction = { creating = true })
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.documentBadges, key = { it.id }) { b ->
+                ItemCard(
+                    title = b.label,
+                    badge = b.category.toDisplayString(),
+                    details = listOf(index.targetLabel(b.targetType, b.targetId), if (b.isDerived) "Generato automaticamente" else "", b.notes.orEmpty())
+                ) {
+                    if (!b.isDerived) EditButton { editing = b }
+                    DeleteButton(b.label, onDelete = { onProjectUpdated(ProjectEdits.deleteDocumentBadge(project, b.id), "Badge eliminato.") })
+                }
+            }
+        }
+    }
+
+    if (creating || editing != null) {
+        val b = editing
+        var form by remember(b) { mutableStateOf(BadgeForm.from(b)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (b == null) "Nuovo badge" else "Modifica badge",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toBadge(b, project.id)
+                creating = false; editing = null
+                onProjectUpdated(if (b == null) ProjectEdits.addDocumentBadge(project, saved) else ProjectEdits.updateDocumentBadge(project, saved), "Badge salvato.")
+            },
+            width = 620.dp
+        ) {
+            TargetPicker(index, form.target, { form = form.copy(target = it) }, errors["target"])
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.label, { form = form.copy(label = it) }, "Etichetta *", Modifier.weight(1.3f), errors["label"])
+                EnumPicker("Categoria", BadgeCategory.entries, form.category, { it.toDisplayString() }, { form = form.copy(category = it) }, Modifier.weight(1f))
+            }
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note")
+        }
+    }
+}
+
+private fun trim(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString().replace('.', ',')

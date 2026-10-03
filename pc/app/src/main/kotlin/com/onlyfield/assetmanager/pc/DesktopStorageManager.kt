@@ -1,6 +1,10 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.model.Attachment
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.model.TrashItem
+import kotlinx.serialization.builtins.ListSerializer
+import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.exchange.PackageImportResult
 import com.onlyfield.assetmanager.exchange.PackageSerializer
 import com.onlyfield.assetmanager.exchange.ProjectPackage
@@ -80,6 +84,49 @@ class DesktopStorageManager(
 
     fun getProjectsFolder(): File = File(dataDir, "projects")
     fun getTempFolder(): File = File(dataDir, "tmp")
+
+    /** Folder holding the files of the attachments, one sub-folder per project. */
+    fun getMediaFolder(): File = File(dataDir, "media")
+
+    fun attachmentFile(projectId: String, attachment: Attachment): File =
+        AttachmentFiles.localFile(getMediaFolder(), projectId, attachment)
+
+    /** Copies [source] into the media folder as the file of [attachment]. */
+    fun storeAttachmentFile(projectId: String, attachment: Attachment, source: File): File {
+        val target = attachmentFile(projectId, attachment)
+        target.parentFile?.mkdirs()
+        Files.copy(source.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        return target
+    }
+
+    /** Saves the attachment files contained in an imported package; returns how many were written. */
+    fun extractAttachments(pkg: ProjectPackage): Int = AttachmentFiles.extract(pkg, getMediaFolder())
+
+    private val trashJson = Json { ignoreUnknownKeys = true }
+
+    private fun trashFile(projectId: String) = File(dataDir, "trash/$projectId.json")
+
+    /** Trash of a project, persisted between sessions (only for projects without a password). */
+    fun loadTrash(projectId: String): List<TrashItem> = try {
+        trashFile(projectId).takeIf { it.isFile }
+            ?.let { trashJson.decodeFromString(ListSerializer(TrashItem.serializer()), it.readText(Charsets.UTF_8)) }
+            ?: emptyList()
+    } catch (_: Exception) {
+        emptyList()
+    }
+
+    fun saveTrash(projectId: String, items: List<TrashItem>) {
+        val file = trashFile(projectId)
+        if (items.isEmpty()) {
+            file.delete()
+            return
+        }
+        file.parentFile?.mkdirs()
+        file.writeText(trashJson.encodeToString(ListSerializer(TrashItem.serializer()), items), Charsets.UTF_8)
+    }
+
+    fun missingAttachments(project: Project): List<Attachment> =
+        AttachmentFiles.missing(project) { attachmentFile(project.id, it) }
 
     fun acquireProjectLock(projectId: String) {
         if (activeLocks.containsKey(projectId)) return
@@ -221,7 +268,7 @@ class DesktopStorageManager(
         project: Project,
         targetFile: File,
         password: String? = null,
-        attachments: Map<String, ByteArray> = emptyMap()
+        attachments: Map<String, ByteArray> = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
     ) {
         val parent = targetFile.parentFile ?: File(".")
         if (parent.exists() && !parent.canWrite()) {

@@ -1,14 +1,16 @@
 # Architettura Storage Desktop e Interoperabilità Android <-> PC
 
-Data: 2 ottobre 2026
+Data: 3 ottobre 2026
 
 ## Storage Desktop (`DesktopStorageManager`)
 
-L'editor Windows Desktop (`:pc:app`) gestisce i progetti locali in una cartella dati esplicita configurabile dall'utente (`dataDir`).
+L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dataDir`) risolta da `PortablePaths`.
 
-### 1. Gestione Cartella Dati e Selezione (`pickDirectory`)
-- Selezione della cartella di lavoro tramite `JFileChooser` in `DesktopStorageHelper`.
-- Verifica automatica di leggibilità, scrivibilità e spazio libero sul disco.
+### 1. Cartella Dati Portable (`PortablePaths`)
+- Avviato dall'eseguibile del pacchetto portable, i dati stanno in `data\` accanto a `OnlyFieldAssetManager.exe` (proprietà `jpackage.app-path`).
+- Se quella cartella non è scrivibile, o se l'app è avviata da Gradle, si usa `%USERPROFILE%\.onlyfield_asset_manager`.
+- Leggibilità, scrivibilità e spazio libero vengono verificati; il percorso in uso è mostrato nella barra di stato.
+- Ogni modifica viene salvata automaticamente: non esiste un comando "Salva".
 
 ### 2. Salvataggio Transazionale Atomico
 - La scrittura di un progetto avviene sempre prima su un file temporaneo `.tmp` nella stessa directory.

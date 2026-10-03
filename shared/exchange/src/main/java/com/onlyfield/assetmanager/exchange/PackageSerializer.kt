@@ -87,26 +87,21 @@ object PackageSerializer {
         }
 
         val checksumsMap = mutableMapOf<String, String>()
-        val processedAttachments = mutableMapOf<String, ByteArray>()
-        for ((path, bytes) in attachments) {
-            val normalizedPath = if (path.startsWith(PackageManifest.ATTACHMENTS_DIR)) path else "${PackageManifest.ATTACHMENTS_DIR}$path"
-            checksumsMap[normalizedPath] = calculateSha256(bytes)
-            processedAttachments[normalizedPath] = bytes
-        }
 
         var kdfSaltHex: String? = null
         var kdfIterations: Int? = null
         var cipherIvHex: String? = null
         val payloadBytes: ByteArray
         val payloadEntryName: String
+        var key: SecretKeySpec? = null
+        val random = SecureRandom()
 
         if (isEncrypted && (effectivePassword != null)) {
-            val random = SecureRandom()
             val salt = ByteArray(16).also { random.nextBytes(it) }
             val iv = ByteArray(12).also { random.nextBytes(it) }
             val iterations = PackageManifest.DEFAULT_KDF_ITERATIONS
 
-            val key = deriveKey(effectivePassword, salt, iterations)
+            key = deriveKey(effectivePassword, salt, iterations)
             payloadBytes = encryptAesGcm(projectJsonBytes, key, iv)
             payloadEntryName = PackageManifest.PROJECT_ENC_FILE_NAME
 
@@ -121,6 +116,18 @@ object PackageSerializer {
             checksumsMap[PackageManifest.PROJECT_FILE_NAME] = calculateSha256(payloadBytes)
         }
 
+        // Attachments of a protected project are encrypted with the same key (one random IV per file).
+        val processedAttachments = mutableMapOf<String, ByteArray>()
+        for ((path, bytes) in attachments) {
+            val normalizedPath = if (path.startsWith(PackageManifest.ATTACHMENTS_DIR)) path else "${PackageManifest.ATTACHMENTS_DIR}$path"
+            val stored = key?.let { k ->
+                val iv = ByteArray(12).also { random.nextBytes(it) }
+                iv + encryptAesGcm(bytes, k, iv)
+            } ?: bytes
+            checksumsMap[normalizedPath] = calculateSha256(stored)
+            processedAttachments[normalizedPath] = stored
+        }
+
         val manifest = PackageManifest(
             formatVersion = PackageManifest.CURRENT_FORMAT_VERSION,
             exportId = UUID.randomUUID().toString(),
@@ -132,6 +139,7 @@ object PackageSerializer {
             kdfIterations = kdfIterations,
             cipherIvHex = cipherIvHex,
             checksums = checksumsMap,
+            attachmentsEncrypted = key != null && processedAttachments.isNotEmpty(),
         )
 
         val manifestJsonBytes = jsonConfig.encodeToString(PackageManifest.serializer(), manifest).toByteArray(Charsets.UTF_8)
@@ -166,7 +174,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "EMPTY_PACKAGE",
-                    message = "Package ZIP file is empty",
+                    message = "Il file è vuoto",
                     severity = ValidationSeverity.STRUCTURAL_ERROR,
                 )
             )
@@ -199,7 +207,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "INVALID_ZIP_ARCHIVE",
-                    message = "Failed to parse ZIP archive: ${e.message}",
+                    message = "Il file non è un archivio .ofam leggibile",
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
@@ -210,7 +218,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "MISSING_MANIFEST",
-                    message = "Package missing manifest.json",
+                    message = "Il file non è un pacchetto .ofam (manca il manifest)",
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
@@ -223,7 +231,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "INVALID_MANIFEST_JSON",
-                    message = "Failed to parse manifest.json: ${e.message}",
+                    message = "Manifest del pacchetto illeggibile",
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )
@@ -231,12 +239,13 @@ object PackageSerializer {
         }
 
         val projectBytes: ByteArray
+        var key: SecretKeySpec? = null
         if (manifest.isEncrypted) {
             if (projectEncBytes == null) {
                 issues.add(
                     ValidationIssue(
                         code = "MISSING_ENCRYPTED_PROJECT_DATA",
-                        message = "Encrypted package missing project.json.enc",
+                        message = "Pacchetto cifrato incompleto: mancano i dati del progetto",
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -250,7 +259,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "PROJECT_CHECKSUM_MISMATCH",
-                        message = "SHA-256 mismatch for project.json.enc. Expected: $expectedEncChecksum, Actual: $actualEncChecksum",
+                        message = "Il pacchetto è danneggiato: i dati del progetto non corrispondono al controllo di integrità",
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -276,7 +285,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "CORRUPTED_ENCRYPTION_METADATA",
-                        message = "Encrypted package manifest missing salt or IV",
+                        message = "Pacchetto cifrato danneggiato: parametri di cifratura mancanti",
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -284,7 +293,7 @@ object PackageSerializer {
             }
 
             try {
-                val key = deriveKey(password, saltHex.hexToBytes(), iterations)
+                key = deriveKey(password, saltHex.hexToBytes(), iterations)
                 projectBytes = decryptAesGcm(projectEncBytes, key, ivHex.hexToBytes())
             } catch (_: Exception) {
                 issues.add(
@@ -301,7 +310,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "MISSING_PROJECT_DATA",
-                        message = "Package missing project.json",
+                        message = "Pacchetto incompleto: mancano i dati del progetto",
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -315,7 +324,7 @@ object PackageSerializer {
                 issues.add(
                     ValidationIssue(
                         code = "PROJECT_CHECKSUM_MISMATCH",
-                        message = "SHA-256 mismatch for project.json. Expected: $expectedProjectChecksum, Actual: $actualProjectChecksum",
+                        message = "Il pacchetto è danneggiato: i dati del progetto non corrispondono al controllo di integrità",
                         severity = ValidationSeverity.STRUCTURAL_ERROR
                     )
                 )
@@ -331,8 +340,26 @@ object PackageSerializer {
                     issues.add(
                         ValidationIssue(
                             code = "ATTACHMENT_CHECKSUM_MISMATCH",
-                            message = "SHA-256 mismatch for attachment $attPath. Expected: $expectedChecksum, Actual: $actualChecksum",
+                            message = "Allegato danneggiato: $attPath",
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
+                            targetEntityId = attPath
+                        )
+                    )
+                }
+            }
+        }
+
+        if (manifest.attachmentsEncrypted && key != null) {
+            for ((attPath, stored) in attachments.toMap()) {
+                try {
+                    attachments[attPath] = decryptAesGcm(stored.copyOfRange(12, stored.size), key, stored.copyOfRange(0, 12))
+                } catch (_: Exception) {
+                    attachments.remove(attPath)
+                    issues.add(
+                        ValidationIssue(
+                            code = "ATTACHMENT_DECRYPTION_FAILED",
+                            message = "Impossibile decifrare l'allegato $attPath",
+                            severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = attPath
                         )
                     )
@@ -346,7 +373,7 @@ object PackageSerializer {
             issues.add(
                 ValidationIssue(
                     code = "INVALID_PROJECT_JSON",
-                    message = "Failed to parse project.json: ${e.message}",
+                    message = "Dati del progetto illeggibili o di una versione non supportata",
                     severity = ValidationSeverity.STRUCTURAL_ERROR
                 )
             )

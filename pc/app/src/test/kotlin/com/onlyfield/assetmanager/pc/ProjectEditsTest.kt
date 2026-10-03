@@ -1,11 +1,12 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
 import org.junit.Assert.*
 import org.junit.Test
 import java.util.UUID
 
-class DesktopDomainLogicTest {
+class ProjectEditsTest {
 
     private fun createSampleProject(): Project {
         val now = System.currentTimeMillis()
@@ -60,11 +61,11 @@ class DesktopDomainLogicTest {
         var proj = createSampleProject()
         val newDev = Device(id = "dev-3", technicalName = "SRV-DB-01", category = DeviceCategory.SERVER_STORAGE)
 
-        proj = DesktopDomainLogic.addDevice(proj, "bu-1", newDev)
+        proj = ProjectEdits.addDevice(proj, "bu-1", newDev)
         assertEquals(3, proj.businessUnits[0].devices.size)
 
         val updatedDev = newDev.copy(physicalLabel = "LBL-SRV-01")
-        proj = DesktopDomainLogic.updateDevice(proj, updatedDev)
+        proj = ProjectEdits.updateDevice(proj, updatedDev)
         val found = proj.businessUnits[0].devices.find { it.id == "dev-3" }
         assertNotNull(found)
         assertEquals("LBL-SRV-01", found?.physicalLabel)
@@ -73,7 +74,7 @@ class DesktopDomainLogicTest {
     @Test
     fun testDeleteDeviceToTrashAndDisconnectCables() {
         var proj = createSampleProject()
-        val (updatedProj, trashItem) = DesktopDomainLogic.deleteDeviceToTrash(proj, "dev-1")
+        val (updatedProj, trashItem) = ProjectEdits.deleteDeviceToTrash(proj, "dev-1")
 
         assertNotNull(trashItem)
         assertEquals("DEVICE", trashItem?.itemType)
@@ -87,7 +88,7 @@ class DesktopDomainLogicTest {
         assertEquals("other-port", cable?.portBId)
 
         // Test Restore
-        val restoredProj = DesktopDomainLogic.restoreFromTrash(updatedProj, trashItem!!)
+        val restoredProj = ProjectEdits.restoreFromTrash(updatedProj, trashItem!!)
         assertEquals(2, restoredProj.businessUnits[0].devices.size)
     }
 
@@ -101,7 +102,7 @@ class DesktopDomainLogicTest {
             rackId = "rack-1"
         )
 
-        proj = DesktopDomainLogic.batchEditDevices(proj, listOf("dev-1", "dev-2"), changes)
+        proj = ProjectEdits.batchEditDevices(proj, listOf("dev-1", "dev-2"), changes)
         for (dev in proj.businessUnits[0].devices) {
             assertEquals(DeviceCategory.SERVER_STORAGE, dev.category)
             assertEquals("rack-1", dev.rackId)
@@ -111,7 +112,7 @@ class DesktopDomainLogicTest {
     @Test
     fun testReplaceDevice() {
         var proj = createSampleProject()
-        val (updatedProj, trashItem) = DesktopDomainLogic.replaceDevice(
+        val (updatedProj, trashItem) = ProjectEdits.replaceDevice(
             proj,
             oldDeviceId = "dev-1",
             newTechnicalName = "SW-CORE-NEXTGEN",
@@ -134,7 +135,7 @@ class DesktopDomainLogicTest {
             mergePorts = true
         )
 
-        val (updatedProj, trashItem) = DesktopDomainLogic.mergeDevices(
+        val (updatedProj, trashItem) = ProjectEdits.mergeDevices(
             proj,
             survivingDeviceId = "dev-1",
             duplicateDeviceId = "dev-2",
@@ -152,14 +153,14 @@ class DesktopDomainLogicTest {
         var proj = createSampleProject()
         val newRack = Rack(id = "rack-2", name = "Rack 02 Core", heightU = 24)
 
-        proj = DesktopDomainLogic.addRack(proj, newRack)
+        proj = ProjectEdits.addRack(proj, newRack)
         assertEquals(2, proj.racks.size)
 
         val updated = newRack.copy(notes = "Note rack 02")
-        proj = DesktopDomainLogic.updateRack(proj, updated)
+        proj = ProjectEdits.updateRack(proj, updated)
         assertEquals("Note rack 02", proj.racks.find { it.id == "rack-2" }?.notes)
 
-        val (projAfterDel, trashItem) = DesktopDomainLogic.deleteRackToTrash(proj, "rack-2")
+        val (projAfterDel, trashItem) = ProjectEdits.deleteRackToTrash(proj, "rack-2")
         assertNotNull(trashItem)
         assertEquals(1, projAfterDel.racks.size)
     }
@@ -169,12 +170,12 @@ class DesktopDomainLogicTest {
         var proj = createSampleProject()
         val model = proj.deviceModels[0]
 
-        val ports = DesktopDomainLogic.generatePortsFromTemplates(model, "dev-2")
+        val ports = ProjectEdits.generatePortsFromTemplates(model, "dev-2")
         assertEquals(24, ports.size)
         assertEquals("Gi1/0/1", ports[0].name)
         assertEquals("Gi1/0/24", ports[23].name)
 
-        proj = DesktopDomainLogic.applyModelToDevice(proj, "dev-2", model.id)
+        proj = ProjectEdits.applyModelToDevice(proj, "dev-2", model.id)
         val dev2 = proj.businessUnits[0].devices.find { it.id == "dev-2" }
         assertEquals(24, dev2?.ports?.size)
         assertEquals(model.id, dev2?.deviceModelId)
@@ -190,10 +191,10 @@ class DesktopDomainLogicTest {
             relativePath = "media/p1.png"
         )
 
-        proj = DesktopDomainLogic.addAttachment(proj, attachment)
+        proj = ProjectEdits.addAttachment(proj, attachment)
         assertEquals(1, proj.attachments.size)
 
-        proj = DesktopDomainLogic.setAreaFloorplan(proj, "area-1", attachment.id)
+        proj = ProjectEdits.setAreaFloorplan(proj, "area-1", attachment.id)
         val area = proj.businessUnits[0].areas.find { it.id == "area-1" }
         assertEquals(attachment.id, area?.floorplanAttachmentId)
 
@@ -205,10 +206,10 @@ class DesktopDomainLogicTest {
             xRatio = 0.5f,
             yRatio = 0.3f
         )
-        proj = DesktopDomainLogic.addFloorplanPlacement(proj, placement)
+        proj = ProjectEdits.addFloorplanPlacement(proj, placement)
         assertEquals(1, proj.floorplanPlacements.size)
 
-        proj = DesktopDomainLogic.deleteFloorplanPlacement(proj, "place-1")
+        proj = ProjectEdits.deleteFloorplanPlacement(proj, "place-1")
         assertEquals(0, proj.floorplanPlacements.size)
     }
 
@@ -217,28 +218,28 @@ class DesktopDomainLogicTest {
         var proj = createSampleProject()
 
         val cable = Cable(id = "cable-2", codeOrLabel = "CBL-002", portAId = "port-1", portBId = "port-2")
-        proj = DesktopDomainLogic.addCable(proj, cable)
+        proj = ProjectEdits.addCable(proj, cable)
         assertEquals(2, proj.cables.size)
 
         val updatedCable = cable.copy(color = "Rosso", lengthValue = 10.0)
-        proj = DesktopDomainLogic.updateCable(proj, updatedCable)
+        proj = ProjectEdits.updateCable(proj, updatedCable)
         assertEquals("Rosso", proj.cables.find { it.id == "cable-2" }?.color)
 
         val segment = SharedPathSegment(id = "seg-1", name = "Canalina Principale Piano 1", capacityMaxCables = 50)
-        proj = DesktopDomainLogic.addSharedPathSegment(proj, segment)
+        proj = ProjectEdits.addSharedPathSegment(proj, segment)
         assertEquals(1, proj.sharedPathSegments.size)
 
         val panelMap = PanelMapping(id = "map-1", portAId = "port-1", portBId = "port-2", mappingType = "PATCH_PANEL")
-        proj = DesktopDomainLogic.addPanelMapping(proj, panelMap)
+        proj = ProjectEdits.addPanelMapping(proj, panelMap)
         assertEquals(1, proj.panelMappings.size)
 
-        proj = DesktopDomainLogic.deleteCable(proj, "cable-2")
+        proj = ProjectEdits.deleteCable(proj, "cable-2")
         assertEquals(1, proj.cables.size)
 
-        proj = DesktopDomainLogic.deleteSharedPathSegment(proj, "seg-1")
+        proj = ProjectEdits.deleteSharedPathSegment(proj, "seg-1")
         assertEquals(0, proj.sharedPathSegments.size)
 
-        proj = DesktopDomainLogic.deletePanelMapping(proj, "map-1")
+        proj = ProjectEdits.deletePanelMapping(proj, "map-1")
         assertEquals(0, proj.panelMappings.size)
     }
 
@@ -247,22 +248,22 @@ class DesktopDomainLogicTest {
         var proj = createSampleProject()
 
         val vlan = Vlan(id = "vlan-10", vlanId = 10, name = "VLAN_DATA")
-        proj = DesktopDomainLogic.addVlan(proj, vlan)
+        proj = ProjectEdits.addVlan(proj, vlan)
         assertEquals(1, proj.vlans.size)
 
         val subnet = Subnet(id = "sub-10", cidrBlock = "10.0.10.0/24", gatewayIp = "10.0.10.1", vlanId = "vlan-10")
-        proj = DesktopDomainLogic.addSubnet(proj, subnet)
+        proj = ProjectEdits.addSubnet(proj, subnet)
         assertEquals(1, proj.subnets.size)
 
         val logInt = LogicalInterface(id = "int-10", deviceId = "dev-1", name = "Vlan10", ipAddress = "10.0.10.254")
-        proj = DesktopDomainLogic.addLogicalInterface(proj, logInt)
+        proj = ProjectEdits.addLogicalInterface(proj, logInt)
         assertEquals(1, proj.logicalInterfaces.size)
 
         val wanConn = WanVpnConnection(id = "wan-1", name = "MPLS-Primary", providerOrCarrier = "Telecom")
-        proj = DesktopDomainLogic.addWanVpnConnection(project = proj, connection = wanConn)
+        proj = ProjectEdits.addWanVpnConnection(project = proj, connection = wanConn)
         assertEquals(1, proj.wanVpnConnections.size)
 
-        proj = DesktopDomainLogic.deleteVlan(proj, "vlan-10")
+        proj = ProjectEdits.deleteVlan(proj, "vlan-10")
         assertEquals(0, proj.vlans.size)
     }
 
@@ -271,18 +272,18 @@ class DesktopDomainLogicTest {
         var proj = createSampleProject()
 
         val feed = PowerFeed(id = "feed-1", deviceId = "dev-1", feedName = "Feed A - Main UPS", voltageVolts = 230, loadWatts = 450.0)
-        proj = DesktopDomainLogic.addPowerFeed(proj, feed)
+        proj = ProjectEdits.addPowerFeed(proj, feed)
         assertEquals(1, proj.powerFeeds.size)
 
         val poe = PoeMapping(id = "poe-1", portId = "port-1", role = PoeRole.PSE_SOURCE, allocatedPowerWatts = 30.0)
-        proj = DesktopDomainLogic.addOrUpdatePoeMapping(proj, poe)
+        proj = ProjectEdits.addOrUpdatePoeMapping(proj, poe)
         assertEquals(1, proj.poeMappings.size)
 
         val badge = DocumentBadge(id = "badge-1", targetType = "DEVICE", targetId = "dev-1", label = "CRITICAL_CORE")
-        proj = DesktopDomainLogic.addDocumentBadge(proj, badge)
+        proj = ProjectEdits.addDocumentBadge(proj, badge)
         assertEquals(1, proj.documentBadges.size)
 
-        proj = DesktopDomainLogic.deletePowerFeed(proj, "feed-1")
+        proj = ProjectEdits.deletePowerFeed(proj, "feed-1")
         assertEquals(0, proj.powerFeeds.size)
     }
 }

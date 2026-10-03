@@ -5,521 +5,373 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
-import com.onlyfield.assetmanager.pc.DesktopDomainLogic
-import java.util.UUID
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.pc.ui.components.*
+import com.onlyfield.assetmanager.core.forms.*
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NetworkLogicalSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var subTab by remember { mutableStateOf(0) }
-    // 0 = VLAN & Subnet, 1 = Interfacce Logiche & Port VLAN, 2 = Gruppi LAG & WAN/VPN, 3 = Videosorveglianza & Config, 4 = Campi Extra
-
-    Column(
-        modifier = Modifier.fillMaxSize().padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        ScrollableTabRow(selectedTabIndex = subTab, edgePadding = 0.dp) {
-            Tab(selected = subTab == 0, onClick = { subTab = 0 }) {
-                Text("🌐 VLAN & Subnet (${project.vlans.size}/${project.subnets.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 1, onClick = { subTab = 1 }) {
-                Text("🔀 Interfacce & Port-VLAN (${project.logicalInterfaces.size}/${project.portVlanMemberships.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 2, onClick = { subTab = 2 }) {
-                Text("🔗 LAG & WAN/VPN (${project.lagGroups.size}/${project.wanVpnConnections.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 3, onClick = { subTab = 3 }) {
-                Text("📹 Videosorveglianza & Config (${project.videoSurveillanceMappings.size}/${project.deviceConfigurations.size})", modifier = Modifier.padding(10.dp))
-            }
-            Tab(selected = subTab == 4, onClick = { subTab = 4 }) {
-                Text("🏷️ Campi Extra (${project.customExtraFields.size})", modifier = Modifier.padding(10.dp))
-            }
-        }
-
-        when (subTab) {
-            0 -> VlanSubnetSubSection(project, onProjectUpdated)
-            1 -> InterfacesVlanSubSection(project, onProjectUpdated)
-            2 -> LagWanSubSection(project, onProjectUpdated)
-            3 -> VideoConfigSubSection(project, onProjectUpdated)
-            4 -> CustomFieldsSubSection(project, onProjectUpdated)
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun VlanSubnetSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showVlanDialog by remember { mutableStateOf(false) }
-    var editingVlan by remember { mutableStateOf<Vlan?>(null) }
-
-    var showSubnetDialog by remember { mutableStateOf(false) }
-    var editingSubnet by remember { mutableStateOf<Subnet?>(null) }
-
+fun NetworkLogicalSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    val index = remember(project) { ProjectIndex(project) }
+    var tab by remember { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // VLAN Section
-        Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Column(modifier = Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+        SubTabs(
+            listOf(
+                "VLAN (${project.vlans.size})",
+                "Subnet (${project.subnets.size})",
+                "Interfacce logiche (${project.logicalInterfaces.size})",
+                "WAN / VPN (${project.wanVpnConnections.size})",
+                "Configurazioni (${project.deviceConfigurations.size})",
+                "Campi extra (${project.customExtraFields.size})"
+            ),
+            tab
+        ) { tab = it }
+        when (tab) {
+            0 -> VlanTab(project, onProjectUpdated)
+            1 -> SubnetTab(project, onProjectUpdated)
+            2 -> InterfacesTab(project, index, onProjectUpdated)
+            3 -> WanTab(project, index, onProjectUpdated)
+            4 -> ConfigsTab(project, index, onProjectUpdated)
+            5 -> ExtraFieldsTab(project, index, onProjectUpdated)
+        }
+    }
+}
+
+private fun vlanLabel(project: Project, vlanNumber: Int?): String =
+    vlanNumber?.let { n -> project.vlans.find { it.vlanId == n }?.let { "VLAN $n · ${it.name}" } ?: "VLAN $n" } ?: "—"
+
+@Composable
+private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    val index = remember(project) { ProjectIndex(project) }
+    var query by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<Vlan?>(null) }
+    var creating by remember { mutableStateOf(false) }
+    val vlans = project.vlans.filter { matchesQuery(query, it.vlanId.toString(), it.name, it.description) }.sortedBy { it.vlanId }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("VLAN", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = "Cerca numero o nome…") {
+            Button(onClick = { creating = true }) { Text("+ Nuova VLAN") }
+        }
+        if (vlans.isEmpty()) EmptyState("Nessuna VLAN.", actionLabel = "+ Nuova VLAN", onAction = { creating = true })
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(vlans, key = { it.id }) { v ->
+                val scope = if (v.scopeType == VlanScopeType.PROJECT) "Tutto il progetto"
+                else "${v.scopeType.toDisplayString()}: ${index.entityName(v.scopeTargetId) ?: "non indicato"}"
+                ItemCard(title = "VLAN ${v.vlanId} · ${v.name}", details = listOf(scope, v.description.orEmpty())) {
+                    EditButton { editing = v }
+                    DeleteButton("VLAN ${v.vlanId}", onDelete = { onProjectUpdated(ProjectEdits.deleteVlan(project, v.id), "VLAN ${v.vlanId} eliminata.") })
+                }
+            }
+        }
+    }
+
+    if (creating || editing != null) {
+        val v = editing
+        var form by remember(v) { mutableStateOf(VlanForm.from(v)) }
+        val taken = project.vlans.filter { it.id != v?.id && it.scopeType == VlanScopeType.PROJECT }.map { it.vlanId }.toSet()
+        val errors = form.errors(taken)
+        FormDialog(
+            title = if (v == null) "Nuova VLAN" else "Modifica VLAN",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toVlan(v)
+                creating = false; editing = null
+                onProjectUpdated(if (v == null) ProjectEdits.addVlan(project, saved) else ProjectEdits.updateVlan(project, saved), "VLAN ${saved.vlanId} salvata.")
+            },
+            width = 520.dp
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.vlanId, { form = form.copy(vlanId = it) }, "Numero VLAN *", Modifier.weight(0.6f), errors["vlanId"], hint = "1–4094")
+                FormField(form.name, { form = form.copy(name = it) }, "Nome *", Modifier.weight(1f), errors["name"])
+            }
+            EnumPicker("Ambito", VlanScopeType.entries, form.scopeType, { it.toDisplayString() }, { form = form.copy(scopeType = it, scopeTargetId = null) })
+            when (form.scopeType) {
+                VlanScopeType.BUSINESS_UNIT -> OptionPicker("Business unit", project.businessUnits, project.businessUnits.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
+                VlanScopeType.SITE -> OptionPicker("Sede", index.sites, index.sites.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
+                VlanScopeType.DEVICE -> DevicePicker("Apparato", index, form.scopeTargetId, { form = form.copy(scopeTargetId = it) })
+                VlanScopeType.PROJECT -> Unit
+            }
+            FormField(form.description, { form = form.copy(description = it) }, "Descrizione")
+        }
+    }
+}
+
+@Composable
+private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<Subnet?>(null) }
+    var creating by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Subnet") { Button(onClick = { creating = true }) { Text("+ Nuova subnet") } }
+        if (project.subnets.isEmpty()) EmptyState("Nessuna subnet.", actionLabel = "+ Nuova subnet", onAction = { creating = true })
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.subnets, key = { it.id }) { s ->
+                val vlan = project.vlans.find { it.id == s.vlanId }
+                ItemCard(
+                    title = s.cidrBlock + (s.name?.let { " · $it" } ?: ""),
+                    details = listOf(
+                        listOfNotNull(s.gatewayIp?.let { "Gateway $it" }, vlan?.let { "VLAN ${it.vlanId} · ${it.name}" }).joinToString(" · "),
+                        s.description.orEmpty()
+                    )
                 ) {
-                    Text("VLAN Definite (${project.vlans.size})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = {
-                        editingVlan = null
-                        showVlanDialog = true
-                    }) {
-                        Text("+ Nuova VLAN")
-                    }
-                }
-
-                if (project.vlans.isEmpty()) {
-                    Text("Nessuna VLAN configurata.", style = MaterialTheme.typography.bodySmall)
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(project.vlans) { vlan ->
-                            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("VLAN ${vlan.vlanId}: ${vlan.name}", fontWeight = FontWeight.Bold)
-                                        Text("Ambito: ${vlan.scopeType.name} | Descrizione: ${(vlan.description ?: "—").ifBlank { "—" }}", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(onClick = { editingVlan = vlan; showVlanDialog = true }) { Text("Modifica", fontSize = 10.sp) }
-                                        Button(
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            onClick = { onProjectUpdated(DesktopDomainLogic.deleteVlan(project, vlan.id), "VLAN rimossa.") }
-                                        ) { Text("Elimina", fontSize = 10.sp) }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    EditButton { editing = s }
+                    DeleteButton(s.cidrBlock, onDelete = { onProjectUpdated(ProjectEdits.deleteSubnet(project, s.id), "Subnet ${s.cidrBlock} eliminata.") })
                 }
             }
         }
+    }
 
-        // Subnet Section
-        Card(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            Column(modifier = Modifier.padding(12.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+    if (creating || editing != null) {
+        val s = editing
+        var form by remember(s) { mutableStateOf(SubnetForm.from(s)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (s == null) "Nuova subnet" else "Modifica subnet",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toSubnet(s)
+                creating = false; editing = null
+                onProjectUpdated(if (s == null) ProjectEdits.addSubnet(project, saved) else ProjectEdits.updateSubnet(project, saved), "Subnet ${saved.cidrBlock} salvata.")
+            },
+            width = 520.dp
+        ) {
+            FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, "Blocco CIDR *", error = errors["cidrBlock"], hint = "Es. 192.168.10.0/24")
+            FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, "Gateway", error = errors["gatewayIp"])
+            OptionPicker(
+                "VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId },
+                { "VLAN ${it.vlanId} · ${it.name}" }, { form = form.copy(vlanRefId = it?.id) }, noneLabel = "Nessuna VLAN"
+            )
+            FormField(form.name, { form = form.copy(name = it) }, "Nome")
+            FormField(form.description, { form = form.copy(description = it) }, "Descrizione")
+        }
+    }
+}
+
+@Composable
+private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<LogicalInterface?>(null) }
+    var creating by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Interfacce logiche", subtitle = "SVI, loopback e altre interfacce di livello 3") {
+            Button(onClick = { creating = true }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova interfaccia") }
+        }
+        if (project.logicalInterfaces.isEmpty()) EmptyState("Nessuna interfaccia logica.")
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.logicalInterfaces, key = { it.id }) { li ->
+                ItemCard(
+                    title = "${index.deviceName(li.deviceId, "Apparato mancante")} › ${li.name}",
+                    details = listOf(
+                        listOfNotNull(li.ipAddress, li.subnetCidr, li.vlanId?.let { vlanLabel(project, it) }, if (li.isL3) "L3" else "L2").joinToString(" · "),
+                        li.notes.orEmpty()
+                    )
                 ) {
-                    Text("Subnet CIDR (${project.subnets.size})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                    Button(onClick = {
-                        editingSubnet = null
-                        showSubnetDialog = true
-                    }) {
-                        Text("+ Nuova Subnet")
-                    }
-                }
-
-                if (project.subnets.isEmpty()) {
-                    Text("Nessuna Subnet CIDR configurata.", style = MaterialTheme.typography.bodySmall)
-                } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        items(project.subnets) { sub ->
-                            Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                                Row(
-                                    modifier = Modifier.padding(8.dp).fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column {
-                                        Text("${sub.cidrBlock} ${(sub.name?.let { "($it)" } ?: "")}", fontWeight = FontWeight.Bold)
-                                        Text("Gateway: ${sub.gatewayIp ?: "—"} | VLAN ID: ${sub.vlanId ?: "—"}", style = MaterialTheme.typography.bodySmall)
-                                    }
-                                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        OutlinedButton(onClick = { editingSubnet = sub; showSubnetDialog = true }) { Text("Modifica", fontSize = 10.sp) }
-                                        Button(
-                                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                            onClick = { onProjectUpdated(DesktopDomainLogic.deleteSubnet(project, sub.id), "Subnet rimossa.") }
-                                        ) { Text("Elimina", fontSize = 10.sp) }
-                                    }
-                                }
-                            }
-                        }
-                    }
+                    EditButton { editing = li }
+                    DeleteButton(li.name, onDelete = { onProjectUpdated(ProjectEdits.deleteLogicalInterface(project, li.id), "Interfaccia eliminata.") })
                 }
             }
         }
     }
 
-    // Vlan Dialog
-    if (showVlanDialog) {
-        val v = editingVlan
-        var vlanIdText by remember { mutableStateOf(v?.vlanId?.toString() ?: "10") }
-        var name by remember { mutableStateOf(v?.name ?: "") }
-        var desc by remember { mutableStateOf(v?.description ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showVlanDialog = false },
-            title = { Text(if (v == null) "Nuova VLAN" else "Modifica VLAN") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = vlanIdText, onValueChange = { vlanIdText = it }, label = { Text("VLAN ID (1-4094)") })
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome VLAN") })
-                    OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Descrizione") })
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val vid = vlanIdText.toIntOrNull() ?: 10
-                    val newV = Vlan(id = v?.id ?: UUID.randomUUID().toString(), vlanId = vid, name = name.ifBlank { "VLAN_$vid" }, description = desc.ifBlank { null })
-                    val updated = if (v == null) DesktopDomainLogic.addVlan(project, newV) else DesktopDomainLogic.updateVlan(project, newV)
-                    onProjectUpdated(updated, "VLAN salvata.")
-                    showVlanDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showVlanDialog = false }) { Text("Annulla") } }
-        )
-    }
-
-    // Subnet Dialog
-    if (showSubnetDialog) {
-        val s = editingSubnet
-        var cidrBlock by remember { mutableStateOf(s?.cidrBlock ?: "192.168.1.0/24") }
-        var gatewayIp by remember { mutableStateOf(s?.gatewayIp ?: "192.168.1.1") }
-        var name by remember { mutableStateOf(s?.name ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showSubnetDialog = false },
-            title = { Text(if (s == null) "Nuova Subnet CIDR" else "Modifica Subnet") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = cidrBlock, onValueChange = { cidrBlock = it }, label = { Text("Blocco CIDR (es. 10.0.0.0/24)") })
-                    OutlinedTextField(value = gatewayIp, onValueChange = { gatewayIp = it }, label = { Text("IP Gateway (opzionale)") })
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome Rete (opzionale)") })
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val newS = Subnet(id = s?.id ?: UUID.randomUUID().toString(), cidrBlock = cidrBlock, gatewayIp = gatewayIp.ifBlank { null }, name = name.ifBlank { null })
-                    val updated = if (s == null) DesktopDomainLogic.addSubnet(project, newS) else DesktopDomainLogic.updateSubnet(project, newS)
-                    onProjectUpdated(updated, "Subnet salvata.")
-                    showSubnetDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showSubnetDialog = false }) { Text("Annulla") } }
-        )
+    if (creating || editing != null) {
+        val li = editing
+        var form by remember(li) { mutableStateOf(LogicalInterfaceForm.from(li)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (li == null) "Nuova interfaccia logica" else "Modifica interfaccia",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toInterface(li)
+                creating = false; editing = null
+                onProjectUpdated(if (li == null) ProjectEdits.addLogicalInterface(project, saved) else ProjectEdits.updateLogicalInterface(project, saved), "Interfaccia salvata.")
+            }
+        ) {
+            DevicePicker("Apparato *", index, form.deviceId, { form = form.copy(deviceId = it) }, error = errors["deviceId"])
+            FormField(form.name, { form = form.copy(name = it) }, "Nome *", error = errors["name"], hint = "Es. Vlan10, Loopback0")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, "Indirizzo IP", Modifier.weight(1f), errors["ipAddress"])
+                FormField(form.subnetCidr, { form = form.copy(subnetCidr = it) }, "Subnet (CIDR)", Modifier.weight(1f), errors["subnetCidr"])
+            }
+            OptionPicker(
+                "VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId },
+                { "VLAN ${it.vlanId} · ${it.name}" }, { form = form.copy(vlanId = it?.vlanId) }, noneLabel = "Nessuna VLAN"
+            )
+            FormField(form.macAddress, { form = form.copy(macAddress = it) }, "MAC", error = errors["macAddress"])
+            LabeledCheckbox(form.isL3, { form = form.copy(isL3 = it) }, "Interfaccia di livello 3 (con indirizzo IP)")
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun InterfacesVlanSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showIntDialog by remember { mutableStateOf(false) }
-    var editingInt by remember { mutableStateOf<LogicalInterface?>(null) }
+private fun WanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<WanVpnConnection?>(null) }
+    var creating by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Interfacce Logiche / SVI L3", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { editingInt = null; showIntDialog = true }) { Text("+ Nuova Interfaccia") }
-        }
-
-        if (project.logicalInterfaces.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Nessuna interfaccia logica / SVI creata.") }
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(project.logicalInterfaces) { logInt ->
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column {
-                                Text(logInt.name, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                                Text("IP/Subnet: ${logInt.ipAddress ?: "—"} / ${logInt.subnetCidr ?: "—"} | VLAN: ${logInt.vlanId ?: "—"}")
-                                Text("MAC: ${logInt.macAddress ?: "—"} | L3: ${if (logInt.isL3) "Sì" else "No"}")
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { editingInt = logInt; showIntDialog = true }) { Text("Modifica", fontSize = 11.sp) }
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = { onProjectUpdated(DesktopDomainLogic.deleteLogicalInterface(project, logInt.id), "Interfaccia rimossa.") }
-                                ) { Text("Elimina", fontSize = 11.sp) }
-                            }
-                        }
-                    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Connessioni WAN / VPN") { Button(onClick = { creating = true }) { Text("+ Nuova connessione") } }
+        if (project.wanVpnConnections.isEmpty()) EmptyState("Nessuna connessione WAN o VPN.", actionLabel = "+ Nuova connessione", onAction = { creating = true })
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.wanVpnConnections, key = { it.id }) { c ->
+                val local = c.localEndpointDeviceId?.let { index.deviceName(it) } ?: c.localEndpointSiteDescription ?: "?"
+                val remote = c.remoteEndpointDeviceId?.let { index.deviceName(it) } ?: c.remoteEndpointSiteDescription ?: "?"
+                ItemCard(
+                    title = c.name,
+                    badge = c.type.toDisplayString(),
+                    details = listOf("$local → $remote", listOfNotNull(c.providerOrCarrier, c.bandwidth).joinToString(" · "), c.notes.orEmpty())
+                ) {
+                    EditButton { editing = c }
+                    DeleteButton(c.name, onDelete = { onProjectUpdated(ProjectEdits.deleteWanVpnConnection(project, c.id), "Connessione eliminata.") })
                 }
             }
         }
     }
 
-    if (showIntDialog) {
-        val i = editingInt
-        var devId by remember { mutableStateOf(i?.deviceId ?: "") }
-        var name by remember { mutableStateOf(i?.name ?: "Vlan10") }
-        var ip by remember { mutableStateOf(i?.ipAddress ?: "") }
-        var subnet by remember { mutableStateOf(i?.subnetCidr ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showIntDialog = false },
-            title = { Text(if (i == null) "Nuova Interfaccia Logica" else "Modifica Interfaccia") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = devId, onValueChange = { devId = it }, label = { Text("ID Apparato") })
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome Interfaccia (es. Vlan10)") })
-                    OutlinedTextField(value = ip, onValueChange = { ip = it }, label = { Text("Indirizzo IP") })
-                    OutlinedTextField(value = subnet, onValueChange = { subnet = it }, label = { Text("Subnet CIDR") })
-                }
+    if (creating || editing != null) {
+        val c = editing
+        var form by remember(c) { mutableStateOf(WanForm.from(c)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (c == null) "Nuova connessione" else "Modifica connessione",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toConnection(c)
+                creating = false; editing = null
+                onProjectUpdated(if (c == null) ProjectEdits.addWanVpnConnection(project, saved) else ProjectEdits.updateWanVpnConnection(project, saved), "Connessione salvata.")
             },
-            confirmButton = {
-                Button(onClick = {
-                    val newI = LogicalInterface(
-                        id = i?.id ?: UUID.randomUUID().toString(),
-                        deviceId = devId.ifBlank { "DEV_UNASSIGNED" },
-                        name = name,
-                        ipAddress = ip.ifBlank { null },
-                        subnetCidr = subnet.ifBlank { null }
-                    )
-                    val updated = if (i == null) DesktopDomainLogic.addLogicalInterface(project, newI) else DesktopDomainLogic.updateLogicalInterface(project, newI)
-                    onProjectUpdated(updated, "Interfaccia logica salvata.")
-                    showIntDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showIntDialog = false }) { Text("Annulla") } }
-        )
+            width = 640.dp
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.name, { form = form.copy(name = it) }, "Nome / circuito *", Modifier.weight(1.4f), errors["name"])
+                EnumPicker("Tipo", WanVpnType.entries, form.type, { it.toDisplayString() }, { form = form.copy(type = it) }, Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.provider, { form = form.copy(provider = it) }, "Operatore", Modifier.weight(1f))
+                FormField(form.bandwidth, { form = form.copy(bandwidth = it) }, "Banda", Modifier.weight(1f), hint = "Es. 1 Gbps")
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DevicePicker("Apparato locale", index, form.localDeviceId, { form = form.copy(localDeviceId = it) }, Modifier.weight(1f), noneLabel = "Non nel progetto")
+                FormField(form.localSite, { form = form.copy(localSite = it) }, "Sede locale (descrizione)", Modifier.weight(1f))
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DevicePicker("Apparato remoto", index, form.remoteDeviceId, { form = form.copy(remoteDeviceId = it) }, Modifier.weight(1f), noneLabel = "Non nel progetto")
+                FormField(form.remoteSite, { form = form.copy(remoteSite = it) }, "Sede remota (descrizione)", Modifier.weight(1f))
+            }
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note", singleLine = false)
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun LagWanSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showWanDialog by remember { mutableStateOf(false) }
-    var editingWan by remember { mutableStateOf<WanVpnConnection?>(null) }
+private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<DeviceConfiguration?>(null) }
+    var creating by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Connessioni WAN e VPN", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { editingWan = null; showWanDialog = true }) { Text("+ Nuova Connessione WAN/VPN") }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Configurazioni apparati", subtitle = "Copie testuali di running-config e script") {
+            Button(onClick = { creating = true }, enabled = index.devices.isNotEmpty()) { Text("+ Nuova configurazione") }
         }
-
-        if (project.wanVpnConnections.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Nessuna connessione WAN/VPN definita.") }
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(project.wanVpnConnections) { conn ->
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column {
-                                Text("${conn.name} (${conn.type.name})", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleSmall)
-                                Text("Carrier: ${conn.providerOrCarrier ?: "—"} | Banda: ${conn.bandwidth ?: "—"}")
-                                Text("Endpoint locale: ${conn.localEndpointSiteDescription ?: "—"}  ➡️  Remoto: ${conn.remoteEndpointSiteDescription ?: "—"}")
-                            }
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                OutlinedButton(onClick = { editingWan = conn; showWanDialog = true }) { Text("Modifica", fontSize = 11.sp) }
-                                Button(
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                    onClick = { onProjectUpdated(DesktopDomainLogic.deleteWanVpnConnection(project, conn.id), "Connessione rimossa.") }
-                                ) { Text("Elimina", fontSize = 11.sp) }
-                            }
-                        }
-                    }
+        if (project.deviceConfigurations.isEmpty()) EmptyState("Nessuna configurazione salvata.")
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.deviceConfigurations, key = { it.id }) { cfg ->
+                ItemCard(
+                    title = "${index.deviceName(cfg.deviceId, "Apparato mancante")} › ${cfg.title}",
+                    details = listOf(cfg.configText?.lines()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty(), "${cfg.configText?.lines()?.size ?: 0} righe")
+                ) {
+                    EditButton { editing = cfg }
+                    DeleteButton(cfg.title, onDelete = { onProjectUpdated(ProjectEdits.deleteDeviceConfiguration(project, cfg.id), "Configurazione eliminata.") })
                 }
             }
         }
     }
 
-    if (showWanDialog) {
-        val w = editingWan
-        var name by remember { mutableStateOf(w?.name ?: "") }
-        var provider by remember { mutableStateOf(w?.providerOrCarrier ?: "") }
-        var bandwidth by remember { mutableStateOf(w?.bandwidth ?: "") }
-
-        AlertDialog(
-            onDismissRequest = { showWanDialog = false },
-            title = { Text(if (w == null) "Nuova Connessione WAN/VPN" else "Modifica Connessione") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Nome Connessione / Circuito") })
-                    OutlinedTextField(value = provider, onValueChange = { provider = it }, label = { Text("Provider / Carrier") })
-                    OutlinedTextField(value = bandwidth, onValueChange = { bandwidth = it }, label = { Text("Banda (es. 1 Gbps)") })
-                }
+    if (creating || editing != null) {
+        val cfg = editing
+        var form by remember(cfg) { mutableStateOf(DeviceConfigForm.from(cfg)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (cfg == null) "Nuova configurazione" else "Modifica configurazione",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toConfig(cfg)
+                creating = false; editing = null
+                onProjectUpdated(if (cfg == null) ProjectEdits.addDeviceConfiguration(project, saved) else ProjectEdits.updateDeviceConfiguration(project, saved), "Configurazione salvata.")
             },
-            confirmButton = {
-                Button(onClick = {
-                    val newW = WanVpnConnection(
-                        id = w?.id ?: UUID.randomUUID().toString(),
-                        name = name,
-                        providerOrCarrier = provider.ifBlank { null },
-                        bandwidth = bandwidth.ifBlank { null }
-                    )
-                    val updated = if (w == null) DesktopDomainLogic.addWanVpnConnection(project, newW) else DesktopDomainLogic.updateWanVpnConnection(project, newW)
-                    onProjectUpdated(updated, "Connessione WAN/VPN salvata.")
-                    showWanDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showWanDialog = false }) { Text("Annulla") } }
-        )
+            width = 760.dp
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                DevicePicker("Apparato *", index, form.deviceId, { form = form.copy(deviceId = it) }, Modifier.weight(1f), error = errors["deviceId"])
+                FormField(form.title, { form = form.copy(title = it) }, "Titolo *", Modifier.weight(1f), errors["title"], hint = "Es. Running config 03/10")
+            }
+            OutlinedTextField(
+                value = form.configText,
+                onValueChange = { form = form.copy(configText = it) },
+                label = { Text("Testo della configurazione") },
+                textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
+                minLines = 12,
+                modifier = Modifier.fillMaxWidth()
+            )
+            FormField(form.notes, { form = form.copy(notes = it) }, "Note")
+        }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun VideoConfigSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showConfigDialog by remember { mutableStateOf(false) }
+private fun ExtraFieldsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+    var editing by remember { mutableStateOf<CustomExtraField?>(null) }
+    var creating by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Configurazioni Apparati / Script", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { showConfigDialog = true }) { Text("+ Nuova Configurazione") }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        SectionHeader("Campi extra", subtitle = "Informazioni aggiuntive libere su progetto, apparati, rack, porte o aree") {
+            Button(onClick = { creating = true }) { Text("+ Nuovo campo") }
         }
-
-        if (project.deviceConfigurations.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Nessuna configurazione CLI / testo memorizzata.") }
-            }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(project.deviceConfigurations) { cfg ->
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(cfg.title, fontWeight = FontWeight.Bold)
-                                Text("Apparato ID: ${cfg.deviceId}")
-                                if (!cfg.configText.isNullOrBlank()) Text("Testo Config: ${cfg.configText?.take(100)}...", style = MaterialTheme.typography.bodySmall)
-                            }
-                            Button(
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                onClick = { onProjectUpdated(DesktopDomainLogic.deleteDeviceConfiguration(project, cfg.id), "Configurazione rimossa.") }
-                            ) { Text("Elimina", fontSize = 11.sp) }
-                        }
-                    }
+        if (project.customExtraFields.isEmpty()) EmptyState("Nessun campo extra.", actionLabel = "+ Nuovo campo", onAction = { creating = true })
+        else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(project.customExtraFields, key = { it.id }) { f ->
+                ItemCard(
+                    title = "${f.fieldKey}: ${f.fieldValue}",
+                    badge = f.classification.takeIf { it != AttachmentClassification.SHAREABLE }?.toDisplayString(),
+                    details = listOf(index.targetLabel(f.targetType, f.targetId), f.fieldType.toDisplayString())
+                ) {
+                    EditButton { editing = f }
+                    DeleteButton(f.fieldKey, onDelete = { onProjectUpdated(ProjectEdits.deleteCustomExtraField(project, f.id), "Campo eliminato.") })
                 }
             }
         }
     }
 
-    if (showConfigDialog) {
-        var devId by remember { mutableStateOf("") }
-        var title by remember { mutableStateOf("Running Config") }
-        var configText by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { showConfigDialog = false },
-            title = { Text("Aggiungi Configurazione Apparato") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = devId, onValueChange = { devId = it }, label = { Text("ID Apparato") })
-                    OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Titolo Configurazione") })
-                    OutlinedTextField(value = configText, onValueChange = { configText = it }, label = { Text("Testo CLI / Running-Config") }, modifier = Modifier.height(150.dp))
-                }
+    if (creating || editing != null) {
+        val f = editing
+        var form by remember(f) { mutableStateOf(ExtraFieldForm.from(f)) }
+        val errors = form.errors()
+        FormDialog(
+            title = if (f == null) "Nuovo campo extra" else "Modifica campo extra",
+            onDismiss = { creating = false; editing = null },
+            confirmEnabled = errors.isEmpty(),
+            onConfirm = {
+                val saved = form.toField(f, project.id)
+                creating = false; editing = null
+                onProjectUpdated(if (f == null) ProjectEdits.addCustomExtraField(project, saved) else ProjectEdits.updateCustomExtraField(project, saved), "Campo salvato.")
             },
-            confirmButton = {
-                Button(onClick = {
-                    val newCfg = DeviceConfiguration(
-                        id = UUID.randomUUID().toString(),
-                        deviceId = devId.ifBlank { "DEV_UNASSIGNED" },
-                        title = title,
-                        configText = configText.ifBlank { null }
-                    )
-                    onProjectUpdated(DesktopDomainLogic.addDeviceConfiguration(project, newCfg), "Configurazione aggiunta.")
-                    showConfigDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showConfigDialog = false }) { Text("Annulla") } }
-        )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CustomFieldsSubSection(
-    project: Project,
-    onProjectUpdated: (Project, String) -> Unit
-) {
-    var showDialog by remember { mutableStateOf(false) }
-
-    Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("Campi Extra e Personalizzati", fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-            Button(onClick = { showDialog = true }) { Text("+ Nuovo Campo Extra") }
-        }
-
-        if (project.customExtraFields.isEmpty()) {
-            Card(modifier = Modifier.fillMaxWidth().weight(1f), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Nessun campo extra/personalizzato registrato.") }
+            width = 620.dp
+        ) {
+            TargetPicker(index, form.target, { form = form.copy(target = it) }, errors["target"])
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FormField(form.key, { form = form.copy(key = it) }, "Nome campo *", Modifier.weight(1f), errors["key"], hint = "Es. Numero di serie")
+                EnumPicker("Tipo", CustomFieldType.entries, form.fieldType, { it.toDisplayString() }, { form = form.copy(fieldType = it) }, Modifier.weight(0.6f))
             }
-        } else {
-            LazyColumn(modifier = Modifier.fillMaxSize().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(project.customExtraFields) { field ->
-                    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)) {
-                        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                            Column {
-                                Text("${field.fieldKey}: ${field.fieldValue}", fontWeight = FontWeight.Bold)
-                                Text("Target: ${field.targetType} [${field.targetId.take(8)}] | Tipo: ${field.fieldType.name}")
-                            }
-                            Button(
-                                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                                onClick = { onProjectUpdated(DesktopDomainLogic.deleteCustomExtraField(project, field.id), "Campo extra rimosso.") }
-                            ) { Text("Elimina", fontSize = 11.sp) }
-                        }
-                    }
-                }
-            }
+            FormField(form.value, { form = form.copy(value = it) }, "Valore", error = errors["value"])
+            EnumPicker("Classificazione", AttachmentClassification.entries, form.classification, { it.toDisplayString() }, { form = form.copy(classification = it) })
         }
-    }
-
-    if (showDialog) {
-        var key by remember { mutableStateOf("") }
-        var value by remember { mutableStateOf("") }
-        var targetType by remember { mutableStateOf("DEVICE") }
-        var targetId by remember { mutableStateOf("") }
-
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text("Nuovo Campo Extra") },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedTextField(value = key, onValueChange = { key = it }, label = { Text("Chiave Campo (es. NumeroSerialeHW)") })
-                    OutlinedTextField(value = value, onValueChange = { value = it }, label = { Text("Valore Campo") })
-                    OutlinedTextField(value = targetType, onValueChange = { targetType = it }, label = { Text("Tipo Target (DEVICE, RACK, PROJECT)") })
-                    OutlinedTextField(value = targetId, onValueChange = { targetId = it }, label = { Text("ID Target") })
-                }
-            },
-            confirmButton = {
-                Button(onClick = {
-                    val field = CustomExtraField(
-                        id = UUID.randomUUID().toString(),
-                        targetType = targetType,
-                        targetId = targetId.ifBlank { "PROJ_GLOBAL" },
-                        fieldKey = key,
-                        fieldValue = value
-                    )
-                    onProjectUpdated(DesktopDomainLogic.addCustomExtraField(project, field), "Campo extra salvato.")
-                    showDialog = false
-                }) { Text("Salva") }
-            },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Annulla") } }
-        )
     }
 }

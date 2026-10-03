@@ -25,11 +25,12 @@ L'infrastruttura è organizzata secondo la gerarchia principale:
 L'archivio ZIP `.ofam` v1.7 costituisce il formato universale di scambio tra Android e Windows Desktop e contiene:
 - `manifest.json`: Metadati del pacchetto, formato (`1.7`), timestamp, checksum SHA-256 e parametri di cifratura KDF.
 - `project.json` (o `project.json.enc` se cifrato): L'albero completo del progetto in JSON UTF-8.
-- `attachments/`: Risorse binarie (foto, planimetrie, sfondi cartografici, schemi PDF) referenziate con SHA-256.
+- `attachments/<idAllegato>/<nomeFile>`: i file degli allegati (foto, planimetrie, PDF…), con checksum SHA-256 nel manifest. Il percorso è calcolato da `AttachmentFiles.entryName` (`:shared:exchange`) ed è lo stesso su Android e Windows. Un allegato il cui file non è presente sul dispositivo viene esportato solo come metadati, con un avviso all'utente.
 
 ### Parametri Crittografici del Pacchetto Cifrato
 - **Derivazione Chiave (KDF):** `PBKDF2WithHmacSHA256`, 100.000 iterazioni, salt casuale da 16 byte.
 - **Cifratura Simmetrica:** AES-256 in modalità `AES/GCM/NoPadding` con IV casuale da 12 byte (96 bit) e tag a 128 bit.
+- **Allegati cifrati:** nei pacchetti protetti anche ogni file in `attachments/` è cifrato con la stessa chiave; ogni voce contiene IV (12 byte) seguito dal testo cifrato. Il manifest lo segnala con `attachmentsEncrypted: true` (campo opzionale, assente = `false`, compatibile con i pacchetti v1.7 precedenti, che non contenevano allegati).
 
 ## 3. Motore di Validazione (`ModelValidator`)
 

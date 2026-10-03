@@ -15,6 +15,8 @@ data class PackageManifest(
     val kdfIterations: Int? = null,
     val cipherIvHex: String? = null,
     val checksums: Map<String, String> = emptyMap(), // relativePath -> SHA-256 Hex
+    /** When true every attachment entry is stored as IV (12 bytes) + AES-256-GCM ciphertext. */
+    val attachmentsEncrypted: Boolean = false,
 ) {
     companion object {
         const val CURRENT_FORMAT_VERSION = "1.7"
