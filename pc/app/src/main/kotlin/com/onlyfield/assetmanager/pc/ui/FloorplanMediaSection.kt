@@ -203,6 +203,7 @@ private fun AttachmentsTab(
                     badge = att.classification.toDisplayString(),
                     details = listOf(
                         "${att.fileType.toDisplayString()} · ${att.originalFileName}" + if (attachmentFile(att) == null) " · file non presente su questo PC" else "",
+                        index.attachmentTarget(att).orEmpty(),
                         usedBy.takeIf { it.isNotEmpty() }?.let { "Planimetria di: ${it.joinToString()}" }.orEmpty()
                     )
                 ) {

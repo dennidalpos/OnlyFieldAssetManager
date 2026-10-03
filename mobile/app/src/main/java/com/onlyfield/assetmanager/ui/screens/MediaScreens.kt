@@ -56,7 +56,11 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
                 ItemCard(
                     title = a.name,
                     badge = a.classification.toDisplayString(),
-                    details = listOf("${a.fileType.toDisplayString()} · ${a.originalFileName}", usedBy.takeIf { it.isNotEmpty() }?.let { "Planimetria di ${it.joinToString()}" }.orEmpty()),
+                    details = listOf(
+                        "${a.fileType.toDisplayString()} · ${a.originalFileName}",
+                        index.attachmentTarget(a).orEmpty(),
+                        usedBy.takeIf { it.isNotEmpty() }?.let { "Planimetria di ${it.joinToString()}" }.orEmpty()
+                    ).filter { it.isNotBlank() },
                     menu = listOfNotNull(
                         MenuAction("Usa come planimetria…") { floorplanFor = a }.takeIf { index.areas.isNotEmpty() },
                         MenuAction("Cambia classificazione…") { classifying = a },

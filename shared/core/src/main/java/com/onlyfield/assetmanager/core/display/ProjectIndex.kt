@@ -55,6 +55,14 @@ class ProjectIndex(val project: Project) {
         return "${EntityTypeLabels.of(targetType)}: ${name ?: "non trovato"}"
     }
 
+    /** Attachments linked to an entity (photos of a device, rack or area). */
+    fun attachmentsOf(targetId: String): List<Attachment> = project.attachments.filter { it.targetId == targetId }
+
+    /** "Apparato: SW-01" for a linked attachment, null when it belongs to the whole project. */
+    fun attachmentTarget(attachment: Attachment): String? = attachment.targetType
+        ?.takeIf { it != AttachmentTargetType.PROJECT }
+        ?.let { targetLabel(it.name, attachment.targetId) }
+
     /** Best-effort name of any entity in the project, used e.g. for validation issues. */
     fun entityName(id: String?): String? {
         if (id == null) return null

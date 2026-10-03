@@ -1,17 +1,17 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (9/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "F01",
+  "currentPhase": "Fase v1.1 in corso (10/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "F02",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 31,
-    "pendingTasks": 5,
-    "progressPercentage": 86.1,
-    "totalPassedTests": 103,
+    "completedTasks": 32,
+    "pendingTasks": 4,
+    "progressPercentage": 88.9,
+    "totalPassedTests": 104,
     "testsByModule": {
       "mobile/app": 22,
-      "shared/core": 27,
+      "shared/core": 28,
       "shared/exchange": 16,
       "pc/app": 38
     }
@@ -82,16 +82,15 @@
       "title": "Refactor repository Android",
       "date": "2026-10-03",
       "evidence": "ProjectRepository (1.141 righe) diviso in facciata + 6 classi per area, EntityMappers (945) in 5 file di mapper; rimossi 20 metodi senza chiamanti e lo stack di undo mai letto; 22 test Android invariati e verdi"
+    },
+    {
+      "id": "F01",
+      "title": "Foto dalla fotocamera",
+      "date": "2026-10-03",
+      "evidence": "TakePicture + FileProvider nella cartella allegati, collegamento automatico ad apparato/rack/area/progetto, elenco nella scheda apparato e indicazione del collegamento su Android e Windows; scatto verificato su emulatore"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "F01",
-      "area": "Funzioni",
-      "title": "Foto dalla fotocamera",
-      "description": "Scatto con ActivityResultContracts.TakePicture e FileProvider nella cartella allegati del progetto; collegamento automatico all'apparato, rack o area aperti; le foto viaggiano nel .ofam.",
-      "acceptance": "Una foto scattata dalla scheda di un apparato compare tra i suoi allegati e arriva sul PC."
-    },
     {
       "id": "F02",
       "area": "Funzioni",
@@ -126,7 +125,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F01."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: F02."
   ],
   "residuals": [
     {

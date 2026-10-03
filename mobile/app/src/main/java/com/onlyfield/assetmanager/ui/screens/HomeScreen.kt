@@ -23,6 +23,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
+import com.onlyfield.assetmanager.core.model.AttachmentTargetType
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import com.onlyfield.assetmanager.ui.ProjectViewModel
@@ -42,6 +43,7 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
     var managingPassword by remember { mutableStateOf(false) }
     var query by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf("") }
     var addingDevice by remember { mutableStateOf(false) }
+    val takePhoto = rememberPhotoCapture(vm)
     // Same fields as the Inventory search
     val found = if (query.isBlank()) emptyList() else index.devices.filter {
         matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress)
@@ -118,6 +120,7 @@ fun HomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSta
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Button(onClick = { addingDevice = true }) { Text("+ Aggiungi apparato") }
+                    OutlinedButton(onClick = { takePhoto(AttachmentTargetType.PROJECT, null) }) { Text("Foto") }
                 }
             }
             item(span = { GridItemSpan(maxLineSpan) }) {

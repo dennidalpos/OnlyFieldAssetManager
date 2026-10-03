@@ -465,4 +465,42 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             }
         }
     }
+
+    // --- Camera (F01) ---------------------------------------------------------------------------
+
+    /** Photo being taken: the attachment to add and the file the camera app writes. */
+    private var pendingPhoto: Pair<Attachment, File>? = null
+
+    /** Creates the target file for a new photo linked to [type]/[targetId]; null without a project. */
+    fun preparePhoto(type: AttachmentTargetType, targetId: String?): File? {
+        val p = _project.value ?: return null
+        val root = repository.attachmentsRoot() ?: return null
+        val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT).format(java.util.Date())
+        val attachment = Attachment(
+            name = "Foto ${formatPhotoTitle()}",
+            originalFileName = "foto_$stamp.jpg",
+            fileType = AttachmentType.IMAGE,
+            mimeType = "image/jpeg",
+            relativePath = "",
+            targetType = type,
+            targetId = targetId,
+        )
+        val file = AttachmentFiles.localFile(root, p.id, attachment).apply { parentFile?.mkdirs() }
+        pendingPhoto = attachment to file
+        return file
+    }
+
+    fun onPhotoResult(saved: Boolean) {
+        val (attachment, file) = pendingPhoto ?: return
+        pendingPhoto = null
+        if (!saved || file.length() == 0L) {
+            file.parentFile?.deleteRecursively()
+            return
+        }
+        val added = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
+        edit("Foto aggiunta agli allegati.") { ProjectEdits.addAttachment(it, added) }
+    }
+
+    private fun formatPhotoTitle() = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ITALY).format(java.util.Date())
+
 }

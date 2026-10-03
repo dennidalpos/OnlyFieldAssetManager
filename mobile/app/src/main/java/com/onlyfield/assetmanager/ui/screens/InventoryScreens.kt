@@ -104,6 +104,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
     var addingPort by remember { mutableStateOf(false) }
     var replacing by remember { mutableStateOf(false) }
     var merging by remember { mutableStateOf(false) }
+    val takePhoto = rememberPhotoCapture(vm)
 
     AppScaffold(
         title = device.technicalName,
@@ -111,6 +112,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
         onBack = { vm.back() },
         snackbarHost = snackbar,
         actions = {
+            TextButton(onClick = { takePhoto(AttachmentTargetType.DEVICE, device.id) }) { Text("Foto") }
             TextButton(onClick = { editing = true }) { Text("Modifica") }
             OverflowMenu(
                 listOf(
@@ -155,6 +157,13 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                         ).joinToString("\n"),
                         style = MaterialTheme.typography.bodySmall
                     )
+                }
+            }
+            val photos = index.attachmentsOf(device.id)
+            if (photos.isNotEmpty()) {
+                item { SectionTitle("Foto e allegati (${photos.size})") }
+                items(photos, key = { it.id }) { a ->
+                    ItemCard(title = a.name, details = listOf("${a.fileType.toDisplayString()} · ${a.originalFileName}"))
                 }
             }
             item { SectionTitle("Porte (${device.ports.size})") }

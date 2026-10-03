@@ -36,6 +36,8 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var editBu by remember { mutableStateOf<BusinessUnit?>(null) }
     var newBu by remember { mutableStateOf(false) }
     var areaTarget by remember { mutableStateOf<Pair<BusinessUnit, Area?>?>(null) }
+    val takePhoto = rememberPhotoCapture(vm)
+    val index = remember(project) { ProjectIndex(project) }
 
     AppScaffold(
         "Sedi e aree", onBack = { vm.back() }, snackbarHost = snackbar,
@@ -64,10 +66,10 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                 items(areas, key = { it.id }) { area ->
                     ItemCard(
                         title = area.name,
-                        details = listOfNotNull(area.floor?.let { "Piano $it" }, area.description),
+                        details = listOfNotNull(area.floor?.let { "Piano $it" }, area.description, index.attachmentsOf(area.id).size.takeIf { it > 0 }?.let { "$it foto/allegati" }),
                         modifier = Modifier.padding(start = 24.dp),
                         onClick = { areaTarget = bu to area },
-                        menu = listOf(MenuAction("Elimina", destructive = true) {
+                        menu = listOf(MenuAction("Scatta foto") { takePhoto(AttachmentTargetType.AREA, area.id) }, MenuAction("Elimina", destructive = true) {
                             confirm(ConfirmRequest("Eliminare l'area «${area.name}»?", "L'area verrà eliminata dal progetto.") {
                                 vm.edit("Area eliminata.") { ProjectEdits.deleteArea(it, area.id) ?: error("l'area è ancora usata da apparati, rack o planimetrie") }
                             })
@@ -140,6 +142,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     var editing by remember { mutableStateOf(false) }
     var placing by remember { mutableStateOf(false) }
     var side by remember { mutableStateOf(RackSide.FRONT) }
+    val takePhoto = rememberPhotoCapture(vm)
     val inRack = index.devices.filter { it.rackId == rack.id }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
         uri?.let { vm.exportRackPdf(context.contentResolver, it, rack.id) }
@@ -147,8 +150,9 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 
     AppScaffold(
         rack.name, onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
-        subtitle = "${rack.heightU}U · ${index.areaName(rack.areaId, "nessuna area")}",
+        subtitle = "${rack.heightU}U · ${index.areaName(rack.areaId, "nessuna area")} · ${index.attachmentsOf(rack.id).size} foto/allegati",
         actions = {
+            TextButton(onClick = { takePhoto(AttachmentTargetType.RACK, rack.id) }) { Text("Foto") }
             TextButton(onClick = { editing = true }) { Text("Modifica") }
             OverflowMenu(listOf(
                 MenuAction("Scheda PDF…") { pdfLauncher.launch("${safeFileName(rack.name)}.pdf") },

@@ -38,4 +38,14 @@ class ProjectIndexTest {
         assertEquals("SW-CORE01", index.entityName("d1"))
         assertNull(index.entityName("unknown"))
     }
+
+    @Test
+    fun linksAttachmentsToTheirEntity() {
+        val photo = Attachment(name = "Foto", originalFileName = "f.jpg", relativePath = "", targetType = AttachmentTargetType.DEVICE, targetId = "d1")
+        val general = Attachment(name = "Doc", originalFileName = "d.pdf", relativePath = "", targetType = AttachmentTargetType.PROJECT)
+        val idx = ProjectIndex(project.copy(attachments = listOf(photo, general)))
+        assertEquals(listOf(photo), idx.attachmentsOf("d1"))
+        assertEquals("Apparato: SW-CORE01", idx.attachmentTarget(photo))
+        assertNull(idx.attachmentTarget(general))
+    }
 }
