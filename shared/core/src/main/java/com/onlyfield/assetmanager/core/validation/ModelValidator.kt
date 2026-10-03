@@ -31,6 +31,7 @@ object ModelValidator {
     fun validateProject(project: Project): ValidationResult {
         val issues = mutableListOf<ValidationIssue>()
         val seenIds = mutableSetOf<String>()
+        issues += ObjectHierarchy.errors(project).map { ValidationIssue("INVALID_OBJECT_CONTAINMENT", it, ValidationSeverity.STRUCTURAL_ERROR) }
 
         // 1. Project ID validity
         checkUuid("INVALID_PROJECT_UUID", project.id, "Identificativo non valido (progetto)", issues)

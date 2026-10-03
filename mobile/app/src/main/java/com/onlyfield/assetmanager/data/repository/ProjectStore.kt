@@ -114,7 +114,7 @@ internal class ProjectStore(private val db: AppDatabase) {
             )
 
             // Save project entity
-            projectDao.insertProject(updatedProjEntity)
+            if (existing == null) projectDao.insertProject(updatedProjEntity) else projectDao.updateProject(updatedProjEntity)
 
             // Delete existing inventory tree & all related entities
             inventoryDao.deleteBusinessUnitsByProjectId(project.id)

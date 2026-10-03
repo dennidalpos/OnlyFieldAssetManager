@@ -138,7 +138,7 @@ Riferimento dei percorsi:
 **Residui chiusi (3 ottobre 2026).**
 - Il PDF di Windows è un vero PDF multipagina.
 - Gli allegati viaggiano nei pacchetti, cifrati se il progetto è protetto.
-- Il cestino di Windows è persistente e ogni modifica si annulla con Ctrl+Z.
+- Il cestino di Windows è persistente per progetti non protetti; la persistenza cifrata dei progetti protetti resta RES-14. Ogni modifica si annulla con Ctrl+Z.
 - I messaggi di validazione sono in italiano.
 - Su Windows le planimetrie mostrano l'immagine di sfondo e gli allegati si aprono con l'applicazione predefinita.
 
@@ -153,7 +153,7 @@ RES-07 (mappe su Android) è stato deciso il 3 ottobre 2026 ed è pianificato co
 ## Fase v1.1: refactor UI
 
 - **Android, modifiche a pagina intera (R01)**: tutti gli editor di entità (inventario, sedi/rack/modelli, cablaggio, rete/alimentazione, allegati/credenziali) usano `EditScreen`, una pagina intera disegnata sopra la schermata corrente con «Annulla» e «Salva» nella barra in alto. Il form scorre sopra la tastiera (`imePadding`) e, se ci sono modifiche, l'uscita con Indietro o Annulla chiede conferma; i campi segnalano le modifiche tramite `LocalMarkDirty`. La rotazione non ricrea l'activity (`android:configChanges`, come indicato dalla guida Android per le app Compose), quindi i dati inseriti restano. Restano dialog solo le conferme, le password e le scelte brevi (`FormDialog`: rinomina progetto, password). Limite noto: se il sistema chiude il processo mentre un form è aperto, le modifiche non salvate si perdono.
-- **Windows, pannello laterale (R02)**: ogni sezione è ospitata da `MasterDetailHost`: a sinistra la lista con ricerca, a destra l'editor aperto (`EditPanel`), che sostituisce i `FormDialog` delle sezioni. Ctrl+S salva ed Esc chiude; la chiusura di un form modificato chiede conferma. I form continuano a usare `core.forms` e a copiare l'entità esistente, quindi i campi nascosti restano. Restano dialog: nuovo sito, documenti, password, validazione e confronto all'import. RES-08 chiuso: cambio elemento, creazione e tab interne chiedono conferma prima di sostituire il form; Continua a modificare conserva la bozza. Le azioni globali restano tracciate in RES-10.
+- **Windows, pannello laterale (R02)**: ogni sezione è ospitata da `MasterDetailHost`: a sinistra la lista con ricerca, a destra l'editor aperto (`EditPanel`), che sostituisce i `FormDialog` delle sezioni. Ctrl+S salva ed Esc chiude; la chiusura di un form modificato chiede conferma. I form continuano a usare `core.forms` e a copiare l'entità esistente, quindi i campi nascosti restano. Restano dialog: nuovo sito, documenti, password, validazione e confronto all'import. RES-08 chiuso: cambio elemento, creazione e tab interne chiedono conferma prima di sostituire il form; Continua a modificare conserva la bozza. RES-10 chiuso: anche le azioni globali e la chiusura della finestra proteggono la bozza con la stessa conferma.
 - **Icone e tema scuro (R03)**: le emoji della navigazione sono sostituite dai Material Symbols Outlined (Apache 2.0, repository `google/material-design-icons`), come raccomanda la guida Android al posto della libreria `material-icons`, non più mantenuta. Su Android sono vector drawable in `res/drawable/ic_*.xml`, su Windows `ImageVector` in `pc.ui.SymbolIcons`. Android segue il tema del sistema (schemi Material3 chiaro/scuro e tema della finestra in `values`/`values-night`); Windows ha «Visualizza › Tema scuro», salvato in `settings.properties` nella cartella dati. I colori fissi rimasti riguardano solo superfici a sfondo proprio (blocchi del rack per categoria, canvas della planimetria) e sono leggibili in entrambi i temi.
 
 ## Fase v1.1: funzioni
@@ -174,3 +174,10 @@ RES-07 (mappe su Android) è stato deciso il 3 ottobre 2026 ed è pianificato co
 - Windows espone anche le credenziali nel menu Strumenti, mascherate fino alla richiesta Mostra.
 - Schema a griglia disponibile anche senza planimetria; trascinamento, zoom, panoramica e Adatta alla vista. Cavi selezionabili, percorsi editabili ed estremità su porte/apparati, anche fuori piano o sconosciute.
 - Immagini e PDF offline dal dispositivo o dagli allegati; anteprime numerate, pagina indipendente per piano, proporzioni conservate e messaggi per file illeggibili/protetti. Dettagli in [08-floor-map.md](08-floor-map.md).
+
+## MAP03 — Contenitori e cavi aggregati (3 ottobre 2026)
+
+- Rack e tipologie di apparato abilitate mostrano una sottomodale per livello, con percorso, informazioni, foto, figli e azioni per aggiungere, assegnare o rimuovere. Non restano modali sovrapposte.
+- La mappa non duplica i figli fuori dal contenitore: espone la radice fisica e proietta su di essa le estremità dei cavi reali.
+- Le linee aggregate e l’indicatore dei cavi interni permettono di scegliere il cavo singolo e aprirne la scheda, mantenendo porte e contesto originari.
+- La conferma già applicata alle bozze protegge anche l’editor aperto da una sottomodale Windows; Android chiede prima di abbandonare il form.

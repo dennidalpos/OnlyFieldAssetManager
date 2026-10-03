@@ -561,6 +561,10 @@ data class TrashItem(
     val displayName: String,
     val serializedJson: String,
     val deletedEpochMs: Long = System.currentTimeMillis(),
+    val containments: List<ObjectContainment> = emptyList(),
+    val mountSnapshots: List<MountSnapshot> = emptyList(),
+    val containmentPlacements: List<FloorplanPlacement> = emptyList(),
+    val originalBusinessUnitId: String? = null,
     val affectedReferencesSummary: String? = null
 )
 
@@ -641,6 +645,7 @@ data class Project(
     val floorplanPlacements: List<FloorplanPlacement> = emptyList(),
     val objectTypes: List<ObjectType> = emptyList(),
     val cableRoutes: List<CableRoute> = emptyList(),
+    val objectContainments: List<ObjectContainment> = emptyList(),
     val cables: List<Cable> = emptyList(),
     val sharedPathSegments: List<SharedPathSegment> = emptyList(),
     val panelMappings: List<PanelMapping> = emptyList(),

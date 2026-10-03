@@ -15,6 +15,28 @@ import com.onlyfield.assetmanager.ui.components.*
 @Composable
 internal fun ObjectFields(project: Project, draft: MapObjectDraft, change: (MapObjectDraft) -> Unit) {
     val errors = draft.errors(project)
+    if (draft.type.kind != ObjectKind.CABLE) {
+        val self = ObjectRef(if (draft.type.kind == ObjectKind.RACK) PlacementTargetType.RACK else PlacementTargetType.DEVICE, draft.id)
+        val candidates = ObjectHierarchy.refs(project).filter { it != self && ObjectHierarchy.canContain(project, it) && self !in ObjectHierarchy.ancestors(project, it) }
+        OptionPicker("Contenitore", candidates, draft.parentRef, { ObjectHierarchy.name(project, it) }, { parent ->
+            val rackId = parent?.let { (listOf(it) + ObjectHierarchy.ancestors(project, it)).firstOrNull { r -> r.type == PlacementTargetType.RACK }?.id }
+            change(draft.copy(parentRef = parent, device = draft.device.copy(rackId = rackId, mountingType = if (rackId == null) MountingType.OUT_OF_RACK else draft.device.mountingType.takeUnless { it == MountingType.OUT_OF_RACK } ?: MountingType.RACK_MOUNT)))
+        }, noneLabel = "Sul piano")
+    }
+    if (draft.type.kind == ObjectKind.DEVICE) {
+        val hasChildren = ObjectHierarchy.refs(project).any { ref ->
+            project.businessUnits.flatMap { it.devices }.find { it.id == ref.id }?.objectTypeId == draft.type.id && ObjectHierarchy.children(project, ref).isNotEmpty()
+        }
+        Row {
+            Checkbox(draft.type.canContainObjects, { enabled ->
+                val type = if (ObjectCatalog.builtins.any { it.id == draft.type.id } || draft.type.id == "legacy")
+                    draft.type.copy(id = java.util.UUID.randomUUID().toString(), name = "${draft.type.name} (contenitore)", canContainObjects = enabled)
+                else draft.type.copy(canContainObjects = enabled)
+                change(draft.copy(type = type, device = draft.device.copy(objectTypeId = type.id)))
+            }, enabled = !draft.type.canContainObjects || !hasChildren)
+            Text("Può contenere oggetti")
+        }
+    }
     when (draft.type.kind) {
         ObjectKind.DEVICE -> {
             val d = draft.device
@@ -25,7 +47,6 @@ internal fun ObjectFields(project: Project, draft: MapObjectDraft, change: (MapO
             FormField(d.macAddress, { change(draft.copy(device = d.copy(macAddress = it))) }, "MAC", error = errors["macAddress"])
             FormField(d.serialNumber, { change(draft.copy(device = d.copy(serialNumber = it))) }, "Numero di serie")
             OptionPicker("Modello", project.deviceModels, project.deviceModels.find { it.id == d.deviceModelId }, { it.name }, { change(draft.copy(device = d.copy(deviceModelId = it?.id))) }, noneLabel = "Nessun modello")
-            OptionPicker("Rack", project.racks.filter { it.areaId == draft.areaId }, project.racks.find { it.id == d.rackId }, { it.name }, { change(draft.copy(device = d.copy(rackId = it?.id, mountingType = if (it == null) MountingType.OUT_OF_RACK else MountingType.RACK_MOUNT))) }, noneLabel = "Fuori rack")
             if (d.rackId != null) {
                 FormField(d.positionU, { change(draft.copy(device = d.copy(positionU = it))) }, "Posizione U", error = errors["positionU"])
                 EnumPicker("Lato", RackSide.entries, d.rackSide, { it.toDisplayString() }, { change(draft.copy(device = d.copy(rackSide = it))) })
@@ -75,21 +96,23 @@ internal fun ObjectFields(project: Project, draft: MapObjectDraft, change: (MapO
 }
 
 @Composable
-internal fun ObjectCatalogDialog(project: Project, onClose: () -> Unit, onSelect: (ObjectType) -> Unit, onCustom: (ObjectType) -> Unit) {
+internal fun ObjectCatalogDialog(project: Project, onClose: () -> Unit, onSelect: (ObjectType) -> Unit, onCustom: (ObjectType) -> Unit, allowCables: Boolean = true) {
     var query by remember { mutableStateOf("") }
     var custom by remember { mutableStateOf(false) }
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(DeviceCategory.CUSTOM) }
+    var container by remember { mutableStateOf(false) }
     AlertDialog(onDismissRequest = onClose, title = { Text("Aggiungi oggetto") }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SearchField(query, { query = it }, "Cerca tipologia…")
             if (custom) {
                 FormField(name, { name = it }, "Nome tipologia *")
                 EnumPicker("Categoria di base", DeviceCategory.entries, category, { it.toDisplayString() }, { category = it })
-                Button(enabled = name.isNotBlank(), onClick = { onCustom(ObjectType(name = name.trim(), category = category)) }) { Text("Crea e usa") }
+                Row { Checkbox(container, { container = it }); Text("Può contenere oggetti") }
+                Button(enabled = name.isNotBlank(), onClick = { onCustom(ObjectType(name = name.trim(), category = category, canContainObjects = container)) }) { Text("Crea e usa") }
             } else {
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(ObjectCatalog.types(project).filter { it.name.contains(query, true) }, key = { it.id }) { type ->
+                    items(ObjectCatalog.types(project).filter { it.name.contains(query, true) && (allowCables || it.kind != ObjectKind.CABLE) }, key = { it.id }) { type ->
                         TextButton(onClick = { onSelect(type) }, modifier = Modifier.fillMaxWidth()) { Text(type.name) }
                     }
                 }

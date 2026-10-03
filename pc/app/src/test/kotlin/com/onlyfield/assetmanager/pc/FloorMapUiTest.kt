@@ -90,6 +90,34 @@ class FloorMapUiTest {
         rule.runOnIdle { assertEquals(credential.copy(username = "operator"), project.credentials.single()) }
     }
 
+    @Test fun cableGroupsAndInternalIndicatorsSelectRealCables() {
+        val rack = Rack(name = "R1", areaId = area.id)
+        val inside = device.copy(rackId = rack.id)
+        val peer = Device(technicalName = "AP", areaId = area.id)
+        val otherInside = Device(technicalName = "SW-02", rackId = rack.id)
+        val c1 = Cable(codeOrLabel = "C1", deviceAId = inside.id, deviceBId = peer.id)
+        val c2 = Cable(codeOrLabel = "C2", deviceAId = otherInside.id, deviceBId = peer.id)
+        val internal = Cable(codeOrLabel = "INT", deviceAId = inside.id, deviceBId = otherInside.id)
+        val p = initial.copy(racks = listOf(rack), businessUnits = listOf(initial.businessUnits.single().copy(devices = listOf(inside, peer, otherInside))),
+            cables = listOf(c1, c2, internal), floorplanPlacements = listOf(
+                FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.RACK, targetId = rack.id, xRatio = .2f, yRatio = .5f),
+                FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = peer.id, xRatio = .8f, yRatio = .5f)))
+        var opened: String? = null
+        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) { FloorCanvas(p, area.id, null, { _, _ -> }, {}, { opened = it }) } } }
+        val canvas = rule.onNodeWithTag("floor-map")
+        val size = canvas.fetchSemanticsNode().size
+        val point = MapViewport(size.width.toFloat(), size.height.toFloat(), 1200f, 900f).screen(MapPoint(.5f, .5f))
+        canvas.performTouchInput { click(Offset(point.x, point.y)) }
+        rule.onNodeWithText("Scegli cavo").assertIsDisplayed()
+        rule.onNodeWithText(ObjectMap.cableLabel(p, c2)).performClick()
+        rule.onNodeWithText("Scheda cavo e foto").performClick()
+        rule.runOnIdle { assertEquals(c2.id, opened) }
+        rule.onNodeWithText("R1 · 1 cavi interni").performClick()
+        rule.onNodeWithText(ObjectMap.cableLabel(p, internal)).performClick()
+        rule.onNodeWithText("Scheda cavo e foto").performClick()
+        rule.runOnIdle { assertEquals(internal.id, opened) }
+    }
+
     @Test fun cableIsSelectableAndItsFreeEndCanBeDragged() {
         val cable = Cable(codeOrLabel = "C1")
         val route = CableRoute(cableId = cable.id, areaId = area.id)

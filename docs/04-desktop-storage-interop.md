@@ -24,7 +24,7 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
 ## Interoperabilità e Scambio Android <-> Windows (`BidirectionalInteropTest`)
 
 1. **Contratto Pacchetto Omogeneo:**
-   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.9 (1.7 e 1.8 in lettura, versioni successive rifiutate).
+   - Entrambe le piattaforme usano la libreria comune `:shared:exchange` per esportare ed importare pacchetti ZIP `.ofam` v1.10 (1.7–1.9 in lettura, versioni successive rifiutate).
 2. **Supporto Cifratura Completo:**
    - Supporto identico per pacchetti cifrati con password mediante PBKDF2 (100.000 iterazioni) e AES-256-GCM.
 3. **Confronto Semantico delle Versioni (`ProjectComparison`):**
@@ -41,8 +41,14 @@ L'editor Windows Desktop (`:pc:app`) salva i progetti in una cartella dati (`dat
      - Modifica ed aggiornamento transazionale atomico su Windows.
      - Re-esportazione pacchetto da Windows ed importazione su Android con riscontro `NEWER_REVISION` e verifica dell'integrità del modello di dominio.
 
-Le nuove tipologie, posizioni, pagine di planimetria, percorsi e foto dei cavi sono inclusi anche nei pacchetti cifrati. Per scambiarli occorrono entrambe le app aggiornate. `ObjectMapExchangeTest`, `ObjectMapStorageTest` e `FloorMediaTest` verificano rispettivamente contratto/fusione, persistenza Android e archiviazione Windows.
+Le nuove tipologie, posizioni, pagine di planimetria, percorsi, foto dei cavi e relazioni di contenimento sono inclusi anche nei pacchetti cifrati. Per scambiarli occorrono entrambe le app aggiornate. `ContainmentExchangeTest`, `ObjectMapStorageTest` e `FloorMediaTest` verificano rispettivamente contratto/fusione, persistenza Android e archiviazione Windows.
 
 ## Fusione all'import (fase v1.1, F04)
 
 Quando si importa un pacchetto dello stesso progetto, oltre a «Sostituisci» è disponibile «Unisci…» (Android: revisione dell'import; Windows: finestra di confronto). Le modifiche fatte da una sola parte dopo l'ultimo scambio vengono applicate da sole; per ogni elemento modificato in entrambe le copie l'app mostra il conflitto (tipo, nome, campi diversi) e chiede «Tieni mio» o «Tieni importato», uno alla volta. La base è l'ultima istantanea sincronizzata (`data/sync/<id>.ofam` su Windows, tabella `sync_snapshots` su Android), aggiornata a ogni export e import. Su Windows l'unione è una modifica come le altre e si annulla con Ctrl+Z.
+
+## Bozze Windows e azioni globali
+
+L’autosave registra le modifiche confermate, non la bozza del form. Le azioni che cambiano contesto o chiudono l’app chiedono «Scarta» oppure «Continua a modificare». La seconda scelta mantiene bozza e progetto aperti; lock e shutdown vengono eseguiti soltanto dopo la conferma.
+
+Il cestino Windows è salvato tra le sessioni solo per progetti non protetti. Per un progetto con password resta nella sessione: la persistenza cifrata è il residuo RES-14.

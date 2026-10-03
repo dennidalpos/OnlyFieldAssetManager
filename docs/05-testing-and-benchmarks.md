@@ -4,20 +4,20 @@ Data: 3 ottobre 2026
 
 ## Suite di Test Unitari
 
-L'intero progetto include 149 test unitari/Compose sui 4 moduli e 3 test strumentali Android, eseguiti e superati (152 complessivi):
+L’ultima suite completa ha eseguito 166 test unitari/Compose sui quattro moduli. Le prove Android QA registrate sono 4: i 3 casi `FloorNativeTest` sono stati ripetuti per MAP03, mentre `FloorGestureNativeTest` resta una prova separata.
 
 ```
-Total Passed Tests: 152
-├── :mobile:app        (26 unit + 3 native passed)
-├── :shared:core       (40 passed)
-├── :shared:exchange   (28 passed)
-└── :pc:app            (55 passed)
+Ultima suite JVM/Compose: 166
+├── :mobile:app        27
+├── :shared:core       46
+├── :shared:exchange   32
+└── :pc:app            61
 ```
 
 ### Copertura dei Test per Modulo
 - **`:shared:core` (`ModelValidatorTest`, `NewSiteWizardTest`, `CodeLookupTest`, `CoreModuleTest`)**: Validazione completa di tutte le entità, errori strutturali, avvisi documentali, sovrapposizioni slot rack, cicli di alimentazione, derivazione badge e passi della procedura «Nuovo sito».
 - **`:shared:exchange` (`PackageSerializerTest`, `DocumentExportTest`, `FixtureTest`, `DeviceModelSerializerTest`, `PasswordHasherTest`, `ContractVersionTest`, `LabelSheetPdfTest`, `ProjectMergerTest`)**: Round-trip di pacchetti `.ofam` v1.7 liberi e cifrati AES-GCM, verifica checksum SHA-256, hash PBKDF2 delle password di progetto e migrazione degli hash SHA-256, test di integrità OpenXML XLSX, Markdown e fixtures sintetiche.
-- **`:mobile:app` (`ProjectRepositoryTest`, `CartographicMapManagerTest`, `PilotBenchmarkTest`, `EncryptedDatabaseTest`)**: Persistenza Room, riconoscimento del DB in chiaro da convertire, migrazioni DB v1->v12, repository, base di sincronizzazione, numero di serie, gestione tessere cartografiche offline e benchmark pilota.
+- **`:mobile:app` (`ProjectRepositoryTest`, `CartographicMapManagerTest`, `PilotBenchmarkTest`, `EncryptedDatabaseTest`, `ObjectMapStorageTest`)**: Persistenza Room, riconoscimento del DB in chiaro da convertire, migrazioni fino a v13, repository, base di sincronizzazione, numero di serie, contenimento, gestione tessere cartografiche offline e benchmark pilota.
 - **`:pc:app` (`DesktopStorageTest`, `DesktopToolchainTest`, `DesktopDomainLogicTest`, `DesktopDocumentAndCartographyTest`, `BidirectionalInteropTest`, `MasterDetailTest`)**: Gestore storage desktop, pannello laterale degli editor (test UI Compose), salvataggio atomico, blocco `.lock`, password, interoperabilità bidirezionale Android ↔ Windows, UI rack elevation, cablaggio, rete logica, alimentazione A/B, badge documentali e cartografia.
 
 ## Verifiche di manutenzione (3 ottobre 2026)
@@ -26,7 +26,7 @@ Total Passed Tests: 152
 - **MAP01:** `DesktopMapDownloadTest`, 5 casi: mosaico e attribuzione, tessera non valida, HTTP 503 e servizio irraggiungibile, coordinate limite e zoom, riapertura offline e trasferimento cifrato con byte e metadati invariati. Le risposte di rete dei test sono servite localmente; nessun dato di prova nel codice di produzione.
 - **Download reale:** nove tessere OpenTopoMap a Roma (12,4964; 41,9028; zoom 15), PNG 768 × 800, 645.178 byte; immagine e attribuzione ispezionate. Script e immagine temporanei rimossi dopo la verifica.
 - **Build:** suite dei quattro moduli, APK debug e pacchetto portable Windows compilati con successo. Il collaudo manuale dell'interazione cartografica nell'eseguibile Windows non è stato eseguito; verificati backend reale, persistenza, scambio e compilazione UI.
-- **Residui:** RES-10 per le azioni globali Windows; RES-11 per deprecazioni della toolchain; RES-12 per il piano dettagliato precedente a v1.1.
+- **Residui:** RES-11 per deprecazioni della toolchain, RES-13 per prove hardware manuali e RES-14 per il cestino cifrato Windows.
 
 ## MAP02: verifiche della navigazione e della mappa
 
@@ -58,3 +58,17 @@ Total Passed Tests: 152
 | **Importazione e Decifratura Pacchetto** | ~110 ms | < 2.000 ms | Superato |
 | **Ricerca Inventario (Nome, IP, Etichetta)** | ~15 ms | < 500 ms | Superato |
 | **Memoria Heap Occupata** | < 45 MB | Non critico | Stabile |
+
+## RES-10: protezione delle bozze Windows
+
+`DetailChangeTest` verifica cancellazione dell’uscita, scarto con azione eseguita una sola volta e protezione di navigazione, undo, nuovo sito e chiusura. Suite Windows: 57 test, BUILD SUCCESSFUL; portable ricostruito.
+
+## MAP03: contenitori, persistenza e mappa
+
+- `ObjectHierarchyTest`: conversione di `rackId`, annidamento, cicli, spostamento della radice, distacco, eliminazione/ripristino con U e proiezione/aggregazione dei cavi interni ed esterni.
+- `ContainmentExchangeTest` e `ContractVersionTest`: round-trip 1.10 cifrato, pacchetto 1.9 invariato all’import, conflitto di genitore sul figlio e rifiuto di un ciclo.
+- `ObjectMapStorageTest`: migrazione Room 12 → 13, riapertura, conversione dell’associazione rack e conservazione del cestino durante salvataggi successivi.
+- `ContainerUiTest` e `FloorMapUiTest`: navigazione multilivello, lettura dei figli aggiornati, assegnazione/rimozione, scarto di una bozza annidata, linea aggregata e scelta del cavo reale, incluso indicatore interno.
+- Telefono Android API 36, app QA separata: `FloorNativeTest` ha superato 3 casi, compresi backup SQLCipher e ripristino delle basi 11 e 12 fino a Room 13. Il test di gesture precedente copre clic e trascinamento, non multitouch manuale.
+
+Le prove manuali non eseguite restano RES-13: foto/QR da fotocamera reale, multitouch e lettore USB fisico.

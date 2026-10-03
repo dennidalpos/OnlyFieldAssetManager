@@ -10,7 +10,7 @@ All'avvio selezionare un progetto, una BU e un piano. Gli elenchi consentono di 
 
 ## Oggetti e foto
 
-«Aggiungi» apre un catalogo ricercabile di apparati, rack e cavi. Non richiede marche o modelli: le famiglie generiche seguono i cataloghi ufficiali [Cisco](https://www.cisco.com/site/us/en/products/index.html) e [HPE](https://www.hpe.com/us/en/products/compute.html). «Tipologia personalizzata» registra nel progetto un nome e una categoria di base. I campi extra esistenti restano utilizzabili nella scheda.
+«Aggiungi» apre un catalogo ricercabile di apparati, rack e cavi. Non richiede marche o modelli: le famiglie generiche seguono i cataloghi ufficiali [Cisco](https://www.cisco.com/site/us/en/products/index.html) e [HPE](https://www.hpe.com/us/en/products/compute.html). «Tipologia personalizzata» registra nel progetto un nome e una categoria di base; per apparati è disponibile «Può contenere oggetti», disattivato di default. Rack è sempre contenitore; cavi non lo sono.
 
 La scheda precompila BU e piano e comprende informazioni, foto esistenti e nuove foto. Su Android si può scegliere dal telefono o scattare. I file vengono copiati nell'archivio del progetto al salvataggio; annullando il form, gli allegati esistenti restano invariati e gli scatti temporanei vengono rimossi. Un errore di lettura o salvataggio mantiene aperta la scheda. Modificare un oggetto conserva porte e campi non mostrati.
 
@@ -20,7 +20,9 @@ La scheda precompila BU e piano e comprende informazioni, foto esistenti e nuove
 
 Ogni piano ha sempre una mappa. Senza planimetria viene mostrata una griglia; gli oggetti precedenti senza coordinate ricevono una disposizione iniziale deterministica. Un oggetto appena salvato compare in una posizione libera. Tocco/clic apre la scheda; trascinamento sposta l'oggetto e salva al rilascio. Sono disponibili zoom, panoramica e «Adatta alla vista».
 
-I cavi sono linee selezionabili. Selezionare una linea per vedere le estremità e aprire «Scheda cavo e foto»; trascinare i punti liberi del percorso per modificarlo. Le estremità collegate agli apparati sul piano seguono la posizione dell'apparato; per spostarle si sposta l'apparato o si cambia il collegamento nella scheda. Il collegamento può indicare una porta, il solo apparato o un'estremità sconosciuta. Le destinazioni fuori piano mostrano BU e contesto del piano/sede. Lo stesso cavo può avere percorsi distinti sui piani attraversati.
+La mappa mostra i contenitori radice e gli oggetti indipendenti. Toccare un contenitore apre una sola sottomodale: mostra dettagli, foto e contenuto; rack conserva fronte/retro e U, gli altri contenitori mostrano l’elenco dei figli. Il percorso è leggibile e Indietro/Esc risale un livello mantenendo piano, zoom e panoramica. Si può aggiungere un figlio, assegnare un oggetto esistente o rimuoverlo dal contenitore; l’uscita da una bozza chiede conferma.
+
+I cavi sono linee selezionabili ricavate solo da estremità salvate. Le estremità di un figlio sono proiettate sul contenitore radice visibile, quindi seguono il suo spostamento. Cavi tra la stessa coppia sono una linea con conteggio e scelta del singolo cavo; cavi interni alla stessa radice sono un indicatore selezionabile. Selezionare un cavo mostra apparati, porte e contesto reali e apre «Scheda cavo e foto»; trascinare i punti liberi modifica il suo percorso. La linea aggregata usa il percorso del primo ID. Il collegamento può indicare una porta, il solo apparato o un'estremità sconosciuta. Le destinazioni fuori piano mostrano BU e contesto del piano/sede.
 
 Le coordinate sono relative alla superficie effettiva della pagina, conservando le proporzioni. Aggiungere o rimuovere uno sfondo conserva oggetti e posizioni. Inventario, rete, credenziali, documenti e altri strumenti sono accessibili dal menu Strumenti.
 
@@ -34,9 +36,9 @@ Rendering e anteprime usano [PdfRenderer Android](https://developer.android.com/
 
 ## Compatibilità e aggiornamento
 
-Il contratto [`.ofam` 1.9](02-domain-data-contract.md) include tipologie, geometrie, pagine e foto, anche cifrate. Legge 1.7 e 1.8 e rifiuta versioni non supportate. Aggiornare entrambe le app prima di scambiare questi dati.
+Il contratto [`.ofam` 1.10](02-domain-data-contract.md) include tipologie, gerarchia, geometrie, pagine e foto, anche cifrate. Legge 1.7–1.9 e rifiuta versioni non supportate. Aggiornare entrambe le app prima di scambiare questi dati.
 
-Android passa da Room 11 a 12 con sole aggiunte di colonne, nella transazione gestita da Room. Prima dell'aggiornamento il database SQLCipher viene aperto con la chiave dell'installazione, il WAL viene consolidato e viene creata una copia cifrata in `no_backup/onlyfield_asset_manager.db.v11.backup`. Se il backup fallisce, l'aggiornamento non parte. La copia è locale e non viene esportata: conserva la chiave protetta dal Keystore della stessa installazione.
+Android passa da Room 12 a 13 con sole aggiunte di colonne, nella transazione gestita da Room. Prima dell'aggiornamento il database SQLCipher viene aperto con la chiave dell'installazione, il WAL viene consolidato e viene creata una copia cifrata in `no_backup/onlyfield_asset_manager.db.v12.backup`. Se il backup fallisce, l'aggiornamento non parte. La copia è locale e non viene esportata: conserva la chiave protetta dal Keystore della stessa installazione.
 
 Per un ripristino tecnico, conservare anche i dati e la chiave dell'installazione, chiudere l'app e ripristinare il backup con la versione compatibile; reinstallare l'app può perdere la chiave del Keystore. Per trasferimenti tra telefoni usare l'export `.ofam`.
 

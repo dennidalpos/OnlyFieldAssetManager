@@ -81,6 +81,7 @@ object ProjectEdits {
     }
 
     fun updateDevice(project: Project, updatedDevice: Device): Project {
+        val previous = project.businessUnits.flatMap { it.devices }.find { it.id == updatedDevice.id }
         val updatedBus = project.businessUnits.map { bu ->
             val hasDev = bu.devices.any { it.id == updatedDevice.id }
             if (hasDev) {
@@ -90,10 +91,11 @@ object ProjectEdits {
                 bu
             }
         }
-        return project.copy(
+        val result = project.copy(
             businessUnits = updatedBus,
             updatedEpochMs = System.currentTimeMillis()
         )
+        return if (previous?.rackId != updatedDevice.rackId) ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, updatedDevice.id), updatedDevice.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) }) else ObjectHierarchy.synchronize(result)
     }
 
     fun deleteDeviceToTrash(project: Project, deviceId: String): Pair<Project, TrashItem?> {
@@ -115,7 +117,7 @@ object ProjectEdits {
                     portAId = if (affectedPortIds.contains(cable.portAId)) null else cable.portAId,
                     portBId = if (affectedPortIds.contains(cable.portBId)) null else cable.portBId,
                     observation = Observation(
-                        source = "System Trash Desktop",
+                        source = "System Trash",
                         timestampEpochMs = System.currentTimeMillis(),
                         status = ObservationStatus.TO_VERIFY,
                         notes = "Estremità scollegata per eliminazione apparato '${device.technicalName}'"
@@ -153,7 +155,8 @@ object ProjectEdits {
             updatedEpochMs = System.currentTimeMillis()
         )
 
-        return Pair(updatedProject, trashItem)
+        val ref = ObjectRef(PlacementTargetType.DEVICE, deviceId)
+        return Pair(ObjectHierarchy.afterDeletion(project, updatedProject, ref), ObjectHierarchy.snapshot(project, ref, trashItem))
     }
 
     fun batchEditDevices(
@@ -170,9 +173,9 @@ object ProjectEdits {
                     var updated = dev
                     if (changes.updateSiteId) updated = updated.copy(siteId = changes.siteId)
                     if (changes.updateAreaId) updated = updated.copy(areaId = changes.areaId)
-                    if (changes.updateCategory && changes.category != null) updated = updated.copy(category = changes.category!!)
+                    if (changes.updateCategory && changes.category != null) updated = updated.copy(category = changes.category)
                     if (changes.updateRackId) updated = updated.copy(rackId = changes.rackId)
-                    if (changes.updateMountingType && changes.mountingType != null) updated = updated.copy(mountingType = changes.mountingType!!)
+                    if (changes.updateMountingType && changes.mountingType != null) updated = updated.copy(mountingType = changes.mountingType)
                     if (changes.updateObservationNotes) {
                         val obs = updated.observation ?: Observation("BatchEditDesktop", System.currentTimeMillis())
                         updated = updated.copy(observation = obs.copy(notes = changes.observationNotes))
@@ -185,10 +188,12 @@ object ProjectEdits {
             bu.copy(devices = updatedDevs)
         }
 
-        return project.copy(
+        var result = project.copy(
             businessUnits = updatedBus,
             updatedEpochMs = System.currentTimeMillis()
         )
+        if (changes.updateRackId) for (id in deviceIds) result = ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, id), changes.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) })
+        return ObjectHierarchy.synchronize(result)
     }
 
     fun replaceDevice(
@@ -338,10 +343,10 @@ object ProjectEdits {
 
     fun updateRack(project: Project, updatedRack: Rack): Project {
         val updated = project.racks.map { if (it.id == updatedRack.id) updatedRack else it }
-        return project.copy(
+        return ObjectHierarchy.synchronize(project.copy(
             racks = updated,
             updatedEpochMs = System.currentTimeMillis()
-        )
+        ))
     }
 
     fun deleteRackToTrash(project: Project, rackId: String): Pair<Project, TrashItem?> {
@@ -376,7 +381,8 @@ object ProjectEdits {
             updatedEpochMs = System.currentTimeMillis()
         )
 
-        return Pair(updatedProject, trashItem)
+        val ref = ObjectRef(PlacementTargetType.RACK, rackId)
+        return Pair(ObjectHierarchy.afterDeletion(project, updatedProject, ref), ObjectHierarchy.snapshot(project, ref, trashItem))
     }
 
     // --- DEVICE MODELS ---
@@ -547,10 +553,10 @@ object ProjectEdits {
     // --- TRASH RESTORE ---
 
     fun restoreFromTrash(project: Project, trashItem: TrashItem): Project {
-        return when (trashItem.itemType.uppercase()) {
+        val restored = when (trashItem.itemType.uppercase()) {
             "DEVICE" -> {
                 val device = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
-                val targetBU = project.businessUnits.firstOrNull() ?: return project
+                val targetBU = project.businessUnits.find { it.id == trashItem.originalBusinessUnitId } ?: project.businessUnits.firstOrNull() ?: return project
                 addDevice(project, targetBU.id, device)
             }
             "RACK" -> {
@@ -559,6 +565,7 @@ object ProjectEdits {
             }
             else -> project
         }
+        return ObjectHierarchy.restore(restored, trashItem)
     }
 
     // --- CABLING & PHYSICAL PATHS (W03) ---

@@ -7,7 +7,7 @@ Data aggiornamento: 3 ottobre 2026
 Editor offline per tecnici di networking e telecomunicazioni.
 
 - **`shared/core/`**: Modello di dominio, regole di validazione, senza dipendenze Android UI.
-- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.9 (legge 1.7 e 1.8), fusione all'import, etichette QR, cifratura AES-GCM, OpenXML XLSX, Markdown.
+- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.10 (legge 1.7–1.9), fusione all'import, etichette QR, cifratura AES-GCM, OpenXML XLSX, Markdown.
 - **`mobile/app/`**: App Android 14+ Jetpack Compose, Room DB, fotocamera, mappe offline, stampa.
 - **`pc/app/`**: Editor Windows 11 x64 Compose Desktop, storage esplicito, salvataggio atomico e blocco `.lock`.
 
@@ -68,4 +68,22 @@ Mappa sempre disponibile, informazioni/foto nella stessa scheda, posizioni salva
 
 Planimetria dal dispositivo o dagli allegati, copiata nell'archivio: immagine diretta, PDF con pagina selezionata e anteprime numerate. PdfRenderer Android e PDFBox 3.0.8 Windows, rendering fuori dal thread UI. Coordinate riferite alla superficie effettiva e schema disponibile su errore o senza sfondo.
 
-Contratto `.ofam` 1.9 approvato, lettura 1.7/1.8 e rifiuto di versioni non supportate; tipologie, geometrie e foto incluse nella fusione. Migrazione Android 11 → 12 additiva, transazionale e preceduta da backup cifrato. Scambio dei nuovi dati richiede due app aggiornate. Verifiche ed eventuali limiti di collaudo in [roadmap.md](roadmap.md) e [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md).
+Contratto `.ofam` 1.10 approvato, lettura 1.7–1.9 e rifiuto di versioni non supportate; tipologie, geometrie, foto e contenimento incluse nella fusione. Migrazione Android 12 → 13 additiva, transazionale e preceduta da backup cifrato. Scambio dei nuovi dati richiede due app aggiornate. Verifiche ed eventuali limiti di collaudo in [roadmap.md](roadmap.md) e [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md).
+
+## 5. MAP03 — Contenitori e cablaggio logico sulla mappa
+
+Rack e apparati di una tipologia che abilita «Può contenere oggetti» possono contenere rack o apparati in più livelli; i cavi non sono contenitori. Ogni figlio ha al massimo un genitore. Riferimenti mancanti, autoriferimenti, cicli e assegnazioni a oggetti non contenitori sono errori strutturali.
+
+La gerarchia è la sorgente condivisa per mappa, form, spostamenti, modifiche multiple, cestino, undo, Room e pacchetti. L’associazione `rackId` preesistente è convertita in una relazione senza alterare il pacchetto letto; continua a indicare il rack fisico più vicino e conserva U, lato, porte e campi non mostrati. Il piano deriva dal contenitore radice, mentre la BU resta l’appartenenza organizzativa. Eliminare un contenitore trasferisce i figli al suo genitore, oppure al piano se era radice; il ripristino ricrea relazione, collocazione e montaggio.
+
+La mappa mostra solo radici e oggetti indipendenti. Aprire un contenitore porta a una sola sottomodale con percorso leggibile; Indietro/Esc risale senza cambiare piano, zoom o panoramica. Rack mantiene fronte/retro e U; gli altri contenitori mostrano i figli. Da qui è possibile creare un figlio, assegnare un oggetto sullo stesso piano o rimuoverlo dal contenitore. Prima di abbandonare una bozza è richiesta conferma; al ritorno la scheda legge il progetto aggiornato.
+
+Le linee provengono esclusivamente dai cavi configurati. Ogni estremità è proiettata sulla radice visibile e segue lo spostamento di quella radice. Cavi fra la stessa coppia sono una linea con conteggio e scelta del singolo cavo; quelli con entrambe le estremità nella stessa radice sono un indicatore selezionabile. Il percorso dell’aggregato è quello del primo ID, mentre ciascun cavo conserva il proprio percorso modificabile. Restano distinti destinazioni fuori piano ed estremità ignote o scollegate.
+
+Il contratto 1.10 include relazioni e proprietà dei contenitori, anche cifrate. La fusione usa l’identità del figlio: genitori concorrenti sono un conflitto sul figlio. Room 13 aggiunge le relazioni al progetto con migrazione 12 → 13 e backup SQLCipher della versione sorgente. Sono leggibili 1.7–1.9; versioni successive vengono rifiutate.
+
+## 6. Requisiti consolidati e limiti aperti
+
+Il prodotto resta offline-first: nessun server, sincronizzazione automatica, merge automatico o cloud obbligatorio. Identificativi stabili, osservazioni con fonte/data, errori strutturali distinti dagli avvisi documentali, allegati originali, export manuali PDF/XLSX/Markdown e esclusione dei segreti rimangono requisiti applicati. Modelli di apparato sono definizioni separate dalle istanze; mapping di pannelli, rete logica, alimentazione e percorsi di cavo restano documentali e non generano inferenze.
+
+I limiti verificati e il lavoro non completato sono nel tracker; la roadmap conserva la cronologia e le prove. Il precedente piano per step A00–W05 è stato ritirato perché sostituito da questo piano e dai documenti di dominio.

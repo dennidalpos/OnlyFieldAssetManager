@@ -16,6 +16,7 @@ data class ProjectEntity(
     val passwordHash: String? = null,
     val objectTypesJson: String = "[]",
     val cableRoutesJson: String = "[]",
+    val objectContainmentsJson: String = "[]",
 )
 
 @Entity(
@@ -688,7 +689,8 @@ data class TrashItemEntity(
     val displayName: String,
     val serializedJson: String,
     val deletedEpochMs: Long,
-    val affectedReferencesSummary: String?
+    val affectedReferencesSummary: String?,
+    val containmentMetadataJson: String? = null
 )
 
 /**

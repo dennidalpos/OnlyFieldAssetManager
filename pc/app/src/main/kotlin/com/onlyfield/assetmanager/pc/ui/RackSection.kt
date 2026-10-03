@@ -172,7 +172,7 @@ fun RackSection(
 }
 
 @Composable
-private fun RackElevation(rack: Rack, devices: List<Device>, side: RackSide, modifier: Modifier) {
+internal fun RackElevation(rack: Rack, devices: List<Device>, side: RackSide, modifier: Modifier) {
     val slots = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) (rack.heightU downTo 1).toList() else (1..rack.heightU).toList()
     Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF202124))) {
         LazyColumn(modifier = Modifier.padding(10.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {

@@ -1,70 +1,45 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "MAP02 completato: navigazione BU/piano e mappa Android/Windows; residui aperti nel tracker.",
+  "currentPhase": "Nessun task implementativo attivo.",
   "activeTask": null,
-  "summary": {
-    "totalTasks": 39,
-    "completedTasks": 39,
-    "pendingTasks": 0,
-    "progressPercentage": 100.0,
-    "totalPassedTests": 152,
-    "testsByModule": {
-      "mobile/app": 29,
-      "shared/core": 40,
-      "shared/exchange": 28,
-      "pc/app": 55
-    },
-    "unitAndComposeTests": 149,
-    "androidInstrumentedTests": 3
-  },
-  "completedTasks": [],
+  "nextSession": "Riprendere da RES-13 oppure RES-14; verificare prima tracker, roadmap e stato Git.",
   "remainingTasks": [],
-  "nextSessionNotes": [
-    "Riprendere dal branch main; verificare git status e git log -1 prima di nuove modifiche. Il lavoro della sessione è salvato nel commit di consegna.",
-    "Tracker con solo lavoro aperto; evidenze e completamenti in roadmap.md.",
-    "MAP02 implementato su Android e Windows; contratto .ofam 1.9 legge 1.7/1.8 e rifiuta versioni non supportate. Entrambe le app devono essere aggiornate per scambiare i nuovi dati.",
-    "149 test unit/Compose e 3 strumentali su Android API 36 passati. Verificati backup SQLCipher/migrazione/ripristino, PDF multipagina e clic/trascinamento Android in installazione QA separata.",
-    "APK con identificativo normale e portable Windows ricostruiti, BUILD SUCCESSFUL. Artefatti in mobile/app/build/outputs/apk/debug e dist/; non versionati.",
-    "RES-10: protezione delle azioni globali Windows; RES-12: consolidamento delle specifiche iniziali. RES-01/02/11 sono miglioramenti futuri.",
-    "RES-13: collaudo manuale di fotocamera/QR, multitouch e lettore USB fisico ancora aperto."
-  ],
   "residuals": [
     {
       "id": "RES-01",
       "title": "Integrazione CI/CD Automation",
       "status": "FUTURE_ENHANCEMENT",
-      "description": "Workflow GitHub Actions per pubblicazione automatizzata artefatti APK e zip portable Windows x64."
+      "description": "Workflow GitHub Actions per pubblicazione automatizzata degli artefatti APK e ZIP portable Windows.",
+      "closureCriteria": "Workflow documentati, eseguiti su tag e con artefatti verificabili."
     },
     {
       "id": "RES-02",
-      "title": "Localizzazione Multi-lingua",
+      "title": "Localizzazione multi-lingua",
       "status": "FUTURE_ENHANCEMENT",
-      "description": "Estensione localizzazione stringhe UI a Inglese e Spagnolo."
-    },
-    {
-      "id": "RES-10",
-      "title": "Uscita globale con editor Windows modificato",
-      "status": "OPEN",
-      "description": "Cambio sezione dal menu Strumenti o dal menu di sistema, chiusura del progetto e uscita non passano ancora dalla conferma del pannello. RES-08 protegge cambio elemento, creazione e tab interne; estendere la protezione alle azioni globali."
+      "description": "Estensione delle stringhe UI a Inglese e Spagnolo.",
+      "closureCriteria": "Cataloghi localizzati completi e flussi principali verificati nelle lingue aggiunte."
     },
     {
       "id": "RES-11",
       "title": "Aggiornamento API deprecate della toolchain",
       "status": "FUTURE_ENHANCEMENT",
-      "description": "Deprecazioni preesistenti: proprietà Gradle by tasks.registering in pc/app/build.gradle.kts:68 (rimossa in Gradle 10) e createComposeRule v1 nei test UI. Identificate con --warning-mode all; build e test verdi."
-    },
-    {
-      "id": "RES-12",
-      "title": "Consolidare il piano dettagliato precedente a v1.1",
-      "status": "OPEN",
-      "description": "docs/plan.md mantiene specifiche iniziali A00-W05 non allineate a v1.1, inclusa l'esclusione della fusione all'import ora implementata. Intestazione e nota sul wrapper corrette; consolidare i dettagli nei documenti correnti prima di ritirarlo."
+      "description": "Deprecazioni Gradle e createComposeRule rilevate dalla build, senza regressioni funzionali.",
+      "closureCriteria": "Build senza le deprecazioni attribuibili al progetto su una toolchain supportata."
     },
     {
       "id": "RES-13",
-      "title": "Collaudo manuale dei dispositivi di acquisizione e multitouch",
+      "title": "Collaudo manuale di acquisizione e multitouch",
       "status": "OPEN",
-      "description": "Scatto/lettura QR con fotocamera reale, lettore USB fisico e zoom/panoramica multitouch manuali non verificati. Test nativi del canvas, PdfRenderer e backup/migrazione SQLCipher passati su telefono API 36."
+      "description": "Non verificati scatto e lettura QR con fotocamera reale, zoom/panoramica multitouch manuali e lettore USB fisico.",
+      "closureCriteria": "Checklist eseguita su hardware reale e risultati registrati in roadmap e documentazione QA."
+    },
+    {
+      "id": "RES-14",
+      "title": "Persistenza del cestino Windows nei progetti protetti",
+      "status": "OPEN",
+      "description": "Il cestino Windows dei progetti protetti resta disponibile solo nella sessione; non viene scritto in chiaro nella cartella dati.",
+      "closureCriteria": "Cestino serializzato e cifrato con il progetto, ripristinabile dopo riavvio senza esporre dati o relazioni."
     }
   ]
 }

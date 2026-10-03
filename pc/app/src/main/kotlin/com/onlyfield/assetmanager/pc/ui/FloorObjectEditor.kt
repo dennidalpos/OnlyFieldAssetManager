@@ -12,12 +12,30 @@ import java.io.File
 
 @Composable
 internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial: MapObjectDraft, close: () -> Unit) {
+    if (LocalDetailSlot.current == null) {
+        val slot = remember { DetailSlot() }
+        DetailChangeHost(slot) { FloorObjectEditor(state, project, initial, close) }
+        return
+    }
     var draft by remember { mutableStateOf(initial) }
     val photos = remember { mutableStateListOf<File>() }
     var removed by remember { mutableStateOf<Set<String>>(emptySet()) }
-    var askDiscard by remember { mutableStateOf(false) }
     val dirty = draft != initial || photos.isNotEmpty() || removed.isNotEmpty()
-    FormDialog(initial.type.name, { if (dirty) askDiscard = true else close() }, {
+    val slot = LocalDetailSlot.current!!
+    val latestClose by rememberUpdatedState(close)
+    val dismiss = remember { { latestClose() } }
+    DisposableEffect(slot) {
+        slot.dismiss = dismiss
+        onDispose {
+            if (slot.dismiss === dismiss) {
+                slot.dismiss = null
+                slot.dirty = false
+                slot.pendingChange = null
+            }
+        }
+    }
+    SideEffect { slot.dirty = dirty }
+    FormDialog(initial.type.name, { slot.requestChange {} }, {
         if (state.saveMapObject(draft, photos.toList(), removed)) close()
     }, confirmEnabled = draft.errors(project).isEmpty(), width = 680.dp) {
         ObjectFields(project, draft) { draft = it }
@@ -32,6 +50,4 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
         }
         OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile("Scegli foto", "Immagini", "png", "jpg", "jpeg", "webp", "bmp")?.let { photos += it } }) { Text("Aggiungi foto…") }
     }
-    if (askDiscard) AlertDialog(onDismissRequest = { askDiscard = false }, title = { Text("Scartare le modifiche?") }, text = { Text("Le modifiche non salvate andranno perse.") },
-        confirmButton = { TextButton(onClick = close) { Text("Scarta") } }, dismissButton = { TextButton(onClick = { askDiscard = false }) { Text("Continua a modificare") } })
 }

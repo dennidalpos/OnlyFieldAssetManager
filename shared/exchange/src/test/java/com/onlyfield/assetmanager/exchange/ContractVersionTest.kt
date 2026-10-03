@@ -3,6 +3,10 @@ package com.onlyfield.assetmanager.exchange
 import com.onlyfield.assetmanager.core.model.BusinessUnit
 import com.onlyfield.assetmanager.core.model.Device
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.model.Rack
+import com.onlyfield.assetmanager.core.model.ObjectHierarchy
+import com.onlyfield.assetmanager.core.model.ObjectRef
+import com.onlyfield.assetmanager.core.model.PlacementTargetType
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -20,9 +24,9 @@ class ContractVersionTest {
     )
 
     @Test
-    fun serialNumberRoundTripsInVersion19() {
+    fun serialNumberRoundTripsInVersion110() {
         val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(project))
-        assertEquals("1.9", result.pkg!!.manifest.formatVersion)
+        assertEquals("1.10", result.pkg!!.manifest.formatVersion)
         assertEquals("FOC123", result.pkg!!.project.businessUnits.single().devices.single().serialNumber)
     }
 
@@ -56,6 +60,23 @@ class ContractVersionTest {
         assertEquals(project, imported.pkg!!.project)
         assertTrue(imported.pkg!!.project.objectTypes.isEmpty())
         assertTrue(imported.pkg!!.project.cableRoutes.isEmpty())
+    }
+
+    @Test
+    fun version19ConvertsRackMembershipWithoutChangingOriginalPackage() {
+        val rack = Rack(name = "R1")
+        val device = project.businessUnits.single().devices.single().copy(rackId = rack.id, positionU = 5)
+        val legacy = project.copy(racks = listOf(rack), businessUnits = listOf(project.businessUnits.single().copy(devices = listOf(device))))
+        val entries = unzip(PackageSerializer.exportPackage(legacy)).toMutableMap()
+        val manifest = PackageSerializer.jsonConfig.decodeFromString(PackageManifest.serializer(), entries.getValue("manifest.json").toString(Charsets.UTF_8))
+        entries["manifest.json"] = PackageSerializer.jsonConfig.encodeToString(PackageManifest.serializer(), manifest.copy(formatVersion = "1.9")).toByteArray(Charsets.UTF_8)
+        val bytes = zip(entries)
+        val original = bytes.copyOf()
+        val result = PackageSerializer.importPackage(bytes)
+        assertTrue(result.validationResult.isValid)
+        assertEquals(ObjectRef(PlacementTargetType.RACK, rack.id), ObjectHierarchy.parent(result.pkg!!.project, ObjectRef(PlacementTargetType.DEVICE, device.id)))
+        assertEquals(5, result.pkg!!.project.businessUnits.single().devices.single().positionU)
+        org.junit.Assert.assertArrayEquals(original, bytes)
     }
 
     private fun unzip(bytes: ByteArray): Map<String, ByteArray> = buildMap {

@@ -68,7 +68,8 @@ object ProjectComparisonEvaluator {
         }
 
         // Check if project content is semantically identical
-        val isIdenticalContent = (currentProject == incomingProj)
+        val isIdenticalContent = com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(currentProject) ==
+            com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(incomingProj)
         val currentExportEpoch = currentManifest?.exportedEpochMs ?: currentProject.updatedEpochMs
 
         if (isIdenticalContent && ((currentManifest == null) || (currentManifest.exportId == incomingManifest.exportId))) {

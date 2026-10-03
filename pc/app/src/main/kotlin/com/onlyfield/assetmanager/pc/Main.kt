@@ -27,16 +27,15 @@ fun main() = application {
     val icon = remember { loadAppIcon() }
     val hasProject = state.project != null
 
-    // Every change is saved automatically, so closing needs no confirmation.
     Window(
-        onCloseRequest = { state.shutdown(); exitApplication() },
+        onCloseRequest = { state.requestChange { state.shutdown(); exitApplication() } },
         title = state.windowTitle,
         icon = icon,
         state = windowState
     ) {
         MenuBar {
             Menu("File", mnemonic = 'F') {
-                Item("Nuovo sito…", shortcut = KeyShortcut(Key.N, ctrl = true), onClick = { state.dialog = AppDialog.NewProject })
+                Item("Nuovo sito…", shortcut = KeyShortcut(Key.N, ctrl = true), onClick = { state.newProject() })
                 Item("Apri / Importa .ofam…", shortcut = KeyShortcut(Key.O, ctrl = true), onClick = state::pickAndImport)
                 Item("Esporta .ofam…", shortcut = KeyShortcut(Key.E, ctrl = true), enabled = hasProject, onClick = state::exportPackage)
                 Separator()
@@ -44,7 +43,7 @@ fun main() = application {
                 Item("Password del progetto…", enabled = hasProject, onClick = { state.dialog = AppDialog.ManagePassword })
                 Separator()
                 Item("Chiudi progetto", shortcut = KeyShortcut(Key.W, ctrl = true), enabled = hasProject, onClick = state::closeProject)
-                Item("Esci", onClick = { state.shutdown(); exitApplication() })
+                Item("Esci", onClick = { state.requestChange { state.shutdown(); exitApplication() } })
             }
             Menu("Modifica", mnemonic = 'M') {
                 Item(

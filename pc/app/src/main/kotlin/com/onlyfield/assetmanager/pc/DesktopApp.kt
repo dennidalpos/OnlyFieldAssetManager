@@ -42,6 +42,7 @@ private val DarkColors = darkColorScheme(
 @Composable
 fun DesktopApp(state: DesktopAppState) {
     MaterialTheme(colorScheme = if (state.darkTheme) DarkColors else LightColors) {
+        com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
                 Row(modifier = Modifier.fillMaxSize()) {
@@ -58,6 +59,7 @@ fun DesktopApp(state: DesktopAppState) {
             }
             ProjectDialogs(state)
         }
+        }
     }
 }
 
@@ -72,7 +74,7 @@ private fun ProjectToolbar(state: DesktopAppState) {
                 if (project != null) Text("Salvataggio automatico" + if (project.isPasswordProtected) " · Protetto da password" else "", style = MaterialTheme.typography.bodySmall)
             }
             if (project == null) {
-                OutlinedButton(onClick = { state.dialog = AppDialog.NewProject }) { Text("Nuovo sito") }
+                OutlinedButton(onClick = { state.newProject() }) { Text("Nuovo sito") }
                 OutlinedButton(onClick = state::pickAndImport) { Text("Importa .ofam…") }
             } else {
                 TextButton(onClick = { state.section = AppSection.FLOORPLANS }) { Text("Mappa") }
@@ -86,7 +88,7 @@ private fun ProjectToolbar(state: DesktopAppState) {
                         DropdownMenuItem(text = { Text("Password del progetto") }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
                         DropdownMenuItem(text = { Text("Esporta .ofam") }, onClick = { tools = false; state.exportPackage() })
                         DropdownMenuItem(text = { Text("Apri / Importa…") }, onClick = { tools = false; state.pickAndImport() })
-                        DropdownMenuItem(text = { Text("Nuovo sito") }, onClick = { tools = false; state.dialog = AppDialog.NewProject })
+                        DropdownMenuItem(text = { Text("Nuovo sito") }, onClick = { tools = false; state.newProject() })
                         DropdownMenuItem(text = { Text("Chiudi progetto") }, onClick = { tools = false; state.closeProject() })
                     }
                 }

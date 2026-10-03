@@ -17,6 +17,7 @@ data class ObjectType(
     val category: DeviceCategory = DeviceCategory.CUSTOM,
     val kind: ObjectKind = ObjectKind.DEVICE,
     val cableMedium: CableMedium = CableMedium.ETHERNET_COPPER,
+    val canContainObjects: Boolean = false,
 )
 
 @Serializable
@@ -57,6 +58,8 @@ object ObjectCatalog {
 
 data class MapNode(val type: PlacementTargetType, val id: String, val name: String, val point: MapPoint, val symbol: String)
 
+data class MapConnection(val cableIds: List<String>, val route: CableRoute, val internalAt: ObjectRef? = null)
+
 /** Coordinates are relative to the fitted page, before viewport zoom and pan. */
 data class MapViewport(val width: Float, val height: Float, val contentWidth: Float, val contentHeight: Float, val zoom: Float = 1f, val panX: Float = 0f, val panY: Float = 0f) {
     private val fit = min(width / contentWidth, height / contentHeight)
@@ -69,12 +72,43 @@ data class MapViewport(val width: Float, val height: Float, val contentWidth: Fl
 }
 
 object ObjectMap {
+    fun cableLabel(project: Project, cable: Cable): String {
+        fun label(first: Boolean): String {
+            val device = endpoint(project, cable, first) ?: return "Ignoto / scollegato"
+            val portId = if (first) cable.portAId else cable.portBId
+            val port = device.ports.find { it.id == portId }
+            val floor = areaId(project, device)
+            val area = project.businessUnits.flatMap { areas(it) }.find { it.id == floor }
+            return device.technicalName + (port?.let { " / ${it.name}" } ?: "") + " (${area?.name ?: "senza piano"})"
+        }
+        return "${cable.codeOrLabel ?: "Cavo"}: ${label(true)} → ${label(false)}"
+    }
+    fun connections(project: Project, areaId: String): List<MapConnection> {
+        fun ref(cable: Cable, first: Boolean) = endpoint(project, cable, first)?.let {
+            ObjectHierarchy.root(project, ObjectRef(PlacementTargetType.DEVICE, it.id))
+        }
+        val routes = routes(project, areaId)
+        val groups = routes.groupBy { route ->
+            val cable = project.cables.first { it.id == route.cableId }
+            val a = ref(cable, true)
+            val b = ref(cable, false)
+            if (a == null || b == null) "unknown:${cable.id}" else listOf("${a.type}:${a.id}", "${b.type}:${b.id}").sorted().joinToString("|")
+        }
+        return groups.values.map { group ->
+            val ordered = group.sortedBy { it.cableId }
+            val cable = project.cables.first { it.id == ordered.first().cableId }
+            val a = ref(cable, true)
+            val b = ref(cable, false)
+            MapConnection(ordered.map { it.cableId }, ordered.first(), a?.takeIf { it == b && ObjectHierarchy.areaId(project, it) == areaId })
+        }
+    }
+
     fun areas(bu: BusinessUnit) = bu.areas + bu.sites.flatMap { it.areas }
     fun areaLabel(bu: BusinessUnit, area: Area): String = bu.sites.find { s -> s.areas.any { it.id == area.id } }?.let { "${it.name} / ${area.name}" } ?: area.name
 
     fun nodes(project: Project, areaId: String): List<MapNode> {
-        val devices = project.businessUnits.flatMap { it.devices }.filter { d -> d.areaId == areaId || (d.areaId == null && project.racks.any { it.id == d.rackId && it.areaId == areaId }) }
-        val racks = project.racks.filter { it.areaId == areaId }
+        val devices = project.businessUnits.flatMap { it.devices }.filter { d -> ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, d.id)) == null && d.areaId == areaId }
+        val racks = project.racks.filter { it.areaId == areaId && ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.RACK, it.id)) == null }
         val items = racks.map { Triple(PlacementTargetType.RACK, it.id, it.name) } + devices.map { Triple(PlacementTargetType.DEVICE, it.id, it.technicalName) }
         return items.mapIndexed { i, (type, id, name) ->
             val stored = project.floorplanPlacements.find { it.areaId == areaId && it.targetType == type && it.targetId == id }
@@ -113,7 +147,7 @@ object ObjectMap {
         return if (port != null) devices.find { d -> d.ports.any { it.id == port } } else devices.find { it.id == id }
     }
 
-    fun areaId(project: Project, device: Device?): String? = device?.areaId ?: project.racks.find { it.id == device?.rackId }?.areaId
+    fun areaId(project: Project, device: Device?): String? = device?.let { ObjectHierarchy.areaId(project, ObjectRef(PlacementTargetType.DEVICE, it.id)) }
 
     fun routes(project: Project, areaId: String): List<CableRoute> = project.cables.mapNotNull { cable ->
         project.cableRoutes.find { it.cableId == cable.id && it.areaId == areaId }
@@ -124,7 +158,7 @@ object ObjectMap {
         val cable = project.cables.find { it.id == route.cableId } ?: return route.points
         return route.points.mapIndexed { i, point ->
             val endpoint = when (i) { 0 -> endpoint(project, cable, true); route.points.lastIndex -> endpoint(project, cable, false); else -> null }
-            nodes.find { it.id == endpoint?.id }?.point ?: point
+            endpoint?.let { ObjectHierarchy.root(project, ObjectRef(PlacementTargetType.DEVICE, it.id)) }?.let { ref -> nodes.find { it.id == ref.id && it.type == ref.type }?.point } ?: point
         }
     }
 

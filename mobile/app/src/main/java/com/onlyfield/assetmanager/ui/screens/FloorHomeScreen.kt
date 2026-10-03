@@ -28,6 +28,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var addingStructure by remember { mutableStateOf(false) }
     var catalog by remember { mutableStateOf(false) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
+    var container by remember { mutableStateOf<ObjectRef?>(null) }
     var selectingPlan by remember { mutableStateOf(false) }
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
@@ -72,7 +73,9 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                 }
                 imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 FloorCanvas(project, area.id, image, vm::editMap, { n ->
-                    editor = if (n.type == PlacementTargetType.RACK) MapObjectDraft.rack(project, bu.id, area.id, n.id) else MapObjectDraft.device(project, bu.id, area.id, n.id)
+                    val ref = ObjectRef(n.type, n.id)
+                if (ObjectHierarchy.canContain(project, ref)) container = ref
+                else editor = MapObjectDraft.device(project, project.businessUnits.find { b -> b.devices.any { it.id == n.id } }?.id ?: bu.id, area.id, n.id)
                 }, { editor = MapObjectDraft.cable(project, bu.id, area.id, it) }, Modifier.weight(1f))
             }
         }
@@ -91,6 +94,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         editor = MapObjectDraft(type = type, buId = bu.id, areaId = area.id); catalog = false
     })
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(vm, project, draft) { editor = null } } }
+    container?.let { ref -> ContainerBrowser(vm, project, ref, bu!!.id, area!!.id) { container = null } }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, vm::attachmentFile, { picker.launch(arrayOf("image/*", "application/pdf")) }, { id, page, pages ->
         vm.edit("Planimetria impostata.") { ProjectEdits.setAreaFloorplan(it, area.id, id, page, pages) }; selectingPlan = false; newPlanId = null
     }, { selectingPlan = false; newPlanId = null })

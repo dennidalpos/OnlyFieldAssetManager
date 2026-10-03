@@ -44,6 +44,7 @@ internal fun toProjectEntity(project: Project): ProjectEntity {
         isPasswordProtected = project.isPasswordProtected,
         objectTypesJson = mapperJson.encodeToString(project.objectTypes),
         cableRoutesJson = mapperJson.encodeToString(project.cableRoutes),
+        objectContainmentsJson = mapperJson.encodeToString(com.onlyfield.assetmanager.core.model.ObjectHierarchy.relations(project)),
     )
 }
 
@@ -357,7 +358,7 @@ internal fun toProject(
     val poeMappings = poeMappingEntities.map { toPoeMapping(it) }
     val documentBadges = documentBadgeEntities.map { toDocumentBadge(it) }
 
-    return Project(
+    return com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(Project(
         id = entity.id,
         name = entity.name,
         description = entity.description,
@@ -387,6 +388,7 @@ internal fun toProject(
         documentBadges = documentBadges,
         objectTypes = mapperJson.decodeFromString(entity.objectTypesJson),
         cableRoutes = mapperJson.decodeFromString(entity.cableRoutesJson),
+        objectContainments = mapperJson.decodeFromString(entity.objectContainmentsJson),
         isPasswordProtected = entity.isPasswordProtected
-    )
+    ))
 }

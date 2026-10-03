@@ -53,7 +53,7 @@ private fun WelcomeCard(state: DesktopAppState) {
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 val big = Modifier.weight(1f).heightIn(min = 52.dp)
-                Button(onClick = { state.dialog = AppDialog.NewProject }, modifier = big) { Text("Inizia un nuovo sito") }
+                Button(onClick = { state.newProject() }, modifier = big) { Text("Inizia un nuovo sito") }
                 OutlinedButton(onClick = state::pickAndImport, modifier = big) { Text("Apri un pacchetto ricevuto (.ofam)…") }
             }
         }

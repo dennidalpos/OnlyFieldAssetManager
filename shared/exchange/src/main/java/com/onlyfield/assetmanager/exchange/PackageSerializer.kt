@@ -238,7 +238,7 @@ object PackageSerializer {
             return PackageImportResult(null, ValidationResult(issues))
         }
 
-        if (manifest.formatVersion !in setOf("1.7", "1.8", "1.9")) {
+        if (manifest.formatVersion !in setOf("1.7", "1.8", "1.9", "1.10")) {
             issues += ValidationIssue(
                 code = "UNSUPPORTED_FORMAT_VERSION",
                 message = "Formato ${manifest.formatVersion} non supportato. Aggiorna l'applicazione.",
@@ -377,7 +377,7 @@ object PackageSerializer {
         }
 
         val project = try {
-            jsonConfig.decodeFromString(Project.serializer(), String(projectBytes, Charsets.UTF_8))
+            com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(jsonConfig.decodeFromString(Project.serializer(), String(projectBytes, Charsets.UTF_8)))
         } catch (e: Exception) {
             issues.add(
                 ValidationIssue(

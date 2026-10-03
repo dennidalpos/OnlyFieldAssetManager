@@ -26,6 +26,7 @@ fun FloorHomeSection(state: DesktopAppState) {
     var addingStructure by remember { mutableStateOf(false) }
     var catalog by remember { mutableStateOf(false) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
+    var container by remember { mutableStateOf<ObjectRef?>(null) }
     var selectingPlan by remember { mutableStateOf(false) }
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
@@ -63,7 +64,9 @@ fun FloorHomeSection(state: DesktopAppState) {
             }
             imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FloorCanvas(project, area.id, image, state::update, { n ->
-                editor = if (n.type == PlacementTargetType.RACK) MapObjectDraft.rack(project, bu.id, area.id, n.id) else MapObjectDraft.device(project, bu.id, area.id, n.id)
+                val ref = ObjectRef(n.type, n.id)
+                if (ObjectHierarchy.canContain(project, ref)) container = ref
+                else editor = MapObjectDraft.device(project, project.businessUnits.find { b -> b.devices.any { it.id == n.id } }?.id ?: bu.id, area.id, n.id)
             }, { editor = MapObjectDraft.cable(project, bu.id, area.id, it) }, Modifier.weight(1f))
         }
     }
@@ -81,6 +84,7 @@ fun FloorHomeSection(state: DesktopAppState) {
         editor = MapObjectDraft(type = type, buId = bu.id, areaId = area.id); catalog = false
     })
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft) { editor = null } } }
+    container?.let { ref -> ContainerBrowser(state, ref, bu!!.id, area!!.id) { container = null } }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentFile, {
         DesktopStorageHelper.pickOpenFile("Scegli planimetria", "Immagini e PDF", "pdf", "png", "jpg", "jpeg", "webp", "bmp")?.let { file ->
             state.importFloorplan(file, area.id)?.let { a ->

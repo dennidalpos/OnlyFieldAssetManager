@@ -7,7 +7,7 @@ Data: 3 ottobre 2026
 Tutti i comandi si eseguono dalla radice del repository con il wrapper Gradle:
 
 ```powershell
-# Suite JVM/Room/Compose (149 test; altri 3 test Android sul dispositivo)
+# Suite JVM/Room/Compose
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest
 
 # APK Android debug e release
@@ -31,7 +31,7 @@ Tutti i comandi si eseguono dalla radice del repository con il wrapper Gradle:
     data/                       ← creata al primo avvio: progetti salvati
   ```
 - **Windows portable (archivio):** `dist/OnlyFieldAssetManager-portable-x64-1.0.0.zip` (stessa cartella, senza `data/`)
-- **Contratto Dati Consolidato:** Versione `1.9`, legge `1.7` e `1.8`; versioni successive rifiutate (`docs/02-domain-data-contract.md`)
+- **Contratto Dati Consolidato:** Versione `1.10`, legge `1.7`–`1.9`; versioni successive rifiutate (`docs/02-domain-data-contract.md`)
 
 ## Uso del Programma Portable
 
@@ -45,7 +45,7 @@ La ricostruzione con `packagePortable` sostituisce `app/` e `runtime/` ma conser
 
 ## Collaudo nativo Android senza sostituire l'app personale
 
-Verificati su telefono API 36: `FloorNativeTest` (2 casi) e `FloorGestureNativeTest` (1 caso). Il runner installa e rimuove l'app QA separata. Le fixture della migrazione usano comunque un database isolato nella cache. Per ripetere il controllo, creare questo init script temporaneo in `mobile/app/build/qa-phone.init.gradle`:
+Verificati su telefono API 36: `FloorNativeTest` (3 casi, inclusi backup/ripristino SQLCipher 11 → 13 e 12 → 13) e `FloorGestureNativeTest` (1 caso). Il runner installa e rimuove l'app QA separata. Le fixture della migrazione usano comunque un database isolato nella cache. Per ripetere il controllo, creare questo init script temporaneo in `mobile/app/build/qa-phone.init.gradle`:
 
 ```groovy
 allprojects { project ->

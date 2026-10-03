@@ -1,6 +1,8 @@
 package com.onlyfield.assetmanager.ui.screens
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -37,7 +39,12 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
     var movingRoute by remember { mutableStateOf<CableRoute?>(null) }
     var movingPoint by remember { mutableStateOf(-1) }
     val nodes = ObjectMap.nodes(project, areaId).map { it.copy(point = preview[it.id] ?: it.point) }
-    val routes = ObjectMap.routes(project, areaId)
+    val allRoutes = ObjectMap.routes(project, areaId)
+    val connections = ObjectMap.connections(project, areaId)
+    var choosing by remember(areaId) { mutableStateOf<List<String>>(emptyList()) }
+    val routes = connections.filter { it.internalAt == null }.map { group ->
+        allRoutes.find { it.cableId == selected && selected in group.cableIds } ?: group.route
+    }
     val latestNodes by rememberUpdatedState(nodes)
     val latestRoutes by rememberUpdatedState(routes)
     val latestNodeClick by rememberUpdatedState(onNode)
@@ -48,6 +55,7 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
     val foreground = MaterialTheme.colorScheme.onSurface
     val nodeColor = MaterialTheme.colorScheme.primary
     val wireColor = MaterialTheme.colorScheme.tertiary
+    val nodeBackground = MaterialTheme.colorScheme.surface
     fun viewport() = MapViewport(width, height, image?.width?.toFloat() ?: 1200f, image?.height?.toFloat() ?: 900f, zoom, pan.x, pan.y)
     fun screen(p: MapPoint): Offset = viewport().screen(p).let { Offset(it.x, it.y) }
     fun hitNode(p: Offset) = latestNodes.lastOrNull { (screen(it.point) - p).getDistance() <= radius }
@@ -64,14 +72,25 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
             .transformable(transform, canPan = { false })
             .pointerInput(areaId, project, image) {
                 detectTapGestures(onPress = { pointerStart = it }, onTap = { p ->
+                    val badge = connections.firstOrNull { group ->
+                        group.internalAt?.let { ref -> latestNodes.find { it.id == ref.id && it.type == ref.type } }?.let { node ->
+                            (screen(node.point) + Offset(radius, -radius) - p).getDistance() <= radius * .6f
+                        } == true
+                    }
                     val node = hitNode(p)
-                    if (node != null) latestNodeClick(node)
-                    else selected = latestRoutes.lastOrNull { route ->
-                        ObjectMap.routePoints(project, route, latestNodes).zipWithNext().any { (a, b) ->
-                            val sa = screen(a); val sb = screen(b)
-                            ObjectMap.segmentDistance(MapPoint(p.x, p.y), MapPoint(sa.x, sa.y), MapPoint(sb.x, sb.y)) <= radius / 2
+                    if (badge != null) { choosing = badge.cableIds; selected = null }
+                    else if (node != null) latestNodeClick(node)
+                    else {
+                        val hit = latestRoutes.lastOrNull { route ->
+                            ObjectMap.routePoints(project, route, latestNodes).zipWithNext().any { (a, b) ->
+                                val sa = screen(a); val sb = screen(b)
+                                ObjectMap.segmentDistance(MapPoint(p.x, p.y), MapPoint(sa.x, sa.y), MapPoint(sb.x, sb.y)) <= radius / 2
+                            }
                         }
-                    }?.cableId
+                        val group = connections.find { hit?.cableId in it.cableIds }
+                        if (group != null && group.cableIds.size > 1) { choosing = group.cableIds; selected = null }
+                        else selected = hit?.cableId
+                    }
                 })
             }
             .pointerInput(areaId, project, image) {
@@ -117,6 +136,13 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
                 val route = routePreview?.takeIf { it.cableId == stored.cableId } ?: stored
                 val points = ObjectMap.routePoints(project, route, nodes)
                 points.zipWithNext().forEach { (a, b) -> drawLine(wireColor, screen(a), screen(b), if (selected == route.cableId) 6f else 3f) }
+                val count = connections.find { route.cableId in it.cableIds }?.cableIds?.size ?: 1
+                if (count > 1) {
+                    val label = textMeasurer.measure(AnnotatedString("$count cavi"), TextStyle(color = foreground, fontSize = 12.sp))
+                    val anchor = screen(points[points.size / 2])
+                    drawRect(nodeBackground, anchor, androidx.compose.ui.geometry.Size(label.size.width.toFloat(), label.size.height.toFloat()))
+                    drawText(label, topLeft = anchor)
+                }
                 if (selected == route.cableId) points.forEach { drawCircle(wireColor, radius / 3, screen(it)) }
             }
             nodes.forEach { node ->
@@ -127,8 +153,24 @@ internal fun FloorCanvas(project: Project, areaId: String, image: ImageBitmap?, 
                 val label = textMeasurer.measure(AnnotatedString(node.name), TextStyle(color = foreground, fontSize = 12.sp))
                 drawRect(Color.White.copy(alpha = .85f), point + Offset(-label.size.width / 2f - 2, radius), androidx.compose.ui.geometry.Size(label.size.width + 4f, label.size.height.toFloat()))
                 drawText(label, color = Color.Black, topLeft = point + Offset(-label.size.width / 2f, radius))
+                connections.find { it.internalAt == ObjectRef(node.type, node.id) }?.let { group ->
+                    val badge = point + Offset(radius, -radius)
+                    drawCircle(wireColor, radius * .6f, badge)
+                    val count = textMeasurer.measure(AnnotatedString(group.cableIds.size.toString()), TextStyle(color = nodeBackground, fontSize = 12.sp))
+                    drawText(count, topLeft = badge - Offset(count.size.width / 2f, count.size.height / 2f))
+                }
             }
         }
+        connections.filter { it.internalAt != null }.forEach { group ->
+            TextButton(onClick = { choosing = group.cableIds; selected = null }) { Text("${ObjectHierarchy.name(project, group.internalAt!!)} · ${group.cableIds.size} cavi interni") }
+        }
+        if (choosing.isNotEmpty()) AlertDialog(onDismissRequest = { choosing = emptyList() }, title = { Text("Scegli cavo") }, text = {
+            Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                choosing.mapNotNull { id -> project.cables.find { it.id == id } }.forEach { cable ->
+                    TextButton(onClick = { selected = cable.id; choosing = emptyList() }) { Text(ObjectMap.cableLabel(project, cable)) }
+                }
+            }
+        }, confirmButton = { TextButton(onClick = { choosing = emptyList() }) { Text("Chiudi") } })
         val cable = project.cables.find { it.id == selected }
         if (cable != null) {
             val a = ObjectMap.endpoint(project, cable, true); val b = ObjectMap.endpoint(project, cable, false)

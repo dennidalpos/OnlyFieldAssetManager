@@ -81,7 +81,14 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     val undoLabel: String? get() = history.lastOrNull()?.second
     var selectedBuId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
-    var section by mutableStateOf(AppSection.PROJECT)
+    val detailSlot = com.onlyfield.assetmanager.pc.ui.components.DetailSlot()
+    private var currentSection by mutableStateOf(AppSection.PROJECT)
+    var section: AppSection
+        get() = currentSection
+        set(value) { if (value != currentSection) requestChange { currentSection = value } }
+
+    fun requestChange(action: () -> Unit) = detailSlot.requestChange(action)
+    fun newProject() = requestChange { dialog = AppDialog.NewProject }
     var dialog by mutableStateOf<AppDialog?>(null)
 
     var status by mutableStateOf("Pronto")
@@ -222,7 +229,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     }
 
     /** Restores the project as it was before the last change. */
-    fun undo() {
+    fun undo() = requestChange { undoNow() }
+
+    private fun undoNow() {
         val (previous, message) = history.removeLastOrNull() ?: return
         canUndo = history.isNotEmpty()
         project = previous
@@ -285,7 +294,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         open(newProject, null, newPassword, "Creato il progetto «${newProject.name}».")
     }
 
-    fun closeProject() {
+    fun closeProject() = requestChange { closeProjectNow() }
+
+    private fun closeProjectNow() {
         project?.let { storage.releaseProjectLock(it.id) }
         project = null
         manifest = null
@@ -297,12 +308,12 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         status = "Progetto chiuso."
     }
 
-    fun pickAndImport() {
+    fun pickAndImport() = requestChange {
         DesktopStorageHelper.pickOpenFile()?.let { importFile(it) }
     }
 
     /** Opens a project saved in the data folder, replacing the current one without comparison. */
-    fun openStored(file: File) = importFile(file, password = null, compare = false)
+    fun openStored(file: File) = requestChange { importFile(file, password = null, compare = false) }
 
     fun importFile(file: File, password: String? = null, compare: Boolean = true) {
         val result = try {

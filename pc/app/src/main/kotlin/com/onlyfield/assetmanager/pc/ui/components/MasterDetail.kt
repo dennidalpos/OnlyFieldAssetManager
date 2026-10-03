@@ -30,13 +30,16 @@ class DetailSlot {
     var dismiss: (() -> Unit)? = null
 
     fun requestChange(action: () -> Unit) {
+        if (pendingChange != null) return
         if (dirty) pendingChange = action else change(action)
     }
 
     fun change(action: () -> Unit) {
         pendingChange = null
         dirty = false
-        dismiss?.invoke()
+        val close = dismiss
+        dismiss = null
+        close?.invoke()
         editorVersion++
         action()
     }
@@ -48,13 +51,25 @@ val LocalDetailChange = staticCompositionLocalOf<(() -> Unit) -> Unit> { { it() 
 /** Section on the left (list with search), the open [EditPanel] on the right. */
 @Composable
 fun MasterDetailHost(modifier: Modifier = Modifier, master: @Composable () -> Unit) {
-    val slot = remember { DetailSlot() }
+    val inherited = LocalDetailSlot.current
+    if (inherited == null) {
+        val slot = remember { DetailSlot() }
+        DetailChangeHost(slot) { MasterDetailHost(modifier, master) }
+        return
+    }
+    val slot = inherited
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Box(Modifier.weight(1f).fillMaxHeight()) {
             CompositionLocalProvider(LocalDetailSlot provides slot, LocalDetailChange provides slot::requestChange) { master() }
         }
         key(slot.editorVersion) { slot.content?.invoke() }
     }
+}
+
+/** Shares the discard guard with the window and its menus. */
+@Composable
+fun DetailChangeHost(slot: DetailSlot, content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalDetailSlot provides slot, LocalDetailChange provides slot::requestChange) { content() }
     slot.pendingChange?.let { action ->
         AlertDialog(
             onDismissRequest = { slot.pendingChange = null },
@@ -85,7 +100,7 @@ fun EditPanel(
     // The pane composes elsewhere: read the latest arguments through updated state.
     val args by rememberUpdatedState(PanelArgs(title, onDismiss, onConfirm, confirmEnabled, confirmLabel, width, content))
     val panel: @Composable () -> Unit = remember { { PanelBody(args, slot) } }
-    DisposableEffect(slot) {
+    DisposableEffect(slot, slot.editorVersion) {
         slot.content = panel
         slot.dismiss = { args.onDismiss() }
         slot.dirty = false

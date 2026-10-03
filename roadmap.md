@@ -10,7 +10,7 @@ Data aggiornamento: 3 ottobre 2026
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
 - **Fase v1.1 (S/O/R/F)**: Completata il 3 ottobre 2026 (14 step su 14), vedi `docs/07-ux-audit.md`.
 - **Stato Complessivo**: 36 step di fase e 3 interventi di manutenzione completati (39/39).
-- **Test Totali Passati**: 152 test: 149 unit/Compose (26 mobile/app, 40 shared/core, 28 shared/exchange, 55 pc/app) e 3 Android nativi, inclusi i test UI Compose desktop.
+- **Test Totali Passati**: ultima suite completa 166 unit/Compose (27 mobile/app, 46 shared/core, 32 shared/exchange, 61 pc/app); 4 prove Android QA registrate, di cui 3 ripetute per MAP03.
 
 ## Tabella Riassuntiva degli Step
 
@@ -65,15 +65,13 @@ Data aggiornamento: 3 ottobre 2026
 Il tracker `PROJECT_STATUS.json` contiene soltanto attività e residui aperti. Evidenze di completamento nelle sezioni precedenti e nel registro manutenzione.
 - **RES-01 (Integrazione CI/CD Automation)**: Aggiunta opzionale di workflow GitHub Actions per la pubblicazione automatica di `app-debug.apk` e dell'eseguibile Windows Desktop ad ogni tag release.
 - **RES-02 (Localizzazione Multi-lingua)**: Espansione del dizionario stringhe da Italiano a Inglese/Spagnolo per mercati internazionali.
-- **RES-10 (Editor Windows, azioni globali)**: cambio sezione dalla barra/menu, chiusura progetto e uscita non chiedono ancora conferma per form modificati.
 - **RES-11 (Toolchain)**: deprecazioni preesistenti: proprietà Gradle `by tasks.registering` (`pc/app/build.gradle.kts:68`, rimozione prevista in Gradle 10) e `createComposeRule` v1 nei test UI. Build verde; aggiornamento futuro.
-- **RES-12 (Specifiche iniziali)**: `docs/plan.md` contiene ancora vincoli/fasi anteriori a v1.1 (es. esclusione fusione all'import). Intestazione e comandi obsolete corretti; consolidare i dettagli residui nei documenti correnti.
 
 ## Note per la prossima sessione
 
-- Stato di consegna del 03/10/2026: RES-08, MAP01 e MAP02 completati; 152 test passati, portable Windows e APK debug ricostruiti. Ripresa dal branch `main`, commit di consegna identificabile con `git log -1`.
+- Stato storico del 03/10/2026: RES-08, MAP01 e MAP02 completati; evidenze successive sono registrate sotto. Nessun commit o push è eseguito da questa attività.
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Prossimo intervento: RES-10, poi consolidamento delle specifiche RES-12; collaudo manuale RES-13 ancora aperto. RES-01/02/11 sono miglioramenti futuri.
+- Residui correnti: RES-13 per collaudo manuale hardware, RES-14 per cestino cifrato Windows; RES-01/02/11 sono miglioramenti futuri.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
 
 ## Manutenzione dopo v1.1
@@ -103,3 +101,17 @@ Evidenze: 149 test dei quattro moduli, UI desktop reale Compose, migrazione Room
 ```
 
 Comandi dei 3 test nativi in [docs/06-release-and-delivery.md](docs/06-release-and-delivery.md). Non verificati: scatto/QR con fotocamera reale, lettore USB fisico e multitouch manuale (RES-13). Deprecazioni preesistenti RES-11. Documentazione e tracker sincronizzati per il cambio sessione; commit e push su `main` autorizzati dall'utente.
+
+## RES-10 — Protezione globale Windows (3 ottobre 2026)
+
+Guardia condivisa tra menu, pannelli e schede mappa. Cambio sezione, chiusura, uscita, nuovo progetto, apertura e undo attendono la conferma della bozza; foto/allegati inclusi. Verifica: `.\gradlew.bat :pc:app:test :pc:app:packagePortable`, BUILD SUCCESSFUL, 57 test Windows.
+
+## MAP03 — Contenitori annidati e connessioni aggregate (3 ottobre 2026)
+
+Completato su Android e Windows: relazione tipizzata figlio/genitore, rack sempre contenitore e opzione per tipologie di apparato; conversione compatibile di `rackId`; mappa con sole radici; navigazione in sottomodali, assegnazione, creazione e rimozione dei figli; cavi proiettati sulla radice, aggregati per coppia e indicatore per cavi interni. Eliminazione, cestino, undo, modifiche multiple, fusione e scambio usano la stessa gerarchia.
+
+Contratto `.ofam` 1.10, lettura 1.7–1.9; Room 13 con migrazione 12 → 13 e backup SQLCipher della versione sorgente. Verifiche mirate JVM/Compose: `ObjectHierarchyTest`, `ContainmentExchangeTest`, `ContractVersionTest`, `ObjectMapStorageTest`, `ContainerUiTest` e `FloorMapUiTest`, BUILD SUCCESSFUL. Sul telefono Android API 36, l’app QA separata ha eseguito 3 casi `FloorNativeTest` senza errori, incluso backup/ripristino SQLCipher da v11 e v12.
+
+## RES-12 — Consolidamento documentazione e tracker (3 ottobre 2026)
+
+Contenuti validi del piano A00–W05 trasferiti in `plan.md` e documenti di dominio; aggiornati contratto 1.10, storage, UX, QA e release. Ritirato il piano storico e corretti i riferimenti. Il tracker contiene soltanto lavoro aperto: RES-13 per prove hardware manuali, RES-14 per cestino Windows cifrato, più miglioramenti futuri RES-01/02/11.

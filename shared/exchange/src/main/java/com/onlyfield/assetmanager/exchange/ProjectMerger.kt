@@ -110,7 +110,7 @@ object ProjectMerger {
 
     // --- Flatten / rebuild ------------------------------------------------------------------
 
-    private fun root(p: Project) = json.encodeToJsonElement(Project.serializer(), p).jsonObject
+    private fun root(p: Project) = json.encodeToJsonElement(Project.serializer(), com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(p)).jsonObject
 
     /** Top-level lists of entities with an id (all of them except business units). */
     private fun listKindsOf(p: Project) = root(p).filter { (k, v) -> k != BU && isEntityList(v) }.keys.toList()
@@ -172,7 +172,7 @@ object ProjectMerger {
         val meta = nodes[MergeKey("project", "project")]?.json ?: JsonObject(emptyMap())
         val lists = listKinds.associateWith { kind -> JsonArray(nodes.filterKeys { it.kind == kind }.values.map { it.json }) }
         val project = JsonObject(meta + lists + mapOf(BU to buArray, "updatedEpochMs" to JsonPrimitive(nowMs)))
-        return json.decodeFromJsonElement(Project.serializer(), project)
+        return com.onlyfield.assetmanager.core.model.ObjectHierarchy.synchronize(json.decodeFromJsonElement(Project.serializer(), project))
     }
 
     // --- Labels -----------------------------------------------------------------------------
@@ -200,6 +200,7 @@ object ProjectMerger {
         "cables" -> "Cavo"
         "objectTypes" -> "Tipologia"
         "cableRoutes" -> "Percorso sulla mappa"
+        "objectContainments" -> "Contenitore dell’oggetto"
         "sharedPathSegments" -> "Percorso"
         "panelMappings" -> "Permutazione"
         "vlans" -> "VLAN"

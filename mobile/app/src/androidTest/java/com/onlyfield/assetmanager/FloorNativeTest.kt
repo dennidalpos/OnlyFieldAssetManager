@@ -20,7 +20,11 @@ import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class FloorNativeTest {
-    @Test fun encryptedUpgradeBacksUpOldDataAndBackupCanBeRestored() = runBlocking {
+    @Test fun encryptedUpgradeBacksUpOldDataAndBackupCanBeRestored() = upgradeAndRestore(11)
+
+    @Test fun encryptedVersionTwelveUpgradeBacksUpAndRestores() = upgradeAndRestore(12)
+
+    private fun upgradeAndRestore(sourceVersion: Int) = runBlocking {
         val base = InstrumentationRegistry.getInstrumentation().targetContext
         val root = File(base.cacheDir, "native-migration-${UUID.randomUUID()}").apply { mkdirs() }
         val context = object : ContextWrapper(base) {
@@ -39,21 +43,27 @@ class FloorNativeTest {
             } finally { template.close() }
             val source = context.getDatabasePath(EncryptedDatabase.DB_NAME)
             android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(source, null).use { db ->
-                schemas.forEach { sql -> db.execSQL(sql.replace(", `objectTypesJson` TEXT NOT NULL", "").replace(", `cableRoutesJson` TEXT NOT NULL", "")
-                    .replace(", `objectTypeId` TEXT", "").replace("`objectTypeId` TEXT, ", "").replace("`deviceAId` TEXT, ", "").replace("`deviceBId` TEXT, ", "")) }
-                db.execSQL("INSERT INTO projects (id,name,createdEpochMs,updatedEpochMs,isPasswordProtected) VALUES (?,?,?,?,0)", arrayOf<Any>(project.id, project.name, 1L, 1L))
+                schemas.forEach { sql ->
+                    var old = sql.replace(", `objectContainmentsJson` TEXT NOT NULL", "").replace(", `containmentMetadataJson` TEXT", "")
+                    if (sourceVersion == 11) old = old.replace(", `objectTypesJson` TEXT NOT NULL", "").replace(", `cableRoutesJson` TEXT NOT NULL", "")
+                        .replace(", `objectTypeId` TEXT", "").replace("`objectTypeId` TEXT, ", "").replace("`deviceAId` TEXT, ", "").replace("`deviceBId` TEXT, ", "")
+                    db.execSQL(old)
+                }
+                val mapColumns = if (sourceVersion == 12) ",objectTypesJson,cableRoutesJson" else ""
+                val mapValues = if (sourceVersion == 12) ",'[]','[]'" else ""
+                db.execSQL("INSERT INTO projects (id,name,createdEpochMs,updatedEpochMs,isPasswordProtected$mapColumns) VALUES (?,?,?,?,0$mapValues)", arrayOf<Any>(project.id, project.name, 1L, 1L))
                 val bu = project.businessUnits.single()
                 db.execSQL("INSERT INTO business_units (id,projectId,name) VALUES (?,?,?)", arrayOf(bu.id, project.id, bu.name))
                 val device = bu.devices.single()
                 db.execSQL("INSERT INTO devices (id,businessUnitId,technicalName,heightU,rackSide,mountingType,category,serialNumber) VALUES (?,?,?,1,'BOTH','OUT_OF_RACK','CUSTOM',?)", arrayOf(device.id, bu.id, device.technicalName, device.serialNumber))
-                db.version = 11
+                db.version = sourceVersion
             }
             val upgraded = EncryptedDatabase.open(context)
             try {
                 assertEquals(project, ProjectRepository(upgraded).getProjectById(project.id))
-                assertEquals(12, upgraded.openHelper.writableDatabase.version)
+                assertEquals(13, upgraded.openHelper.writableDatabase.version)
             } finally { upgraded.close() }
-            val backup = File(context.noBackupFilesDir, "${EncryptedDatabase.DB_NAME}.v11.backup")
+            val backup = File(context.noBackupFilesDir, "${EncryptedDatabase.DB_NAME}.v$sourceVersion.backup")
             assertTrue(backup.isFile && backup.length() > 0)
             assertFalse(EncryptedDatabase.isPlaintextSqlite(backup))
             assertFalse(EncryptedDatabase.isPlaintextSqlite(source))

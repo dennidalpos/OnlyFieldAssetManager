@@ -35,9 +35,9 @@ L'applicazione include motori nativi per l'esportazione documentale sia su Andro
 - **Uso offline:** l'allegato può diventare lo sfondo di un'area da «Allegati › Usa come planimetria…». I byte e l'attribuzione viaggiano nel `.ofam`, anche cifrato; i documenti conservano l'attribuzione.
 - **Attribuzione:** «© OpenStreetMap contributors, SRTM | © OpenTopoMap (CC-BY-SA)» visibile nel PNG e nei metadati. Condizioni verificate il 3 ottobre 2026 nelle [istruzioni ufficiali OpenTopoMap](https://opentopomap.org/about#verwendung): uso anche commerciale con attribuzione e condivisione della mappa alle stesse condizioni; evitare download massivi. L'app acquisisce nove tessere per richiesta.
 
-## Mappa del piano e pacchetto 1.9
+## Mappa del piano e pacchetto 1.10
 
-La mappa operativa è descritta in [08-floor-map.md](08-floor-map.md). Tipologie, geometrie e foto viaggiano nel `.ofam` anche cifrato; importare/rimuovere uno sfondo conserva le posizioni. I report documentali mantengono le sezioni e i filtri esistenti; il canvas interattivo non costituisce un nuovo formato di report.
+La mappa operativa è descritta in [08-floor-map.md](08-floor-map.md). Tipologie, gerarchie, geometrie e foto viaggiano nel `.ofam` anche cifrato; importare/rimuovere uno sfondo conserva le posizioni. I report documentali mantengono le sezioni e i filtri esistenti; il canvas interattivo non costituisce un nuovo formato di report.
 
 ## Regole di Sicurezza, Riservatezza e Privacy
 

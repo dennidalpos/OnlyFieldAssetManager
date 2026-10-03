@@ -46,7 +46,7 @@ object EncryptedDatabase {
             }
             db.version
         } finally { db.close() }
-        if (version >= 12) return
+        if (version >= 13) return
         val backup = File(context.noBackupFilesDir, "$DB_NAME.v$version.backup")
         if (!backup.exists()) {
             val temporary = File(backup.path + ".tmp")

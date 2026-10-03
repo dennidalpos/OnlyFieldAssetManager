@@ -125,11 +125,13 @@ internal fun toTrashItemEntity(trashItem: com.onlyfield.assetmanager.core.model.
         displayName = trashItem.displayName,
         serializedJson = trashItem.serializedJson,
         deletedEpochMs = trashItem.deletedEpochMs,
-        affectedReferencesSummary = trashItem.affectedReferencesSummary
+        affectedReferencesSummary = trashItem.affectedReferencesSummary,
+        containmentMetadataJson = mapperJson.encodeToString(trashItem)
     )
 }
 
 internal fun toTrashItem(entity: com.onlyfield.assetmanager.data.local.TrashItemEntity): com.onlyfield.assetmanager.core.model.TrashItem {
+    entity.containmentMetadataJson?.let { return mapperJson.decodeFromString(it) }
     return com.onlyfield.assetmanager.core.model.TrashItem(
         id = entity.id,
         projectId = entity.projectId,

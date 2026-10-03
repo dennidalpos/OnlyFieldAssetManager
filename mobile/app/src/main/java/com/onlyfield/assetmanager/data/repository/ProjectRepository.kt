@@ -66,7 +66,7 @@ class ProjectRepository(
     private val documents = DocumentExports(store::load)
     private val exchange = PackageExchange(attachmentsRoot, store::load, store::save, store::saveBase)
     private val search = InventorySearch(db)
-    private val trash = TrashOperations(db, store::load)
+    private val trash = TrashOperations(db, store::load, store::save)
 
     // --- Projects ---
 
