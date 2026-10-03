@@ -74,7 +74,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     picked?.let { uri ->
         var name by remember(uri) { mutableStateOf("") }
         var classification by remember(uri) { mutableStateOf(AttachmentClassification.SHAREABLE) }
-        FormDialog("Nuovo allegato", { picked = null }, { picked = null; vm.addAttachment(context, uri, name, classification) }, confirmLabel = "Aggiungi") {
+        EditScreen("Nuovo allegato", { picked = null }, { picked = null; vm.addAttachment(context, uri, name, classification) }, confirmLabel = "Aggiungi") {
             FormField(name, { name = it }, "Nome", hint = "Vuoto = nome del file")
             EnumPicker("Classificazione", AttachmentClassification.entries, classification, { it.toDisplayString() }, { classification = it })
         }
@@ -82,7 +82,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
 
     floorplanFor?.let { a ->
         var area by remember(a) { mutableStateOf<Area?>(null) }
-        FormDialog("Usa come planimetria", { floorplanFor = null }, {
+        EditScreen("Usa come planimetria", { floorplanFor = null }, {
             floorplanFor = null
             vm.edit("Planimetria di «${area!!.name}» impostata.") { ProjectEdits.setAreaFloorplan(it, area!!.id, a.id) }
         }, confirmEnabled = area != null, confirmLabel = "Imposta") {
@@ -92,7 +92,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
 
     classifying?.let { a ->
         var c by remember(a) { mutableStateOf(a.classification) }
-        FormDialog("Classificazione", { classifying = null }, {
+        EditScreen("Classificazione", { classifying = null }, {
             classifying = null
             vm.edit("Classificazione aggiornata.") { p -> p.copy(attachments = p.attachments.map { if (it.id == a.id) it.copy(classification = c) else it }) }
         }) {
@@ -236,7 +236,7 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
         var group by remember(c) { mutableStateOf(c?.groupName.orEmpty()) }
         var deviceId by remember(c) { mutableStateOf(c?.deviceId) }
         var notes by remember(c) { mutableStateOf(c?.notes.orEmpty()) }
-        FormDialog(if (c == null) "Nuova credenziale" else "Modifica credenziale", { creating = false; editing = null }, {
+        EditScreen(if (c == null) "Nuova credenziale" else "Modifica credenziale", { creating = false; editing = null }, {
             creating = false; editing = null
             val saved = (c ?: Credential(username = username.trim(), secret = secret)).copy(
                 username = username.trim(), secret = secret, type = type, groupName = group.trim().ifBlank { null }, deviceId = deviceId, notes = notes.trim().ifBlank { null }
@@ -246,7 +246,8 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
             }
         }, confirmEnabled = username.isNotBlank() && secret.isNotEmpty()) {
             FormField(username, { username = it }, "Utente *")
-            OutlinedTextField(secret, { secret = it }, label = { Text("Password / segreto *") }, singleLine = type != CredentialType.SSH_KEY, modifier = Modifier.fillMaxWidth())
+            val markDirty = LocalMarkDirty.current
+            OutlinedTextField(secret, { markDirty(); secret = it }, label = { Text("Password / segreto *") }, singleLine = type != CredentialType.SSH_KEY, modifier = Modifier.fillMaxWidth())
             EnumPicker("Tipo", CredentialType.entries, type, { it.toDisplayString() }, { type = it })
             DevicePicker("Apparato", index, deviceId, { deviceId = it }, noneLabel = "Nessuno (credenziale di gruppo)")
             FormField(group, { group = it }, "Gruppo", hint = "Es. Switch accesso")

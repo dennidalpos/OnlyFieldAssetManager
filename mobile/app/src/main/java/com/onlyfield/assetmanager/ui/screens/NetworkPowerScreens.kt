@@ -103,7 +103,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         var form by remember(t) { mutableStateOf(VlanForm.from(v)) }
         val taken = project.vlans.filter { it.id != v?.id && it.scopeType == VlanScopeType.PROJECT }.map { it.vlanId }.toSet()
         val errors = form.errors(taken)
-        FormDialog(if (v == null) "Nuova VLAN" else "Modifica VLAN", { vlan = null }, {
+        EditScreen(if (v == null) "Nuova VLAN" else "Modifica VLAN", { vlan = null }, {
             vlan = null; val saved = form.toVlan(v)
             vm.edit("VLAN ${saved.vlanId} salvata.") { if (v == null) ProjectEdits.addVlan(it, saved) else ProjectEdits.updateVlan(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -124,7 +124,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val s = t.item
         var form by remember(t) { mutableStateOf(SubnetForm.from(s)) }
         val errors = form.errors()
-        FormDialog(if (s == null) "Nuova subnet" else "Modifica subnet", { subnet = null }, {
+        EditScreen(if (s == null) "Nuova subnet" else "Modifica subnet", { subnet = null }, {
             subnet = null; val saved = form.toSubnet(s)
             vm.edit("Subnet salvata.") { if (s == null) ProjectEdits.addSubnet(it, saved) else ProjectEdits.updateSubnet(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -141,7 +141,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val i = t.item
         var form by remember(t) { mutableStateOf(LogicalInterfaceForm.from(i)) }
         val errors = form.errors()
-        FormDialog(if (i == null) "Nuova interfaccia" else "Modifica interfaccia", { iface = null }, {
+        EditScreen(if (i == null) "Nuova interfaccia" else "Modifica interfaccia", { iface = null }, {
             iface = null; val saved = form.toInterface(i)
             vm.edit("Interfaccia salvata.") { if (i == null) ProjectEdits.addLogicalInterface(it, saved) else ProjectEdits.updateLogicalInterface(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -160,7 +160,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val c = t.item
         var form by remember(t) { mutableStateOf(WanForm.from(c)) }
         val errors = form.errors()
-        FormDialog(if (c == null) "Nuova connessione" else "Modifica connessione", { wan = null }, {
+        EditScreen(if (c == null) "Nuova connessione" else "Modifica connessione", { wan = null }, {
             wan = null; val saved = form.toConnection(c)
             vm.edit("Connessione salvata.") { if (c == null) ProjectEdits.addWanVpnConnection(it, saved) else ProjectEdits.updateWanVpnConnection(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -179,13 +179,14 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val c = t.item
         var form by remember(t) { mutableStateOf(DeviceConfigForm.from(c)) }
         val errors = form.errors()
-        FormDialog(if (c == null) "Nuova configurazione" else "Modifica configurazione", { config = null }, {
+        EditScreen(if (c == null) "Nuova configurazione" else "Modifica configurazione", { config = null }, {
             config = null; val saved = form.toConfig(c)
             vm.edit("Configurazione salvata.") { if (c == null) ProjectEdits.addDeviceConfiguration(it, saved) else ProjectEdits.updateDeviceConfiguration(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             DevicePicker("Apparato *", index, form.deviceId, { form = form.copy(deviceId = it) })
             FormField(form.title, { form = form.copy(title = it) }, "Titolo *", error = errors["title"])
-            OutlinedTextField(form.configText, { form = form.copy(configText = it) }, label = { Text("Testo della configurazione") },
+            val markDirty = LocalMarkDirty.current
+            OutlinedTextField(form.configText, { markDirty(); form = form.copy(configText = it) }, label = { Text("Testo della configurazione") },
                 textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace), minLines = 8, modifier = Modifier.fillMaxWidth())
         }
     }
@@ -194,7 +195,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val f = t.item
         var form by remember(t) { mutableStateOf(ExtraFieldForm.from(f)) }
         val errors = form.errors()
-        FormDialog(if (f == null) "Nuovo campo extra" else "Modifica campo extra", { extra = null }, {
+        EditScreen(if (f == null) "Nuovo campo extra" else "Modifica campo extra", { extra = null }, {
             extra = null; val saved = form.toField(f, project.id)
             vm.edit("Campo salvato.") { if (f == null) ProjectEdits.addCustomExtraField(it, saved) else ProjectEdits.updateCustomExtraField(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -255,7 +256,7 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         val f = t.item
         var form by remember(t) { mutableStateOf(PowerFeedForm.from(f)) }
         val errors = form.errors()
-        FormDialog(if (f == null) "Nuova alimentazione" else "Modifica alimentazione", { feed = null }, {
+        EditScreen(if (f == null) "Nuova alimentazione" else "Modifica alimentazione", { feed = null }, {
             feed = null; val saved = form.toFeed(f)
             vm.edit("Alimentazione salvata.") { if (f == null) ProjectEdits.addPowerFeed(it, saved) else ProjectEdits.updatePowerFeed(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -276,7 +277,7 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         val p = t.item
         var form by remember(t) { mutableStateOf(PoeForm.from(p)) }
         val errors = form.errors()
-        FormDialog(if (p == null) "Nuova porta PoE" else "Modifica PoE", { poe = null }, {
+        EditScreen(if (p == null) "Nuova porta PoE" else "Modifica PoE", { poe = null }, {
             poe = null; val saved = form.toMapping(p)
             vm.edit("PoE salvato.") { ProjectEdits.addOrUpdatePoeMapping(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
@@ -291,7 +292,7 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         val b = t.item
         var form by remember(t) { mutableStateOf(BadgeForm.from(b)) }
         val errors = form.errors()
-        FormDialog(if (b == null) "Nuovo badge" else "Modifica badge", { badge = null }, {
+        EditScreen(if (b == null) "Nuovo badge" else "Modifica badge", { badge = null }, {
             badge = null; val saved = form.toBadge(b, project.id)
             vm.edit("Badge salvato.") { if (b == null) ProjectEdits.addDocumentBadge(it, saved) else ProjectEdits.updateDocumentBadge(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {

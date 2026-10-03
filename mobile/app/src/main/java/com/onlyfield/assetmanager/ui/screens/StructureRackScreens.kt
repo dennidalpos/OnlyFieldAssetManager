@@ -81,7 +81,7 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     if (newBu || editBu != null) {
         val bu = editBu
         var name by remember(bu) { mutableStateOf(bu?.name.orEmpty()) }
-        FormDialog(if (bu == null) "Nuova business unit" else "Rinomina", { newBu = false; editBu = null }, {
+        EditScreen(if (bu == null) "Nuova business unit" else "Rinomina", { newBu = false; editBu = null }, {
             newBu = false; editBu = null
             vm.edit("Business unit salvata.") { if (bu == null) ProjectEdits.addBusinessUnit(it, name.trim()) else ProjectEdits.renameBusinessUnit(it, bu.id, name.trim()) }
         }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, "Nome *") }
@@ -91,7 +91,7 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         var name by remember(area, bu) { mutableStateOf(area?.name.orEmpty()) }
         var floor by remember(area, bu) { mutableStateOf(area?.floor.orEmpty()) }
         var description by remember(area, bu) { mutableStateOf(area?.description.orEmpty()) }
-        FormDialog(if (area == null) "Nuova area in ${bu.name}" else "Modifica area", { areaTarget = null }, {
+        EditScreen(if (area == null) "Nuova area in ${bu.name}" else "Modifica area", { areaTarget = null }, {
             areaTarget = null
             val edited = (area ?: Area(name = name.trim())).copy(name = name.trim(), floor = floor.trim().ifBlank { null }, description = description.trim().ifBlank { null })
             vm.edit("Area «${edited.name}» salvata.") { if (area == null) ProjectEdits.addArea(it, bu.id, edited) else ProjectEdits.updateArea(it, edited) }
@@ -206,7 +206,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
         var placeSide by remember { mutableStateOf(side) }
         val free = device?.let { RackLayout.freeStartPositions(rack, index.devices, it.heightU, placeSide, it.id) } ?: emptyList()
         var start by remember(device, placeSide) { mutableStateOf(free.firstOrNull()) }
-        FormDialog("Colloca in ${rack.name}", { placing = false }, {
+        EditScreen("Colloca in ${rack.name}", { placing = false }, {
             placing = false
             val d = device!!
             val placed = d.copy(rackId = rack.id, positionU = start, rackSide = placeSide,
@@ -227,7 +227,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 private fun RackDialog(vm: ProjectViewModel, index: ProjectIndex, rack: Rack?, onClose: () -> Unit) {
     var form by remember(rack) { mutableStateOf(RackForm.from(rack)) }
     val errors = form.errors()
-    FormDialog(if (rack == null) "Nuovo rack" else "Modifica rack", onClose, {
+    EditScreen(if (rack == null) "Nuovo rack" else "Modifica rack", onClose, {
         onClose()
         val saved = form.toRack(rack)
         vm.edit("Rack «${saved.name}» salvato.") { if (rack == null) ProjectEdits.addRack(it, saved) else ProjectEdits.updateRack(it, saved) }
@@ -299,7 +299,7 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
         var count by remember { mutableStateOf("") }
         val heightError = FieldValidators.int(height, 1, 60, required = true)
         val countError = FieldValidators.int(count, 1, 512)
-        FormDialog(if (m == null) "Nuovo modello" else "Modifica modello", { creating = false; editing = null }, {
+        EditScreen(if (m == null) "Nuovo modello" else "Modifica modello", { creating = false; editing = null }, {
             creating = false; editing = null
             val saved = (m ?: DeviceModel(name = name.trim())).copy(name = name.trim(), brand = brand.trim().ifBlank { null },
                 modelNumber = code.trim().ifBlank { null }, category = category, defaultHeightU = height.trim().toInt(), portTemplates = templates)
@@ -328,7 +328,7 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
     applying?.let { model ->
         var deviceId by remember(model) { mutableStateOf<String?>(null) }
         val device = index.device(deviceId)
-        FormDialog("Applica «${model.name}»", { applying = null }, {
+        EditScreen("Applica «${model.name}»", { applying = null }, {
             applying = null
             vm.edit("Modello applicato a «${device?.technicalName}».") { ProjectEdits.applyModelToDevice(it, deviceId!!, model.id) }
         }, confirmEnabled = deviceId != null, confirmLabel = "Applica") {

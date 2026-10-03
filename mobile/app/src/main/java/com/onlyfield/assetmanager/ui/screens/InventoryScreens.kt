@@ -180,7 +180,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
         var name by remember { mutableStateOf("") }
         var label by remember { mutableStateOf("") }
         val duplicate = device.ports.any { it.name.equals(name.trim(), ignoreCase = true) }
-        FormDialog("Nuova porta", { addingPort = false }, {
+        EditScreen("Nuova porta", { addingPort = false }, {
             addingPort = false
             vm.edit("Porta ${name.trim()} aggiunta.") { ProjectEdits.addPortToDevice(it, device.id, name.trim(), label.trim().ifBlank { null }) }
         }, confirmEnabled = name.isNotBlank() && !duplicate) {
@@ -191,7 +191,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
     if (replacing) {
         var name by remember { mutableStateOf("") }
         var category by remember { mutableStateOf(device.category) }
-        FormDialog("Sostituisci apparato", { replacing = false }, {
+        EditScreen("Sostituisci apparato", { replacing = false }, {
             replacing = false
             vm.back()
             vm.replaceDevice(device.id, name.trim(), category)
@@ -204,7 +204,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
     if (merging) {
         var duplicate by remember { mutableStateOf<Device?>(null) }
         var choices by remember { mutableStateOf(MergeDataChoices()) }
-        FormDialog("Unisci un duplicato", { merging = false }, {
+        EditScreen("Unisci un duplicato", { merging = false }, {
             merging = false
             vm.mergeDevices(device.id, duplicate!!.id, choices)
         }, confirmEnabled = duplicate != null, confirmLabel = "Unisci") {
@@ -241,7 +241,7 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: Project
     val errors = form.errors(rack?.heightU)
     val buAreas = project.businessUnits.find { it.id == form.businessUnitId }?.let { bu -> bu.areas + bu.sites.flatMap { it.areas } } ?: index.areas
 
-    FormDialog(
+    EditScreen(
         title = if (device == null) "Nuovo apparato" else "Modifica apparato",
         onDismiss = onClose,
         confirmEnabled = errors.isEmpty(),
@@ -286,7 +286,7 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, index: Project
 private fun BatchDialog(vm: ProjectViewModel, project: Project, index: ProjectIndex, ids: Set<String>, onClose: () -> Unit) {
     var changes by remember { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH)) }
     val any = changes.updateCategory || changes.updateAreaId || changes.updateRackId || changes.updateObservationNotes
-    FormDialog("Modifica ${ids.size} apparati", onClose, {
+    EditScreen("Modifica ${ids.size} apparati", onClose, {
         onClose()
         vm.edit("Modificati ${ids.size} apparati.") { ProjectEdits.batchEditDevices(it, ids.toList(), changes) }
     }, confirmEnabled = any, confirmLabel = "Applica") {

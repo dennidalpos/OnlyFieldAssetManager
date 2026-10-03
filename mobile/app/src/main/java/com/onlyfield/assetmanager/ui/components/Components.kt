@@ -183,6 +183,7 @@ fun matchesQuery(query: String, vararg fields: String?): Boolean =
 
 // --- Forms --------------------------------------------------------------------------------------
 
+/** Small dialog for short forms (rename, password). Entity editors use [EditScreen]. */
 @Composable
 fun FormDialog(
     title: String,
@@ -224,9 +225,10 @@ fun FormField(
 ) {
     var touched by remember { mutableStateOf(value.isNotEmpty()) }
     val shownError = error?.takeIf { touched }
+    val markDirty = LocalMarkDirty.current
     OutlinedTextField(
         value = value,
-        onValueChange = { touched = true; onValueChange(it) },
+        onValueChange = { touched = true; markDirty(); onValueChange(it) },
         label = { Text(label) },
         isError = shownError != null,
         supportingText = (shownError ?: hint)?.let { { Text(it) } },
@@ -246,8 +248,10 @@ fun FormField(
 
 @Composable
 fun LabeledCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { onCheckedChange(!checked) }) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+    val markDirty = LocalMarkDirty.current
+    val change = { v: Boolean -> markDirty(); onCheckedChange(v) }
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { change(!checked) }) {
+        Checkbox(checked = checked, onCheckedChange = change)
         Text(label)
     }
 }
@@ -276,6 +280,7 @@ fun <T> OptionPicker(
     enabled: Boolean = true,
 ) {
     var open by remember { mutableStateOf(false) }
+    val markDirty = LocalMarkDirty.current
     Box(modifier = modifier.fillMaxWidth()) {
         OutlinedTextField(
             value = selected?.let(optionLabel) ?: noneLabel ?: "",
@@ -307,7 +312,7 @@ fun <T> OptionPicker(
                     LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
                         if (noneLabel != null && query.isBlank()) {
                             item {
-                                ListItem(headlineContent = { Text(noneLabel) }, modifier = Modifier.clickable { onSelected(null); open = false })
+                                ListItem(headlineContent = { Text(noneLabel) }, modifier = Modifier.clickable { markDirty(); onSelected(null); open = false })
                                 HorizontalDivider()
                             }
                         }
@@ -317,7 +322,7 @@ fun <T> OptionPicker(
                                 headlineContent = { Text(optionLabel(o)) },
                                 supportingContent = optionDetail?.invoke(o)?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
                                 trailingContent = if (o == selected) { { Text("✓") } } else null,
-                                modifier = Modifier.clickable { onSelected(o); open = false }
+                                modifier = Modifier.clickable { markDirty(); onSelected(o); open = false }
                             )
                         }
                     }

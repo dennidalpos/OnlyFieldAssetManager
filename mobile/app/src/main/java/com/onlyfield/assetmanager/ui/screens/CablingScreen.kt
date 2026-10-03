@@ -104,7 +104,7 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val errors = form.errors()
         val busy = project.cables.filter { it.id != c?.id }.flatMap { listOfNotNull(it.portAId, it.portBId) }.toSet()
         val busyError = { id: String? -> if (id != null && id in busy) "Porta già usata da un altro cavo" else null }
-        FormDialog(if (c == null) "Nuovo cavo" else "Modifica cavo", { newCable = false; cableDialog = null }, {
+        EditScreen(if (c == null) "Nuovo cavo" else "Modifica cavo", { newCable = false; cableDialog = null }, {
             newCable = false; cableDialog = null
             val saved = form.toCable(c)
             vm.edit("Cavo salvato.") { if (c == null) ProjectEdits.addCable(it, saved) else ProjectEdits.updateCable(it, saved) }
@@ -136,7 +136,7 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val s = pathDialog
         var form by remember(s) { mutableStateOf(SharedPathForm.from(s)) }
         val errors = form.errors()
-        FormDialog(if (s == null) "Nuovo percorso" else "Modifica percorso", { newPath = false; pathDialog = null }, {
+        EditScreen(if (s == null) "Nuovo percorso" else "Modifica percorso", { newPath = false; pathDialog = null }, {
             newPath = false; pathDialog = null
             val saved = form.toSegment(s)
             vm.edit("Percorso salvato.") { if (s == null) ProjectEdits.addSharedPathSegment(it, saved) else ProjectEdits.updateSharedPathSegment(it, saved) }
@@ -153,7 +153,7 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val m = mapDialog
         var form by remember(m) { mutableStateOf(PanelMappingForm.from(m)) }
         val errors = form.errors()
-        FormDialog(if (m == null) "Nuova permutazione" else "Modifica permutazione", { newMap = false; mapDialog = null }, {
+        EditScreen(if (m == null) "Nuova permutazione" else "Modifica permutazione", { newMap = false; mapDialog = null }, {
             newMap = false; mapDialog = null
             val saved = form.toMapping(m)
             vm.edit("Permutazione salvata.") { if (m == null) ProjectEdits.addPanelMapping(it, saved) else ProjectEdits.updatePanelMapping(it, saved) }
