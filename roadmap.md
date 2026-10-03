@@ -8,9 +8,9 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (6 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 28 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
-- **Test Unitari Totali Passati**: 102 test su 102 (22 mobile/app, 27 shared/core, 16 shared/exchange, 37 pc/app).
+- **Fase v1.1 (S/O/R/F)**: In corso (7 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 29 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Test Unitari Totali Passati**: 103 test su 103 (22 mobile/app, 27 shared/core, 16 shared/exchange, 38 pc/app).
 
 ## Tabella Riassuntiva degli Step
 
@@ -44,7 +44,7 @@ Data aggiornamento: 3 ottobre 2026
 | **O02** | Avvio | Schermata iniziale chiara | Completato | 03/10/2026 | Android ProjectsScreen: azioni grandi al primo avvio e «Continua: «ultimo progetto»» in cima; Windows WelcomeCard con le stesse azioni; procedura verificata su emulatore |
 | **O03** | Avvio | Home progetto Android: ricerca e azioni rapide | Completato | 03/10/2026 | Ricerca apparati in cima alla home (stessi campi dell'Inventario) con apertura diretta della scheda, azione rapida «Aggiungi apparato»; Foto/Scansiona collegate in F01/F02; verificata su emulatore |
 | **R01** | Refactor UI | Android: modifiche a pagina intera | Completato | 03/10/2026 | EditScreen a pagina intera per tutti i 27 editor di entità, conferma su modifiche non salvate (LocalMarkDirty), configChanges per la rotazione; verificato su emulatore (rotazione, Indietro, insets) |
-| **R02** | Refactor UI | Windows: pannello laterale (master-detail) | Da fare | — | — |
+| **R02** | Refactor UI | Windows: pannello laterale (master-detail) | Completato | 03/10/2026 | MasterDetailHost + EditPanel per tutte le sezioni Windows (Ctrl+S, Esc, conferma su modifiche non salvate); MasterDetailTest (Compose UI test desktop); residuo RES-08 |
 | **R03** | Refactor UI | Icone Material e tema scuro | Da fare | — | — |
 | **R04** | Refactor UI | Refactor repository Android | Da fare | — | — |
 | **F01** | Funzioni | Foto dalla fotocamera | Da fare | — | — |
@@ -57,7 +57,7 @@ Data aggiornamento: 3 ottobre 2026
 
 ```powershell
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:packagePortable :mobile:app:assembleDebug
-# Esito: BUILD SUCCESSFUL (102 passed unit tests: 22 mobile/app, 27 shared/core, 16 shared/exchange, 37 pc/app)
+# Esito: BUILD SUCCESSFUL (103 passed unit tests: 22 mobile/app, 27 shared/core, 16 shared/exchange, 38 pc/app)
 ```
 
 ## Registro Residui e Note di Monitoraggio
@@ -71,9 +71,10 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 - ~~RES-05 (Cestino Windows)~~: risolto il 03/10/2026 — cestino salvato su disco (progetti senza password) e «Annulla» (Ctrl+Z, 50 passi) per ogni modifica.
 - ~~RES-06 (Messaggi di validazione)~~: risolto il 03/10/2026 — messaggi di validazione e di importazione in italiano.
 - **RES-07 (Mappe Android)**: decisa il 03/10/2026 — permesso di rete solo per il download delle mappe; pianificata come F05.
+- **RES-08 (Editor Windows)**: con un form modificato nel pannello laterale, la scelta di un altro elemento nella lista non chiede conferma (solo Annulla/Esc la chiedono).
 
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: R02.
+- Nessuna decisione aperta. Prossimo task: R03.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.

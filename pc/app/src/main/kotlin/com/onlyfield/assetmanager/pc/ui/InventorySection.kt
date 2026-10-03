@@ -212,7 +212,7 @@ private fun DeviceDialog(
     val buAreas = project.businessUnits.find { it.id == form.businessUnitId }
         ?.let { bu -> bu.areas + bu.sites.flatMap { it.areas } } ?: index.areas
 
-    FormDialog(
+    EditPanel(
         title = if (device == null) "Nuovo apparato" else "Modifica «${device.technicalName}»",
         onDismiss = onDismiss,
         confirmEnabled = errors.isEmpty(),
@@ -368,7 +368,7 @@ private fun PortsDialog(
 private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (String, DeviceCategory) -> Unit) {
     var name by remember { mutableStateOf("") }
     var category by remember { mutableStateOf(device.category) }
-    FormDialog(
+    EditPanel(
         title = "Sostituisci «${device.technicalName}»",
         onDismiss = onDismiss,
         onConfirm = { onConfirm(name.trim(), category) },
@@ -388,7 +388,7 @@ private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> 
     var duplicate by remember { mutableStateOf<Device?>(null) }
     var choices by remember { mutableStateOf(MergeDataChoices()) }
 
-    FormDialog(
+    EditPanel(
         title = "Unisci un duplicato in «${survivor.technicalName}»",
         onDismiss = onDismiss,
         onConfirm = { duplicate?.let { onConfirm(it.id, choices) } },
@@ -430,7 +430,7 @@ private fun BatchEditDialog(
     var changes by remember { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH, mountingType = MountingType.RACK_MOUNT)) }
     val any = changes.updateCategory || changes.updateAreaId || changes.updateRackId || changes.updateMountingType || changes.updateObservationNotes
 
-    FormDialog(
+    EditPanel(
         title = "Modifica in blocco",
         onDismiss = onDismiss,
         onConfirm = { onApply(changes) },

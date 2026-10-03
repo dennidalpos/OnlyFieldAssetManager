@@ -207,7 +207,7 @@ private fun PlaceDeviceDialog(rack: Rack, index: ProjectIndex, initialSide: Rack
     val free = device?.let { RackLayout.freeStartPositions(rack, index.devices, it.heightU, side, it.id) } ?: emptyList()
     LaunchedEffect(device, side) { start = free.firstOrNull() }
 
-    FormDialog(
+    EditPanel(
         title = "Colloca apparato in «${rack.name}»",
         onDismiss = onDismiss,
         onConfirm = { onPlace(device!!, start!!, side) },
@@ -248,7 +248,7 @@ private fun RackDialog(index: ProjectIndex, rack: Rack?, onDismiss: () -> Unit, 
     val tallestDevice = rack?.let { r -> index.devices.filter { it.rackId == r.id && it.positionU != null }.maxOfOrNull { it.positionU!! + it.heightU - 1 } }
     val shrinkError = tallestDevice?.let { top -> form.heightU.toIntOrNull()?.takeIf { it < top }?.let { "Ci sono apparati fino a U$top" } }
 
-    FormDialog(
+    EditPanel(
         title = if (rack == null) "Nuovo rack" else "Modifica «${rack.name}»",
         onDismiss = onDismiss,
         onConfirm = { onSave(form.toRack(rack), rack == null) },

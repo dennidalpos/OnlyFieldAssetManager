@@ -73,7 +73,7 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
         val f = editing
         var form by remember(f) { mutableStateOf(PowerFeedForm.from(f)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (f == null) "Nuova alimentazione" else "Modifica alimentazione",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -134,7 +134,7 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
         var form by remember(poe) { mutableStateOf(PoeForm.from(poe)) }
         val errors = form.errors()
         val existingOnPort = project.poeMappings.find { it.portId == form.portId && it.id != poe?.id }
-        FormDialog(
+        EditPanel(
             title = if (poe == null) "Nuova porta PoE" else "Modifica porta PoE",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -185,7 +185,7 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
         val b = editing
         var form by remember(b) { mutableStateOf(BadgeForm.from(b)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (b == null) "Nuovo badge" else "Modifica badge",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),

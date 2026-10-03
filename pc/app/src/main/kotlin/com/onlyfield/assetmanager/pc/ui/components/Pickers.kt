@@ -32,6 +32,7 @@ fun <T> OptionPicker(
     isError: Boolean = false,
     enabled: Boolean = true,
 ) {
+    val markDirty = LocalMarkDirty.current
     var expanded by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
     var fieldWidthPx by remember { mutableStateOf(0) }
@@ -91,7 +92,7 @@ fun <T> OptionPicker(
             if (noneLabel != null && query.isBlank()) {
                 DropdownMenuItem(
                     text = { Text(noneLabel, style = MaterialTheme.typography.bodyMedium) },
-                    onClick = { onSelected(null); expanded = false }
+                    onClick = { markDirty(); onSelected(null); expanded = false }
                 )
                 HorizontalDivider()
             }
@@ -119,7 +120,7 @@ fun <T> OptionPicker(
                             }
                         }
                     },
-                    onClick = { onSelected(opt); expanded = false }
+                    onClick = { markDirty(); onSelected(opt); expanded = false }
                 )
             }
         }

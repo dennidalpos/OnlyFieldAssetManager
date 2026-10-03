@@ -51,6 +51,7 @@ fun ConfirmHost(content: @Composable () -> Unit) {
 
 // --- Dialog and form building blocks -----------------------------------------------------------
 
+/** Dialog for short forms; entity editors use [EditPanel]. */
 @Composable
 fun FormDialog(
     title: String,
@@ -92,9 +93,10 @@ fun FormField(
     // Errors appear only once the user has typed something, not on a freshly opened form.
     var touched by remember { mutableStateOf(value.isNotEmpty()) }
     val shownError = error?.takeIf { touched }
+    val markDirty = LocalMarkDirty.current
     OutlinedTextField(
         value = value,
-        onValueChange = { touched = true; onValueChange(it) },
+        onValueChange = { touched = true; markDirty(); onValueChange(it) },
         label = { Text(label) },
         isError = shownError != null,
         supportingText = (shownError ?: hint)?.let { { Text(it) } },
@@ -106,8 +108,9 @@ fun FormField(
 
 @Composable
 fun LabeledCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
+    val markDirty = LocalMarkDirty.current
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Checkbox(checked = checked, onCheckedChange = { markDirty(); onCheckedChange(it) })
         Text(label)
     }
 }

@@ -221,7 +221,7 @@ private fun AttachmentsTab(
         var file by remember { mutableStateOf<File?>(null) }
         var name by remember { mutableStateOf("") }
         var classification by remember { mutableStateOf(AttachmentClassification.SHAREABLE) }
-        FormDialog(
+        EditPanel(
             title = "Aggiungi allegato",
             onDismiss = { adding = false },
             confirmEnabled = file != null && name.isNotBlank(),
@@ -244,7 +244,7 @@ private fun AttachmentsTab(
 
     floorplanFor?.let { att ->
         var areaId by remember(att) { mutableStateOf<String?>(null) }
-        FormDialog(
+        EditPanel(
             title = "Usa «${att.name}» come planimetria",
             onDismiss = { floorplanFor = null },
             confirmEnabled = areaId != null,

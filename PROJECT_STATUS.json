@@ -1,19 +1,19 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (6/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "R02",
+  "currentPhase": "Fase v1.1 in corso (7/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "R03",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 28,
-    "pendingTasks": 8,
-    "progressPercentage": 77.8,
-    "totalPassedTests": 102,
+    "completedTasks": 29,
+    "pendingTasks": 7,
+    "progressPercentage": 80.6,
+    "totalPassedTests": 103,
     "testsByModule": {
       "mobile/app": 22,
       "shared/core": 27,
       "shared/exchange": 16,
-      "pc/app": 37
+      "pc/app": 38
     }
   },
   "completedTasks": [
@@ -64,16 +64,15 @@
       "title": "Android: modifiche a pagina intera",
       "date": "2026-10-03",
       "evidence": "EditScreen a pagina intera per tutti i 27 editor di entità, conferma su modifiche non salvate (LocalMarkDirty), configChanges per la rotazione; verificato su emulatore (rotazione, Indietro, insets)"
+    },
+    {
+      "id": "R02",
+      "title": "Windows: pannello laterale (master-detail)",
+      "date": "2026-10-03",
+      "evidence": "MasterDetailHost + EditPanel per tutte le sezioni Windows (Ctrl+S, Esc, conferma su modifiche non salvate); MasterDetailTest (Compose UI test desktop); residuo RES-08"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "R02",
-      "area": "Refactor UI",
-      "title": "Windows: pannello laterale (master-detail)",
-      "description": "Componente MasterDetail: lista con ricerca a sinistra, editor a destra con core.forms, Ctrl+S / Esc, avviso su modifiche non salvate. Restano dialog: documenti, password, validazione, confronto import.",
-      "acceptance": "Nessun FormDialog nelle sezioni; i form continuano a preservare i campi nascosti."
-    },
     {
       "id": "R03",
       "area": "Refactor UI",
@@ -129,7 +128,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: R02."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: R03."
   ],
   "residuals": [
     {
@@ -173,6 +172,12 @@
       "title": "Acquisizione mappe su Android",
       "status": "SCHEDULED",
       "description": "Decisa il 2026-10-03: permesso INTERNET solo per il download delle mappe su richiesta. Pianificata come F05."
+    },
+    {
+      "id": "RES-08",
+      "title": "Cambio elemento con editor Windows modificato",
+      "status": "OPEN",
+      "description": "Nel pannello laterale (R02), scegliere un altro elemento nella lista mentre il form ha modifiche non salvate apre il nuovo elemento senza chiedere conferma; la conferma c'è solo per Annulla/Esc/chiusura. Richiede di instradare la selezione delle sezioni attraverso il pannello."
     }
   ]
 }

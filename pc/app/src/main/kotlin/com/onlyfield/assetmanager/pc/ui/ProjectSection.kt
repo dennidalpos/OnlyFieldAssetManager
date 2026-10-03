@@ -89,7 +89,7 @@ private fun ProjectInfoCard(project: Project, state: DesktopAppState) {
     if (editing) {
         var name by remember { mutableStateOf(project.name) }
         var description by remember { mutableStateOf(project.description.orEmpty()) }
-        FormDialog(
+        EditPanel(
             title = "Modifica progetto",
             onDismiss = { editing = false },
             onConfirm = {
@@ -158,7 +158,7 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
     if (newBu || editBu != null) {
         val bu = editBu
         var name by remember(bu) { mutableStateOf(bu?.name.orEmpty()) }
-        FormDialog(
+        EditPanel(
             title = if (bu == null) "Nuova business unit" else "Rinomina business unit",
             onDismiss = { newBu = false; editBu = null },
             onConfirm = {
@@ -178,7 +178,7 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
         var name by remember(area) { mutableStateOf(area?.name.orEmpty()) }
         var floor by remember(area) { mutableStateOf(area?.floor.orEmpty()) }
         var description by remember(area) { mutableStateOf(area?.description.orEmpty()) }
-        FormDialog(
+        EditPanel(
             title = if (area == null) "Nuova area in «${bu.name}»" else "Modifica area",
             onDismiss = { areaTarget = null },
             onConfirm = {

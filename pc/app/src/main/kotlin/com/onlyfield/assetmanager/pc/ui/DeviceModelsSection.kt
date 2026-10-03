@@ -69,7 +69,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
     applying?.let { model ->
         var deviceId by remember(model) { mutableStateOf<String?>(null) }
         val device = index.device(deviceId)
-        FormDialog(
+        EditPanel(
             title = "Applica «${model.name}»",
             onDismiss = { applying = null },
             onConfirm = {
@@ -111,7 +111,7 @@ private fun ModelDialog(model: DeviceModel?, onDismiss: () -> Unit, onSave: (Dev
     val countError = FieldValidators.int(count, 1, 512)
     val startError = FieldValidators.int(start, 0, 9999, required = true)
 
-    FormDialog(
+    EditPanel(
         title = if (model == null) "Nuovo modello" else "Modifica «${model.name}»",
         onDismiss = onDismiss,
         confirmEnabled = name.isNotBlank() && heightError == null,

@@ -109,7 +109,7 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
         val busy = project.cables.filter { it.id != cable?.id }.flatMap { listOfNotNull(it.portAId, it.portBId) }.toSet()
         val busyError = { id: String? -> if (id != null && id in busy) "Porta già usata da un altro cavo" else null }
 
-        FormDialog(
+        EditPanel(
             title = if (cable == null) "Nuovo cavo" else "Modifica cavo",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty() && busyError(form.portAId) == null && busyError(form.portBId) == null,
@@ -188,7 +188,7 @@ private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
         val seg = editing
         var form by remember(seg) { mutableStateOf(SharedPathForm.from(seg)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (seg == null) "Nuovo percorso" else "Modifica percorso",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -239,7 +239,7 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
         val m = editing
         var form by remember(m) { mutableStateOf(PanelMappingForm.from(m)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (m == null) "Nuova permutazione" else "Modifica permutazione",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),

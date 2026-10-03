@@ -10,6 +10,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.pc.ui.components.MasterDetailHost
 import com.onlyfield.assetmanager.pc.ui.*
 import com.onlyfield.assetmanager.pc.ui.components.ConfirmHost
 import com.onlyfield.assetmanager.pc.ui.components.EmptyState
@@ -41,7 +42,7 @@ fun DesktopApp(state: DesktopAppState) {
                     Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         ProjectToolbar(state)
                         state.error?.let { ErrorBanner(it) { state.error = null } }
-                        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(16.dp)) {
+                        MasterDetailHost(Modifier.weight(1f).fillMaxWidth().padding(16.dp)) {
                             SectionContent(state)
                         }
                         HorizontalDivider()

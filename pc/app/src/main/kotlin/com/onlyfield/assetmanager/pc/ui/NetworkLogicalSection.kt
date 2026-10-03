@@ -75,7 +75,7 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
         var form by remember(v) { mutableStateOf(VlanForm.from(v)) }
         val taken = project.vlans.filter { it.id != v?.id && it.scopeType == VlanScopeType.PROJECT }.map { it.vlanId }.toSet()
         val errors = form.errors(taken)
-        FormDialog(
+        EditPanel(
             title = if (v == null) "Nuova VLAN" else "Modifica VLAN",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -131,7 +131,7 @@ private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> U
         val s = editing
         var form by remember(s) { mutableStateOf(SubnetForm.from(s)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (s == null) "Nuova subnet" else "Modifica subnet",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -184,7 +184,7 @@ private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdate
         val li = editing
         var form by remember(li) { mutableStateOf(LogicalInterfaceForm.from(li)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (li == null) "Nuova interfaccia logica" else "Modifica interfaccia",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -239,7 +239,7 @@ private fun WanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
         val c = editing
         var form by remember(c) { mutableStateOf(WanForm.from(c)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (c == null) "Nuova connessione" else "Modifica connessione",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -298,7 +298,7 @@ private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: 
         val cfg = editing
         var form by remember(cfg) { mutableStateOf(DeviceConfigForm.from(cfg)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (cfg == null) "Nuova configurazione" else "Modifica configurazione",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),
@@ -313,9 +313,10 @@ private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: 
                 DevicePicker("Apparato *", index, form.deviceId, { form = form.copy(deviceId = it) }, Modifier.weight(1f), error = errors["deviceId"])
                 FormField(form.title, { form = form.copy(title = it) }, "Titolo *", Modifier.weight(1f), errors["title"], hint = "Es. Running config 03/10")
             }
+            val markDirty = LocalMarkDirty.current
             OutlinedTextField(
                 value = form.configText,
-                onValueChange = { form = form.copy(configText = it) },
+                onValueChange = { markDirty(); form = form.copy(configText = it) },
                 label = { Text("Testo della configurazione") },
                 textStyle = MaterialTheme.typography.bodySmall.copy(fontFamily = FontFamily.Monospace),
                 minLines = 12,
@@ -354,7 +355,7 @@ private fun ExtraFieldsTab(project: Project, index: ProjectIndex, onProjectUpdat
         val f = editing
         var form by remember(f) { mutableStateOf(ExtraFieldForm.from(f)) }
         val errors = form.errors()
-        FormDialog(
+        EditPanel(
             title = if (f == null) "Nuovo campo extra" else "Modifica campo extra",
             onDismiss = { creating = false; editing = null },
             confirmEnabled = errors.isEmpty(),

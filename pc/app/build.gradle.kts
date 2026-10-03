@@ -25,6 +25,7 @@ dependencies {
     implementation(compose.material3)
 
     testImplementation(libs.junit)
+    testImplementation(compose.desktop.uiTestJUnit4)
 }
 
 // jpackage is required to build the Windows app-image. The JDK used to run Gradle
