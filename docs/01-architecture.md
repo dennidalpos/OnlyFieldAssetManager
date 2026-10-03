@@ -26,6 +26,7 @@ OnlyFieldAssetManager/
    - Pura libreria Kotlin/JVM dipendente solo da `:shared:core`.
    - Serializzazione e deserializzazione del pacchetto ZIP `.ofam` v1.7 (`PackageSerializer`).
    - Cifratura simmetrica AES-256-GCM / PBKDF2.
+   - Verifica della password di progetto (`PasswordHasher`): PBKDF2-HMAC-SHA256 con salt casuale da 16 byte e 600.000 iterazioni (OWASP Password Storage Cheat Sheet), formato `pbkdf2-sha256$<iterazioni>$<salt>$<hash>`; gli hash SHA-256 senza salt delle versioni precedenti sono accettati e ricalcolati al primo sblocco riuscito.
    - Generatori di documentazione espostabile: OpenXML XLSX (`XlsxExportManager`), Markdown (`MarkdownExportManager`), confronto semantico (`ProjectComparison`).
 
 3. **`:mobile:app`**:

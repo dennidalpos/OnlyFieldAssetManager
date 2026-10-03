@@ -238,6 +238,23 @@ class ProjectRepositoryTest {
     }
 
     @Test
+    fun legacySha256PasswordIsUpgradedOnUnlock() = runBlocking {
+        val projId = UUID.randomUUID().toString()
+        repository.saveProject(Project(id = projId, name = "Legacy", createdEpochMs = 1L, updatedEpochMs = 1L))
+        // Pre-v1.1 unsalted SHA-256 of "password"
+        val legacy = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+        val dao = db.projectDao()
+        dao.updateProject(dao.getProjectById(projId)!!.copy(isPasswordProtected = true, passwordHash = legacy))
+
+        assertFalse(repository.verifyProjectPassword(projId, "wrong"))
+        assertEquals(legacy, dao.getProjectById(projId)!!.passwordHash)
+        assertTrue(repository.verifyProjectPassword(projId, "password"))
+        val upgraded = dao.getProjectById(projId)!!.passwordHash!!
+        assertTrue(upgraded.startsWith("pbkdf2-sha256$"))
+        assertTrue(repository.verifyProjectPassword(projId, "password"))
+    }
+
+    @Test
     fun testRenameProject() = runBlocking {
         val projId = UUID.randomUUID().toString()
         val project = Project(

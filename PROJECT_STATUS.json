@@ -1,18 +1,18 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-03",
-  "currentPhase": "Fase v1.1 in corso (1/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
-  "activeTask": "S02",
+  "currentPhase": "Fase v1.1 in corso (2/14); v1.0 completata (A00-A13, W00-W05, U01-U02)",
+  "activeTask": "O01",
   "summary": {
     "totalTasks": 36,
-    "completedTasks": 23,
-    "pendingTasks": 13,
-    "progressPercentage": 63.9,
-    "totalPassedTests": 95,
+    "completedTasks": 24,
+    "pendingTasks": 12,
+    "progressPercentage": 66.7,
+    "totalPassedTests": 98,
     "testsByModule": {
-      "mobile/app": 21,
+      "mobile/app": 22,
       "shared/core": 24,
-      "shared/exchange": 14,
+      "shared/exchange": 16,
       "pc/app": 36
     }
   },
@@ -34,16 +34,15 @@
       "title": "Database Android cifrato",
       "date": "2026-10-03",
       "evidence": "Room + SQLCipher 4.19.1 (EncryptedDatabase), chiave casuale cifrata con chiave Keystore in no_backup/; migrazione del DB v9 in chiaro provata su emulatore (progetto esistente aperto, file non più leggibile come SQLite); allowBackup=false + data_extraction_rules"
+    },
+    {
+      "id": "S02",
+      "title": "Password del progetto con PBKDF2 e salt",
+      "date": "2026-10-03",
+      "evidence": "PasswordHasher in :shared:exchange (PBKDF2-HMAC-SHA256, salt 16 byte, 600.000 iterazioni); hash SHA-256 legacy ricalcolati al primo sblocco; PasswordHasherTest + test di migrazione nel repository"
     }
   ],
   "remainingTasks": [
-    {
-      "id": "S02",
-      "area": "Sicurezza",
-      "title": "Password del progetto con PBKDF2 e salt",
-      "description": "Sostituire hashPassword SHA-256 (ProjectRepository) con la derivazione PBKDF2 di :shared:exchange; gli hash vecchi vengono ricalcolati al primo sblocco riuscito.",
-      "acceptance": "Test su verifica password, migrazione degli hash e password errata."
-    },
     {
       "id": "O01",
       "area": "Avvio",
@@ -134,7 +133,7 @@
     "Logica di modifica, form ed etichette condivisi in :shared:core (core.edit.ProjectEdits, core.forms, core.display).",
     "Convenzione allegati condivisa: :shared:exchange AttachmentFiles (pacchetto attachments/<id>/<nome>, cifrati se il progetto e' protetto).",
     "Remote: origin = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch main.",
-    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: S02."
+    "Fase v1.1: ordine Sicurezza -> Avvio -> Refactor UI -> Funzioni. Prossimo: O01."
   ],
   "residuals": [
     {

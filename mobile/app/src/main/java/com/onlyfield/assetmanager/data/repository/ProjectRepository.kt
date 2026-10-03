@@ -24,6 +24,7 @@ import com.onlyfield.assetmanager.exchange.DeviceModelSerializer
 import com.onlyfield.assetmanager.exchange.MarkdownExportManager
 import com.onlyfield.assetmanager.exchange.PackageImportResult
 import com.onlyfield.assetmanager.exchange.PackageSerializer
+import com.onlyfield.assetmanager.exchange.PasswordHasher
 import com.onlyfield.assetmanager.exchange.ProjectComparison
 import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
 import com.onlyfield.assetmanager.exchange.ProjectPackage
@@ -33,7 +34,8 @@ import com.onlyfield.assetmanager.export.ProjectPrintDocumentAdapter
 import kotlinx.coroutines.flow.Flow
 import java.io.InputStream
 import java.io.OutputStream
-import java.security.MessageDigest
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 data class SearchResult(
     val device: Device,
@@ -55,12 +57,6 @@ class ProjectRepository(
 ) {
     private val projectDao = db.projectDao()
     private val inventoryDao = db.inventoryDao()
-
-    private fun hashPassword(password: String): String {
-        val digest = MessageDigest.getInstance("SHA-256")
-        val bytes = digest.digest(password.toByteArray(Charsets.UTF_8))
-        return bytes.joinToString("") { "%02x".format(it) }
-    }
 
     fun getAllProjects(): Flow<List<ProjectEntity>> {
         return projectDao.getAllProjects()
@@ -405,7 +401,13 @@ class ProjectRepository(
         val projEntity = projectDao.getProjectById(projectId) ?: return false
         if (!projEntity.isPasswordProtected) return true
         val storedHash = projEntity.passwordHash ?: return false
-        return hashPassword(password) == storedHash
+        // PBKDF2 is CPU-bound: keep it off the main thread.
+        val ok = withContext(Dispatchers.Default) { PasswordHasher.verify(password, storedHash) }
+        if (ok && PasswordHasher.needsRehash(storedHash)) {
+            val upgraded = withContext(Dispatchers.Default) { PasswordHasher.hash(password) }
+            projectDao.updateProject(projEntity.copy(passwordHash = upgraded))
+        }
+        return ok
     }
 
     suspend fun setProjectPassword(projectId: String, currentPassword: String?, newPassword: String): Boolean {
@@ -417,7 +419,7 @@ class ProjectRepository(
         }
         val updated = projEntity.copy(
             isPasswordProtected = true,
-            passwordHash = hashPassword(newPassword),
+            passwordHash = withContext(Dispatchers.Default) { PasswordHasher.hash(newPassword) },
             updatedEpochMs = System.currentTimeMillis()
         )
         projectDao.updateProject(updated)

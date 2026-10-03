@@ -8,9 +8,9 @@ Data aggiornamento: 3 ottobre 2026
 - **Fase Windows (W00–W05)**: 100% Completata (6 step completati su 6: W00, W01, W02, W03, W04, W05 completati).
 - **Toolchain**: Gradle 9.7.1, AGP 9.4.1, compileSdk 37, targetSdk 35, minSdk 34.
 - **Rework UX (U01–U02)**: Completato il 3 ottobre 2026 (vedi `docs/07-ux-audit.md`).
-- **Fase v1.1 (S/O/R/F)**: In corso (1 step completati su 14), vedi `plan.md`.
-- **Stato Complessivo**: 23 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
-- **Test Unitari Totali Passati**: 95 test su 95 (21 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app).
+- **Fase v1.1 (S/O/R/F)**: In corso (2 step completati su 14), vedi `plan.md`.
+- **Stato Complessivo**: 24 step completati su 36 (v1.0 chiusa, fase v1.1 in corso).
+- **Test Unitari Totali Passati**: 98 test su 98 (22 mobile/app, 24 shared/core, 16 shared/exchange, 36 pc/app).
 
 ## Tabella Riassuntiva degli Step
 
@@ -39,7 +39,7 @@ Data aggiornamento: 3 ottobre 2026
 | **U01** | Windows | Rework UX editor e programma portable con .exe in radice | Completato | 03/10/2026 | `packagePortable` → `dist/`, dati portable, navigazione laterale, menu e scorciatoie, selettori, conferme, form che preservano i campi |
 | **U02** | Android | Rework UX app: navigazione, schermate dedicate, selettori | Completato | 03/10/2026 | Back stack nel ViewModel, Back di sistema, rotazione, CRUD apparati/porte/aree/credenziali, snackbar con Annulla, export su stream corretto |
 | **S01** | Sicurezza | Database Android cifrato | Completato | 03/10/2026 | Room + SQLCipher 4.19.1 (EncryptedDatabase), chiave casuale cifrata con chiave Keystore in no_backup/; migrazione del DB v9 in chiaro provata su emulatore (progetto esistente aperto, file non più leggibile come SQLite); allowBackup=false + data_extraction_rules |
-| **S02** | Sicurezza | Password del progetto con PBKDF2 e salt | Da fare | — | — |
+| **S02** | Sicurezza | Password del progetto con PBKDF2 e salt | Completato | 03/10/2026 | PasswordHasher in :shared:exchange (PBKDF2-HMAC-SHA256, salt 16 byte, 600.000 iterazioni); hash SHA-256 legacy ricalcolati al primo sblocco; PasswordHasherTest + test di migrazione nel repository |
 | **O01** | Avvio | Procedura guidata "Nuovo sito" condivisa | Da fare | — | — |
 | **O02** | Avvio | Schermata iniziale chiara | Da fare | — | — |
 | **O03** | Avvio | Home progetto Android: ricerca e azioni rapide | Da fare | — | — |
@@ -57,7 +57,7 @@ Data aggiornamento: 3 ottobre 2026
 
 ```powershell
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:packagePortable :mobile:app:assembleDebug
-# Esito: BUILD SUCCESSFUL (95 passed unit tests: 21 mobile/app, 24 shared/core, 14 shared/exchange, 36 pc/app)
+# Esito: BUILD SUCCESSFUL (98 passed unit tests: 22 mobile/app, 24 shared/core, 16 shared/exchange, 36 pc/app)
 ```
 
 ## Registro Residui e Note di Monitoraggio
@@ -75,5 +75,5 @@ Segnalazioni per future iterazioni post-v1.0 (non bloccanti per il rilascio):
 ## Note per la prossima sessione
 
 - Audit UX e interventi: `docs/07-ux-audit.md`; tracker macchina: `PROJECT_STATUS.json`.
-- Nessuna decisione aperta. Prossimo task: S02.
+- Nessuna decisione aperta. Prossimo task: O01.
 - Repository remoto: `origin` = https://github.com/dennidalpos/OnlyFieldAssetManager (privato), branch `main`.
