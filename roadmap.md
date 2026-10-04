@@ -158,3 +158,8 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
     - Windows: lista dispositivi;
     - pannello mappa: dispositivi e rack (Sposta nel cestino) e cavo scelto (Elimina).
   - Nuovi test: `ObjectMapTest.panKeepsThePageOnScreen` e `FloorMapUiTest.selectedObjectHasVisibleConfirmedTrash`. Suite core, Desktop e Android JVM verde; APK provato su emulatore.
+
+## Progetto demo importabile — 5 ottobre 2026
+
+- `fixtures/demo/onlyfield-demo.ofam`: 2 BU × 2 piani, 44 apparati, 4 rack, 109 cavi. Contiene switch, patch panel, prese a muro e AP. 6 switch su 8 sono cablati e collegati in fibra con piani diversi. Generato da `DemoSeed` con `:shared:exchange:demoPackage`; dettaglio in [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md).
+- Verifica: `DemoSeedTest` (4 test). Import provato sull'emulatore Pixel 9 con mappa del piano ed elevazione del rack.

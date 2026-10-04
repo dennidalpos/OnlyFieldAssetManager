@@ -10,6 +10,23 @@ La verifica JVM e Compose usa:
 
 Le suite coprono dominio, serializzazione/cifratura, fusione, migrazioni Room, storage, interoperabilita, configuratore, documenti e UI Desktop. Il workflow CI esegue lo stesso perimetro prima di creare gli artefatti.
 
+## Progetto demo
+
+[fixtures/demo/onlyfield-demo.ofam](../fixtures/demo/onlyfield-demo.ofam) si importa da Importa .ofam su Android e Windows. Si rigenera con:
+
+```powershell
+.\gradlew.bat :shared:exchange:demoPackage
+```
+
+Contenuto («Demo OnlyField»):
+
+- Sede Nord e Sede Sud, ognuna con Piano terra e Primo piano.
+- Per piano: rack RK da 42 U con patch panel PP (24 RJ45, U42) e due switch A/B (24 porte, metà PoE, 4 SFP+, U40 e U39). Sulla mappa: sei prese a muro PR da due porte e due access point.
+- Ogni porta di presa arriva a una porta del patch panel (cavi H); il patch panel va agli switch (cavi PC). Gli AP sono collegati alla presa, quindi il percorso fino allo switch è completo.
+- 6 switch su 8 sono cablati. Restano vuoti SW-S0-B e SW-S1-B. Ogni switch cablato ha un uplink in fibra verso un altro piano (FO-01…05, montanti e dorsale Nord–Sud), utile anche per provare monconi e Vai a.
+
+Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di `:shared:exchange`); `DemoSeedTest` ne verifica struttura, cablaggio e import.
+
 ## Limiti noti
 
 - Il collaudo su telefono, multitouch, fotocamera, scanner e lettore USB richiede hardware reale: [checklist](testing/hardware-checklist.md).

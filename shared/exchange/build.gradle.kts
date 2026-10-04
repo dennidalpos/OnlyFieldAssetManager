@@ -22,3 +22,12 @@ dependencies {
     testImplementation(libs.junit)
 }
 
+
+// Importable demo project (2 sites × 2 floors, cabled switches): fixtures/demo/onlyfield-demo.ofam
+tasks.register<JavaExec>("demoPackage") {
+    group = "application"
+    description = "Writes the demo .ofam package for manual tests."
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.onlyfield.assetmanager.exchange.DemoSeed")
+    workingDir = rootDir
+}
