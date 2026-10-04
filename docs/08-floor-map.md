@@ -27,7 +27,17 @@ Trascinando un oggetto, il punto in cui lo si è afferrato resta sotto il dito. 
 
 ## Pannello e inserimento
 
-`configurator.map.MapWorkspace` è condiviso dalle due app; il pannello è in `MapDetailPane`. Il pannello dei dettagli non è modale: in basso sotto 840 dp di larghezza, laterale da 840 dp, secondo le classi di finestra Android. Il percorso di navigazione parte dal nome del piano; il comando della barra è Aggiungi oggetto sul piano e Aggiungi qui dentro un contenitore.
+`configurator.map.MapWorkspace` è condiviso dalle due app; il pannello è in `MapDetailPane`. Il pannello dei dettagli non è modale: in basso sotto 840 dp di larghezza, laterale da 840 dp, secondo le classi di finestra Android.
+
+L'area del piano è un foglio pieno con bordo, su sfondo distinto, e griglia 24 × 24 con una linea più marcata ogni 4 celle; resta visibile anche in tema scuro. Con una planimetria il bordo circonda l'immagine.
+
+Nessun comando scorre in orizzontale:
+
+- **Intestazione**: ‹ Indietro e il livello corrente. I livelli superiori sono in un menu a tendina.
+- **Telefono**: Aggiungi oggetto (Aggiungi qui dentro un contenitore) a tutta larghezza con Elenco. Scansiona codice e Planimetria sono nel menu ⋮.
+- **Finestre da 600 dp**: tutti i comandi in una riga.
+
+Le miniature degli allegati vanno a capo.
 
 Per un oggetto l'ordine è sempre lo stesso:
 
@@ -35,13 +45,15 @@ Per un oggetto l'ordine è sempre lo stesso:
 2. **Azioni**: una sola primaria (Apri per i contenitori, altrimenti Modifica), Porte come secondaria; Rimuovi dal contenitore è nel menu Altre azioni e si annulla con Annulla.
 3. **Stato**: posizione nel rack, contenuto, porte occupate, cavi interni e carico PoE come righe etichetta/valore, con il pannello porte compatto.
 4. **Identificativi**: etichetta, alias, IP, MAC e numero di serie, solo se compilati (`core.display.ObjectSummary`).
-5. **Collegamenti** e **Foto e allegati**, con il numero di elementi; le miniature scorrono in orizzontale.
+5. **Collegamenti** e **Foto e allegati**, con il numero di elementi.
+
+Per un rack lo stato riporta unità occupate su totali e profondità, se registrata. Le sezioni senza dati non compaiono.
 
 Il contenitore aperto mostra la propria intestazione (Contenitore aperto) e la sezione Contenuto con Assegna esistente: una finestra con ricerca che indica tipo e posizione attuale di ogni oggetto. Senza selezione il pannello elenca gli oggetti della vista raggruppati per famiglia, con filtro oltre dieci elementi, e la legenda chiusa; sotto 840 dp si apre con Elenco. Per un collegamento ogni cavo è una scheda con estremità A e B e mezzo; il cavo scelto mostra Modifica cavo.
 
 Per un dispositivo la sezione **Collegamenti logici** segue Collegamenti ed elenca le connessioni WAN, VPN, Internet e Altro (`WanVpnConnection`) di cui è estremità locale o remota: tipo, nome, operatore, banda e «verso» l'altra estremità (dispositivo e piano, oppure descrizione della sede). Il collegamento è agganciato al dispositivo, non alla porta. + Nuovo apre una finestra basata su `core.forms.WanForm` con tipo VPN e il dispositivo come estremità locale; il tocco su una riga modifica la connessione mantenendo il lato del dispositivo, note e accesso sottostante. Se l'altra estremità è un dispositivo del progetto, Vai a lo apre sul suo piano. L'eliminazione resta nella sezione Rete. `core.model.LogicalLinks` fornisce elenco ed etichette.
 
-L'inserimento usa un'unica finestra. Il sottotitolo dice dove andrà l'oggetto (Sul piano Terra, In RACK-A) e il passo (Scegli la tipologia, Scegli le porte). La tipologia è raggruppata per famiglia con simbolo e colore; Tipologia personalizzata resta visibile sotto l'elenco. Il passo porte ha Continua come unica azione primaria, Indietro, e il collegamento Configura le porte manualmente. Nel configuratore il preset applicato è riassunto, con Cambia preset. Il nome proposto è automatico, ad esempio `SW-03`. La pressione prolungata su un punto vuoto del piano posiziona lì il nuovo oggetto; senza punto scelto va nella posizione libera più vicina al centro, mai sul bordo. Nel passo porte i menu del preset occupano tutta la riga disponibile e l'elenco aperto ha la larghezza del campo.
+L'inserimento è rapido e usa un'unica finestra (`ObjectPickerDialog`, descritto in [10-object-configurator.md](10-object-configurator.md)). Il sottotitolo dice dove andrà l'oggetto (Sul piano Terra, In RACK-A). Aggiungi salva subito; Aggiungi e modifica apre l'editor completo. La pressione prolungata su un punto vuoto del piano posiziona lì il nuovo oggetto; senza punto scelto va nella posizione libera più vicina al centro, mai sul bordo. Nel passo porte i menu del preset occupano tutta la riga disponibile e l'elenco aperto ha la larghezza del campo.
 
 ## Planimetrie
 

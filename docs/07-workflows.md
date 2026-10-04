@@ -20,10 +20,20 @@ Le destinazioni hanno gli stessi gruppi e nomi sulle due piattaforme:
 | --- | --- |
 | Lavoro | Mappa, Dispositivi, Rack, Cablaggio |
 | Dati tecnici | Rete, Alimentazione |
-| Supporto | Modelli, Allegati, Credenziali, Documenti |
+| Supporto | Modelli, Allegati, Documenti, Credenziali |
 | Progetto | Struttura e impostazioni, Cestino |
 
-La barra laterale Windows misura 208 dp. Si richiude nel menu Sezioni se lascerebbe meno di 360 dp all'elenco, tenendo conto del pannello aperto. Importazione, esportazione, password e chiusura sono raccolte in Operazioni progetto. Android mantiene queste operazioni fuori dall'elenco delle destinazioni.
+**Android.** Una barra in basso porta alle destinazioni di Lavoro (Mappa, Dispositivi, Rack, Cablaggio) e ad Altro. La scelta di una voce svuota lo stack sopra la mappa.
+
+Altro contiene:
+
+- il controllo del progetto, solo se ci sono avvisi;
+- gli altri gruppi, con icone;
+- Azioni progetto: Esporta, Importa, password e Chiudi progetto.
+
+La barra si nasconde mentre è aperto un editor a pagina intera o lo scanner, così un cambio di sezione non perde la bozza. Le sottoschede sono fisse fino a tre; oltre diventano un menu Vista.
+
+**Windows.** La barra laterale misura 208 dp e mostra le icone delle destinazioni. Si richiude nel menu Sezioni se lascerebbe meno di 360 dp all'elenco, tenendo conto del pannello aperto. Operazioni progetto elenca Esporta, Importa, password, poi Nuovo sito e Chiudi progetto.
 
 Le scorciatoie Windows mantengono le associazioni: `Ctrl+1` Dispositivi, `Ctrl+2` Rack, `Ctrl+3` Modelli, `Ctrl+4` Mappa, `Ctrl+5` Credenziali, `Ctrl+6` Allegati, `Ctrl+7` Cablaggio, `Ctrl+8` Rete, `Ctrl+9` Alimentazione.
 
@@ -35,6 +45,6 @@ Ogni editor ha un titolo operativo, ad esempio Aggiungi dispositivo, Modifica di
 
 Le spaziature sono 8 dp fra elementi collegati, 16 dp fra campi e 24 dp fra sezioni; i margini sono 16 dp su Android e 24 dp negli editor desktop. Filtri e azioni vanno a capo quando necessario. I configuratori della mappa usano gli stessi contenitori degli altri editor.
 
-Gli errori compaiono vicino al campo e nel riepilogo presso il salvataggio. Le sezioni con errori bloccanti si aprono automaticamente. Le righe checkbox sono interamente cliccabili, con un unico controllo semantico e altezza minima di 48 dp. Su Android il footer considera tastiera e barra di navigazione, consumando gli inset già applicati dal contenitore.
+Gli editor e i pannelli si aprono sempre dall'inizio: un nuovo oggetto, una nuova selezione o un altro editor non ereditano lo scorrimento precedente. Solo il ritorno da una porta riporta alla sezione Porte. Gli errori compaiono vicino al campo e nel riepilogo presso il salvataggio. Le sezioni con errori bloccanti si aprono automaticamente. Le righe checkbox sono interamente cliccabili, con un unico controllo semantico e altezza minima di 48 dp. Su Android il footer considera tastiera e barra di navigazione, consumando gli inset già applicati dal contenitore.
 
-Riferimenti: [dialoghi Compose](https://developer.android.com/develop/ui/compose/components/dialog), [accessibilità predefinita](https://developer.android.com/develop/ui/compose/accessibility/api-defaults), [layout a flusso](https://developer.android.com/develop/ui/compose/layouts/flow), [gestione degli inset](https://developer.android.com/develop/ui/compose/system/insets-ui). Consultati il 4 ottobre 2026; gli esiti di verifica sono in [05-testing-and-benchmarks.md](05-testing-and-benchmarks.md).
+Riferimenti: [barra di navigazione Compose](https://developer.android.com/develop/ui/compose/components/navigation-bar), [forme Material 3](https://m3.material.io/styles/shape), [dialoghi Compose](https://developer.android.com/develop/ui/compose/components/dialog), [accessibilità predefinita](https://developer.android.com/develop/ui/compose/accessibility/api-defaults), [layout a flusso](https://developer.android.com/develop/ui/compose/layouts/flow), [gestione degli inset](https://developer.android.com/develop/ui/compose/system/insets-ui). Consultati il 4 ottobre 2026; gli esiti di verifica sono in [05-testing-and-benchmarks.md](05-testing-and-benchmarks.md).

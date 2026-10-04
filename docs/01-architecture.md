@@ -12,6 +12,12 @@
 
 `core` ed `exchange` restano JVM puri e non dipendono da Android UI o `Context`. Le UI applicano modifiche attraverso `ProjectEdits`; i form partono dall'entita esistente per conservare i campi non esposti.
 
+Aspetto comune in `shared/configurator`:
+
+- `theme.OnlyFieldTheme`: colori chiaro/scuro e forme squadrate (2–8 dp). I pulsanti M3 hanno angoli pieni fissi, non derivati da `Shapes`; per questo `theme.Button`, `OutlinedButton` e `TextButton` li sostituiscono con angoli da 4 dp e margini interni ridotti. I file UI li importano esplicitamente.
+- `ObjectIcons`: disegni a linee dei tipi predefiniti, scelti da `Glyph.typeId`; i tipi personalizzati mostrano il codice testuale.
+- `SymbolIcons`: icone di navigazione Material Symbols.
+
 ## Confini
 
 I progetti sono locali. La rete serve solo al download esplicito della cartografia; i dati restano utilizzabili offline. Android usa Room cifrato, Windows una working copy con salvataggio atomico e file `.lock`.

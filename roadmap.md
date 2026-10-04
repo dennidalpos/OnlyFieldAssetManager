@@ -114,3 +114,29 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - Tag annotato `v1.0.0` su `dedf863` pubblicato su origin. Run [37219874814](https://github.com/dennidalpos/OnlyFieldAssetManager/actions/runs/37219874814) fallita nel passo «Verify all JVM and Compose suites»: Gradle non trova la toolchain `{languageVersion=21, vendor=JetBrains}` e il JDK scaricato da foojay non ha `javac`, `javadoc` e `jar`. Job publish saltato, nessuna release. In locale la stessa suite passa (242 test).
 - Tracker: nessuna attività aperta; residui RES-01 (CI su tag), RES-13, RES-17, RES-19. Ramo `main` allineato a `origin/main`.
 
+## Restyling UI/UX (UX-R1…R8) — 4 ottobre 2026
+
+- **UX-R1**:
+  - tema condiviso `OnlyFieldTheme` con forme squadrate;
+  - pulsanti con angoli da 4 dp e margini interni ridotti (wrapper in `configurator.theme`).
+- **UX-R2**:
+  - icone disegnate dei tipi predefiniti (`ObjectIcons`, `Glyph.typeId`) su badge, mappa ed elenchi;
+  - icone di navigazione spostate in `shared/configurator`; rimossi i drawable inutilizzati.
+- **UX-R3**:
+  - area della mappa con bordo e griglia visibili anche in tema scuro;
+  - comandi senza scorrimento orizzontale: menu ⋮, livelli in un menu, miniature a capo.
+- **UX-R4**: editor e pannelli aperti dall'inizio. Scorrimento azzerato su nuova selezione, editor annidati e pannelli PC; Porte richiamata solo al ritorno da una porta.
+- **UX-R5**:
+  - porte adattate alla larghezza, a capo in fasce bilanciate (`SchematicGeometry.portGrid`);
+  - elevazione rack condivisa a tutta larghezza (`RackElevation`) con U libere toccabili.
+- **UX-R6**:
+  - inserimento rapido tipo → menu precompilati → Aggiungi (`ObjectPickerDialog`, `core.forms.QuickAdd`) da mappa, U libera, inventario e rack;
+  - Aggiungi e modifica apre l'editor completo; i rack nascono vuoti.
+- **UX-R7**:
+  - solo dati compilati nel pannello mappa e nei dettagli Android;
+  - editor più snello: niente testo guida, Modello solo se utile, Campi personalizzati e Opzioni avanzate in «Altro»;
+  - rimosse le chiavi i18n inutilizzate.
+- **UX-R8**:
+  - Android: barra in basso Mappa · Dispositivi · Rack · Cablaggio · Altro, nascosta con editor aperti; Altro a gruppi con icone e azioni progetto; sottoschede senza scorrimento;
+  - Windows: icone nella barra laterale e menu Operazioni progetto riordinato.
+- **Verifica**: 247 test superati (Core 88, Exchange 37, Desktop 94, Android JVM 28). APK debug provato su emulatore Pixel 9, dove sono stati corretti i pulsanti segmentati e la fascia porte. Dettaglio in [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md). La prova sul moto g86 è aggiunta a RES-19.

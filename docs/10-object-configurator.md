@@ -10,9 +10,31 @@ Quando il percorso fisico termina senza conflitti, cicli o passaggi sconosciuti 
 
 Il contratto 1.11 conserva hardware, modelli e porte; Room 14 li persiste. Le versioni precedenti non ricevono lato o passaggi inventati.
 
+## Inserimento rapido
+
+Il censimento parte da menu precompilati. `ObjectPickerDialog` usa lo stesso flusso ovunque: mappa, Aggiungi in una U libera, Nuovo apparato e Nuovo rack.
+
+1. **Tipo**: elenco raggruppato per famiglia, con icona e ricerca. Un solo tipo possibile salta l'elenco.
+2. **Menu**:
+   - nome proposto (`SW-03`), sempre modificabile;
+   - preset porte;
+   - per i rack l'altezza, predefinita 42 U;
+   - la business unit, solo se il contesto non la dà e ce n'è più d'una.
+
+Aggiungi salva subito come una sola modifica annullabile. Aggiungi e modifica apre l'editor completo; una bozza nuova lì è già lavoro non salvato, quindi chiudere chiede conferma.
+
+Regole del flusso:
+
+- I tipi senza menu (modem, ONT, sensori…) si aggiungono con un tocco.
+- I cavi aprono sempre l'editor, perché servono gli estremi.
+- Una tipologia personalizzata nasce insieme all'oggetto.
+- Un rack nasce vuoto e si riempie man mano.
+
+La logica pura è in `core.forms.QuickAdd`: bozza con nome, preset, altezza e business unit; dispositivo in una U del rack. È coperta da `QuickAddTest`.
+
 ## Dati essenziali e dettagli
 
-In testa una riga di contesto mostra simbolo, tipo e posizione (`Terra › R1 › U10–11`); il nome è già nel titolo della finestra. **Dati essenziali** contiene nome, tipo, modello facoltativo ed etichetta fisica (per i rack l'altezza, per i cavi il mezzo). Il tipo imposta la categoria; la categoria compare in Hardware solo per tipi personalizzati, legacy e modelli.
+In testa una riga di contesto mostra simbolo, tipo e posizione (`Terra › R1 › U10–11`); il nome è già nel titolo della finestra. **Dati essenziali** contiene nome, tipo, modello ed etichetta fisica (per i rack l'altezza, per i cavi il mezzo). Il modello compare solo se esistono modelli applicabili o ne è già impostato uno. Il tipo imposta la categoria; la categoria compare in Hardware solo per tipi personalizzati, legacy e modelli.
 
 Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo; l'intestazione è rettangolare perché titolo e riepilogo su due righe non vengano tagliati dagli angoli arrotondati:
 
@@ -22,10 +44,11 @@ Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo; l'inte
 4. **Hardware**.
 5. **Note e rilievo**.
 6. Sezioni dell'host passate con `extraSections`, ad esempio **Foto e allegati** dalla mappa.
-7. **Campi personalizzati**: una scheda per campo.
-8. **Opzioni avanzate**: Salva come modello.
+7. **Altro**: Campi personalizzati (una scheda per campo) e Opzioni avanzate (Salva come modello). L'editor dei modelli mostra solo Campi personalizzati.
 
-Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e modelli usano la stessa gerarchia con campi pertinenti. **Dispositivi nel rack** mostra il lato scelto con filtri Fronte/Retro, i dispositivi montati, quelli ancora Senza posizione U (così il conteggio del riepilogo coincide), le U libere come intervalli (`U libere: 1–9, 12–42`) e Aggiungi in una U libera. Tutti i campi a scelta usano `SelectField`: bordo ed etichetta come i campi di testo, letto come un solo pulsante "etichetta: valore".
+Le viste di lettura mostrano solo i dati registrati: pannello della mappa, dettaglio dispositivo e rack su Android. I campi vuoti restano disponibili in modifica. Il dettaglio dispositivo Android disegna le porte con `PortPanel`; il tocco apre l'editor su Porte.
+
+Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e modelli usano la stessa gerarchia con campi pertinenti. **Dispositivi nel rack** mostra il lato scelto con filtri Fronte/Retro e l'elevazione `RackElevation`. È condivisa con il dettaglio rack Android e la sezione Rack Windows: larghezza piena, un blocco per apparato con icona e nome, U libere come righe con «+». Il tocco su una U libera apre l'inserimento rapido in quella U (`RackUnitPicker`). Seguono le U libere come intervalli (`U libere: 1–9, 12–42`) e i dispositivi ancora Senza posizione U, così il conteggio del riepilogo coincide. Tutti i campi a scelta usano `SelectField`: bordo ed etichetta come i campi di testo, letto come un solo pulsante "etichetta: valore".
 
 ## Preset e porte
 
@@ -43,11 +66,11 @@ Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e mode
 | NVR | 0/4/8/16 porte PoE e uplink |
 | UPS, PDU, alimentatori | 6/8/12/24 prese C13 o Schuko |
 
-Il preset si sceglie all'inserimento dalla mappa oppure nella sezione Porte; se esistono già gruppi di porte la sezione li riassume e i menu si aprono con Cambia preset. Applicarlo sostituisce i gruppi di porte; le porte collegate richiedono ancora il consenso esplicito. Il budget PoE proposto vale 15,4 W per ogni porta PoE (uscita PSE IEEE 802.3af) e resta modificabile.
+Il preset si sceglie all'inserimento rapido oppure nella sezione Porte; se esistono già gruppi di porte la sezione li riassume e i menu si aprono con Cambia preset. Applicarlo sostituisce i gruppi di porte; le porte collegate richiedono ancora il consenso esplicito. Il budget PoE proposto vale 15,4 W per ogni porta PoE (uscita PSE IEEE 802.3af) e resta modificabile.
 
 I gruppi di porte seguono tre passi: **tipologia** (`PortKind`: RJ45, SFP, SFP+, SFP28, QSFP28, LC, SC, console, C13, Schuko), **quantità**, **etichetta**. Le etichette possono essere brevi (`P1`, `X1`), di interfaccia (`Gi1/0/1`, `Te1/1/1`) o un prefisso libero, con anteprima dell'intervallo. Il prefisso libero si scrive e poi si conferma con Applica prefisso: solo allora la numerazione viene ricalcolata. La tipologia imposta connettore, mezzo, velocità e ruolo. Un nuovo gruppo continua la numerazione dei gruppi con lo stesso prefisso. I prefissi restano non vuoti perché i lettori del contratto 1.11 li richiedono. Lato, velocità, ruolo, accoppiamento e combo sono nei dettagli avanzati.
 
-Il pannello porte (`PortPanel`) imita il frontale: porte dispari sopra e pari sotto, un blocco per connettore e lato. Pieno indica occupata, bordo libera; ⚡ indica PoE (pieno se erogato, tenue se solo supportato), il numero in basso la VLAN, ! una porta da verificare. Il tocco apre la porta. La pressione prolungata avvia la selezione multipla, con le azioni Seleziona tutte e Solo libere, e permette di applicare VLAN (access o trunk) e PoE a tutte le porte selezionate. All'inizio della selezione l'anteprima viene fissata nella sessione, così le porte non ancora salvate mantengono il proprio identificativo; `PortLogic` ignora comunque porte inesistenti e non crea righe orfane. La logica è in `core.forms.PortLogic` e usa le entità esistenti `PortVlanMembership`, `PoeMapping` e `Vlan`. Le VLAN mancanti vengono create a livello di progetto; la subnet si ricava da `Subnet.vlanId`.
+Il pannello porte (`PortPanel`) imita il frontale: porte dispari sopra e pari sotto, un blocco per connettore e lato. Le celle si adattano alla larghezza (`SchematicGeometry.portGrid`, da 24 a 40 dp). Se non bastano, il blocco va a capo in fasce bilanciate senza scorrimento orizzontale: 48 porte su un telefono stretto diventano due fasce da 2 × 12. Sotto 32 dp le celle nascondono la VLAN. Pieno indica occupata, bordo libera; ⚡ indica PoE (pieno se erogato, tenue se solo supportato), il numero in basso la VLAN, ! una porta da verificare. Il tocco apre la porta. La pressione prolungata avvia la selezione multipla, con le azioni Seleziona tutte e Solo libere, e permette di applicare VLAN (access o trunk) e PoE a tutte le porte selezionate. All'inizio della selezione l'anteprima viene fissata nella sessione, così le porte non ancora salvate mantengono il proprio identificativo; `PortLogic` ignora comunque porte inesistenti e non crea righe orfane. La logica è in `core.forms.PortLogic` e usa le entità esistenti `PortVlanMembership`, `PoeMapping` e `Vlan`. Le VLAN mancanti vengono create a livello di progetto; la subnet si ricava da `Subnet.vlanId`.
 
 La porta si apre con Torna all'oggetto, il titolo `SW-01 › P5` e lo stato del collegamento; ha tre schede:
 
@@ -71,3 +94,4 @@ Preset, pannello porte e modifiche multiple non cambiano database, formato `.ofa
 - [Grafica Compose](https://developer.android.com/develop/ui/compose/graphics/draw/overview)
 - [Dialoghi Compose](https://developer.android.com/develop/ui/compose/components/dialog)
 - [Accessibilità predefinita Compose](https://developer.android.com/develop/ui/compose/accessibility/api-defaults)
+- [Forme Material 3](https://m3.material.io/styles/shape)
