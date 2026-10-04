@@ -48,7 +48,7 @@ compose.desktop {
                 org.jetbrains.compose.desktop.application.dsl.TargetFormat.Exe
             )
             packageName = "OnlyFieldAssetManager"
-            packageVersion = "1.0.0"
+            packageVersion = "1.0.1"
             description = "OnlyFieldAssetManager Portable Windows Desktop App"
             copyright = "© 2026 OnlyField"
             vendor = "OnlyField"
