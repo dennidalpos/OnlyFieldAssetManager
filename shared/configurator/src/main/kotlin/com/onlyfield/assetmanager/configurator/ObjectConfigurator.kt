@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.configurator
 
+import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Alignment
@@ -117,7 +120,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         val apply = { stage(child.apply(preview, i18n)); nested = null }
         val valid = child.errors(preview, i18n).isEmpty()
         // The host's Save still saves the root object: say so, and keep both choices together.
-        Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = RoundedCornerShape(8.dp)) {
+        Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.medium) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(i18n.text("config.nestedBanner", childName, rootName.ifBlank { ObjectCatalog.displayName(draft.type, i18n) }), style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -329,7 +332,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         extras.forEach { field ->
             fun update(transform: (CustomExtraField) -> CustomExtraField) = change(draft.copy(extraFields = extras.map { if (it.id == field.id) transform(it) else it }))
             // One card per field so key, value and options read as one item.
-            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(8.dp)) {
+            Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium) {
                 Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Choice(i18n.text("config.field"), field.fieldKey, reusableExtras.map { it.fieldKey }) { v -> update { it.copy(fieldKey = v) } }
                     Choice(i18n.text("config.value"), field.fieldValue, reusableExtras.filter { it.fieldKey == field.fieldKey && it.fieldType == field.fieldType && it.classification == field.classification }.map { it.fieldValue }) { v -> update { it.copy(fieldValue = v) } }
@@ -486,7 +489,7 @@ private fun PortGroups(project: Project, draft: MapObjectDraft, i18n: Messages, 
         OutlinedButton(onClick = { editingGroup = if (editingGroup == n) null else n }, modifier = Modifier.fillMaxWidth()) {
             Text(summary, modifier = Modifier.weight(1f)); Text(if (editingGroup == n) "▴" else "▾")
         }
-        if (editingGroup == n) Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(8.dp)) { Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        if (editingGroup == n) Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium) { Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             ValueMenu(i18n.text("preset.param.kind"), kind, PortKind.entries, { it?.let { k -> i18n.text("port.kind.${k.name}") } ?: g.connector.orEmpty() }) { k ->
                 if (k != null) {
                     val retyped = PortGroups.retype(g, k)
@@ -547,7 +550,7 @@ private fun BulkPortBar(project: Project, cells: List<PortCell>, selected: Set<S
     var poe by remember { mutableStateOf<PoeStandard?>(PoeStandard.IEEE_802_3AT) }
     val untaggedVlan = untagged.trim().toIntOrNull()?.takeIf { it in 1..4094 }
     val taggedVlans = tagged.split(',', ' ', ';').mapNotNull { it.trim().toIntOrNull() }.filter { it in 1..4094 }
-    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(8.dp)) {
+    Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(i18n.plural("port.selected", selected.size), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -605,7 +608,7 @@ private fun PortConfiguration(project: Project, ref: ProjectIndex.PortRef, rootI
     val port = ref.port
     var tab by remember(port.id) { mutableStateOf(PortTab.LINK) }
     Text("${ref.device.technicalName} › ${port.name}", style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
-    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = RoundedCornerShape(50)) {
+    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
         Text(i18n.text("config.${graph.state(port.id).name.lowercase()}"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.pc.LocalMessages
 

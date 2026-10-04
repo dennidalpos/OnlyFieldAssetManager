@@ -1,10 +1,13 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.onlyfield.assetmanager.configurator.ProjectDestination
+import com.onlyfield.assetmanager.configurator.theme.OnlyFieldTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -21,33 +24,10 @@ import com.onlyfield.assetmanager.pc.ui.components.ConfirmHost
 import com.onlyfield.assetmanager.pc.ui.components.EmptyState
 import com.onlyfield.assetmanager.pc.ui.dialogs.ProjectDialogs
 
-private val LightColors = lightColorScheme(
-    primary = Color(0xFF1565C0),
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFD6E3FF),
-    onPrimaryContainer = Color(0xFF001B3E),
-    secondary = Color(0xFF545F71),
-    secondaryContainer = Color(0xFFD8E3F8),
-    tertiary = Color(0xFF00696E),
-    tertiaryContainer = Color(0xFFB4ECEF),
-    error = Color(0xFFBA1A1A),
-    errorContainer = Color(0xFFFFDAD6),
-    background = Color(0xFFF8F9FC),
-    surface = Color(0xFFF8F9FC),
-)
-
-private val DarkColors = darkColorScheme(
-    primary = Color(0xFFA9C7FF),
-    onPrimary = Color(0xFF003063),
-    primaryContainer = Color(0xFF00468C),
-    onPrimaryContainer = Color(0xFFD6E3FF),
-    tertiary = Color(0xFF80D4D9),
-)
-
 @Composable
 fun DesktopApp(state: DesktopAppState) {
     CompositionLocalProvider(LocalMessages provides state.i18n) {
-    MaterialTheme(colorScheme = if (state.darkTheme) DarkColors else LightColors) {
+    OnlyFieldTheme(state.darkTheme) {
         com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {

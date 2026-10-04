@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.pc.ui.dialogs
 
+import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.pc.LocalMessages
 

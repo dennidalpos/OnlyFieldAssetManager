@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.border
@@ -69,7 +71,7 @@ fun RackSection(
                     val used = RackLayout.usedUnits(rack, index.devices)
                     Card(
                         modifier = Modifier.fillMaxWidth()
-                            .border(if (isSelected) 2.dp else 0.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, RoundedCornerShape(12.dp))
+                            .border(if (isSelected) 2.dp else 0.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, MaterialTheme.shapes.medium)
                             .clickable { if (selectedRackId != rack.id) changeDetail { selectedRackId = rack.id } },
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow

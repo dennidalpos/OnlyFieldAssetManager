@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.configurator.map
 
+import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -37,7 +40,7 @@ fun MapDetailPane(project: Project, scene: MapScene, selection: MapSelection?, i
                   hierarchy: HierarchyIndex = remember(project) { HierarchyIndex(project) }) {
     val index = remember(project) { ProjectIndex(project) }
     var assigning by remember(scene.container) { mutableStateOf(false) }
-    Surface(modifier.testTag("map-detail"), tonalElevation = 2.dp, shape = RoundedCornerShape(12.dp)) {
+    Surface(modifier.testTag("map-detail"), tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (selection) {
                 is MapSelection.Node -> scene.node(selection.ref)?.let { node ->
@@ -231,7 +234,7 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
     SectionTitle(i18n.text("map.cablesTitle"), link.cableIds.size)
     link.cableIds.mapNotNull { id -> project.cables.find { it.id == id } }.forEach { cable ->
         val selected = cable.id == cableId
-        Surface(color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(8.dp),
+        Surface(color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium,
             modifier = Modifier.fillMaxWidth().semantics { this.selected = selected }
                 .clickable(role = Role.Button) { onSelect(MapSelection.Link(link.cableIds, cable.id)) }) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {

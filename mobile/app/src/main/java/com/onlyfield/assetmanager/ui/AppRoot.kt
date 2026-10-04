@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui
 
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.ui.LocalMessages
 
@@ -19,7 +20,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.ui.components.ConfirmHost
 import com.onlyfield.assetmanager.ui.screens.*
-import com.onlyfield.assetmanager.ui.theme.OnlyFieldTheme
+import com.onlyfield.assetmanager.configurator.theme.OnlyFieldTheme
+import androidx.compose.foundation.isSystemInDarkTheme
 
 /** Root of the UI: routes the current [Screen], shows snackbars and the import flow. */
 @Composable
@@ -45,7 +47,7 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
 
     BackHandler { if (!vm.back()) onExit() }
 
-    OnlyFieldTheme {
+    OnlyFieldTheme(isSystemInDarkTheme()) {
         ConfirmHost {
             Surface {
                 val screen = vm.currentScreen

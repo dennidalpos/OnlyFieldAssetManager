@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.horizontalScroll

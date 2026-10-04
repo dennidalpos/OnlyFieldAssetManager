@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import android.Manifest

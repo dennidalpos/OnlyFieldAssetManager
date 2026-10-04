@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.pc.LocalMessages
 
