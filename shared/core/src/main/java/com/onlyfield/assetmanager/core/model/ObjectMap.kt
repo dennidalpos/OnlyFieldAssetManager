@@ -30,8 +30,15 @@ data class CableRoute(
     val id: String = UUID.randomUUID().toString(),
     val cableId: String,
     val areaId: String,
-    val points: List<MapPoint> = listOf(MapPoint(.2f, .5f), MapPoint(.5f, .5f), MapPoint(.8f, .5f)),
-)
+    val points: List<MapPoint> = listOf(MapPoint(.4f, .5f), MapPoint(.6f, .5f)),
+) {
+    /** Routes saved before 2026-10 used a shared centre bend; treat it as "no bend". */
+    val bends: List<MapPoint> get() = if (points == LEGACY_DEFAULT) emptyList() else points.drop(1).dropLast(1)
+
+    companion object {
+        val LEGACY_DEFAULT = listOf(MapPoint(.2f, .5f), MapPoint(.5f, .5f), MapPoint(.8f, .5f))
+    }
+}
 
 object ObjectCatalog {
     private fun device(id: String, name: String, category: DeviceCategory = DeviceCategory.CUSTOM) = ObjectType(id, name, category)
@@ -48,7 +55,11 @@ object ObjectCatalog {
         device("power-supply", "Alimentatore", DeviceCategory.UPS_PDU),
         ObjectType("rack", "Rack", kind = ObjectKind.RACK),
         device("patch-panel", "Patch panel", DeviceCategory.PATCH_PANEL), device("outlet", "Presa dati"),
-        device("shelf", "Mensola", DeviceCategory.SHELF), device("blank-panel", "Pannello cieco", DeviceCategory.BLANK_PANEL),
+        device("blank-panel", "Pannello cieco", DeviceCategory.BLANK_PANEL),
+        // Built-in containers: their children open as a nested map.
+        ObjectType("shelf", "Mensola", DeviceCategory.SHELF, canContainObjects = true),
+        ObjectType("cabinet", "Armadio", DeviceCategory.SHELF, canContainObjects = true),
+        ObjectType("enclosure", "Cassetta", DeviceCategory.SHELF, canContainObjects = true),
         ObjectType("copper-cable", "Cavo rame", kind = ObjectKind.CABLE),
         ObjectType("fiber-cable", "Cavo fibra", kind = ObjectKind.CABLE, cableMedium = CableMedium.FIBER_OVERALL),
         ObjectType("coax-cable", "Cavo coassiale", kind = ObjectKind.CABLE, cableMedium = CableMedium.OTHER),
@@ -81,6 +92,8 @@ object ObjectCatalog {
             "patch-panel" -> i18n.text("text.e97fc26f3676")
             "outlet" -> i18n.text("text.4803b51f3912")
             "shelf" -> i18n.text("text.ae286ff299bb")
+            "cabinet" -> i18n.text("type.cabinet")
+            "enclosure" -> i18n.text("type.enclosure")
             "blank-panel" -> i18n.text("text.3f0dca5e90e5")
             "copper-cable" -> i18n.text("text.b688578fe650")
             "fiber-cable" -> i18n.text("text.e6858e841f57")
@@ -93,9 +106,7 @@ object ObjectCatalog {
     fun type(project: Project, id: String?) = types(project).find { it.id == id }
 }
 
-data class MapNode(val type: PlacementTargetType, val id: String, val name: String, val point: MapPoint, val symbol: String)
-
-data class MapConnection(val cableIds: List<String>, val route: CableRoute, val internalAt: ObjectRef? = null)
+data class MapNode(val type: PlacementTargetType, val id: String, val name: String, val point: MapPoint)
 
 /** Coordinates are relative to the fitted page, before viewport zoom and pan. */
 data class MapViewport(val width: Float, val height: Float, val contentWidth: Float, val contentHeight: Float, val zoom: Float = 1f, val panX: Float = 0f, val panY: Float = 0f) {
@@ -120,38 +131,17 @@ object ObjectMap {
         }
         return "${cable.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${label(true, i18n = i18n)} → ${label(false, i18n = i18n)}"
     }
-    fun connections(project: Project, areaId: String): List<MapConnection> {
-        fun ref(cable: Cable, first: Boolean) = endpoint(project, cable, first)?.let {
-            ObjectHierarchy.root(project, ObjectRef(PlacementTargetType.DEVICE, it.id))
-        }
-        val routes = routes(project, areaId)
-        val groups = routes.groupBy { route ->
-            val cable = project.cables.first { it.id == route.cableId }
-            val a = ref(cable, true)
-            val b = ref(cable, false)
-            if (a == null || b == null) "unknown:${cable.id}" else listOf("${a.type}:${a.id}", "${b.type}:${b.id}").sorted().joinToString("|")
-        }
-        return groups.values.map { group ->
-            val ordered = group.sortedBy { it.cableId }
-            val cable = project.cables.first { it.id == ordered.first().cableId }
-            val a = ref(cable, true)
-            val b = ref(cable, false)
-            MapConnection(ordered.map { it.cableId }, ordered.first(), a?.takeIf { it == b && ObjectHierarchy.areaId(project, it) == areaId })
-        }
-    }
-
     fun areas(bu: BusinessUnit) = bu.areas + bu.sites.flatMap { it.areas }
     fun areaLabel(bu: BusinessUnit, area: Area): String = bu.sites.find { s -> s.areas.any { it.id == area.id } }?.let { "${it.name} / ${area.name}" } ?: area.name
 
-    fun nodes(project: Project, areaId: String): List<MapNode> {
-        val devices = project.businessUnits.flatMap { it.devices }.filter { d -> ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, d.id)) == null && d.areaId == areaId }
-        val racks = project.racks.filter { it.areaId == areaId && ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.RACK, it.id)) == null }
+    fun nodes(project: Project, areaId: String, hierarchy: HierarchyIndex = HierarchyIndex(project)): List<MapNode> {
+        val devices = project.businessUnits.flatMap { it.devices }.filter { d -> d.areaId == areaId && ObjectRef(PlacementTargetType.DEVICE, d.id) !in hierarchy.parents }
+        val racks = project.racks.filter { it.areaId == areaId && ObjectRef(PlacementTargetType.RACK, it.id) !in hierarchy.parents }
         val items = racks.map { Triple(PlacementTargetType.RACK, it.id, it.name) } + devices.map { Triple(PlacementTargetType.DEVICE, it.id, it.technicalName) }
+        val placements = project.floorplanPlacements.filter { it.areaId == areaId }.associateBy { it.targetType to it.targetId }
         return items.mapIndexed { i, (type, id, name) ->
-            val stored = project.floorplanPlacements.find { it.areaId == areaId && it.targetType == type && it.targetId == id }
-            val device = devices.find { it.id == id }
-            MapNode(type, id, name, stored?.let { MapPoint(it.xRatio, it.yRatio) } ?: freePoint(i, items.size.coerceAtLeast(36)),
-                if (type == PlacementTargetType.RACK) "R" else ObjectCatalog.type(project, device?.objectTypeId)?.name?.take(2)?.uppercase() ?: "D")
+            val stored = placements[type to id]
+            MapNode(type, id, name, stored?.let { MapPoint(it.xRatio, it.yRatio) } ?: freePoint(i, items.size.coerceAtLeast(36)))
         }
     }
 
@@ -186,15 +176,20 @@ object ObjectMap {
 
     fun areaId(project: Project, device: Device?): String? = device?.let { ObjectHierarchy.areaId(project, ObjectRef(PlacementTargetType.DEVICE, it.id)) }
 
-    fun routes(project: Project, areaId: String): List<CableRoute> = project.cables.mapNotNull { cable ->
-        project.cableRoutes.find { it.cableId == cable.id && it.areaId == areaId }
-            ?: if (areaId(project, endpoint(project, cable, true)) == areaId || areaId(project, endpoint(project, cable, false)) == areaId) CableRoute(id = UUID.nameUUIDFromBytes("${cable.id}:$areaId".toByteArray(Charsets.UTF_8)).toString(), cableId = cable.id, areaId = areaId) else null
+    fun routes(project: Project, areaId: String, hierarchy: HierarchyIndex = HierarchyIndex(project)): List<CableRoute> {
+        val stored = project.cableRoutes.filter { it.areaId == areaId }.associateBy { it.cableId }
+        val ends = CableEnds(project)
+        return project.cables.mapNotNull { cable ->
+            stored[cable.id] ?: if (listOf(true, false).any { first -> ends.device(cable, first)?.let { hierarchy.areaId(ObjectRef(PlacementTargetType.DEVICE, it.id)) } == areaId })
+                CableRoute(id = UUID.nameUUIDFromBytes("${cable.id}:$areaId".toByteArray(Charsets.UTF_8)).toString(), cableId = cable.id, areaId = areaId) else null
+        }
     }
 
     fun routePoints(project: Project, route: CableRoute, nodes: List<MapNode>): List<MapPoint> {
         val cable = project.cables.find { it.id == route.cableId } ?: return route.points
-        return route.points.mapIndexed { i, point ->
-            val endpoint = when (i) { 0 -> endpoint(project, cable, true); route.points.lastIndex -> endpoint(project, cable, false); else -> null }
+        val points = listOf(route.points.first()) + route.bends + route.points.last()
+        return points.mapIndexed { i, point ->
+            val endpoint = when (i) { 0 -> endpoint(project, cable, true); points.lastIndex -> endpoint(project, cable, false); else -> null }
             endpoint?.let { ObjectHierarchy.root(project, ObjectRef(PlacementTargetType.DEVICE, it.id)) }?.let { ref -> nodes.find { it.id == ref.id && it.type == ref.type }?.point } ?: point
         }
     }

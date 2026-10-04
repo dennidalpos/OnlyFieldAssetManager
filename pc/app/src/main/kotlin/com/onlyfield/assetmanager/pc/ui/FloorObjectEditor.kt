@@ -15,11 +15,11 @@ import com.onlyfield.assetmanager.pc.ui.components.*
 import java.io.File
 
 @Composable
-internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial: MapObjectDraft, close: () -> Unit) {
+internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial: MapObjectDraft, initialSection: ConfiguratorPage = ConfiguratorPage.ESSENTIALS, close: () -> Unit) {
     val i18n = LocalMessages.current
 
     if (!LocalHasMasterDetail.current) {
-        MasterDetailHost(Modifier.fillMaxSize()) { FloorObjectEditor(state, project, initial, close) }
+        MasterDetailHost(Modifier.fillMaxSize()) { FloorObjectEditor(state, project, initial, initialSection, close) }
         return
     }
     var draft by remember { mutableStateOf(initial) }
@@ -43,7 +43,7 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
     EditPanel(configuratorTitle(project, initial, i18n), { slot.requestChange {} }, {
         if (state.saveMapObject(draft, photos.toList(), removed)) close()
     }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, initial, i18n), width = 640.dp) {
-        ObjectFields(project, draft) { draft = it }
+        ObjectFields(project, draft, initialSection) { draft = it }
         ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n) {
             project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
                 Text(a.name); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)

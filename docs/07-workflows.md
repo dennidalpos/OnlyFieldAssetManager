@@ -10,7 +10,7 @@ Android usa editor a pagina intera; Desktop usa elenco e pannello laterale con `
 
 Inventario, rack, cablaggio, rete, alimentazione, media e documenti sono strumenti del progetto. Scanner e lettore USB aprono il codice trovato; un codice sconosciuto non modifica dati. Eliminazione e cambio di elemento richiedono conferma.
 
-Gli stessi flussi condividono form e regole. Dettagli della mappa sono in [08-floor-map.md](08-floor-map.md); configurazione tecnica in [10-object-configurator.md](10-object-configurator.md).
+Gli stessi flussi condividono form e regole. La mappa è un unico componente condiviso: il tocco su un contenitore lo apre, il tocco su un oggetto o un collegamento mostra i dettagli in un pannello non modale, e l'inserimento procede per tipologia, preset e dati essenziali. Dettagli in [08-floor-map.md](08-floor-map.md); configurazione tecnica e preset in [10-object-configurator.md](10-object-configurator.md).
 
 ## Navigazione e azioni
 

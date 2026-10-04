@@ -10,7 +10,9 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.onlyfield.assetmanager.core.model.*
-import com.onlyfield.assetmanager.ui.screens.FloorCanvas
+import com.onlyfield.assetmanager.configurator.map.MapActions
+import com.onlyfield.assetmanager.configurator.map.MapWorkspace
+import com.onlyfield.assetmanager.core.i18n.Messages
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -26,18 +28,17 @@ class FloorGestureNativeTest {
         var project by mutableStateOf(Project(name = "Native map", createdEpochMs = 1, updatedEpochMs = 1,
             businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))),
             floorplanPlacements = listOf(FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = device.id, xRatio = .3f, yRatio = .4f))))
-        var opened: String? = null
         var saves = 0
         rule.setContent { MaterialTheme { Box(Modifier.fillMaxSize()) {
-            FloorCanvas(project, area.id, null, { updated, _ -> project = updated; saves++ }, { opened = it.id }, {})
+            MapWorkspace(project, area.id, null, Messages(), MapActions({ updated, _ -> project = updated; saves++ }, { _, _ -> }, { _, _ -> }))
         } } }
         val map = rule.onNodeWithTag("floor-map")
-        val size = map.fetchSemanticsNode().size
-        val viewport = MapViewport(size.width.toFloat(), size.height.toFloat(), 1200f, 900f)
-        val position = viewport.screen(MapPoint(.3f, .4f))
-        val start = Offset(position.x, position.y)
-        map.performTouchInput { click(start) }
-        rule.runOnIdle { assertEquals(device.id, opened); assertEquals(0, saves) }
+        fun nodePosition() = map.fetchSemanticsNode().size.let { MapViewport(it.width.toFloat(), it.height.toFloat(), 1200f, 900f) }
+            .screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
+        map.performTouchInput { click(nodePosition()) }
+        rule.onNode(hasTestTag("map-detail") and hasAnyDescendant(hasText("SW"))).assertExists()
+        rule.runOnIdle { assertEquals(0, saves) }
+        val start = nodePosition()
         map.performTouchInput { down(start); moveBy(Offset(10f, 2f)); moveBy(Offset(70f, 35f)); up() }
         rule.runOnIdle {
             assertEquals(1, saves)

@@ -17,6 +17,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.configurator.ConfiguratorPage
+import com.onlyfield.assetmanager.configurator.map.*
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.ui.*
 import com.onlyfield.assetmanager.ui.components.*
@@ -31,9 +33,9 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val bu = project.businessUnits.find { it.id == vm.selectedBuId }
     val area = bu?.let { ObjectMap.areas(it).find { it.id == vm.selectedAreaId } }
     var addingStructure by remember { mutableStateOf(false) }
-    var catalog by remember { mutableStateOf(false) }
+    var adding by remember { mutableStateOf<Pair<ObjectRef?, MapPoint?>?>(null) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
-    var container by remember { mutableStateOf<ObjectRef?>(null) }
+    var editorPage by remember { mutableStateOf(ConfiguratorPage.ESSENTIALS) }
     var selectingPlan by remember { mutableStateOf(false) }
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
@@ -71,17 +73,20 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     }
                 }
             } else {
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(enabled = vm.busy == null, onClick = { catalog = true }) { Text(i18n.text("text.84cbef7b19b8")) }
-                    OutlinedButton(onClick = { scanning = true }) { Text("QR") }
-                    OutlinedButton(enabled = vm.busy == null, onClick = { selectingPlan = true }) { Text(i18n.text("text.68f86d09412c")) }
-                }
                 imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                FloorCanvas(project, area.id, image, vm::editMap, { n ->
-                    val ref = ObjectRef(n.type, n.id)
-                if (ObjectHierarchy.canContain(project, ref)) container = ref
-                else editor = MapObjectDraft.device(project, project.businessUnits.find { b -> b.devices.any { it.id == n.id } }?.id ?: bu.id, area.id, n.id, i18n = i18n)
-                }, { editor = MapObjectDraft.cable(project, bu.id, area.id, it, i18n = i18n) }, Modifier.weight(1f))
+                MapWorkspace(project, area.id, image, i18n, MapActions(
+                    update = vm::editMap,
+                    edit = { draft, page -> editorPage = page; editor = draft },
+                    add = { parent, point -> if (vm.busy == null) adding = parent to point },
+                ), Modifier.weight(1f), toolbar = {
+                    OutlinedButton(onClick = { scanning = true }) { Text(i18n.text("map.scan")) }
+                    OutlinedButton(enabled = vm.busy == null, onClick = { selectingPlan = true }) { Text(i18n.text("text.68f86d09412c")) }
+                }, media = { ref ->
+                    val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
+                    project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
+                        Text(a.name, style = MaterialTheme.typography.bodySmall); MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                    }
+                })
             }
         }
     }
@@ -92,14 +97,13 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             addingStructure = false
         }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
     }
-    if (catalog && area != null) ObjectCatalogDialog(project, { catalog = false }, { type ->
-        editor = MapObjectDraft(type = type, buId = bu.id, areaId = area.id); catalog = false
-    }, { type ->
+    adding?.let { (parent, point) -> if (area != null) ObjectPickerDialog(project, i18n, allowCables = parent == null, onClose = { adding = null }, onPick = { type, preset ->
+        editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(project, type, preset, area.id, parent, point); adding = null
+    }, onCustom = { type ->
         vm.edit(i18n.text("text.a4d3de9d1b61")) { it.copy(objectTypes = it.objectTypes + type) }
-        editor = MapObjectDraft(type = type, buId = bu.id, areaId = area.id); catalog = false
-    })
-    editor?.let { draft -> key(draft.id) { FloorObjectEditor(vm, project, draft) { editor = null } } }
-    container?.let { ref -> ContainerBrowser(vm, project, ref, bu!!.id, area!!.id) { container = null } }
+        editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(project.copy(objectTypes = project.objectTypes + type), type, null, area.id, parent, point); adding = null
+    }) }
+    editor?.let { draft -> key(draft.id) { FloorObjectEditor(vm, project, draft, editorPage) { editor = null } } }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, vm::attachmentFile, { picker.launch(arrayOf("image/*", "application/pdf")) }, { id, page, pages ->
         vm.edit(i18n.text("text.fcd1cc58f46b")) { ProjectEdits.setAreaFloorplan(it, area.id, id, page, pages) }; selectingPlan = false; newPlanId = null
     }, { selectingPlan = false; newPlanId = null })

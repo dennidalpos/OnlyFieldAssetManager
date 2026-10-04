@@ -26,7 +26,7 @@ import java.util.UUID
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: MapObjectDraft, close: () -> Unit) {
+internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: MapObjectDraft, initialSection: ConfiguratorPage = ConfiguratorPage.ESSENTIALS, close: () -> Unit) {
     val i18n = LocalMessages.current
 
     val context = LocalContext.current
@@ -52,7 +52,7 @@ internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: 
     EditScreen(configuratorTitle(project, initial, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty() && vm.busy == null, confirmLabel = configuratorAction(project, initial, i18n)) {
         val dirty = LocalMarkDirty.current
         SideEffect { markDirty = dirty }
-        ObjectFields(project, draft) { draft = it }
+        ObjectFields(project, draft, initialSection) { draft = it }
         ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n) {
             project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
                 Text(a.name)

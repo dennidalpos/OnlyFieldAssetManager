@@ -18,6 +18,8 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 - Configuratori: dati essenziali prima, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la business unit richiede una scelta esplicita.
 - Navigazione condivisa per gruppi Lavoro, Dati tecnici, Supporto e Progetto. Gli elenchi nominali sono ordinati solo nella presentazione; porte, VLAN e unità rack mantengono il loro ordine tecnico.
 - Titolo operativo, corpo scorrevole e azioni persistenti distinguono gli editor. L'espansione delle sezioni non modifica i dati né il contratto di scambio.
+- Mappa: `MapScene` unica per piano e contenitori; ogni contenitore è un solo oggetto, navigabile fino all'ultimo livello. Una linea per coppia di oggetti, con elenco completo dei cavi al tocco. Pannello dettagli non modale, in basso o laterale da 840 dp. Rack, mensola, armadio e cassetta sono contenitori predefiniti; i tipi predefiniti non vengono più duplicati.
+- Preset hardware e logica delle porte solo nel codice (`DevicePresets`, `PortLogic`): nessun cambio a contratto o Room. Porte in tre passi (tipologia → quantità → etichetta); VLAN e PoE multipli sulle entità esistenti.
 
 ## Stato
 

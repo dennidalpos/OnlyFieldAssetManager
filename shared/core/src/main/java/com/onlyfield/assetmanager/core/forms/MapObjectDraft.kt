@@ -21,6 +21,8 @@ data class MapObjectDraft(
     val session: ConfigurationSession? = null,
     val allowConnectedRemoval: Boolean = false,
     val portsConfigured: Boolean = false,
+    /** Where a new object was requested on the floor; null places it in the first free slot. */
+    val mapPoint: MapPoint? = null,
 ) {
     val targetType get() = when (type.kind) { ObjectKind.DEVICE -> AttachmentTargetType.DEVICE; ObjectKind.RACK -> AttachmentTargetType.RACK; ObjectKind.CABLE -> AttachmentTargetType.CABLE }
     fun errors(project: Project, i18n: Messages = Messages()): Map<String, String> {
@@ -51,6 +53,31 @@ data class MapObjectDraft(
             }
         }
     }
+    /** Unvalidated project as it would look with this draft; used for live previews. */
+    fun preview(project: Project): Project {
+        val configured = session?.apply(project) ?: project
+        val p = if (type.id != "legacy" && ObjectCatalog.builtins.none { it.id == type.id })
+            configured.copy(objectTypes = configured.objectTypes.filterNot { it.id == type.id } + type) else configured
+        return when (type.kind) {
+            ObjectKind.DEVICE -> {
+                val existing = p.businessUnits.flatMap { it.devices }.find { it.id == id }
+                val saved = device.toDevice(existing, "Configurator").copy(id = id)
+                val added = if (existing == null) ProjectEdits.addDevice(p, device.businessUnitId ?: buId, saved) else ProjectEdits.updateDevice(p, saved)
+                val ports = portsConfigured || saved.hardware.portGroups.isNotEmpty()
+                if (ports && HardwareConfigurator.validGroups(saved.hardware.portGroups) && (allowConnectedRemoval || HardwareConfigurator.preview(p, saved, saved.hardware.portGroups).connectedRemoved.isEmpty()))
+                    HardwareConfigurator.configure(added, saved, allowConnectedRemoval, true) else added
+            }
+            ObjectKind.RACK -> {
+                val saved = rack.toRack(p.racks.find { it.id == id }).copy(id = id)
+                if (p.racks.any { it.id == id }) ProjectEdits.updateRack(p, saved) else ProjectEdits.addRack(p, saved)
+            }
+            ObjectKind.CABLE -> {
+                val saved = cable.toCable(p.cables.find { it.id == id }).copy(id = id, deviceAId = deviceAId, deviceBId = deviceBId)
+                if (p.cables.any { it.id == id }) ProjectEdits.updateCable(p, saved) else ProjectEdits.addCable(p, saved)
+            }
+        }
+    }
+
     fun apply(project: Project, i18n: Messages = Messages()): Project {
         require(errors(project, i18n = i18n).isEmpty())
         val configured = session?.apply(project) ?: project
@@ -63,13 +90,13 @@ data class MapObjectDraft(
                 val saved = device.toDevice(existing, i18n.text("text.2b71c6a11df1")).copy(id = id, objectTypeId = if (type.id == "legacy") existing?.objectTypeId else type.id)
                 val added = if (existing == null) ProjectEdits.addDevice(source, device.businessUnitId ?: buId, saved) else ProjectEdits.updateDevice(source, saved, i18n = i18n)
                 val p = HardwareConfigurator.configure(added, saved, allowConnectedRemoval, portsConfigured || saved.hardware.portGroups.isNotEmpty())
-                if (existing == null && areaId.isNotBlank()) ObjectMap.placeNew(p, areaId, PlacementTargetType.DEVICE, id) else p
+                if (existing == null && areaId.isNotBlank()) place(p, PlacementTargetType.DEVICE) else p
             }
             ObjectKind.RACK -> {
                 val existing = source.racks.find { it.id == id }
                 val saved = rack.toRack(existing).copy(id = id)
                 val p = if (existing == null) ProjectEdits.addRack(source, saved) else ProjectEdits.updateRack(source, saved)
-                if (existing == null && areaId.isNotBlank()) ObjectMap.placeNew(p, areaId, PlacementTargetType.RACK, id) else p
+                if (existing == null && areaId.isNotBlank()) place(p, PlacementTargetType.RACK) else p
             }
             ObjectKind.CABLE -> {
                 val existing = source.cables.find { it.id == id }
@@ -81,6 +108,9 @@ data class MapObjectDraft(
         val contained = if (type.kind == ObjectKind.CABLE) updated else ObjectHierarchy.assign(updated, ObjectRef(if (type.kind == ObjectKind.RACK) PlacementTargetType.RACK else PlacementTargetType.DEVICE, id), parentRef, i18n = i18n)
         return contained.copy(customExtraFields = extraFields?.let { fields -> updated.customExtraFields.filterNot { it.targetId == id } + fields } ?: updated.customExtraFields, updatedEpochMs = System.currentTimeMillis())
     }
+    private fun place(p: Project, target: PlacementTargetType) =
+        mapPoint?.let { ObjectMap.place(p, areaId, target, id, it) } ?: ObjectMap.placeNew(p, areaId, target, id)
+
     companion object {
         fun forDevice(project: Project, device: Device?): MapObjectDraft {
             val bu = device?.let { d -> project.businessUnits.find { b -> b.devices.any { it.id == d.id } } } ?: project.businessUnits.firstOrNull()

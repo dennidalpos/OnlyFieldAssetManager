@@ -14,6 +14,33 @@ data class ObjectContainment(val child: ObjectRef, val parent: ObjectRef, val id
 @Serializable
 data class MountSnapshot(val deviceId: String, val rackId: String?, val positionU: Int?, val side: RackSide, val mounting: MountingType)
 
+/** Precomputed hierarchy lookups for views that resolve many refs at once. */
+class HierarchyIndex(project: Project) {
+    private val devices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+    private val racks = project.racks.associateBy { it.id }
+    val parents: Map<ObjectRef, ObjectRef> = ObjectHierarchy.relations(project).associate { it.child to it.parent }
+    val children: Map<ObjectRef, List<ObjectRef>> = parents.entries.groupBy({ it.value }, { it.key })
+
+    fun ancestors(ref: ObjectRef): List<ObjectRef> {
+        val seen = mutableSetOf(ref)
+        return generateSequence(parents[ref]) { parents[it] }.takeWhile { seen.add(it) }.toList()
+    }
+    fun root(ref: ObjectRef): ObjectRef = ancestors(ref).lastOrNull() ?: ref
+    fun areaId(ref: ObjectRef): String? = root(ref).let { r ->
+        if (r.type == PlacementTargetType.RACK) racks[r.id]?.areaId else devices[r.id]?.areaId
+    }
+    fun descendants(ref: ObjectRef): List<ObjectRef> {
+        val seen = mutableSetOf(ref)
+        val result = mutableListOf<ObjectRef>()
+        val queue = ArrayDeque(children[ref].orEmpty())
+        while (queue.isNotEmpty()) {
+            val next = queue.removeFirst()
+            if (seen.add(next)) { result += next; queue += children[next].orEmpty() }
+        }
+        return result
+    }
+}
+
 object ObjectHierarchy {
     fun refs(project: Project): List<ObjectRef> = project.racks.map { ObjectRef(PlacementTargetType.RACK, it.id) } +
         project.businessUnits.flatMap { it.devices }.map { ObjectRef(PlacementTargetType.DEVICE, it.id) }

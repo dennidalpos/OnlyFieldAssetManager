@@ -9,7 +9,11 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.model.*
-import com.onlyfield.assetmanager.pc.ui.FloorCanvas
+import com.onlyfield.assetmanager.configurator.map.MapActions
+import com.onlyfield.assetmanager.configurator.map.MapWorkspace
+import com.onlyfield.assetmanager.configurator.map.arc
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.pc.ui.FloorHomeSection
 import com.onlyfield.assetmanager.pc.ui.CredentialsSection
 import com.onlyfield.assetmanager.core.onboarding.*
@@ -24,20 +28,23 @@ class FloorMapUiTest {
     private val device = Device(technicalName = "SW-01", areaId = area.id)
     private val initial = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))), floorplanPlacements = listOf(FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = device.id, xRatio = .3f, yRatio = .4f)))
 
+    private fun viewport(node: SemanticsNodeInteraction) = node.fetchSemanticsNode().size.let { MapViewport(it.width.toFloat(), it.height.toFloat(), 1200f, 900f) }
+    private fun SemanticsNodeInteraction.clickAt(viewport: MapViewport, point: MapPoint) = viewport.screen(point).let { p -> performTouchInput { click(Offset(p.x, p.y)) } }
+
     @Test fun clickOpensObjectAndDragSavesOnlyOnRelease() {
         var p by mutableStateOf(initial)
-        var clicked: String? = null
         var saves = 0
         rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
-            FloorCanvas(p, area.id, null, { updated, _ -> p = updated; saves++ }, { clicked = it.id }, {})
+            MapWorkspace(p, area.id, null, Messages(), MapActions({ updated, _ -> p = updated; saves++ }, { _, _ -> }, { _, _ -> }))
         } } }
         val node = rule.onNodeWithTag("floor-map")
-        val size = node.fetchSemanticsNode().size
-        val viewport = MapViewport(size.width.toFloat(), size.height.toFloat(), 1200f, 900f)
-        val start = viewport.screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
+        val start = viewport(node).screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
         node.performTouchInput { click(start) }
-        rule.runOnIdle { assertEquals(device.id, clicked); assertEquals(0, saves) }
-        node.performTouchInput { down(start); moveBy(Offset(10f, 2f)); moveBy(Offset(60f, 30f)); up() }
+        rule.onNode(hasTestTag("map-detail") and hasAnyDescendant(hasText("SW-01"))).assertIsDisplayed()
+        rule.runOnIdle { assertEquals(0, saves) }
+        // The bottom pane shrinks the map on narrow windows: recompute the node position.
+        val moved = viewport(node).screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
+        node.performTouchInput { down(moved); moveBy(Offset(10f, 2f)); moveBy(Offset(60f, 30f)); up() }
         rule.runOnIdle {
             assertEquals(1, saves)
             assertTrue(p.floorplanPlacements.single().xRatio > .3f)
@@ -55,7 +62,7 @@ class FloorMapUiTest {
             rule.setContent { MaterialTheme { Box(Modifier.size(900.dp, 700.dp)) { FloorHomeSection(state) } } }
             rule.onNodeWithText("BU-A · 2 piani / zone").performClick()
             rule.onNodeWithText("Terra · 1 oggetti").performClick()
-            rule.onNodeWithText("1 oggetti").assertIsDisplayed()
+            rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.onNodeWithText("Aggiungi").performClick()
             rule.onNodeWithText("Cerca tipologia…").performTextInput("modem")
             rule.onNodeWithText("Modem").assertIsDisplayed()
@@ -63,7 +70,7 @@ class FloorMapUiTest {
             rule.runOnIdle { assertEquals(1, state.project!!.businessUnits.first().devices.size) }
             rule.onNodeWithText("› BU-A").performClick()
             rule.onNodeWithText("Primo · 0 oggetti").performClick()
-            rule.onNodeWithText("0 oggetti").assertIsDisplayed()
+            rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.onNodeWithText("Sito").performClick()
             rule.onNodeWithText("Aggiungi BU").performClick()
             rule.onNodeWithText("Nome *").performTextInput("BU-C")
@@ -73,7 +80,7 @@ class FloorMapUiTest {
             rule.onNodeWithText("Nome *").performTextInput("Zona nuova")
             rule.onNodeWithText("Salva").performClick()
             rule.onNodeWithText("Zona nuova · 0 oggetti").performClick()
-            rule.onNodeWithText("0 oggetti").assertIsDisplayed()
+            rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.runOnIdle { assertEquals(3, state.project!!.businessUnits.size); assertEquals(empty, state.project!!.businessUnits[1]) }
         } finally { state.shutdown(); dir.deleteRecursively() }
     }
@@ -102,19 +109,26 @@ class FloorMapUiTest {
             cables = listOf(c1, c2, internal), floorplanPlacements = listOf(
                 FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.RACK, targetId = rack.id, xRatio = .2f, yRatio = .5f),
                 FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = peer.id, xRatio = .8f, yRatio = .5f)))
+        var p2 by mutableStateOf(p)
         var opened: String? = null
-        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) { FloorCanvas(p, area.id, null, { _, _ -> }, {}, { opened = it }) } } }
+        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
+            MapWorkspace(p2, area.id, null, Messages(), MapActions({ updated, _ -> p2 = updated }, { draft, _ -> opened = draft.id }, { _, _ -> }))
+        } } }
         val canvas = rule.onNodeWithTag("floor-map")
-        val size = canvas.fetchSemanticsNode().size
-        val point = MapViewport(size.width.toFloat(), size.height.toFloat(), 1200f, 900f).screen(MapPoint(.5f, .5f))
-        canvas.performTouchInput { click(Offset(point.x, point.y)) }
-        rule.onNodeWithText("Scegli cavo").assertIsDisplayed()
-        rule.onNodeWithText(ObjectMap.cableLabel(p, c2)).performClick()
-        rule.onNodeWithText("Scheda cavo e foto").performClick()
+        // Links are drawn as arcs: tap the middle of the curve.
+        fun middle(a: MapPoint, b: MapPoint) = arc(a, b).let { it[it.size / 2] }
+        canvas.clickAt(viewport(canvas), middle(MapPoint(.2f, .5f), MapPoint(.8f, .5f)))
+        rule.onNodeWithText("2 cavi", substring = true).assertIsDisplayed()
+        rule.onNodeWithText("INT").assertDoesNotExist()
+        rule.onNodeWithText("C2").performScrollTo().performClick()
+        rule.onNodeWithText("Scheda cavo e foto").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(c2.id, opened) }
-        rule.onNodeWithText("R1 · 1 cavi interni").performClick()
-        rule.onNodeWithText(ObjectMap.cableLabel(p, internal)).performClick()
-        rule.onNodeWithText("Scheda cavo e foto").performClick()
+        // Opening the rack shows the internal cable between its children.
+        canvas.clickAt(viewport(canvas), MapPoint(.2f, .5f))
+        rule.onNodeWithText("‹ Indietro").assertIsDisplayed()
+        canvas.clickAt(viewport(canvas), middle(MapPoint(.5f, .25f), MapPoint(.5f, .75f)))
+        rule.onNodeWithText("INT").performScrollTo().performClick()
+        rule.onNodeWithText("Scheda cavo e foto").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(internal.id, opened) }
     }
 
@@ -124,20 +138,16 @@ class FloorMapUiTest {
         var p by mutableStateOf(initial.copy(cables = listOf(cable), cableRoutes = listOf(route)))
         var opened: String? = null
         rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
-            FloorCanvas(p, area.id, null, { updated, _ -> p = updated }, {}, { opened = it })
+            MapWorkspace(p, area.id, null, Messages(), MapActions({ updated, _ -> p = updated }, { draft, _ -> opened = draft.id }, { _, _ -> }))
         } } }
         val node = rule.onNodeWithTag("floor-map")
-        var size = node.fetchSemanticsNode().size
-        var view = MapViewport(size.width.toFloat(), size.height.toFloat(), 1200f, 900f)
-        val middle = view.screen(MapPoint(.5f, .5f))
-        node.performTouchInput { click(Offset(middle.x, middle.y)) }
+        node.clickAt(viewport(node), arc(MapPoint(.4f, .5f), MapPoint(.6f, .5f)).let { it[it.size / 2] })
+        rule.onNodeWithText("C1").performScrollTo().performClick()
         rule.onNodeWithText("Scheda cavo e foto").assertIsDisplayed()
-        size = node.fetchSemanticsNode().size
-        view = MapViewport(size.width.toFloat(), size.height.toFloat(), 1200f, 900f)
-        val end = view.screen(MapPoint(.8f, .5f))
+        val end = viewport(node).screen(MapPoint(.6f, .5f))
         node.performTouchInput { down(Offset(end.x, end.y)); moveBy(Offset(10f, 2f)); moveBy(Offset(40f, 25f)); up() }
-        rule.runOnIdle { assertTrue(p.cableRoutes.single().points.last().x > .8f) }
-        rule.onNodeWithText("Scheda cavo e foto").performClick()
+        rule.runOnIdle { assertTrue(p.cableRoutes.single().points.last().x > .6f) }
+        rule.onNodeWithText("Scheda cavo e foto").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(cable.id, opened) }
     }
 }

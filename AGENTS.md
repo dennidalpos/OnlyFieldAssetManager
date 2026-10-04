@@ -8,7 +8,7 @@
 - Gradle modules: `:mobile:app`, `:pc:app`, `:shared:core`, `:shared:exchange`. `:shared:core` and `:shared:exchange` must never depend on Android UI or Context APIs.
 - Android Room v14: additive migration 13→14; EncryptedDatabase checkpoints and backs up the encrypted database before upgrading.
 - `shared/configurator` is Compose source shared by both app source sets; hardware, port reconciliation and continuity tracing stay in `core.forms` / `core.model.ConnectionGraph`.
-- Map and containment: core.model.ObjectMap/ObjectHierarchy; page rendering uses Android PdfRenderer and desktop PDFBox 3.0.8 off the UI thread.
+- Map and containment: core.model.MapScene/ObjectMap/ObjectHierarchy; shared UI in `shared/configurator` package `configurator.map` (MapWorkspace); presets and port logic in core.forms.DevicePresets/PortLogic. Page rendering uses Android PdfRenderer and desktop PDFBox 3.0.8 off the UI thread.
 - Shared edits, forms and labels: `core.edit.ProjectEdits`, `core.forms`, `core.display`, `core.onboarding` ("Nuovo sito" wizard). Both UIs use them; edit forms must `copy()` the existing entity so hidden fields are preserved.
 - Windows portable build: `.\gradlew.bat :pc:app:packagePortable` → `dist/OnlyFieldAssetManager/OnlyFieldAssetManager.exe` (+ ZIP). Data lives in `data/` next to the exe.
 - `core.i18n.Messages` uses UTF-8 bundles (it/en/es), defaults to Italian; capture it at document generation start. Custom/user text is preserved.

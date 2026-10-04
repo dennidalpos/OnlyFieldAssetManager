@@ -3,7 +3,7 @@
   "lastUpdated": "2026-10-04",
   "currentPhase": "Funzionalita implementate; restano residui di verifica e pulizia.",
   "activeTask": null,
-  "nextSession": "Riprendere da docs/testing/hardware-checklist.md per RES-19 (Android 360/412 dp, tastiera, testo ingrandito e temi). Poi RES-17 (test UI API 37) e RES-18 (scratch build/ux-audit e preesistenti). Restano RES-13 e RES-01. Nessuna attività in corso; ramo di lavoro main.",
+  "nextSession": "Verificare su Android nativo la nuova mappa condivisa (drill-down contenitori, pannello in basso, pressione prolungata per aggiungere, pinch) insieme alla checklist RES-19 (360/412 dp, tastiera, testo ingrandito, temi). Poi RES-17 (test UI API 37, incluso FloorGestureNativeTest aggiornato) e RES-18. Restano RES-13 e RES-01. Nessuna attività in corso; ramo main.",
   "remainingTasks": [],
   "residuals": [
     {
@@ -38,7 +38,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "OPEN",
-      "description": "Configuratore condiviso e layout desktop verificati con Compose; non eseguita la matrice Android nativa 360/412 dp con tastiera, testo ingrandito e temi chiaro/scuro. Nessun dispositivo collegato nella sessione; RES-17 rimane aperto.",
+      "description": "Configuratore, mappa condivisa (MapWorkspace) e pannello porte verificati con test Compose Desktop e catture a 400 e 1280 dp; non eseguita la matrice Android nativa 360/412 dp con tastiera, testo ingrandito, temi chiaro/scuro e gesti multitouch reali sulla mappa. Nessun dispositivo collegato nella sessione; RES-17 rimane aperto.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]

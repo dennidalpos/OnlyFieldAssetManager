@@ -62,19 +62,4 @@ class ObjectHierarchyTest {
         assertEquals(boxRef, ObjectHierarchy.parent(withoutRack, swRef))
         assertEquals(rackRef, ObjectHierarchy.root(ProjectEdits.restoreFromTrash(withoutRack, rackTrash!!), swRef))
     }
-
-    @Test fun mapAggregatesExternalCablesAndMarksInternalCables() {
-        val a = Cable(deviceAId = sw.id, deviceBId = outside.id)
-        val b = Cable(deviceAId = box.id, deviceBId = outside.id)
-        val internal = Cable(deviceAId = sw.id, deviceBId = box.id)
-        val p = initial.copy(cables = listOf(a, b, internal))
-        val groups = ObjectMap.connections(p, area.id)
-        assertEquals(2, groups.size)
-        assertEquals(setOf(a.id, b.id), groups.single { it.internalAt == null }.cableIds.toSet())
-        assertEquals(rackRef, groups.single { it.internalAt != null }.internalAt)
-        val nodes = ObjectMap.nodes(p, area.id)
-        val points = ObjectMap.routePoints(p, groups.single { it.internalAt == null }.route, nodes)
-        val cable = p.cables.first { it.id == groups.single { it.internalAt == null }.route.cableId }
-        assertEquals(nodes.first { it.id == rack.id }.point, if (cable.deviceAId == outside.id) points.last() else points.first())
-    }
 }

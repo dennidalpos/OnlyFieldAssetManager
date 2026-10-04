@@ -25,6 +25,8 @@ import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.forms.*
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.configurator.map.ValueMenu
+import com.onlyfield.assetmanager.configurator.map.presetSummary
 
 @Composable
 private fun Choice(label: String, value: String, values: List<String>, error: String? = null, change: (String) -> Unit) {
@@ -74,29 +76,6 @@ private fun Field(label: String, value: String, error: String? = null, singleLin
         supportingText = error?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth(), singleLine = singleLine)
 }
 
-private fun snapshot(project: Project, draft: MapObjectDraft): Project {
-    val configured = draft.session?.apply(project) ?: project
-    val p = if (draft.type.id != "legacy" && ObjectCatalog.builtins.none { it.id == draft.type.id })
-        configured.copy(objectTypes = configured.objectTypes.filterNot { it.id == draft.type.id } + draft.type) else configured
-    return when (draft.type.kind) {
-        ObjectKind.DEVICE -> {
-            val existing = p.businessUnits.flatMap { it.devices }.find { it.id == draft.id }
-            val device = draft.device.toDevice(existing, "Configurator").copy(id = draft.id)
-            val added = if (existing == null) ProjectEdits.addDevice(p, draft.device.businessUnitId ?: draft.buId, device) else ProjectEdits.updateDevice(p, device)
-            if ((draft.portsConfigured || draft.device.hardware.portGroups.isNotEmpty()) && HardwareConfigurator.validGroups(device.hardware.portGroups) && (draft.allowConnectedRemoval || HardwareConfigurator.preview(p, device, device.hardware.portGroups).connectedRemoved.isEmpty()))
-                HardwareConfigurator.configure(added, device, draft.allowConnectedRemoval, true) else added
-        }
-        ObjectKind.RACK -> {
-            val rack = draft.rack.toRack(p.racks.find { it.id == draft.id }).copy(id = draft.id)
-            if (p.racks.any { it.id == rack.id }) ProjectEdits.updateRack(p, rack) else ProjectEdits.addRack(p, rack)
-        }
-        ObjectKind.CABLE -> {
-            val c = draft.cable.toCable(p.cables.find { it.id == draft.id }).copy(id = draft.id, deviceAId = draft.deviceAId, deviceBId = draft.deviceBId)
-            if (p.cables.any { it.id == c.id }) ProjectEdits.updateCable(p, c) else ProjectEdits.addCable(p, c)
-        }
-    }
-}
-
 /** One staged session is committed by the host's existing Save/Undo operation. */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
@@ -109,7 +88,7 @@ fun ObjectConfigurator(project: Project, draft: MapObjectDraft, i18n: Messages, 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Messages, modelEditor: Boolean, initialSection: ConfiguratorPage, change: (MapObjectDraft) -> Unit) {
-    val preview = remember(project, draft) { snapshot(project, draft) }
+    val preview = remember(project, draft) { draft.preview(project) }
     val index = remember(preview) { ProjectIndex(preview) }
     val graph = remember(preview) { ConnectionGraph(preview) }
     var activePage by remember(draft.id) { mutableStateOf(initialSection) }
@@ -118,14 +97,16 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     var saveModel by remember(draft.id) { mutableStateOf(false) }
     var modelName by remember(draft.id) { mutableStateOf("") }
     var side by remember(draft.id) { mutableStateOf(PortSide.FRONT) }
-    var zoom by remember(draft.id) { mutableFloatStateOf(1f) }
+    var selectedPorts by remember(draft.id) { mutableStateOf(emptySet<String>()) }
     fun stage(p: Project) = change(draft.copy(session = ConfigurationSession(draft.session?.original ?: project, p)))
     fun openDevice(device: Device) {
         stage(preview)
         val bu = index.businessUnitOf(device.id)?.id ?: draft.buId
         nested = MapObjectDraft.device(preview, bu, ObjectMap.areaId(preview, device).orEmpty(), device.id, i18n)
     }
+    val rootName = when (draft.type.kind) { ObjectKind.DEVICE -> draft.device.technicalName; ObjectKind.RACK -> draft.rack.name; ObjectKind.CABLE -> draft.cable.codeOrLabel }
     nested?.let { child ->
+        Trail(listOf(rootName, child.device.technicalName.ifBlank { ObjectCatalog.displayName(child.type, i18n) }))
         TextButton(onClick = { nested = null }) { Text(i18n.text("config.cancelBack")) }
         ObjectConfigurator(preview, child, i18n) { nested = it }
         Button(onClick = { stage(child.apply(preview, i18n)); nested = null }, enabled = child.errors(preview, i18n).isEmpty()) { Text(i18n.text("config.applyBack")) }
@@ -133,6 +114,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     }
     portId?.let { id -> index.port(id)?.let { ref ->
         val bringIntoView = remember(id) { BringIntoViewRequester() }
+        Trail(listOf(rootName, ref.port.name))
         TextButton(onClick = { portId = null }, modifier = Modifier.bringIntoViewRequester(bringIntoView)) { Text(i18n.text("config.backToObject")) }
         LaunchedEffect(id) { bringIntoView.bringIntoView() }
         PortConfiguration(preview, ref, draft.id, i18n, { stage(it) }, { openDevice(it) }, { type ->
@@ -142,7 +124,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         return
     } }
 
-    val errors = draft.errors(project, i18n)
+    val errors = remember(project, draft) { draft.errors(project, i18n) }
     val bu = preview.businessUnits.find { it.id == draft.device.businessUnitId }
     Text(i18n.text("ux.essentialHint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     val name = when (draft.type.kind) {
@@ -196,6 +178,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
                 }
             }
             ConfiguratorSection(i18n.text("ux.ports"), activePage == ConfiguratorPage.PORTS, errors["ports"], focusOnOpen = activePage == ConfiguratorPage.PORTS) {
+                PresetBar(draft, i18n, change)
                 PortGroups(preview, draft, i18n, change)
                 val device = index.device(draft.id)
                 if (device != null) {
@@ -205,22 +188,22 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
                         Text(i18n.text("config.differences", differences.added, differences.removed.size, differences.connectedRemoved.size))
                         if (differences.connectedRemoved.isNotEmpty()) Toggle(i18n.text("config.removeConnected"), draft.allowConnectedRemoval) { change(draft.copy(allowConnectedRemoval = it)) }
                     }
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf(PortSide.FRONT, PortSide.REAR).forEach { s -> TextButton(onClick = { side = s }) { Text(s.toDisplayString(i18n)) } }
-                        TextButton(onClick = { zoom = (zoom - .25f).coerceAtLeast(1f) }) { Text("−") }
-                        TextButton(onClick = { zoom = (zoom + .25f).coerceAtMost(3f) }) { Text("+") }
-                    }
-                    DeviceDrawing(device, graph, side, zoom, portId, i18n) { p -> if (!modelEditor) { stage(preview); activePage = ConfiguratorPage.PORTS; portId = p.id } }
+                    val cells = remember(preview, device.id) { PortLogic.panel(preview, device, graph, index) }
+                    fun toggle(id: String) { selectedPorts = if (id in selectedPorts) selectedPorts - id else selectedPorts + id }
+                    PortPanel(cells, i18n, selected = selectedPorts,
+                        onClick = { cell -> if (selectedPorts.isNotEmpty()) toggle(cell.port.id) else if (!modelEditor) { stage(preview); activePage = ConfiguratorPage.PORTS; portId = cell.port.id } },
+                        onLongClick = { cell: PortCell -> toggle(cell.port.id) }.takeIf { !modelEditor })
+                    if (!modelEditor) BulkPortBar(preview, cells, selectedPorts, i18n, { selectedPorts = it }) { stage(it) }
                 }
             }
             ConfiguratorSection(i18n.text("ux.hardware"), error = if (d.rackId == null) errors["heightU"] else null) {
                 Pick(i18n.text("config.category"), d.category, DeviceCategory.entries, i18n, { it.toDisplayString(i18n) }) { it?.let { c -> change(draft.copy(device = d.copy(category = c))) } }
-                Toggle(i18n.text("config.canContain"), draft.type.canContainObjects) { enabled ->
-                    if (enabled || ObjectHierarchy.children(preview, ObjectRef(PlacementTargetType.DEVICE, draft.id)).isEmpty()) {
-                        val type = if (ObjectCatalog.builtins.any { it.id == draft.type.id } || draft.type.id == "legacy") draft.type.copy(id = java.util.UUID.randomUUID().toString(), canContainObjects = enabled) else draft.type.copy(canContainObjects = enabled)
-                        change(draft.copy(type = type, device = draft.device.copy(objectTypeId = type.id)))
+                // Built-in types have a fixed container role; only custom types can change it.
+                if (ObjectCatalog.builtins.none { it.id == draft.type.id } && draft.type.id != "legacy")
+                    Toggle(i18n.text("config.canContain"), draft.type.canContainObjects) { enabled ->
+                        if (enabled || ObjectHierarchy.children(preview, ObjectRef(PlacementTargetType.DEVICE, draft.id)).isEmpty())
+                            change(draft.copy(type = draft.type.copy(canContainObjects = enabled)))
                     }
-                }
                 if (!modelEditor && d.rackId == null) {
                     Choice(i18n.text("config.units"), d.heightU, listOf("1", "2", "3", "4"), error = errors["heightU"]) { change(draft.copy(device = d.copy(heightU = it))) }
                 }
@@ -341,29 +324,41 @@ private fun Toggle(label: String, value: Boolean, change: (Boolean) -> Unit) {
     }
 }
 
+/** Where the editor is: object › port or nested object. */
 @Composable
-fun DeviceDrawing(device: Device, graph: ConnectionGraph, side: PortSide, zoom: Float, selected: String?, i18n: Messages, click: (Port) -> Unit) {
-    Column(Modifier.fillMaxWidth().border(2.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)).padding(12.dp)) {
-        Text("${device.technicalName} · ${device.heightU}U", style = MaterialTheme.typography.titleMedium)
-        SchematicGeometry.rows(device, side).forEach { row ->
-            row.group?.let { Text(it) }
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                row.ports.forEach { p ->
-                    val state = graph.state(p.id)
-                    val label = i18n.text("config.${state.name.lowercase()}")
-                    val color = when (state) { ConnectionState.COMPLETE -> Color(0xff2e7d32); ConnectionState.INCOMPLETE -> Color(0xff966000); ConnectionState.CONFLICT -> Color(0xffb71c1c); ConnectionState.AVAILABLE -> Color(0xff455a64) }
-                    Surface(onClick = { click(p) }, color = color, contentColor = Color.White, shape = RoundedCornerShape(3.dp), modifier = Modifier.width(80.dp * zoom).heightIn(min = 60.dp * zoom)
-                        .border(if (selected == p.id) 3.dp else 1.dp, if (selected == p.id) MaterialTheme.colorScheme.primary else color, RoundedCornerShape(3.dp))
-                        .semantics { contentDescription = "${device.technicalName} ${p.name}"; stateDescription = label }) {
-                        Column(Modifier.padding(6.dp)) { Text(p.name); Text(label, style = MaterialTheme.typography.labelSmall) }
-                    }
-                }
-            }
-        }
-        if (device.ports.isEmpty()) Text(i18n.text("config.noPorts"))
-    }
+private fun Trail(items: List<String>) {
+    Text(items.filter { it.isNotBlank() }.joinToString(" › "), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
 }
 
+/** Built-in preset for the type: menus with values, applied as port groups. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun PresetBar(draft: MapObjectDraft, i18n: Messages, change: (MapObjectDraft) -> Unit) {
+    val preset = DevicePresets.forType(draft.type.id) ?: return
+    var values by remember(draft.id, preset.id) { mutableStateOf(preset.defaults()) }
+    Text(i18n.text("preset.title"), style = MaterialTheme.typography.titleSmall)
+    Text(i18n.text("preset.hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        preset.params.forEach { param ->
+            ValueMenu(i18n.text("preset.param.${param.key}"), values.getValue(param.key), param.values,
+                { if (param.labelled) i18n.text("preset.value.$it") else it }, Modifier.widthIn(min = 140.dp, max = 220.dp)) { values = values + (param.key to it) }
+        }
+    }
+    val result = preset.result(values)
+    Text(presetSummary(result), style = MaterialTheme.typography.bodySmall)
+    OutlinedButton(onClick = { change(DevicePresets.apply(draft, result)) }) { Text(i18n.text("preset.apply")) }
+}
+
+private const val CUSTOM_NAMING = "CUSTOM"
+
+private fun namingOf(group: PortTemplate, kind: PortKind?): String = when {
+    kind == null -> CUSTOM_NAMING
+    group.namePrefix == PortNaming.SHORT.prefix(kind) -> PortNaming.SHORT.name
+    group.namePrefix == PortNaming.INTERFACE.prefix(kind, group.speed) -> PortNaming.INTERFACE.name
+    else -> CUSTOM_NAMING
+}
+
+/** Port groups in three steps: type → quantity → label. Advanced fields stay folded. */
 @Composable
 @OptIn(ExperimentalLayoutApi::class)
 private fun PortGroups(project: Project, draft: MapObjectDraft, i18n: Messages, change: (MapObjectDraft) -> Unit) {
@@ -371,32 +366,85 @@ private fun PortGroups(project: Project, draft: MapObjectDraft, i18n: Messages, 
     fun update(next: List<PortTemplate>) = change(draft.copy(device = draft.device.copy(hardware = draft.device.hardware.copy(portGroups = next)), allowConnectedRemoval = false, portsConfigured = true))
     var editingGroup by remember(draft.id) { mutableStateOf<Int?>(null) }
     groups.forEachIndexed { n, g ->
+        val others = groups.filterIndexed { i, _ -> i != n }
         fun set(next: PortTemplate) = update(groups.mapIndexed { index, value -> if (index == n) next else value })
-        val summary = listOfNotNull("${g.portCount} × ${g.connector ?: g.namePrefix}", g.speed, g.side.toDisplayString(i18n)).joinToString(" · ")
+        fun rename(prefix: String) = set(g.copy(namePrefix = prefix, startNumber = PortGroups.nextStart(others, prefix)))
+        val kind = PortKind.of(g)
+        val summary = listOfNotNull("${g.portCount} × ${kind?.let { i18n.text("port.kind.${it.name}") } ?: g.connector ?: g.namePrefix}",
+            PortGroups.range(g), g.poeStandard?.let { "PoE" }, g.side.toDisplayString(i18n)).joinToString(" · ")
         OutlinedButton(onClick = { editingGroup = if (editingGroup == n) null else n }, modifier = Modifier.fillMaxWidth()) {
             Text(summary, modifier = Modifier.weight(1f)); Text(if (editingGroup == n) "▴" else "▾")
         }
-        if (editingGroup == n) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Choice(i18n.text("config.count"), g.portCount.toString(), (HardwareConfigurator.portCounts + project.deviceModels.flatMap { it.portTemplates }.map { it.portCount }).map { it.toString() }) { v -> v.toIntOrNull()?.takeIf { it in 1..512 }?.let { set(g.copy(portCount = it)) } }
-            Pick(i18n.text("config.side"), g.side, PortSide.entries, i18n, { it.toDisplayString(i18n) }) { it?.let { s -> set(g.copy(side = s)) } }
-            Choice(i18n.text("config.connector"), g.connector.orEmpty(), listOf("RJ45", "SFP", "SFP+", "SFP28", "QSFP+", "QSFP28", "LC", "SC", "MPO", "USB-C", "C13", "C14") + project.deviceModels.flatMap { it.portTemplates }.mapNotNull { it.connector }) { set(g.copy(connector = it)) }
-            Choice(i18n.text("config.speed"), g.speed.orEmpty(), listOf("100M", "1G", "2.5G", "5G", "10G", "25G", "40G", "100G") + project.deviceModels.flatMap { it.portTemplates }.mapNotNull { it.speed }) { set(g.copy(speed = it)) }
+        if (editingGroup == n) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            ValueMenu(i18n.text("preset.param.kind"), kind, PortKind.entries, { it?.let { k -> i18n.text("port.kind.${k.name}") } ?: g.connector.orEmpty() }) { k ->
+                if (k != null) {
+                    val retyped = PortGroups.retype(g, k)
+                    // Keep the naming scheme when the prefix was generated from the old type.
+                    val naming = namingOf(g, kind)
+                    val prefix = if (naming == CUSTOM_NAMING) g.namePrefix else PortNaming.valueOf(naming).prefix(k)
+                    set(retyped.copy(namePrefix = prefix, startNumber = if (prefix == g.namePrefix) g.startNumber else PortGroups.nextStart(others, prefix)))
+                }
+            }
+            Choice(i18n.text("config.count"), g.portCount.toString(), (PortGroups.counts + project.deviceModels.flatMap { it.portTemplates }.map { it.portCount }).distinct().sorted().map { it.toString() }) { v -> v.toIntOrNull()?.takeIf { it in 1..512 }?.let { set(g.copy(portCount = it)) } }
+            val naming = namingOf(g, kind)
+            ValueMenu(i18n.text("port.label"), naming, listOfNotNull(PortNaming.SHORT.name.takeIf { kind != null }, PortNaming.INTERFACE.name.takeIf { kind != null }, CUSTOM_NAMING),
+                { i18n.text("port.naming.$it") }) { value -> if (value != CUSTOM_NAMING && kind != null) rename(PortNaming.valueOf(value).prefix(kind, g.speed)) }
+            if (naming == CUSTOM_NAMING) Field(i18n.text("config.prefix"), g.namePrefix) { if (it.isNotBlank()) rename(it) }
+            Field(i18n.text("config.start"), g.startNumber.toString()) { v -> v.toIntOrNull()?.takeIf { it in 0..9999 }?.let { set(g.copy(startNumber = it)) } }
+            Text(i18n.text("port.preview", PortGroups.range(g)), style = MaterialTheme.typography.bodySmall)
+            if (g.mediaType == "Copper" || kind == PortKind.RJ45)
+                ValueMenu("PoE", g.poeStandard, listOf(null, PoeStandard.IEEE_802_3AF, PoeStandard.IEEE_802_3AT, PoeStandard.IEEE_802_3BT),
+                    { it?.toDisplayString(i18n) ?: i18n.text("preset.value.NONE") }) { set(g.copy(poeStandard = it)) }
             ConfiguratorSection(i18n.text("ux.advancedPorts")) {
-                Field(i18n.text("config.prefix"), g.namePrefix) { if (it.isNotBlank()) set(g.copy(namePrefix = it)) }
-                Field(i18n.text("config.start"), g.startNumber.toString()) { v -> v.toIntOrNull()?.takeIf { it in 0..9999 }?.let { set(g.copy(startNumber = it)) } }
-                Choice(i18n.text("config.medium"), g.mediaType.orEmpty(), listOf("Copper", "Fiber", "DAC", "AOC", "Power", "Console") + project.deviceModels.flatMap { it.portTemplates }.mapNotNull { it.mediaType }) { set(g.copy(mediaType = it)) }
+                Pick(i18n.text("config.side"), g.side, PortSide.entries, i18n, { it.toDisplayString(i18n) }) { it?.let { s -> set(g.copy(side = s)) } }
+                Choice(i18n.text("config.speed"), g.speed.orEmpty(), listOf("100M", "1G", "2.5G", "5G", "10G", "25G", "40G", "100G")) { set(g.copy(speed = it)) }
                 Choice(i18n.text("config.role"), g.role, listOf("DATA", "UPLINK", "MANAGEMENT", "CONSOLE", "POWER")) { set(g.copy(role = it)) }
-                Pick("PoE", g.poeStandard, PoeStandard.entries, i18n, { it.name }) { set(g.copy(poeStandard = it)) }
                 Toggle(i18n.text("config.paired"), g.pairedSides) { set(g.copy(pairedSides = it)) }
                 Field(i18n.text("config.combo"), g.comboGroup.orEmpty()) { set(g.copy(comboGroup = it.trim().ifBlank { null })) }
             }
-            TextButton(onClick = { update(groups.filterIndexed { index, _ -> index != n }) }) { Text(i18n.text("config.remove")) }
+            TextButton(onClick = { editingGroup = null; update(groups.filterIndexed { index, _ -> index != n }) }) { Text(i18n.text("config.remove")) }
         }
     }
+    val paired = draft.device.category == DeviceCategory.PATCH_PANEL || draft.type.id == "outlet"
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        OutlinedButton(onClick = { editingGroup = groups.size; update(groups + PortTemplate(namePrefix = "P${groups.size + 1}-", portCount = 24, connector = "RJ45", mediaType = "Copper", pairedSides = draft.device.category == DeviceCategory.PATCH_PANEL || draft.type.id == "outlet")) }) { Text(i18n.text("config.addGroup")) }
-        OutlinedButton(onClick = { editingGroup = groups.size; update(groups + PortTemplate(namePrefix = "SFP${groups.size + 1}-", portCount = 4, connector = "SFP", mediaType = "Fiber", role = "UPLINK")) }) { Text(i18n.text("config.addFiber")) }
+        OutlinedButton(onClick = { editingGroup = groups.size; update(groups + PortGroups.create(groups, PortKind.RJ45, 8, paired = paired)) }) { Text(i18n.text("config.addGroup")) }
+        OutlinedButton(onClick = { editingGroup = groups.size; update(groups + PortGroups.create(groups, PortKind.SFP_PLUS, 2)) }) { Text(i18n.text("config.addFiber")) }
     }
+}
+
+/** Bulk VLAN/PoE on the ports selected in the panel (long press to start selecting). */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun BulkPortBar(project: Project, cells: List<PortCell>, selected: Set<String>, i18n: Messages, select: (Set<String>) -> Unit, stage: (Project) -> Unit) {
+    if (selected.isEmpty()) {
+        if (cells.isNotEmpty()) Text(i18n.text("port.selectHint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        return
+    }
+    var mode by remember { mutableStateOf(PortVlanMode.ACCESS) }
+    var untagged by remember { mutableStateOf("") }
+    var tagged by remember { mutableStateOf("") }
+    var poe by remember { mutableStateOf<PoeStandard?>(PoeStandard.IEEE_802_3AT) }
+    val untaggedVlan = untagged.trim().toIntOrNull()?.takeIf { it in 1..4094 }
+    val taggedVlans = tagged.split(',', ' ', ';').mapNotNull { it.trim().toIntOrNull() }.filter { it in 1..4094 }
+    Text(i18n.text("port.selected", selected.size), style = MaterialTheme.typography.titleSmall)
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        TextButton(onClick = { select(cells.map { it.port.id }.toSet()) }) { Text(i18n.text("port.selectAll")) }
+        TextButton(onClick = { select(cells.filter { !it.occupied }.map { it.port.id }.toSet()) }) { Text(i18n.text("port.selectFree")) }
+        TextButton(onClick = { select(emptySet()) }) { Text(i18n.text("port.clearSelection")) }
+    }
+    ValueMenu(i18n.text("port.vlanMode"), mode, listOf(PortVlanMode.ACCESS, PortVlanMode.TRUNK), { it.toDisplayString(i18n) }) { mode = it }
+    Field(i18n.text(if (mode == PortVlanMode.TRUNK) "port.vlanNative" else "port.vlanUntagged"), untagged) { untagged = it.filter(Char::isDigit).take(4) }
+    if (mode == PortVlanMode.TRUNK) Field(i18n.text("port.vlanTagged"), tagged) { tagged = it }
+    PortLogic.subnets(project, untaggedVlan).takeIf { it.isNotEmpty() }?.let { subnets ->
+        Text(i18n.text("port.subnets", subnets.joinToString { it.cidrBlock }), style = MaterialTheme.typography.bodySmall)
+    }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(enabled = untaggedVlan != null || (mode == PortVlanMode.TRUNK && taggedVlans.isNotEmpty()),
+            onClick = { stage(PortLogic.setVlan(project, selected, mode, untaggedVlan, taggedVlans)) }) { Text(i18n.text("port.applyVlan")) }
+        TextButton(onClick = { stage(PortLogic.clearVlan(project, selected)) }) { Text(i18n.text("port.removeVlan")) }
+    }
+    ValueMenu("PoE", poe, listOf(null, PoeStandard.IEEE_802_3AF, PoeStandard.IEEE_802_3AT, PoeStandard.IEEE_802_3BT), { it?.toDisplayString(i18n) ?: i18n.text("preset.value.NONE") }) { poe = it }
+    OutlinedButton(onClick = { stage(PortLogic.setPoe(project, selected, poe)) }) { Text(i18n.text("port.applyPoe")) }
 }
 
 @Composable
@@ -419,40 +467,44 @@ private fun CableEndpoints(project: Project, draft: MapObjectDraft, i18n: Messag
     }
 }
 
+private enum class PortTab { LINK, LOGIC, HARDWARE }
+
+/** One port: connection, logical settings (VLAN, PoE, subnet) and hardware, as tabs. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PortConfiguration(project: Project, ref: ProjectIndex.PortRef, rootId: String, i18n: Messages, stage: (Project) -> Unit, openDevice: (Device) -> Unit, create: (ObjectType) -> Unit) {
     val graph = remember(project) { ConnectionGraph(project) }
     val index = remember(project) { ProjectIndex(project) }
     val port = ref.port
-    fun updateHardware(hardware: PortHardware) = stage(ProjectEdits.updateDevice(project, ref.device.copy(ports = ref.device.ports.map {
-        if (it.id == port.id) it.copy(hardware = hardware.copy(customized = true)) else it
-    })))
-    var query by remember(port.id) { mutableStateOf("") }
-    var buId by remember(port.id) { mutableStateOf<String?>(null) }
-    var areaId by remember(port.id) { mutableStateOf<String?>(null) }
-    var rackId by remember(port.id) { mutableStateOf<String?>(null) }
-    var deviceId by remember(port.id) { mutableStateOf<String?>(null) }
+    var tab by remember(port.id) { mutableStateOf(PortTab.LINK) }
+    Text("${ref.device.technicalName} › ${port.name}", style = MaterialTheme.typography.titleLarge)
+    Text(i18n.text("config.${graph.state(port.id).name.lowercase()}"))
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        PortTab.entries.forEach { t -> FilterChip(selected = tab == t, onClick = { tab = t }, label = { Text(i18n.text("port.tab.${t.name}")) }) }
+    }
+    when (tab) {
+        PortTab.LINK -> PortLink(project, ref, rootId, i18n, graph, index, stage, openDevice, create)
+        PortTab.LOGIC -> PortLogicTab(project, port, i18n, stage)
+        PortTab.HARDWARE -> PortHardwareTab(project, ref, i18n, index, stage)
+    }
+}
+
+@Composable
+private fun PortLink(project: Project, ref: ProjectIndex.PortRef, rootId: String, i18n: Messages, graph: ConnectionGraph, index: ProjectIndex,
+                     stage: (Project) -> Unit, openDevice: (Device) -> Unit, create: (ObjectType) -> Unit) {
+    val port = ref.port
     val existing = project.cables.singleOrNull { it.portAId == port.id || it.portBId == port.id }
     val currentDestination = existing?.let { if (it.portAId == port.id) it.portBId else it.portAId }
     var destination by remember(port.id, existing) { mutableStateOf(currentDestination) }
     var medium by remember(port.id, existing) { mutableStateOf(existing?.medium ?: if (port.hardware.mediaType == "Fiber") CableMedium.FIBER_OVERALL else CableMedium.ETHERNET_COPPER) }
-    Text("${ref.device.technicalName} › ${port.name}", style = MaterialTheme.typography.titleLarge)
-    Text(i18n.text("config.${graph.state(port.id).name.lowercase()}"))
-    Field(i18n.text("config.label"), port.label.orEmpty()) { value -> stage(ProjectEdits.updateDevice(project, ref.device.copy(ports = ref.device.ports.map { if (it.id == port.id) it.copy(label = value.ifBlank { null }) else it }))) }
-    Choice(i18n.text("config.module"), port.hardware.opticalModule.orEmpty(), index.ports.mapNotNull { it.port.hardware.opticalModule }) { value -> stage(ProjectEdits.updateDevice(project, ref.device.copy(ports = ref.device.ports.map { if (it.id == port.id) it.copy(hardware = it.hardware.copy(opticalModule = value.ifBlank { null })) else it }))) }
-    Choice(i18n.text("config.connector"), port.hardware.connector.orEmpty(), listOf("RJ45", "SFP", "SFP+", "LC", "SC", "MPO", "USB-C", "C13", "C14") + index.ports.mapNotNull { it.port.hardware.connector }) { updateHardware(port.hardware.copy(connector = it)) }
-    Choice(i18n.text("config.speed"), port.hardware.speed.orEmpty(), listOf("100M", "1G", "2.5G", "10G", "25G", "100G") + index.ports.mapNotNull { it.port.hardware.speed }) { updateHardware(port.hardware.copy(speed = it)) }
-    Pick("PoE", port.hardware.poeStandard, PoeStandard.entries, i18n, { it.name }) { updateHardware(port.hardware.copy(poeStandard = it)) }
-    Field(i18n.text("config.search"), query) { query = it }
-    Pick(i18n.text("config.bu"), project.businessUnits.find { it.id == buId }, project.businessUnits, i18n, { it.name }) { buId = it?.id }
-    Pick(i18n.text("config.floor"), index.area(areaId), index.areas, i18n, { it.name }) { areaId = it?.id }
-    Pick(i18n.text("config.rack"), index.rack(rackId), project.racks, i18n, { it.name }) { rackId = it?.id }
-    Pick(i18n.text("config.device"), index.device(deviceId), index.devices, i18n, { it.technicalName }) { deviceId = it?.id }
+    val floor = ObjectMap.areaId(project, ref.device)
+    var sameFloor by remember(port.id) { mutableStateOf(floor != null) }
+    // One searchable list replaces the BU/floor/rack/device filters; same connector first.
     val candidates = index.ports.filter { p ->
         p.port.id != port.id && (p.port.id == currentDestination || !graph.occupied(p.port.id, existing?.id)) &&
-            (buId == null || index.businessUnitOf(p.device.id)?.id == buId) && (areaId == null || ObjectMap.areaId(project, p.device) == areaId) &&
-            (rackId == null || p.device.rackId == rackId) && (deviceId == null || p.device.id == deviceId) && index.portLabel(p.port.id).contains(query, true)
-    }.sortedBy { if (it.port.hardware.connector == port.hardware.connector) 0 else 1 }
+            (!sameFloor || ObjectMap.areaId(project, p.device) == floor)
+    }.sortedWith(compareBy({ if (it.port.hardware.connector == port.hardware.connector) 0 else 1 }, { it.device.technicalName.lowercase() }))
+    if (floor != null) Toggle(i18n.text("port.sameFloor"), sameFloor) { sameFloor = it }
     Pick(i18n.text("config.destination"), index.port(destination), candidates, i18n, { "${it.device.technicalName} › ${it.port.name} · ${it.port.hardware.side?.toDisplayString(i18n).orEmpty()}" }, sortByName = false) {
         destination = it?.port?.id
         if (!graph.occupied(port.id, existing?.id)) stage(HardwareConfigurator.connect(project, port.id, destination, medium, existing?.id))
@@ -476,4 +528,45 @@ private fun PortConfiguration(project: Project, ref: ProjectIndex.PortRef, rootI
         }
     }
     Pick(i18n.text("config.createIntermediate"), null, ObjectCatalog.types(project).filter { it.kind == ObjectKind.DEVICE }, i18n, { ObjectCatalog.displayName(it, i18n) }) { it?.let(create) }
+}
+
+@Composable
+private fun PortLogicTab(project: Project, port: Port, i18n: Messages, stage: (Project) -> Unit) {
+    val membership = project.portVlanMemberships.find { it.portId == port.id }
+    val poe = project.poeMappings.find { it.portId == port.id }
+    var mode by remember(port.id, membership) { mutableStateOf(membership?.mode?.takeIf { it == PortVlanMode.TRUNK } ?: PortVlanMode.ACCESS) }
+    var untagged by remember(port.id, membership) { mutableStateOf(membership?.untaggedVlanId?.toString().orEmpty()) }
+    var tagged by remember(port.id, membership) { mutableStateOf(membership?.taggedVlanIds?.joinToString(", ").orEmpty()) }
+    val untaggedVlan = untagged.trim().toIntOrNull()?.takeIf { it in 1..4094 }
+    val taggedVlans = tagged.split(',', ' ', ';').mapNotNull { it.trim().toIntOrNull() }.filter { it in 1..4094 }
+    Text("VLAN", style = MaterialTheme.typography.titleSmall)
+    ValueMenu(i18n.text("port.vlanMode"), mode, listOf(PortVlanMode.ACCESS, PortVlanMode.TRUNK), { it.toDisplayString(i18n) }) { mode = it }
+    Field(i18n.text(if (mode == PortVlanMode.TRUNK) "port.vlanNative" else "port.vlanUntagged"), untagged) { untagged = it.filter(Char::isDigit).take(4) }
+    if (mode == PortVlanMode.TRUNK) Field(i18n.text("port.vlanTagged"), tagged) { tagged = it }
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Button(enabled = untaggedVlan != null || (mode == PortVlanMode.TRUNK && taggedVlans.isNotEmpty()),
+            onClick = { stage(PortLogic.setVlan(project, listOf(port.id), mode, untaggedVlan, taggedVlans)) }) { Text(i18n.text("port.applyVlan")) }
+        if (membership != null) TextButton(onClick = { stage(PortLogic.clearVlan(project, listOf(port.id))) }) { Text(i18n.text("port.removeVlan")) }
+    }
+    val subnets = PortLogic.subnets(project, membership?.untaggedVlanId)
+    Text(if (subnets.isEmpty()) i18n.text("port.noSubnet") else i18n.text("port.subnets", subnets.joinToString { listOfNotNull(it.cidrBlock, it.gatewayIp?.let { g -> "GW $g" }).joinToString(" ") }),
+        style = MaterialTheme.typography.bodySmall)
+    Text("PoE", style = MaterialTheme.typography.titleSmall)
+    ValueMenu(i18n.text("port.poeStandard"), poe?.standard, listOf(null, PoeStandard.IEEE_802_3AF, PoeStandard.IEEE_802_3AT, PoeStandard.IEEE_802_3BT),
+        { it?.toDisplayString(i18n) ?: i18n.text("preset.value.NONE") }) { stage(PortLogic.setPoe(project, listOf(port.id), it, poe?.role ?: PoeRole.PSE_SOURCE)) }
+    if (poe != null) ValueMenu(i18n.text("port.poeRole"), poe.role, listOf(PoeRole.PSE_SOURCE, PoeRole.PD_SINK), { it.toDisplayString(i18n) }) {
+        stage(PortLogic.setPoe(project, listOf(port.id), poe.standard, it))
+    }
+}
+
+@Composable
+private fun PortHardwareTab(project: Project, ref: ProjectIndex.PortRef, i18n: Messages, index: ProjectIndex, stage: (Project) -> Unit) {
+    val port = ref.port
+    fun updatePort(transform: (Port) -> Port) = stage(ProjectEdits.updateDevice(project, ref.device.copy(ports = ref.device.ports.map { if (it.id == port.id) transform(it) else it })))
+    fun updateHardware(hardware: PortHardware) = updatePort { it.copy(hardware = hardware.copy(customized = true)) }
+    Field(i18n.text("config.label"), port.label.orEmpty()) { value -> updatePort { it.copy(label = value.ifBlank { null }) } }
+    Choice(i18n.text("config.connector"), port.hardware.connector.orEmpty(), PortKind.entries.map { it.connector }.distinct() + index.ports.mapNotNull { it.port.hardware.connector }) { updateHardware(port.hardware.copy(connector = it)) }
+    Choice(i18n.text("config.speed"), port.hardware.speed.orEmpty(), listOf("100M", "1G", "2.5G", "10G", "25G", "100G") + index.ports.mapNotNull { it.port.hardware.speed }) { updateHardware(port.hardware.copy(speed = it)) }
+    Choice(i18n.text("config.module"), port.hardware.opticalModule.orEmpty(), index.ports.mapNotNull { it.port.hardware.opticalModule }) { value -> updatePort { it.copy(hardware = it.hardware.copy(opticalModule = value.ifBlank { null })) } }
+    ValueMenu(i18n.text("port.poeCapable"), port.hardware.poeStandard, listOf(null) + PoeStandard.entries, { it?.toDisplayString(i18n) ?: i18n.text("preset.value.NONE") }) { updateHardware(port.hardware.copy(poeStandard = it)) }
 }
