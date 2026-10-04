@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.configurator.SelectField
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.forms.DevicePresets
 import com.onlyfield.assetmanager.core.forms.PresetResult
@@ -21,13 +22,7 @@ import com.onlyfield.assetmanager.core.model.*
 fun <T> ValueMenu(label: String, value: T, values: List<T>, display: (T) -> String, modifier: Modifier = Modifier, change: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
     Box(modifier) {
-        OutlinedButton(onClick = { open = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Column(Modifier.weight(1f)) {
-                Text(label, style = MaterialTheme.typography.labelSmall)
-                Text(display(value))
-            }
-            Text("▾")
-        }
+        SelectField(label, display(value)) { open = true }
         DropdownMenu(open, { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
             values.forEach { v -> DropdownMenuItem(text = { Text(display(v)) }, onClick = { change(v); open = false }) }
         }

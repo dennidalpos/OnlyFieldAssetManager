@@ -37,7 +37,7 @@ class DesktopUxLayoutTest(private val width: Int, private val height: Int) {
             onNodeWithText("Aggiungi dispositivo").assertIsDisplayed()
             onNodeWithText("Aggiungi").assertIsNotEnabled()
             onNode(hasSetTextAction() and hasText("Nome oggetto")).performTextInput("SW-01")
-            onNode(hasText("Business unit:", substring = true)).performScrollTo().performClick()
+            onNode(hasContentDescription("Business unit:", substring = true)).performScrollTo().performClick()
             onNodeWithText("Operations").performClick()
             onNodeWithText("Aggiungi").assertIsDisplayed().assertIsEnabled()
             onNodeWithText("Numero di serie").assertDoesNotExist()

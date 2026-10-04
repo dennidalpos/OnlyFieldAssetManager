@@ -7,9 +7,12 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.i18n.Messages
@@ -29,24 +32,32 @@ fun ConfiguratorSection(
     error: String? = null,
     i18n: Messages = LocalConfiguratorMessages.current,
     focusOnOpen: Boolean = false,
+    /** What the section holds, shown while it is collapsed (e.g. "24 porte · 4 occupate"). */
+    summary: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     var expanded by remember(title) { mutableStateOf(initiallyExpanded) }
     val bringIntoView = remember { BringIntoViewRequester() }
     LaunchedEffect(error) { if (error != null) expanded = true }
     LaunchedEffect(focusOnOpen) { if (focusOnOpen) bringIntoView.bringIntoView() }
-    Column(Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView).padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         HorizontalDivider()
         TextButton(
             onClick = { expanded = !expanded },
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = i18n.text(if (expanded) "ux.expanded" else "ux.collapsed") },
-            contentPadding = PaddingValues(vertical = 8.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = listOfNotNull(i18n.text(if (expanded) "ux.expanded" else "ux.collapsed"), error).joinToString(", ") },
+            contentPadding = PaddingValues(vertical = 4.dp),
         ) {
-            Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f).semantics { heading() })
+            Column(Modifier.weight(1f)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+                if (!expanded) summary?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            if (error != null) Text("!", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp).clearAndSetSemantics {})
             Text(if (expanded) "▴" else "▾")
         }
         if (expanded && error != null) Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
-        if (expanded) Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
+        if (expanded) Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
     }
 }
 

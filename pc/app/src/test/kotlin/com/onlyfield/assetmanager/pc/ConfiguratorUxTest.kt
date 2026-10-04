@@ -34,7 +34,7 @@ class ConfiguratorUxTest {
         rule.onNodeWithText("Numero porte").assertDoesNotExist()
         rule.onNode(hasSetTextAction() and hasText("Nome oggetto")).performTextInput("SW-01")
         rule.runOnIdle { assertTrue(draft.value.errors(project).containsKey("businessUnitId")) }
-        rule.onNode(hasText("Business unit:", substring = true)).performScrollTo().performClick()
+        rule.onNode(hasContentDescription("Business unit:", substring = true)).performScrollTo().performClick()
         rule.onNodeWithText("Operations").performClick()
         rule.runOnIdle {
             assertTrue(draft.value.errors(project).isEmpty())
@@ -83,7 +83,7 @@ class ConfiguratorUxTest {
         rule.setContent { MaterialTheme {
             Column(Modifier.width(560.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
         } }
-        rule.onNode(hasText("Modello:", substring = true)).performClick()
+        rule.onNode(hasContentDescription("Modello:", substring = true)).performClick()
         rule.onNodeWithText("Standard switch").performClick()
         rule.runOnIdle {
             val saved = draft.value.apply(p).businessUnits.single().devices.single()
@@ -103,7 +103,7 @@ class ConfiguratorUxTest {
             Column(Modifier.width(412.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
         } }
         val original = draft.value
-        rule.onNode(hasText("Modello:", substring = true)).performClick()
+        rule.onNode(hasContentDescription("Modello:", substring = true)).performClick()
         rule.onNode(hasSetTextAction() and hasText("Cerca")).performTextInput("12")
         rule.onNodeWithText("Modello 1").assertDoesNotExist()
         rule.onNodeWithText("Modello 12").assertIsDisplayed()

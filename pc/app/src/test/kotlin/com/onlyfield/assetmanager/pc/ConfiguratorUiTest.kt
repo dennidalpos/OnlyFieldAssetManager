@@ -63,7 +63,7 @@ class ConfiguratorUiTest {
         rule.onNodeWithContentDescription("P1: Libera").assertIsDisplayed()
         rule.onNodeWithContentDescription("P1: Libera").performClick()
         rule.runOnIdle { org.junit.Assert.assertNotNull(draft.value.session) }
-        rule.onNode(hasText("Porta di destinazione:", substring = true)).performScrollTo().performClick()
+        rule.onNode(hasContentDescription("Porta di destinazione:", substring = true)).performScrollTo().performClick()
         rule.onNode(hasText("B › P1", substring = true)).performClick()
         rule.onNodeWithText("Torna all'oggetto").performScrollTo().performClick()
         rule.onNodeWithContentDescription("P1: Occupata, B › P1").assertHasClickAction()

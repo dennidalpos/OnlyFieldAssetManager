@@ -34,7 +34,7 @@ private fun Choice(label: String, value: String, values: List<String>, error: St
     Column {
         OutlinedTextField(value, change, label = { Text(label) }, singleLine = true,
             isError = error != null, supportingText = error?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth(),
-            trailingIcon = { TextButton(onClick = { expanded = true }) { Text("▾") } })
+            trailingIcon = { SymbolButton("▾", LocalConfiguratorMessages.current.text("ux.showOptions")) { expanded = true } })
         DropdownMenu(expanded, { expanded = false }, modifier = Modifier.heightIn(max = 300.dp)) {
             values.distinctBy { it.trim().lowercase() }.forEach { item ->
                 DropdownMenuItem(text = { Text(item) }, onClick = { change(item); expanded = false })
@@ -52,12 +52,8 @@ private fun <T> Pick(label: String, selected: T?, options: List<T>, i18n: Messag
         if (sortByName) options.sortedWith(compareBy(java.text.Collator.getInstance(i18n.locale)) { display(it) }) else options
     }
     val filtered = ordered.filter { query.isBlank() || display(it).contains(query.trim(), true) }
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        OutlinedButton(onClick = { query = ""; expanded = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text("$label: ${selected?.let(display) ?: i18n.text("ux.noSelection")}", modifier = Modifier.weight(1f))
-            Text("▾")
-        }
-        error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
+    Box {
+        SelectField(label, selected?.let(display) ?: i18n.text("ux.noSelection"), error = error) { query = ""; expanded = true }
         DropdownMenu(expanded, { expanded = false }, modifier = Modifier.heightIn(max = 360.dp).widthIn(max = 480.dp)) {
             if (options.size > 7) OutlinedTextField(query, { query = it }, label = { Text(i18n.text("ux.search")) },
                 singleLine = true, modifier = Modifier.padding(horizontal = 8.dp).widthIn(max = 320.dp))
