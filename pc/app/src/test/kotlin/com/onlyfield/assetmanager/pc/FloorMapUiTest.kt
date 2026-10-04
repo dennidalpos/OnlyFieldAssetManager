@@ -180,6 +180,40 @@ class FloorMapUiTest {
         rule.onNode(hasTestTag("map-detail") and hasAnyDescendant(hasText("SW-05"))).assertIsDisplayed()
     }
 
+    @Test fun deviceListsCreatesAndEditsItsLogicalLinks() {
+        val vpn = WanVpnConnection(name = "VPN-1", type = WanVpnType.VPN, localEndpointDeviceId = device.id, remoteEndpointSiteDescription = "Sede B",
+            underlyingAccessId = "access-1", notes = "Nota")
+        val wan = WanVpnConnection(name = "FTTH", providerOrCarrier = "Operatore X", bandwidth = "1 Gbps", remoteEndpointDeviceId = device.id)
+        var p by mutableStateOf(initial.copy(wanVpnConnections = listOf(vpn, wan)))
+        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
+            MapWorkspace(p, area.id, null, Messages(), MapActions({ updated, _ -> p = updated }, { _, _ -> }, { _, _ -> }))
+        } } }
+        val canvas = rule.onNodeWithTag("floor-map")
+        canvas.clickAt(viewport(canvas), MapPoint(.3f, .4f))
+        rule.onNodeWithText("Collegamenti logici (2)").performScrollTo().assertIsDisplayed()
+        rule.onNodeWithText("verso Sede B", substring = true).assertExists()
+        rule.onNodeWithText("Operatore X · 1 Gbps", substring = true).assertExists()
+        // Editing keeps hidden fields.
+        rule.onNodeWithText("VPN · VPN-1").performScrollTo().performClick()
+        rule.onNode(hasText("Banda") and hasSetTextAction()).performTextInput("100 Mbps")
+        rule.onNodeWithText("Salva").performClick()
+        rule.runOnIdle {
+            val saved = p.wanVpnConnections.single { it.id == vpn.id }
+            assertEquals("100 Mbps", saved.bandwidth)
+            assertEquals("access-1", saved.underlyingAccessId); assertEquals("Nota", saved.notes); assertEquals(device.id, saved.localEndpointDeviceId)
+        }
+        // A new link starts as VPN with this device on the local side; the name is required.
+        rule.onNodeWithText("+ Nuovo").performScrollTo().performClick()
+        rule.onNodeWithText("Salva").performClick()
+        rule.runOnIdle { assertEquals(2, p.wanVpnConnections.size) }
+        rule.onNode(hasText("Nome / circuito *") and hasSetTextAction()).performTextInput("VPN-2")
+        rule.onNodeWithText("Salva").performClick()
+        rule.runOnIdle {
+            val created = p.wanVpnConnections.single { it.name == "VPN-2" }
+            assertEquals(WanVpnType.VPN, created.type); assertEquals(device.id, created.localEndpointDeviceId)
+        }
+    }
+
     @Test fun cableIsSelectableAndItsFreeEndCanBeDragged() {
         val cable = Cable(codeOrLabel = "C1")
         val route = CableRoute(cableId = cable.id, areaId = area.id)

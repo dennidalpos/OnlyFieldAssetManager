@@ -21,6 +21,7 @@ import com.onlyfield.assetmanager.configurator.*
 import com.onlyfield.assetmanager.core.display.ObjectSummary
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.PortLogic
 import com.onlyfield.assetmanager.core.i18n.Messages
@@ -173,11 +174,43 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
             }
         }
     }
+    if (device != null && !current) LogicalLinksSection(project, hierarchy, device, i18n, actions)
     val target = if (node.ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
     val attachments = project.attachments.count { it.targetId == node.ref.id && it.targetType == target }
     if (attachments > 0 && !current) {
         SectionTitle(i18n.text("ux.attachments"), attachments)
         media(node.ref)
+    }
+}
+
+/** WAN/VPN links of a device, with creation and editing in a dialog. */
+@Composable
+private fun LogicalLinksSection(project: Project, hierarchy: HierarchyIndex, device: Device, i18n: Messages, actions: MapActions) {
+    val links = remember(project, device.id) { LogicalLinks.of(project, device.id) }
+    var editing by remember(device.id) { mutableStateOf<WanVpnConnection?>(null) }
+    var open by remember(device.id) { mutableStateOf(false) }
+    SectionTitle(i18n.text("map.logicalLinks"), links.size.takeIf { it > 0 }) {
+        TextButton(onClick = { editing = null; open = true }) { Text(i18n.text("map.newLogicalLink")) }
+    }
+    links.forEach { link ->
+        val farRef = LogicalLinks.far(link, device.id).first?.let { ObjectRef(PlacementTargetType.DEVICE, it) }
+        val farArea = farRef?.let(hierarchy::areaId)
+        val towards = LogicalLinks.farLabel(project, link, device.id) ?: i18n.text("text.65389ba5d2fd")
+        TextButton(onClick = { editing = link; open = true }, modifier = Modifier.fillMaxWidth()) {
+            Column(Modifier.weight(1f)) {
+                Text("${link.type.toDisplayString(i18n)} · ${link.name}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(listOfNotNull(link.providerOrCarrier, link.bandwidth, i18n.text("map.towards", towards)).joinToString(" · "),
+                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        val goTo = actions.goTo
+        if (goTo != null && farRef != null && farArea != null) TextButton(onClick = { goTo(farArea, farRef) }) {
+            Text(i18n.text("map.goTo", ObjectHierarchy.name(project, farRef, i18n)))
+        }
+    }
+    if (open) LogicalLinkDialog(project, device.id, editing, i18n, onClose = { open = false }) { saved ->
+        val updated = if (editing == null) ProjectEdits.addWanVpnConnection(project, saved) else ProjectEdits.updateWanVpnConnection(project, saved)
+        actions.update(updated, i18n.text("text.ec170e822ebb")); open = false
     }
 }
 

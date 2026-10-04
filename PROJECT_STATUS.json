@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-04",
-  "currentPhase": "F06 completato; prossimi: collegamenti logici nel pannello (F07) e percorso via VPN (F08).",
+  "currentPhase": "F06 e F07 completati; prossimo: percorso porta che prosegue via collegamento logico (F08).",
   "activeTask": null,
-  "nextSession": "Ripartire da F07 (sezione Collegamenti logici VPN/WAN nel pannello), poi F08; F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
+  "nextSession": "Ripartire da F08 (percorso che prosegue via VPN); F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-20, RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
   "remainingTasks": [
-    {
-      "id": "F07",
-      "area": "Mappa",
-      "title": "Collegamenti logici (VPN/WAN) nel pannello dispositivo",
-      "description": "Sezione Collegamenti logici in MapDetailPane per i dispositivi estremità di una WanVpnConnection: tipo, operatore, banda, sede o dispositivo remoto; creazione di una VPN dal dispositivo. Aggancio al dispositivo, non alla porta (nessun cambio di contratto).",
-      "acceptance": "Firewall/router mostra le proprie VPN e WAN e ne crea una nuova; test Desktop e prova su Android."
-    },
     {
       "id": "F08",
       "area": "Core",
@@ -60,8 +53,15 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto. Da provare anche: etichetta del moncone e Vai a verso un altro piano o BU (F06).",
+      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto. Da provare anche: etichetta del moncone e Vai a verso un altro piano o BU (F06). Sezione e finestra Collegamenti logici (F07).",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
+    },
+    {
+      "id": "RES-20",
+      "title": "Estremità WAN/VPN non validate",
+      "status": "OPEN",
+      "description": "ModelValidator controlla solo UUID e riferimenti ai dispositivi: una WanVpnConnection senza alcuna estremità, o con le due estremità sullo stesso dispositivo, non produce avvisi. La finestra della mappa esclude già il dispositivo stesso.",
+      "closureCriteria": "Avviso documentale (DOCUMENTARY_WARNING) per connessioni senza estremità o con estremità coincidenti, con test del validatore."
     }
   ]
 }
