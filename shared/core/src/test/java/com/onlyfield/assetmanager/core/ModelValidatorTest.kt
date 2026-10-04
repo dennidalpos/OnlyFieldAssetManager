@@ -507,4 +507,17 @@ class ModelValidatorTest {
         assertTrue(preview.changesSummary.isNotEmpty())
         assertFalse(preview.isProhibitedFieldAttempted)
     }
+
+    @Test
+    fun wanVpnWithoutOrWithCoincidentEndpointsIsOnlyADocumentaryWarning() {
+        val fw = com.onlyfield.assetmanager.core.model.Device(technicalName = "FW")
+        val empty = com.onlyfield.assetmanager.core.model.WanVpnConnection(name = "VPN-0")
+        val loop = com.onlyfield.assetmanager.core.model.WanVpnConnection(name = "VPN-1", localEndpointDeviceId = fw.id, remoteEndpointDeviceId = fw.id)
+        val ok = com.onlyfield.assetmanager.core.model.WanVpnConnection(name = "VPN-2", localEndpointDeviceId = fw.id, remoteEndpointSiteDescription = "Sede B")
+        val project = com.onlyfield.assetmanager.core.model.Project(name = "P", createdEpochMs = 1, updatedEpochMs = 1,
+            businessUnits = listOf(com.onlyfield.assetmanager.core.model.BusinessUnit(name = "BU", devices = listOf(fw))), wanVpnConnections = listOf(empty, loop, ok))
+        val issues = ModelValidator.validateProject(project).issues.filter { it.code.startsWith("WAN_VPN_") }
+        org.junit.Assert.assertEquals(listOf("WAN_VPN_WITHOUT_ENDPOINTS" to empty.id, "WAN_VPN_SAME_DEVICE" to loop.id), issues.map { it.code to it.targetEntityId })
+        assertTrue(issues.all { it.severity == ValidationSeverity.DOCUMENTARY_WARNING })
+    }
 }

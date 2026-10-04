@@ -18,7 +18,6 @@ Aggiornato al 4 ottobre 2026 dopo confronto con il codice e il tracker.
 | RES-17 | Aperto | Suite UI Android verde su API 37 senza disabilitare controlli. |
 | RES-18 | Aperto | Rimozione mirata degli scratch preesistenti sotto `build/`, dopo verifica dei percorsi. |
 | RES-19 | Aperto | Matrice visiva Android 360/412 dp, tastiera, testo ingrandito e temi chiaro/scuro. |
-| RES-20 | Aperto | Avviso documentale per connessioni WAN/VPN senza estremità o con estremità coincidenti. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
 
@@ -100,4 +99,10 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 
 - `ConnectionGraph.trace` chiude un percorso fisico pulito con un passo logico per ogni `WanVpnConnection` del dispositivo finale (`ChainStep.logical`, testo `config.viaLogical`); nessun passo per conflitti, cicli, passaggi sconosciuti o porte non collegate. Scheda porta con il passo in corsivo e il dispositivo remoto apribile.
 - Verifica: 241 test superati (Core 83, Exchange 37, Desktop 93, Android JVM 28), APK debug e test strumentali compilati, `git diff --check` senza errori. Prova su Android: aggiunta a RES-19.
+
+## RES-20 e decisione F09 — 4 ottobre 2026
+
+- RES-20 chiuso: `ModelValidator` segnala come avvisi documentali `WAN_VPN_WITHOUT_ENDPOINTS` (nessun apparato né sede) e `WAN_VPN_SAME_DEVICE` (estremità coincidenti); testi it/en/es, test del validatore.
+- F09 chiuso senza implementazione: le VPN restano nel pannello (F07) e nel percorso porta (F08); la mappa disegna solo cavi fisici. Decisione registrata in [plan.md](plan.md).
+- Verifica: 242 test superati (Core 84, Exchange 37, Desktop 93, Android JVM 28), APK debug compilato, `git diff --check` senza errori.
 

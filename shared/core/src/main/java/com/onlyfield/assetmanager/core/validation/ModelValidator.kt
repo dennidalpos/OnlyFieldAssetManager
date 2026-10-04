@@ -788,6 +788,12 @@ object ModelValidator {
                     )
                 }
             }
+
+            // Documentary only: incomplete links are allowed while surveying.
+            val described = listOf(conn.localEndpointDeviceId, conn.localEndpointSiteDescription, conn.remoteEndpointDeviceId, conn.remoteEndpointSiteDescription).any { !it.isNullOrBlank() }
+            if (!described) issues.add(ValidationIssue("WAN_VPN_WITHOUT_ENDPOINTS", i18n.text("validation.wanVpnNoEndpoints", conn.name), ValidationSeverity.DOCUMENTARY_WARNING, conn.id))
+            if (conn.localEndpointDeviceId != null && conn.localEndpointDeviceId == conn.remoteEndpointDeviceId)
+                issues.add(ValidationIssue("WAN_VPN_SAME_DEVICE", i18n.text("validation.wanVpnSameDevice", conn.name), ValidationSeverity.DOCUMENTARY_WARNING, conn.id))
         }
 
         for (video in project.videoSurveillanceMappings) {

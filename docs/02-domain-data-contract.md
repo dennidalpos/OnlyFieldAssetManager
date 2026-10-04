@@ -6,6 +6,8 @@ Un progetto contiene organizzazione e siti, aree/piani, apparati e porte, rack, 
 
 `ModelValidator` distingue `STRUCTURAL_ERROR`, che blocca l'import, da `DOCUMENTARY_WARNING`, che segnala dati incompleti senza bloccare il salvataggio.
 
+Le connessioni WAN/VPN (`WanVpnConnection`) sono agganciate ai dispositivi, non alle porte. Un riferimento a un apparato inesistente è un errore strutturale; una connessione senza alcuna estremità (apparato o sede) produce `WAN_VPN_WITHOUT_ENDPOINTS` e una con le due estremità sullo stesso apparato `WAN_VPN_SAME_DEVICE`, entrambi avvisi documentali.
+
 ## Pacchetto
 
 `.ofam` e uno ZIP con `manifest.json`, `project.json` oppure `project.json.enc` e `attachments/`. Il manifest contiene versione, checksum SHA-256 e, quando necessario, parametri di cifratura.
