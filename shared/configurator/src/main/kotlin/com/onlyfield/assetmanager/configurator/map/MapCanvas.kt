@@ -50,6 +50,17 @@ private enum class Press { PENDING, TAP, DRAG, PINCH, LONG }
 /** Route handle: an existing point, or a virtual midpoint that inserts a bend after [index]. */
 private data class Handle(val index: Int, val insert: Boolean)
 
+/** Where a stub continues: one remote device ("→ SW-05 · Primo"), or how many; null for links with both ends in view. */
+fun stubLabel(scene: MapScene, link: SceneLink, i18n: Messages): String? {
+    if (link.b != null) return null
+    val devices = link.remotes.values.distinctBy { it.device.id }
+    return "→ " + when (devices.size) {
+        0 -> i18n.text("map.outside")
+        1 -> devices.single().label(scene.areaId, scene.buId)
+        else -> i18n.plural("map.remoteCount", devices.size)
+    }
+}
+
 const val MAP_CONTENT_WIDTH = 1200f
 const val MAP_CONTENT_HEIGHT = 900f
 
@@ -76,6 +87,7 @@ fun MapCanvas(
     val shown = moving?.let { (ref, p) -> scene.moved(ref, p) } ?: scene
     val selectedLink = (selection as? MapSelection.Link)?.let { s -> s.cableIds.firstNotNullOfOrNull { shown.linkOf(it) } }
     val selectedNode = (selection as? MapSelection.Node)?.ref
+    val stubs = remember(scene, i18n) { scene.links.associate { it.routeCableId to stubLabel(scene, it, i18n) } }
 
     val density = LocalDensity.current
     val unit = with(density) { 2.dp.toPx() }
@@ -226,7 +238,7 @@ fun MapCanvas(
             val v = viewport()
             if (image != null) drawImage(image, dstOffset = IntOffset(v.left.toInt(), v.top.toInt()), dstSize = IntSize(v.pageWidth.toInt().coerceAtLeast(1), v.pageHeight.toInt().coerceAtLeast(1)))
             else drawGrid(::screen, onSurface)
-            shown.links.forEach { link -> drawLink(link, drawn(link).map(::screen), link == selectedLink, unit, copper, highlight, surface, onSurface, measurer) }
+            shown.links.forEach { link -> drawLink(link, drawn(link).map(::screen), link == selectedLink, unit, copper, highlight, surface, onSurface, measurer, stubs[link.routeCableId]) }
             selectedLink?.let { link -> handles(link).forEach { (h, p) -> drawCircle(if (h.insert) surface else highlight, unit * 3, screen(p)); drawCircle(highlight, unit * 3, screen(p), style = Stroke(unit)) } }
             drawNodes(shown, ::screen, selectedNode, radius, unit, zoom, onSurface, surface, highlight, measurer)
         }
@@ -261,13 +273,22 @@ private fun DrawScope.drawGrid(screen: (MapPoint) -> Offset, color: Color) {
 }
 
 private fun DrawScope.drawLink(link: SceneLink, points: List<Offset>, selected: Boolean, unit: Float, copper: Color, highlight: Color, surface: Color, onSurface: Color,
-                               measurer: androidx.compose.ui.text.TextMeasurer) {
+                               measurer: androidx.compose.ui.text.TextMeasurer, stub: String?) {
     if (points.size < 2) return
     val color = if (selected) highlight else MapStyle.medium(link.media, copper)
     val stroke = MapStyle.width(link.cableIds.size, unit) + if (selected) unit else 0f
     points.zipWithNext().forEach { (a, b) -> drawLine(color, a, b, stroke, pathEffect = MapStyle.dash(link.media, unit * 2)) }
     // An open end means "continues elsewhere": draw it hollow.
     if (link.b == null) { drawCircle(surface, unit * 3, points.last()); drawCircle(color, unit * 3, points.last(), style = Stroke(unit)) }
+    stub?.let {
+        // Beside the open end, on the inner side, clamped to the canvas.
+        val text = measurer.measure(AnnotatedString(MapStyle.shortName(it, 36)), TextStyle(color = onSurface, fontSize = 11.sp))
+        val end = points.last()
+        val x = (end.x - text.size.width / 2f).coerceIn(unit * 3, (size.width - text.size.width - unit * 3).coerceAtLeast(unit * 3))
+        val y = (if (end.y > size.height / 2) end.y - text.size.height - unit * 5 else end.y + unit * 5).coerceIn(0f, (size.height - text.size.height).coerceAtLeast(0f))
+        drawRoundRect(surface.copy(alpha = .9f), Offset(x - unit * 2, y), Size(text.size.width + unit * 4, text.size.height.toFloat()), CornerRadius(unit * 3))
+        drawText(text, topLeft = Offset(x, y))
+    }
     if (link.cableIds.size > 1) {
         val mid = if (points.size > 3) points[points.size / 2] else points.zipWithNext().maxBy { (a, b) -> (b - a).getDistance() }.let { (a, b) -> (a + b) / 2f }
         val text = measurer.measure(AnnotatedString(link.cableIds.size.toString()), TextStyle(color = surface, fontSize = 11.sp, fontWeight = FontWeight.Bold))

@@ -35,11 +35,12 @@ class MapActions(
     val edit: (MapObjectDraft, ConfiguratorPage) -> Unit,
     /** New object inside [parent] (or on the floor at [point]). */
     val add: (parent: ObjectRef?, point: MapPoint?) -> Unit,
+    /** Shows [focus] on floor [areaId] (any business unit); null hides "Go to". */
+    val goTo: ((areaId: String, focus: ObjectRef) -> Unit)? = null,
 )
 
 /** Business unit that owns the floor, used for new or legacy objects without one. */
-fun floorBusinessUnit(project: Project, areaId: String): String =
-    project.businessUnits.firstOrNull { bu -> ObjectMap.areas(bu).any { it.id == areaId } }?.id ?: project.businessUnits.firstOrNull()?.id.orEmpty()
+fun floorBusinessUnit(project: Project, areaId: String): String = ObjectMap.floorBusinessUnit(project, areaId)
 
 fun editDraft(project: Project, ref: ObjectRef, areaId: String, i18n: Messages): MapObjectDraft {
     val bu = ProjectIndex(project).businessUnitOf(ref.id)?.id ?: floorBusinessUnit(project, areaId)
@@ -60,23 +61,32 @@ fun MapWorkspace(
     modifier: Modifier = Modifier,
     toolbar: @Composable RowScope.() -> Unit = {},
     media: @Composable (ObjectRef) -> Unit = {},
+    /** Object to open and select on arrival, e.g. after "Go to" from another floor. */
+    focus: ObjectRef? = null,
 ) {
-    var path by remember(areaId) { mutableStateOf(emptyList<ObjectRef>()) }
     val hierarchy = remember(project) { HierarchyIndex(project) }
+    val arrival = focus?.takeIf { hierarchy.areaId(it) == areaId }
+    var path by remember(areaId, arrival) { mutableStateOf(arrival?.let { hierarchy.ancestors(it).reversed() }.orEmpty()) }
     // Keep levels only while each is still a child of the previous one on this floor (deleted or moved levels are dropped).
     val validPath = path.withIndex().takeWhile { (i, ref) ->
         hierarchy.parents[ref] == path.getOrNull(i - 1) && (i > 0 || hierarchy.areaId(ref) == areaId)
     }.map { it.value }
     if (validPath != path) SideEffect { path = validPath }
     val container = validPath.lastOrNull()
-    var selection by remember(areaId, container) { mutableStateOf<MapSelection?>(null) }
+    var selection by remember(areaId, arrival) { mutableStateOf<MapSelection?>(arrival?.let { MapSelection.Node(it) }) }
     val scene = remember(project, areaId, container) { if (container == null) MapScene.area(project, areaId) else MapScene.container(project, container) }
-    if (selection is MapSelection.Node && scene.node((selection as MapSelection.Node).ref) == null) selection = null
+    // Selections that the current view no longer shows are dropped.
+    when (val s = selection) {
+        is MapSelection.Node -> if (scene.node(s.ref) == null) selection = null
+        is MapSelection.Link -> if (s.cableIds.none { scene.linkOf(it) != null }) selection = null
+        null -> Unit
+    }
     // Narrow windows hide the pane until something is selected; "List" opens it on demand.
     var listOpen by remember(areaId) { mutableStateOf(false) }
 
     val floorName = remember(project, areaId) { ProjectIndex(project).area(areaId)?.name } ?: i18n.text("map.floor")
-    fun open(ref: ObjectRef) { path = validPath + ref }
+    fun go(levels: List<ObjectRef>) { path = levels; selection = null }
+    fun open(ref: ObjectRef) = go(validPath + ref)
     val canvas: @Composable (Modifier) -> Unit = { m ->
         MapCanvas(scene, if (container == null) image else null, selection, i18n,
             onSelect = { selection = it }, onOpen = { open(it.ref) },
@@ -89,12 +99,12 @@ fun MapWorkspace(
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val trail: @Composable RowScope.() -> Unit = {
-            if (validPath.isNotEmpty()) TextButton(onClick = { path = validPath.dropLast(1) }) { Text("‹ " + i18n.text("map.back")) }
+            if (validPath.isNotEmpty()) TextButton(onClick = { go(validPath.dropLast(1)) }) { Text("‹ " + i18n.text("map.back")) }
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { path = emptyList() }, enabled = validPath.isNotEmpty()) { Text(MapStyle.shortName(floorName, 24)) }
+                TextButton(onClick = { go(emptyList()) }, enabled = validPath.isNotEmpty()) { Text(MapStyle.shortName(floorName, 24)) }
                 validPath.forEachIndexed { i, ref ->
                     Text("›", Modifier.clearAndSetSemantics {})
-                    TextButton(onClick = { path = validPath.take(i + 1) }, enabled = i < validPath.lastIndex) { Text(MapStyle.shortName(ObjectHierarchy.name(project, ref, i18n), 18)) }
+                    TextButton(onClick = { go(validPath.take(i + 1)) }, enabled = i < validPath.lastIndex) { Text(MapStyle.shortName(ObjectHierarchy.name(project, ref, i18n), 18)) }
                 }
             }
         }

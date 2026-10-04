@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-04",
-  "currentPhase": "Difetti F10 corretti; prossimi: collegamenti tra piani/BU e VPN (F06–F08).",
+  "currentPhase": "F06 completato; prossimi: collegamenti logici nel pannello (F07) e percorso via VPN (F08).",
   "activeTask": null,
-  "nextSession": "Ripartire da F06 (estremità remote dei cavi tra piani e BU con Vai a e dorsale) e F07 (sezione Collegamenti logici VPN/WAN nel pannello), poi F08; F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
+  "nextSession": "Ripartire da F07 (sezione Collegamenti logici VPN/WAN nel pannello), poi F08; F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
   "remainingTasks": [
-    {
-      "id": "F06",
-      "area": "Mappa",
-      "title": "Estremità remote dei cavi tra piani e BU",
-      "description": "Il tratto verso il bordo e la scheda cavo indicano dispositivo, piano e BU dell'estremità remota (es. → SW-05 · Primo · BU Nord); azione Vai a che apre l'altro piano con l'oggetto selezionato; la scheda cavo mostra la dorsale associata (SharedPathSegment). Nessuna modifica a contratto .ofam o Room.",
-      "acceptance": "Da un collegamento Fuori vista si raggiunge l'altro piano con l'oggetto selezionato; BU e dorsale visibili; test Desktop e prova su Android."
-    },
     {
       "id": "F07",
       "area": "Mappa",
@@ -67,7 +60,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto.",
+      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto. Da provare anche: etichetta del moncone e Vai a verso un altro piano o BU (F06).",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]

@@ -132,6 +132,9 @@ object ObjectMap {
         return "${cable.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${label(true, i18n = i18n)} → ${label(false, i18n = i18n)}"
     }
     fun areas(bu: BusinessUnit) = bu.areas + bu.sites.flatMap { it.areas }
+    /** Business unit that owns the floor; falls back to the first one for legacy data. */
+    fun floorBusinessUnit(project: Project, areaId: String): String =
+        project.businessUnits.firstOrNull { bu -> areas(bu).any { it.id == areaId } }?.id ?: project.businessUnits.firstOrNull()?.id.orEmpty()
     fun areaLabel(bu: BusinessUnit, area: Area): String = bu.sites.find { s -> s.areas.any { it.id == area.id } }?.let { "${it.name} / ${area.name}" } ?: area.name
 
     fun nodes(project: Project, areaId: String, hierarchy: HierarchyIndex = HierarchyIndex(project)): List<MapNode> {

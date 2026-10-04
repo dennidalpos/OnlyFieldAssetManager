@@ -34,6 +34,8 @@ fun FloorHomeSection(state: DesktopAppState) {
     var addingStructure by remember { mutableStateOf(false) }
     var adding by remember { mutableStateOf<Pair<ObjectRef?, MapPoint?>?>(null) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
+    // Object to select after "Go to"; cleared when the user picks a floor by hand.
+    var focus by remember { mutableStateOf<ObjectRef?>(null) }
     var editorPage by remember { mutableStateOf(ConfiguratorPage.ESSENTIALS) }
     var selectingPlan by remember { mutableStateOf(false) }
     var newPlanId by remember { mutableStateOf<String?>(null) }
@@ -61,19 +63,20 @@ fun FloorHomeSection(state: DesktopAppState) {
                 if (bu == null) items(project.businessUnits.sortedForDisplay(i18n) { it.name }, key = { it.id }) { b ->
                     Card(Modifier.fillMaxWidth()) { TextButton(onClick = { state.selectedBuId = b.id; state.selectedAreaId = null }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.edc54eb6f93e", b.name, ObjectMap.areas(b).size)) } }
                 } else items(ObjectMap.areas(bu).sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
-                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { state.selectedAreaId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.0b16578ff793", ObjectMap.areaLabel(bu, a), ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)) } }
+                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { focus = null; state.selectedAreaId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.0b16578ff793", ObjectMap.areaLabel(bu, a), ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)) } }
                 }
             }
         } else {
             imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             MapWorkspace(project, area.id, image, i18n, MapActions(
                 update = state::update,
+                goTo = { target, ref -> state.selectedBuId = ObjectMap.floorBusinessUnit(project, target); state.selectedAreaId = target; focus = ref },
                 edit = { draft, page -> editorPage = page; editor = draft },
                 add = { parent, point -> adding = parent to point },
             ), Modifier.weight(1f), toolbar = {
                 OutlinedButton(onClick = { scanning = true }) { Text(i18n.text("map.scan")) }
                 OutlinedButton(onClick = { selectingPlan = true }) { Text(i18n.text("text.68f86d09412c")) }
-            }, media = { ref ->
+            }, focus = focus, media = { ref ->
                 val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
                 // The pane draws the section title; thumbnails scroll sideways to keep it compact.
                 Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

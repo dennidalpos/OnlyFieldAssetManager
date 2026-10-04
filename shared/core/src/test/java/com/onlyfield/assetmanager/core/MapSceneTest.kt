@@ -56,6 +56,25 @@ class MapSceneTest {
         assertEquals(scene.node(apRef)!!.point, route.points.last())
     }
 
+    @Test fun stubKnowsRemoteDeviceFloorBusinessUnitAndBackbone() {
+        val north = Area(name = "Nord 1")
+        val northRack = Rack(name = "RN", areaId = north.id)
+        val sw5 = Device(technicalName = "SW-05", rackId = northRack.id, positionU = 1)
+        val backbone = SharedPathSegment(name = "Dorsale A", sourceAreaId = area.id, targetAreaId = north.id, description = null, capacityMaxCables = null, notes = null)
+        val c = Cable(deviceAId = ap.id, deviceBId = sw5.id, sharedPathSegmentIds = listOf(backbone.id))
+        val p = project(c).let { it.copy(businessUnits = it.businessUnits + BusinessUnit(name = "BU Nord", areas = listOf(north), devices = listOf(sw5)),
+            racks = it.racks + northRack, sharedPathSegments = listOf(backbone)) }
+        val scene = MapScene.area(p, area.id)
+        val end = scene.links.single().remotes.getValue(c.id)
+        assertEquals(ObjectRef(PlacementTargetType.DEVICE, sw5.id), end.ref)
+        assertEquals(north.id, end.areaId)
+        assertEquals("SW-05 · Nord 1 · BU Nord", end.label(scene.areaId, scene.buId))
+        assertEquals("SW-05", end.label(north.id, end.buId))
+        assertEquals(listOf("Dorsale A"), p.backbones(c).map { it.name })
+        // The far floor shows the same cable as a stub towards AP.
+        assertEquals("AP · Terra · BU", MapScene.area(p, north.id).links.single().remotes.getValue(c.id).let { it.label(north.id, end.buId) })
+    }
+
     @Test fun containerShowsChildrenInUnitOrderAndOutsideLinks() {
         val toAp = Cable(deviceAId = sw.id, deviceBId = ap.id)
         val inside = Cable(deviceAId = sw.id, deviceBId = box.id)

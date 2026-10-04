@@ -162,7 +162,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
     if (links.isNotEmpty() && !current) {
         SectionTitle(i18n.text("map.cables"), links.size)
         links.forEach { link ->
-            val other = (if (link.a == node.ref) link.b else link.a)?.let { scene.node(it)?.name } ?: i18n.text("map.outside")
+            val other = (if (link.a == node.ref) link.b else link.a)?.let { scene.node(it)?.name } ?: stubLabel(scene, link, i18n) ?: i18n.text("map.outside")
             TextButton(onClick = { onSelect(MapSelection.Link(link.cableIds)) }, modifier = Modifier.fillMaxWidth()) {
                 Column(Modifier.weight(1f)) {
                     Text(other, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -191,7 +191,8 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
         val where = if (area != null && area != scene.areaId) " (${index.areaName(area)})" else ""
         return (port?.let(index::portLabel) ?: device.technicalName) + where
     }
-    PaneHeader(null, "${scene.node(link.a)?.name ?: i18n.text("map.outside")} ⟷ ${scene.node(link.b)?.name ?: i18n.text("map.outside")}",
+    val far = scene.node(link.b)?.name ?: stubLabel(scene, link, i18n)?.removePrefix("→ ") ?: i18n.text("map.outside")
+    PaneHeader(null, "${scene.node(link.a)?.name ?: i18n.text("map.outside")} ⟷ $far",
         (listOf(i18n.plural("map.cableCount", link.cableIds.size)) + link.media.map { i18n.text("map.medium.${it.name}") }).joinToString(" · "),
         i18n, onClose = { onSelect(null) })
     SectionTitle(i18n.text("map.cablesTitle"), link.cableIds.size)
@@ -207,8 +208,22 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
                 }
                 Text("A: ${endLabel(cable, true)}", style = MaterialTheme.typography.bodySmall)
                 Text("B: ${endLabel(cable, false)}", style = MaterialTheme.typography.bodySmall)
-                if (selected) Button(onClick = { actions.edit(MapObjectDraft.cable(project, floorBusinessUnit(project, scene.areaId), scene.areaId, cable.id, i18n), ConfiguratorPage.ESSENTIALS) },
-                    modifier = Modifier.padding(top = 4.dp)) { Text(i18n.text("map.editCable")) }
+                val remote = link.remotes[cable.id]
+                remote?.let { r ->
+                    Text(i18n.text("map.remoteEnd", r.label(name = r.port?.let { index.portLabel(it.id) } ?: r.device.technicalName)), style = MaterialTheme.typography.bodySmall)
+                }
+                val backbones = project.backbones(cable)
+                if (backbones.isNotEmpty()) Text(i18n.text("map.backbone", backbones.joinToString(", ") { it.name }), style = MaterialTheme.typography.bodySmall)
+                if (selected) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { actions.edit(MapObjectDraft.cable(project, floorBusinessUnit(project, scene.areaId), scene.areaId, cable.id, i18n), ConfiguratorPage.ESSENTIALS) }) {
+                        Text(i18n.text("map.editCable"))
+                    }
+                    val goTo = actions.goTo
+                    val target = remote?.areaId
+                    if (goTo != null && remote != null && target != null) OutlinedButton(onClick = { goTo(target, remote.ref) }) {
+                        Text(i18n.text("map.goTo", remote.device.technicalName))
+                    }
+                }
             }
         }
     }

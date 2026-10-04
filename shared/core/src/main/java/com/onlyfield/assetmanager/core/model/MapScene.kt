@@ -74,6 +74,22 @@ class CableEnds(project: Project) {
     }
 }
 
+/** Cable end outside the current view, with its floor and business unit for labels and navigation. */
+data class RemoteEnd(
+    val device: Device,
+    val port: Port?,
+    /** Object to select on [areaId]: the device itself, opened through its containers. */
+    val ref: ObjectRef,
+    val areaId: String?,
+    val areaName: String?,
+    val buId: String?,
+    val buName: String?,
+) {
+    /** "SW-05 · Primo · BU Nord"; floor and BU only when they differ from the viewer's. */
+    fun label(fromAreaId: String? = null, fromBuId: String? = null, name: String = device.technicalName): String =
+        listOfNotNull(name, areaName?.takeIf { areaId != fromAreaId }, buName?.takeIf { buId != fromBuId }).joinToString(" · ")
+}
+
 data class SceneNode(
     val ref: ObjectRef,
     val name: String,
@@ -102,10 +118,12 @@ data class SceneLink(
     val bends: List<MapPoint> = emptyList(),
     val start: MapPoint? = null,
     val end: MapPoint? = null,
+    /** Outside end of each cable when [b] is null, keyed by cable id. */
+    val remotes: Map<String, RemoteEnd> = emptyMap(),
 )
 
 /** What a map view shows: a floor or the inside of a container, with simplified links. */
-data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: List<SceneNode>, val links: List<SceneLink>) {
+data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: List<SceneNode>, val links: List<SceneLink>, val buId: String? = null) {
     private val byRef = nodes.associateBy { it.ref }
     val editable get() = container == null
 
@@ -173,6 +191,7 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
         private fun build(project: Project, hierarchy: HierarchyIndex, areaId: String, container: ObjectRef?,
                           placed: List<Pair<ObjectRef, MapPoint>>, visible: (ObjectRef) -> ObjectRef?): MapScene {
             val ends = CableEnds(project)
+            val remote = RemoteEnds(project, hierarchy)
             val graph = ConnectionGraph(project)
             val lookup = Lookup(project)
             val devices = lookup.devices
@@ -206,6 +225,7 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
                     bends = route?.bends?.let { if (reversed) it.reversed() else it }.orEmpty(),
                     start = if (a == null && b == null) route?.points?.first() else null,
                     end = if (a == null && b == null) route?.points?.last() else if (a == null || b == null) far ?: near?.let(::edge) else null,
+                    remotes = if ((a == null) != (b == null)) group.mapNotNull { (c, ca, _) -> remote.of(c, first = ca == null)?.let { c.id to it } }.toMap() else emptyMap(),
                 )
             }
             val nodes = placed.map { (ref, point) ->
@@ -217,7 +237,7 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
                     isContainer = children.isNotEmpty() || lookup.canContain(ref), childCount = children.size,
                     portsUsed = ports.count { graph.occupied(it.id) }, portsTotal = ports.size, internalCables = internal[ref].orEmpty())
             }
-            return MapScene(areaId, container, nodes, links)
+            return MapScene(areaId, container, nodes, links, ObjectMap.floorBusinessUnit(project, areaId).ifBlank { null })
         }
 
         /** Nearest border point, slightly inside the page so the stub stays visible. */
@@ -228,3 +248,22 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
         }
     }
 }
+
+/** Resolves cable ends to [RemoteEnd] with one set of lookup tables. */
+class RemoteEnds(private val project: Project, private val hierarchy: HierarchyIndex = HierarchyIndex(project)) {
+    private val ends = CableEnds(project)
+    private val areas = project.businessUnits.flatMap { bu -> ObjectMap.areas(bu).map { it.id to it } }.toMap()
+    private val owners = project.businessUnits.flatMap { bu -> bu.devices.map { it.id to bu } }.toMap()
+
+    fun of(cable: Cable, first: Boolean): RemoteEnd? {
+        val device = ends.device(cable, first) ?: return null
+        val portId = if (first) cable.portAId else cable.portBId
+        val ref = ObjectRef(PlacementTargetType.DEVICE, device.id)
+        val areaId = hierarchy.areaId(ref)
+        val bu = owners[device.id]
+        return RemoteEnd(device, device.ports.find { it.id == portId }, ref, areaId, areaId?.let(areas::get)?.name, bu?.id, bu?.name)
+    }
+}
+
+/** Backbone segments a cable runs through, in the cable's order. */
+fun Project.backbones(cable: Cable): List<SharedPathSegment> = cable.sharedPathSegmentIds.mapNotNull { id -> sharedPathSegments.find { it.id == id } }

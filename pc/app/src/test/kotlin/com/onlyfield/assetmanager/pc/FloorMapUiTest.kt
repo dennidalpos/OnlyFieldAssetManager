@@ -154,6 +154,32 @@ class FloorMapUiTest {
         rule.runOnIdle { assertEquals(internal.id, opened) }
     }
 
+    @Test fun remoteEndLeadsToTheOtherFloorWithTheObjectSelected() {
+        val north = Area(name = "Nord 1")
+        val rack = Rack(name = "RN", areaId = north.id)
+        val remote = Device(technicalName = "SW-05", rackId = rack.id, positionU = 1)
+        val backbone = SharedPathSegment(name = "Dorsale A", sourceAreaId = area.id, targetAreaId = north.id, description = null, capacityMaxCables = null, notes = null)
+        val cable = Cable(codeOrLabel = "C9", deviceAId = device.id, deviceBId = remote.id, sharedPathSegmentIds = listOf(backbone.id))
+        val p = initial.copy(businessUnits = initial.businessUnits + BusinessUnit(name = "BU Nord", areas = listOf(north), devices = listOf(remote)),
+            racks = listOf(rack), cables = listOf(cable), sharedPathSegments = listOf(backbone))
+        var shownArea by mutableStateOf(area.id)
+        var focus by mutableStateOf<ObjectRef?>(null)
+        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
+            MapWorkspace(p, shownArea, null, Messages(), MapActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, goTo = { a, ref -> shownArea = a; focus = ref }), focus = focus)
+        } } }
+        val canvas = rule.onNodeWithTag("floor-map")
+        canvas.clickAt(viewport(canvas), MapPoint(.3f, .4f))
+        rule.onNodeWithText("→ SW-05 · Nord 1 · BU Nord").performScrollTo().performClick()
+        rule.onNodeWithText("C9").performScrollTo().performClick()
+        rule.onNodeWithText("Estremità remota: SW-05 · Nord 1 · BU Nord").assertExists()
+        rule.onNodeWithText("Dorsale: Dorsale A").assertExists()
+        rule.onNodeWithText("Vai a SW-05").performScrollTo().performClick()
+        rule.runOnIdle { assertEquals(north.id, shownArea); assertEquals(remote.id, focus?.id) }
+        // Arrival opens the rack and selects the device.
+        rule.onNodeWithText("‹ Indietro").assertIsDisplayed()
+        rule.onNode(hasTestTag("map-detail") and hasAnyDescendant(hasText("SW-05"))).assertIsDisplayed()
+    }
+
     @Test fun cableIsSelectableAndItsFreeEndCanBeDragged() {
         val cable = Cable(codeOrLabel = "C1")
         val route = CableRoute(cableId = cable.id, areaId = area.id)
