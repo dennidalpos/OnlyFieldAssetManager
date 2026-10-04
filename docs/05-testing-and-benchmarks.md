@@ -31,7 +31,7 @@ Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di 
 
 - Il collaudo su telefono, multitouch, fotocamera, scanner e lettore USB richiede hardware reale: [checklist](testing/hardware-checklist.md).
 - Su API 37 due test UI si arrestano in Espresso prima delle asserzioni; il dettaglio e RES-17 nel [tracker](../PROJECT_STATUS.json).
-- Una release verificata richiede una vera esecuzione CI su tag: RES-01.
+- La pubblicazione su tag è verificata dalla release v1.0.1 (run 37238450362).
 
 Le prove non eseguite non sono considerate superate.
 
