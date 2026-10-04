@@ -3,6 +3,7 @@ package com.onlyfield.assetmanager.configurator.map
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -41,7 +42,8 @@ fun MapDetailPane(project: Project, scene: MapScene, selection: MapSelection?, i
     val index = remember(project) { ProjectIndex(project) }
     var assigning by remember(scene.container) { mutableStateOf(false) }
     Surface(modifier.testTag("map-detail"), tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium) {
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // A new selection starts at the top of the pane.
+        Column(Modifier.verticalScroll(remember(selection, scene.container) { ScrollState(0) }).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (selection) {
                 is MapSelection.Node -> scene.node(selection.ref)?.let { node ->
                     NodeDetails(project, index, hierarchy, scene, node, i18n, actions, onSelect, onOpen, media, current = false)

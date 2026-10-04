@@ -107,6 +107,8 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     var modelName by remember(draft.id) { mutableStateOf("") }
     var side by remember(draft.id) { mutableStateOf(PortSide.FRONT) }
     var selectedPorts by remember(draft.id) { mutableStateOf(emptySet<String>()) }
+    // Only coming back from a port scrolls to Ports; opening the editor always starts at the top.
+    var returnToPorts by remember(draft.id) { mutableStateOf(false) }
     fun stage(p: Project) = change(draft.copy(session = ConfigurationSession(draft.session?.original ?: project, p)))
     fun openDevice(device: Device) {
         stage(preview)
@@ -120,7 +122,9 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         val apply = { stage(child.apply(preview, i18n)); nested = null }
         val valid = child.errors(preview, i18n).isEmpty()
         // The host's Save still saves the root object: say so, and keep both choices together.
-        Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.medium) {
+        val top = remember(child.id) { BringIntoViewRequester() }
+        LaunchedEffect(child.id) { top.bringIntoView() }
+        Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.medium, modifier = Modifier.bringIntoViewRequester(top)) {
             Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(i18n.text("config.nestedBanner", childName, rootName.ifBlank { ObjectCatalog.displayName(draft.type, i18n) }), style = MaterialTheme.typography.bodyMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -135,7 +139,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     }
     portId?.let { id -> index.port(id)?.let { ref ->
         val bringIntoView = remember(id) { BringIntoViewRequester() }
-        TextButton(onClick = { portId = null }, modifier = Modifier.bringIntoViewRequester(bringIntoView)) {
+        TextButton(onClick = { portId = null; returnToPorts = true }, modifier = Modifier.bringIntoViewRequester(bringIntoView)) {
             Text("‹ ", Modifier.clearAndSetSemantics {}); Text(i18n.text("config.backToObject"))
         }
         LaunchedEffect(id) { bringIntoView.bringIntoView() }
@@ -213,7 +217,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             val device = index.device(draft.id)
             val cells = remember(preview, draft.id) { device?.let { PortLogic.panel(preview, it, graph, index) }.orEmpty() }
             val portsSummary = if (cells.isNotEmpty()) i18n.text("config.portsSummary", cells.size, cells.count { it.occupied }) else portGroupsSummary(h.portGroups)
-            ConfiguratorSection(i18n.text("ux.ports"), activePage == ConfiguratorPage.PORTS, errors["ports"], focusOnOpen = activePage == ConfiguratorPage.PORTS,
+            ConfiguratorSection(i18n.text("ux.ports"), activePage == ConfiguratorPage.PORTS, errors["ports"], focusOnOpen = returnToPorts,
                 summary = portsSummary.ifBlank { i18n.text("config.noPorts") }) {
                 PresetBar(draft, i18n, change)
                 PortGroups(preview, draft, i18n, change)

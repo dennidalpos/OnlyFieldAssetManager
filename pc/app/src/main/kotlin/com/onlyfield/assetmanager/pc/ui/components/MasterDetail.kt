@@ -79,7 +79,8 @@ fun MasterDetailHost(modifier: Modifier = Modifier, master: @Composable () -> Un
                 CompositionLocalProvider(LocalHasMasterDetail provides true, LocalDetailSlot provides slot, LocalDetailChange provides slot::requestChange) { master() }
             }
             CompositionLocalProvider(LocalPanelWidth provides if (fullEditor) availableWidth - 16.dp else editorWidth) {
-                key(slot.editorVersion) { slot.content?.invoke() }
+                // Keyed by the panel too, so a different editor never inherits the previous scroll offset.
+                slot.content?.let { panel -> key(slot.editorVersion, panel) { panel() } }
             }
         }
     }
