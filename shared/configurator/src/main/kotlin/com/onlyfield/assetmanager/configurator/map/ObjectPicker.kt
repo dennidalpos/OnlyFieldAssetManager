@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.configurator.map
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -137,6 +138,8 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
                     errors.values.distinct().takeIf { it.isNotEmpty() }?.let {
                         Text(it.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
+                    // Secondary path inside the body, so Back and Add always share one row on phones.
+                    if (onEdit != null) OutlinedButton(enabled = errors.isEmpty(), onClick = { onEdit(draft) }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("quick.addAndEdit")) }
                 }
                 custom -> CustomTypeForm(i18n) { customType = it }
                 else -> {
@@ -175,12 +178,9 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
             custom -> Button(enabled = customType != null, onClick = { custom = false; chosen = customType }) { Text(i18n.text("catalog.continue")) }
         }
     }, dismissButton = {
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            val back = custom || (chosen != null && allTypes.size > 1)
-            if (back) TextButton(onClick = { if (custom) { custom = false; customType = null } else chosen = null }) { Text(i18n.text("map.back")) }
-            else TextButton(onClick = onClose) { Text(i18n.text("ux.cancel")) }
-            if (draft != null && onEdit != null) TextButton(enabled = errors.isEmpty(), onClick = { onEdit(draft) }) { Text(i18n.text("quick.addAndEdit")) }
-        }
+        val back = custom || (chosen != null && allTypes.size > 1)
+        if (back) TextButton(onClick = { if (custom) { custom = false; customType = null } else chosen = null }) { Text(i18n.text("map.back")) }
+        else TextButton(onClick = onClose) { Text(i18n.text("ux.cancel")) }
     })
 }
 

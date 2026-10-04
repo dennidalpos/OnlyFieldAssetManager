@@ -61,7 +61,7 @@ private fun UnitLabel(u: Int, color: Color) =
 @Composable
 private fun FreeUnit(u: Int, i18n: Messages, onAddAt: ((Int) -> Unit)?) {
     val label = i18n.text("rack.freeUnit", u)
-    Row(Modifier.fillMaxWidth().height(UnitHeight)
+    Row(Modifier.fillMaxWidth().heightIn(min = UnitHeight)
         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.extraSmall)
         .then(if (onAddAt != null) Modifier.clickable(role = Role.Button, onClickLabel = i18n.text("config.addAtUnit")) { onAddAt(u) } else Modifier)
         .semantics(mergeDescendants = true) { contentDescription = label }

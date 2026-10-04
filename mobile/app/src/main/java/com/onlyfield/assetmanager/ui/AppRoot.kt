@@ -61,7 +61,7 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                 val screen = vm.currentScreen
                 val p = project
                 val overlays = remember { mutableIntStateOf(0) }
-                val tabbed = p != null && mainTabs.any { it.first == screen }
+                val tabbed = p != null && mainTabs.any { it.screen == screen }
                 CompositionLocalProvider(LocalOverlayCount provides overlays) {
                 Column(Modifier.fillMaxSize()) {
                 // The bar owns the bottom inset; screens above it must not pad for it again.
