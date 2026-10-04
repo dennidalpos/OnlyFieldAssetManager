@@ -1,7 +1,10 @@
 package com.onlyfield.assetmanager.configurator.map
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.OverflowActions
+import com.onlyfield.assetmanager.configurator.PaneAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -61,7 +64,8 @@ fun MapWorkspace(
     i18n: Messages,
     actions: MapActions,
     modifier: Modifier = Modifier,
-    toolbar: @Composable RowScope.() -> Unit = {},
+    /** Host commands (scan, floor plan…): inline on wide windows, in the ⋮ menu on phones. */
+    tools: List<PaneAction> = emptyList(),
     media: @Composable (ObjectRef) -> Unit = {},
     /** Object to open and select on arrival, e.g. after "Go to" from another floor. */
     focus: ObjectRef? = null,
@@ -100,28 +104,38 @@ fun MapWorkspace(
         MapDetailPane(project, scene, selection, i18n, actions, onSelect = { selection = it }, onOpen = ::open, media = media, modifier = m, hierarchy = hierarchy)
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        val levels = listOf(floorName) + validPath.map { ObjectHierarchy.name(project, it, i18n) }
+        // Back plus the current level; the levels above sit in a menu instead of a scrolling trail.
         val trail: @Composable RowScope.() -> Unit = {
             if (validPath.isNotEmpty()) TextButton(onClick = { go(validPath.dropLast(1)) }) { Text("‹ " + i18n.text("map.back")) }
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { go(emptyList()) }, enabled = validPath.isNotEmpty()) { Text(MapStyle.shortName(floorName, 24)) }
-                validPath.forEachIndexed { i, ref ->
-                    Text("›", Modifier.clearAndSetSemantics {})
-                    TextButton(onClick = { go(validPath.take(i + 1)) }, enabled = i < validPath.lastIndex) { Text(MapStyle.shortName(ObjectHierarchy.name(project, ref, i18n), 18)) }
+            Box(Modifier.weight(1f)) {
+                var open by remember { mutableStateOf(false) }
+                if (validPath.isEmpty()) Text(levels.last(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 8.dp))
+                else TextButton(onClick = { open = true }) {
+                    Text(levels.last(), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Text(" ▾", Modifier.clearAndSetSemantics {})
+                }
+                DropdownMenu(open, { open = false }) {
+                    levels.dropLast(1).forEachIndexed { i, name ->
+                        DropdownMenuItem(text = { Text("  ".repeat(i) + MapStyle.shortName(name, 32)) }, onClick = { open = false; go(validPath.take(i)) })
+                    }
                 }
             }
         }
-        val commands: @Composable RowScope.(Boolean) -> Unit = { narrow ->
-            Button(onClick = { actions.add(container, null) }) { Text(i18n.text(if (container == null) "map.addObject" else "map.addHere")) }
-            if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen }, label = { Text(i18n.text("map.list")) })
-            toolbar()
-        }
-        // Phones get breadcrumb and commands on two rows so neither is clipped.
+        val addLabel = i18n.text(if (container == null) "map.addObject" else "map.addHere")
         BoxWithConstraints(Modifier.fillMaxWidth()) {
             val narrow = maxWidth < 840.dp
-            if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { trail(); commands(narrow) }
-            else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { trail() }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { commands(true) }
+            if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                trail()
+                Button(onClick = { actions.add(container, null) }) { Text(addLabel) }
+                if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen }, label = { Text(i18n.text("map.list")) })
+                tools.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
+            } else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { trail(); OverflowActions(i18n, tools) }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(onClick = { actions.add(container, null) }, modifier = Modifier.weight(1f)) { Text(addLabel) }
+                    FilterChip(selected = listOpen, onClick = { listOpen = !listOpen }, label = { Text(i18n.text("map.list")) })
+                }
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {

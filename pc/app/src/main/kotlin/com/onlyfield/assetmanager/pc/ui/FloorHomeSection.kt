@@ -76,13 +76,13 @@ fun FloorHomeSection(state: DesktopAppState) {
                 goTo = { target, ref -> state.selectedBuId = ObjectMap.floorBusinessUnit(project, target); state.selectedAreaId = target; focus = ref },
                 edit = { draft, page -> editorPage = page; editor = draft },
                 add = { parent, point -> adding = parent to point },
-            ), Modifier.weight(1f), toolbar = {
-                OutlinedButton(onClick = { scanning = true }) { Text(i18n.text("map.scan")) }
-                OutlinedButton(onClick = { selectingPlan = true }) { Text(i18n.text("text.68f86d09412c")) }
-            }, focus = focus, media = { ref ->
+            ), Modifier.weight(1f), tools = listOf(
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { selectingPlan = true },
+                ), focus = focus, media = { ref ->
                 val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
-                // The pane draws the section title; thumbnails scroll sideways to keep it compact.
-                Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Thumbnails wrap so the pane never scrolls sideways.
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
                         Column(Modifier.width(120.dp)) {
                             MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)

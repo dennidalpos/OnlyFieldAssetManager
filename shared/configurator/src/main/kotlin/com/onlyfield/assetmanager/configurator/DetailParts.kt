@@ -90,12 +90,18 @@ fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> 
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         primary?.let { Button(onClick = it.onClick) { Text(it.label) } }
         secondary.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
-        if (overflow.isNotEmpty()) Box {
-            var open by remember { mutableStateOf(false) }
-            SymbolButton("⋮", i18n.text("ux.more")) { open = true }
-            DropdownMenu(open, { open = false }) {
-                overflow.forEach { action -> DropdownMenuItem(text = { Text(action.label) }, onClick = { open = false; action.onClick() }) }
-            }
+        OverflowActions(i18n, overflow)
+    }
+}
+
+/** "⋮" button with a menu of [actions]; nothing when empty. */
+@Composable
+fun OverflowActions(i18n: Messages, actions: List<PaneAction>) {
+    if (actions.isNotEmpty()) Box {
+        var open by remember { mutableStateOf(false) }
+        SymbolButton("⋮", i18n.text("ux.more")) { open = true }
+        DropdownMenu(open, { open = false }) {
+            actions.forEach { action -> DropdownMenuItem(text = { Text(action.label) }, onClick = { open = false; action.onClick() }) }
         }
     }
 }

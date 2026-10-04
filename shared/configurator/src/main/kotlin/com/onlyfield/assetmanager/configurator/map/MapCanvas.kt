@@ -101,6 +101,8 @@ fun MapCanvas(
     val surface = MaterialTheme.colorScheme.surface
     val copper = MaterialTheme.colorScheme.primary
     val highlight = MaterialTheme.colorScheme.tertiary
+    val outline = MaterialTheme.colorScheme.outline
+    val gridColor = MaterialTheme.colorScheme.outlineVariant
 
     // Gesture code runs in a long-lived coroutine: read the latest scene and selection through State.
     val current by rememberUpdatedState(shown)
@@ -239,8 +241,13 @@ fun MapCanvas(
                 }
             }) {
             val v = viewport()
+            // The page (floor area) is a filled, outlined sheet so its limits are visible at any zoom.
+            val pageTopLeft = Offset(v.left, v.top)
+            val pageSize = Size(v.pageWidth, v.pageHeight)
+            drawRect(surface, pageTopLeft, pageSize)
             if (image != null) drawImage(image, dstOffset = IntOffset(v.left.toInt(), v.top.toInt()), dstSize = IntSize(v.pageWidth.toInt().coerceAtLeast(1), v.pageHeight.toInt().coerceAtLeast(1)))
-            else drawGrid(::screen, onSurface)
+            else drawGrid(::screen, gridColor)
+            drawRect(outline, pageTopLeft, pageSize, style = Stroke(unit))
             shown.links.forEach { link -> drawLink(link, drawn(link).map(::screen), link == selectedLink, unit, copper, highlight, surface, onSurface, measurer, stubs[link.routeCableId]) }
             selectedLink?.let { link -> handles(link).forEach { (h, p) -> drawCircle(if (h.insert) surface else highlight, unit * 3, screen(p)); drawCircle(highlight, unit * 3, screen(p), style = Stroke(unit)) } }
             drawNodes(shown, ::screen, selectedNode, radius, unit, zoom, onSurface, surface, highlight, measurer)
@@ -268,10 +275,14 @@ internal fun arc(a: MapPoint, b: MapPoint, segments: Int = 16): List<MapPoint> {
     return if (p == a) curve else curve.reversed()
 }
 
+/** 24×24 grid with a stronger line every 4 cells. */
 private fun DrawScope.drawGrid(screen: (MapPoint) -> Offset, color: Color) {
-    for (i in 0..12) {
-        drawLine(color.copy(alpha = .08f), screen(MapPoint(i / 12f, 0f)), screen(MapPoint(i / 12f, 1f)))
-        drawLine(color.copy(alpha = .08f), screen(MapPoint(0f, i / 12f)), screen(MapPoint(1f, i / 12f)))
+    for (i in 1 until 24) {
+        val major = i % 4 == 0
+        val c = if (major) color else color.copy(alpha = .45f)
+        val w = if (major) 1.5f else 1f
+        drawLine(c, screen(MapPoint(i / 24f, 0f)), screen(MapPoint(i / 24f, 1f)), w)
+        drawLine(c, screen(MapPoint(0f, i / 24f)), screen(MapPoint(1f, i / 24f)), w)
     }
 }
 
