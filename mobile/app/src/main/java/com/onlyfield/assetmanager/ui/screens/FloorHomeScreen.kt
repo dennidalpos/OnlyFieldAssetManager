@@ -67,8 +67,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             } else newPlanId = a.id
         }
     }
-    AppScaffold(project.name, subtitle = listOfNotNull(bu?.name, area?.let { ObjectMap.areaLabel(bu, it) }).joinToString(" / "), onBack = ::back, snackbarHost = snackbar, busy = vm.busy,
-        actions = { TextButton(onClick = { vm.navigate(Screen.ProjectTools) }) { Text(i18n.text("text.bb1ca9a0ad66")) } }) { padding ->
+    AppScaffold(project.name, subtitle = listOfNotNull(bu?.name, area?.let { ObjectMap.areaLabel(bu, it) }).joinToString(" / "), onBack = ::back, snackbarHost = snackbar, busy = vm.busy) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (area == null) {
                 Text(if (bu == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)

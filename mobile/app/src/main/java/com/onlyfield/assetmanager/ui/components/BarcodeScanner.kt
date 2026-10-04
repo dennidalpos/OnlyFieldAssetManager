@@ -28,6 +28,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 /** Full-page offline QR/barcode scanner. */
 @Composable
 fun BarcodeScanner(onCode: (String) -> Unit, onClose: () -> Unit, hint: String = LocalMessages.current.text("text.75bf8546adbd")) {
+    TrackOverlay()
     val i18n = LocalMessages.current
 
     val context = LocalContext.current

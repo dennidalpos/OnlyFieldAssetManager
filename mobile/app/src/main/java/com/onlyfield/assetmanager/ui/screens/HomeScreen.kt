@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import com.onlyfield.assetmanager.configurator.ProjectDestination
+import com.onlyfield.assetmanager.configurator.SymbolIcons
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -52,34 +53,23 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
     AppScaffold(
         title = project.name,
         subtitle = if (project.isPasswordProtected) i18n.text("text.8c42691cd614") else i18n.text("text.b1f6bb96d793"),
-        onBack = { vm.back() },
+        onBack = null,
         snackbarHost = snackbar,
         busy = vm.busy,
-        actions = {
-            LanguagePicker(vm)
-            TextButton(onClick = ::startExport) { Text(i18n.text("text.2c4c51a93ca7")) }
-            OverflowMenu(
-                listOf(
-                    MenuAction(i18n.text("text.a6afc0c52be6")) { importLauncher.launch(arrayOf("*/*")) },
-                    MenuAction(if (project.isPasswordProtected) i18n.text("text.e7ce0854e521") else i18n.text("text.07298c58b48f")) { managingPassword = true },
-                    MenuAction(i18n.text("text.c00df9e3726e")) { vm.closeProject() },
-                )
-            )
-        }
+        actions = { LanguagePicker(vm) }
     ) { padding ->
-        LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                Text(project.description?.ifBlank { null } ?: i18n.text("text.0a8a8f203dc2"), style = MaterialTheme.typography.titleMedium)
-                TextButton(onClick = { vm.navigate(Screen.Issues) }, enabled = issues.isNotEmpty()) { Text(i18n.text("text.48139e9146f0", errors, warnings)) }
+        // Everything the bottom bar does not reach, grouped, with project actions last.
+        LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(vertical = 8.dp)) {
+            project.description?.ifBlank { null }?.let { item { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp)) } }
+            if (issues.isNotEmpty()) item {
+                ListItem(headlineContent = { Text(i18n.text("text.48139e9146f0", errors, warnings)) },
+                    leadingContent = { Icon(SymbolIcons.description, null, tint = if (errors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) },
+                    modifier = Modifier.fillMaxWidth().clickable { vm.navigate(Screen.Issues) })
             }
-            ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, destinations) ->
-                item { Text(i18n.text(group), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)) }
+            ProjectDestination.entries.filterNot { it.primary }.groupBy { it.groupKey }.forEach { (group, destinations) ->
+                item { GroupHeader(i18n.text(group)) }
                 items(destinations) { destination ->
                     val screen = when (destination) {
-                        ProjectDestination.MAP -> Screen.Home
-                        ProjectDestination.DEVICES -> Screen.Inventory
-                        ProjectDestination.RACKS -> Screen.Racks
-                        ProjectDestination.CABLING -> Screen.Cabling
                         ProjectDestination.NETWORK -> Screen.Network
                         ProjectDestination.POWER -> Screen.Power
                         ProjectDestination.MODELS -> Screen.Models
@@ -88,11 +78,17 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
                         ProjectDestination.DOCUMENTS -> Screen.Documents
                         ProjectDestination.PROJECT -> Screen.Structure
                         ProjectDestination.TRASH -> Screen.Trash
+                        else -> Screen.Home
                     }
-                    ListItem(headlineContent = { Text(destination.title(i18n)) }, trailingContent = { Text("›") },
+                    ListItem(headlineContent = { Text(destination.title(i18n)) }, leadingContent = { Icon(destination.icon, null) },
                         modifier = Modifier.fillMaxWidth().clickable { vm.navigate(screen) })
                 }
             }
+            item { GroupHeader(i18n.text("ux.nav.actions")) }
+            item { ActionItem(i18n.text("text.2c4c51a93ca7"), ::startExport) }
+            item { ActionItem(i18n.text("text.a6afc0c52be6")) { importLauncher.launch(arrayOf("*/*")) } }
+            item { ActionItem(if (project.isPasswordProtected) i18n.text("text.e7ce0854e521") else i18n.text("text.07298c58b48f")) { managingPassword = true } }
+            item { ActionItem(i18n.text("text.c00df9e3726e")) { vm.closeProject() } }
         }
     }
 
@@ -182,3 +178,11 @@ fun IssuesScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
         }
     }
 }
+
+@Composable
+private fun GroupHeader(text: String) =
+    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp))
+
+@Composable
+private fun ActionItem(label: String, onClick: () -> Unit) =
+    ListItem(headlineContent = { Text(label) }, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick))

@@ -83,7 +83,8 @@ private fun ProjectSidebar(state: DesktopAppState) {
                 Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp))
                 entries.forEach { destination ->
                     NavigationDrawerItem(label = { Text(destination.title(i18n)) }, selected = destination.appSection() == state.section,
-                        onClick = { state.navigate(destination) }, modifier = Modifier.heightIn(min = 48.dp))
+                        onClick = { state.navigate(destination) }, icon = { Icon(destination.icon, null, Modifier.size(20.dp)) },
+                        shape = MaterialTheme.shapes.small, modifier = Modifier.heightIn(min = 44.dp))
                 }
             }
         }
@@ -113,7 +114,8 @@ private fun ProjectToolbar(state: DesktopAppState, sidebarVisible: Boolean) {
                         DropdownMenu(sections, { sections = false }, modifier = Modifier.heightIn(max = 560.dp)) {
                             ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, entries) ->
                                 Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp))
-                                entries.forEach { destination -> DropdownMenuItem(text = { Text(destination.title(i18n)) }, onClick = { sections = false; state.navigate(destination) }) }
+                                entries.forEach { destination -> DropdownMenuItem(text = { Text(destination.title(i18n)) }, leadingIcon = { Icon(destination.icon, null, Modifier.size(20.dp)) },
+                                    onClick = { sections = false; state.navigate(destination) }) }
                             }
                         }
                     }
@@ -122,9 +124,11 @@ private fun ProjectToolbar(state: DesktopAppState, sidebarVisible: Boolean) {
                 Box {
                     OutlinedButton(onClick = { tools = true }) { Text(i18n.text("ux.nav.operations")) }
                     DropdownMenu(expanded = tools, onDismissRequest = { tools = false }) {
-                        DropdownMenuItem(text = { Text(i18n.text("text.f6a32b19c4b1")) }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
+                        // Exchange first, then protection, then project lifecycle.
                         DropdownMenuItem(text = { Text(i18n.text("text.8a1d8b27e511")) }, onClick = { tools = false; state.exportPackage() })
                         DropdownMenuItem(text = { Text(i18n.text("text.c890f54eece6")) }, onClick = { tools = false; state.pickAndImport() })
+                        DropdownMenuItem(text = { Text(i18n.text("text.f6a32b19c4b1")) }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
+                        HorizontalDivider()
                         DropdownMenuItem(text = { Text(i18n.text("text.ac667fe865c9")) }, onClick = { tools = false; state.newProject() })
                         DropdownMenuItem(text = { Text(i18n.text("text.c00df9e3726e")) }, onClick = { tools = false; state.closeProject() })
                     }

@@ -11,12 +11,15 @@ enum class ProjectDestination(val labelKey: String, val groupKey: String) {
     POWER("text.acedc1948e5f", "ux.nav.technical"),
     MODELS("text.7351fc8f354e", "ux.nav.support"),
     ATTACHMENTS("ux.nav.attachments", "ux.nav.support"),
-    CREDENTIALS("text.52f7e6721e97", "ux.nav.support"),
     DOCUMENTS("text.f7ac8562de3a", "ux.nav.support"),
+    CREDENTIALS("text.52f7e6721e97", "ux.nav.support"),
     PROJECT("ux.nav.structure", "ux.nav.project"),
     TRASH("text.9a3a36d5fa15", "ux.nav.project");
 
     fun title(i18n: Messages): String = i18n.text(labelKey)
+
+    /** Everyday work areas: bottom bar on phones, top of the sidebar on PC. */
+    val primary get() = groupKey == "ux.nav.work"
 
     val icon get() = when (this) {
         MAP -> SymbolIcons.map

@@ -8,6 +8,14 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
+import com.onlyfield.assetmanager.ui.components.LocalOverlayCount
+import com.onlyfield.assetmanager.ui.components.MainNavigationBar
+import com.onlyfield.assetmanager.ui.components.mainTabs
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
@@ -52,6 +60,12 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
             Surface {
                 val screen = vm.currentScreen
                 val p = project
+                val overlays = remember { mutableIntStateOf(0) }
+                val tabbed = p != null && mainTabs.any { it.first == screen }
+                CompositionLocalProvider(LocalOverlayCount provides overlays) {
+                Column(Modifier.fillMaxSize()) {
+                // The bar owns the bottom inset; screens above it must not pad for it again.
+                Box(Modifier.weight(1f).then(if (tabbed && overlays.intValue == 0) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
                 if (screen == Screen.NewSite) {
                     NewSiteScreen(vm, snackbar)
                 } else if (p == null || screen == Screen.Projects) {
@@ -75,6 +89,10 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                     Screen.Documents -> DocumentsScreen(vm, p, snackbar)
                     Screen.Issues -> IssuesScreen(vm, p, snackbar)
                     Screen.Projects, Screen.NewSite -> Unit
+                }
+                }
+                if (tabbed && overlays.intValue == 0) MainNavigationBar(screen) { vm.openTab(it) }
+                }
                 }
             }
             ImportDialogs(vm, importState)

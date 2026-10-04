@@ -180,11 +180,13 @@ fun SearchField(query: String, onChange: (String) -> Unit, placeholder: String, 
     )
 }
 
+/** Up to three fixed tabs; longer lists become one menu so nothing scrolls sideways. */
 @Composable
 fun SubTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
-    ScrollableTabRow(selectedTabIndex = selected, edgePadding = 8.dp) {
-        tabs.forEachIndexed { i, t -> Tab(selected = selected == i, onClick = { onSelect(i) }, text = { Text(t) }) }
-    }
+    if (tabs.size <= 3) TabRow(selectedTabIndex = selected) {
+        tabs.forEachIndexed { i, t -> Tab(selected = selected == i, onClick = { onSelect(i) }, text = { Text(t, maxLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center) }) }
+    } else com.onlyfield.assetmanager.configurator.map.ValueMenu(LocalMessages.current.text("ux.view"), selected, tabs.indices.toList(), { tabs[it] },
+        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) { onSelect(it) }
 }
 
 fun matchesQuery(query: String, vararg fields: String?): Boolean =

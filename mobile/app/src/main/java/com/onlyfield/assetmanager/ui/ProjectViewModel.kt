@@ -106,6 +106,14 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         backStack.add(screen)
     }
 
+    /** Bottom-bar tab: drops everything above the map, then opens [screen] (the map itself stays). */
+    fun openTab(screen: Screen) {
+        val home = backStack.indexOf(Screen.Home)
+        if (home < 0) return
+        while (backStack.lastIndex > home) backStack.removeAt(backStack.lastIndex)
+        if (screen != Screen.Home) backStack.add(screen)
+    }
+
     /** Returns false at the root. */
     fun back(): Boolean {
         if (currentScreen == Screen.NewSite && !newSite.isFirst) {

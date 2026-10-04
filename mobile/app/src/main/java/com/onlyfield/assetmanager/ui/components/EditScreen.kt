@@ -33,6 +33,7 @@ fun EditScreen(
 ) {
     val i18n = LocalMessages.current
 
+    TrackOverlay()
     var dirty by remember { mutableStateOf(false) }
     var askDiscard by remember { mutableStateOf(false) }
     val close = { if (dirty) askDiscard = true else onDismiss() }
