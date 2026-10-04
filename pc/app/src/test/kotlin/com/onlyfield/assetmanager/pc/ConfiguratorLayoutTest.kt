@@ -24,7 +24,8 @@ class ConfiguratorLayoutTest {
     private val area = Area(name = "Terra")
     private val rack = Rack(name = "R1", areaId = area.id, heightU = 42)
     private val sw = Device(technicalName = "SW-01", areaId = area.id, rackId = rack.id, positionU = 10, heightU = 2, ipAddress = "10.0.0.2", objectTypeId = "switch")
-    private val bu = BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(sw))
+    private val loose = Device(technicalName = "SW-09", areaId = area.id, rackId = rack.id, objectTypeId = "switch")
+    private val bu = BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(sw, loose))
     private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu), racks = listOf(rack))
 
     private fun show(draft: MapObjectDraft, extra: @androidx.compose.runtime.Composable () -> Unit = {}) {
@@ -58,6 +59,9 @@ class ConfiguratorLayoutTest {
         rule.onNodeWithText("U10–11").assertExists()
         rule.onNodeWithText("U libere: 1–9, 12–42").assertExists()
         rule.onNodeWithText("U5").assertDoesNotExist()
+        // In the rack without a unit: still listed, so the summary count matches.
+        rule.onNodeWithText("Senza posizione U").assertExists()
+        rule.onNodeWithText("SW-09").assertExists()
     }
 
     @Test fun unitRangesCollapseConsecutiveUnits() {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -45,6 +46,8 @@ fun ConfiguratorSection(
         TextButton(
             onClick = { expanded = !expanded },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = listOfNotNull(i18n.text(if (expanded) "ux.expanded" else "ux.collapsed"), error).joinToString(", ") },
+            // Rectangular so a two-line header (title + summary) is not clipped by rounded corners.
+            shape = RectangleShape,
             contentPadding = PaddingValues(vertical = 4.dp),
         ) {
             Column(Modifier.weight(1f)) {

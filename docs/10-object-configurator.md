@@ -12,7 +12,7 @@ Il contratto 1.11 conserva hardware, modelli e porte; Room 14 li persiste. Le ve
 
 In testa una riga di contesto mostra simbolo, tipo e posizione (`Terra › R1 › U10–11`); il nome è già nel titolo della finestra. **Dati essenziali** contiene nome, tipo, modello facoltativo ed etichetta fisica (per i rack l'altezza, per i cavi il mezzo). Il tipo imposta la categoria; la categoria compare in Hardware solo per tipi personalizzati, legacy e modelli.
 
-Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo:
+Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo; l'intestazione è rettangolare perché titolo e riepilogo su due righe non vengano tagliati dagli angoli arrotondati:
 
 1. **Posizione**: contenitore, business unit, piano, altezza U e, in rack, posizione U e lato. Se il piano cambia per un oggetto esistente compare un avviso. Dall'inventario la business unit deve essere selezionata (la sezione si apre per l'errore); piano, rack e porte non sono obbligatori.
 2. **Porte** (`24 porte · 4 occupate`).
@@ -23,7 +23,7 @@ Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo:
 7. **Campi personalizzati**: una scheda per campo.
 8. **Opzioni avanzate**: Salva come modello.
 
-Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e modelli usano la stessa gerarchia con campi pertinenti. **Dispositivi nel rack** mostra il lato scelto con filtri Fronte/Retro, solo i dispositivi montati, le U libere come intervalli (`U libere: 1–9, 12–42`) e Aggiungi in una U libera. Tutti i campi a scelta usano `SelectField`: bordo ed etichetta come i campi di testo, letto come un solo pulsante "etichetta: valore".
+Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e modelli usano la stessa gerarchia con campi pertinenti. **Dispositivi nel rack** mostra il lato scelto con filtri Fronte/Retro, i dispositivi montati, quelli ancora Senza posizione U (così il conteggio del riepilogo coincide), le U libere come intervalli (`U libere: 1–9, 12–42`) e Aggiungi in una U libera. Tutti i campi a scelta usano `SelectField`: bordo ed etichetta come i campi di testo, letto come un solo pulsante "etichetta: valore".
 
 ## Preset e porte
 

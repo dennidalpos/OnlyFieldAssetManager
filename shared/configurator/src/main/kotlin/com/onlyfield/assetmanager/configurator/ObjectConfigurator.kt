@@ -402,13 +402,21 @@ private fun RackContents(rack: Rack, devices: List<Device>, side: PortSide, i18n
     val mounted = devices.filter { it.positionU != null && (it.rackSide == RackSide.BOTH || it.rackSide.name == side.name) }.sortedByDescending { it.positionU }
     val used = mounted.flatMap { d -> d.positionU!! until d.positionU!! + d.heightU }.toSet()
     val free = SchematicGeometry.rackUnits(rack).filter { it !in used }
-    if (mounted.isEmpty()) Text(i18n.text("config.rackEmpty"), style = MaterialTheme.typography.bodySmall)
+    // In the rack but without a unit yet: listed apart so the count in the summary always matches.
+    val unplaced = devices.filter { it.positionU == null }
+    if (mounted.isEmpty() && unplaced.isEmpty()) Text(i18n.text("config.rackEmpty"), style = MaterialTheme.typography.bodySmall)
     mounted.forEach { d ->
         val p = d.positionU!!
         val units = if (d.heightU > 1) "U$p–${p + d.heightU - 1}" else "U$p"
         OutlinedButton(onClick = { onOpen(d) }, modifier = Modifier.fillMaxWidth()) {
             Text(units, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(72.dp))
             Text(d.technicalName, modifier = Modifier.weight(1f))
+        }
+    }
+    if (unplaced.isNotEmpty()) {
+        Text(i18n.text("config.unplaced"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        unplaced.sortedBy { it.technicalName.lowercase() }.forEach { d ->
+            OutlinedButton(onClick = { onOpen(d) }, modifier = Modifier.fillMaxWidth()) { Text(d.technicalName, modifier = Modifier.weight(1f)) }
         }
     }
     Text(if (free.isEmpty()) i18n.text("config.noFreeUnits") else i18n.text("config.freeUnits", unitRanges(free)), style = MaterialTheme.typography.bodySmall,

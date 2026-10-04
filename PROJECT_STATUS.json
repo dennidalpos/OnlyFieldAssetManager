@@ -1,10 +1,46 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-04",
-  "currentPhase": "Funzionalita implementate; restano residui di verifica e pulizia.",
+  "currentPhase": "Pannello, inserimento e configuratore rifattorizzati e provati su Android; prossimi: collegamenti tra piani/BU e VPN (F06–F08).",
   "activeTask": null,
-  "nextSession": "Verificare su Android nativo la mappa condivisa e i nuovi pannello, inserimento e configuratore: trascinamento con presa conservata, pressione prolungata ferma senza salvataggio, zoom a due dita senza salti (non coperto da test automatici), pulsante Elenco e lista oggetti con TalkBack, menu Altre azioni e campi a scelta letti come un solo pulsante, riepiloghi delle sezioni con testo ingrandito, selezione multipla porte con VLAN/PoE. Insieme alla checklist RES-19 (360/412 dp, tastiera, testo ingrandito, temi). Poi RES-17 e RES-18. Restano RES-13 e RES-01. Nessuna attività in corso; ramo main.",
-  "remainingTasks": [],
+  "nextSession": "Ripartire da F06 (estremità remote dei cavi tra piani e BU con Vai a e dorsale) e F07 (sezione Collegamenti logici VPN/WAN nel pannello), poi F08 e F10; F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
+  "remainingTasks": [
+    {
+      "id": "F06",
+      "area": "Mappa",
+      "title": "Estremità remote dei cavi tra piani e BU",
+      "description": "Il tratto verso il bordo e la scheda cavo indicano dispositivo, piano e BU dell'estremità remota (es. → SW-05 · Primo · BU Nord); azione Vai a che apre l'altro piano con l'oggetto selezionato; la scheda cavo mostra la dorsale associata (SharedPathSegment). Nessuna modifica a contratto .ofam o Room.",
+      "acceptance": "Da un collegamento Fuori vista si raggiunge l'altro piano con l'oggetto selezionato; BU e dorsale visibili; test Desktop e prova su Android."
+    },
+    {
+      "id": "F07",
+      "area": "Mappa",
+      "title": "Collegamenti logici (VPN/WAN) nel pannello dispositivo",
+      "description": "Sezione Collegamenti logici in MapDetailPane per i dispositivi estremità di una WanVpnConnection: tipo, operatore, banda, sede o dispositivo remoto; creazione di una VPN dal dispositivo. Aggancio al dispositivo, non alla porta (nessun cambio di contratto).",
+      "acceptance": "Firewall/router mostra le proprie VPN e WAN e ne crea una nuova; test Desktop e prova su Android."
+    },
+    {
+      "id": "F08",
+      "area": "Core",
+      "title": "Percorso porta: prosegue via VPN",
+      "description": "ConnectionGraph.trace aggiunge come ultimo passo logico \"prosegue via VPN X verso Sede B\" quando il percorso fisico termina su un'estremità di WanVpnConnection; il percorso fisico resta distinto.",
+      "acceptance": "Test del core sul passo logico; nessuna regressione nei test di tracciamento esistenti."
+    },
+    {
+      "id": "F09",
+      "area": "Mappa",
+      "title": "VPN disegnate sulla mappa (rimandato)",
+      "description": "Tratto logico distinto da rame e fibra, con simbolo e voce di legenda, senza contare porte occupate; tratto con etichetta se l'estremità è altrove. Da valutare dopo F06–F08.",
+      "acceptance": "Decisione presa dopo F07; se implementato, legenda e lettore di schermo distinguono il collegamento logico."
+    },
+    {
+      "id": "F10",
+      "area": "UI",
+      "title": "Difetti emersi dalla prova su Android del 4 ottobre",
+      "description": "Rack aggiunto senza punto posizionato nell'angolo e tagliato; passo del percorso con nome interno FIBER_OVERALL invece del mezzo tradotto; plurali \"1 cavi\" e \"1 dispositivi\"; menu del preset nella finestra di inserimento non a tutta larghezza.",
+      "acceptance": "Ogni difetto corretto con test o verifica su telefono."
+    }
+  ],
   "residuals": [
     {
       "id": "RES-01",
@@ -37,8 +73,8 @@
     {
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
-      "status": "OPEN",
-      "description": "Configuratore (sezioni con riepilogo, SelectField), mappa condivisa (MapWorkspace, MapDetailPane), finestra di inserimento, pannello porte ed elenco oggetti accessibile verificati con test Compose Desktop e catture a 400 e 1280 dp; non eseguita la matrice Android nativa 360/412 dp con tastiera, testo ingrandito, temi chiaro/scuro, TalkBack e gesti multitouch reali sulla mappa (zoom a due dita). Nessun dispositivo collegato nella sessione; RES-17 rimane aperto.",
+      "status": "PARTIAL",
+      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]
