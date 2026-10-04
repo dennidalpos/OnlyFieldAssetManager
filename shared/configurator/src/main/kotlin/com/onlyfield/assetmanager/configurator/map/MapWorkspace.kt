@@ -42,6 +42,8 @@ class MapActions(
     val add: (parent: ObjectRef?, point: MapPoint?) -> Unit,
     /** Shows [focus] on floor [areaId] (any business unit); null hides "Go to". */
     val goTo: ((areaId: String, focus: ObjectRef) -> Unit)? = null,
+    /** Moves a device or rack to the trash (host storage); null hides "Move to trash". */
+    val trash: ((ObjectRef) -> Unit)? = null,
 )
 
 /** Business unit that owns the floor, used for new or legacy objects without one. */

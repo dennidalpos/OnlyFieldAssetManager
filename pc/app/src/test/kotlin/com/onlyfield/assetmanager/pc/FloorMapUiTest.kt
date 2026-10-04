@@ -51,6 +51,18 @@ class FloorMapUiTest {
             assertTrue(p.floorplanPlacements.single().yRatio > .4f)
         }
     }
+    @Test fun selectedObjectHasVisibleConfirmedTrash() {
+        var trashed: ObjectRef? = null
+        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
+            MapWorkspace(initial, area.id, null, Messages(), MapActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, trash = { trashed = it }))
+        } } }
+        val node = rule.onNodeWithTag("floor-map")
+        node.clickAt(viewport(node), MapPoint(.3f, .4f))
+        rule.onNodeWithText("Sposta nel cestino").performScrollTo().performClick()
+        rule.onNodeWithText("Spostare «SW-01» nel cestino?").assertIsDisplayed()
+        rule.onAllNodesWithText("Sposta nel cestino").filterToOne(hasAnyAncestor(isDialog())).performClick()
+        rule.runOnIdle { assertEquals(ObjectRef(PlacementTargetType.DEVICE, device.id), trashed) }
+    }
     @Test fun longPressDoesNotMoveAndDragKeepsGrabOffset() {
         var p by mutableStateOf(initial)
         var saves = 0

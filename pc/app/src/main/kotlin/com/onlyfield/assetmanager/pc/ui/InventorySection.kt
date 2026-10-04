@@ -152,26 +152,13 @@ fun InventorySection(
                                     enabled = index.devices.size > 1,
                                     onClick = { menuOpen = false; changeDetail { mergeTarget = dev } }
                                 )
-                                HorizontalDivider()
-                                DropdownMenuItem(
-                                    text = { Text(i18n.text("text.dd41b3275173"), color = MaterialTheme.colorScheme.error) },
-                                    onClick = {
-                                        menuOpen = false
-                                        confirm(
-                                            ConfirmRequest(
-                                                title = i18n.text("text.87fc0efddabf", dev.technicalName),
-                                                message = i18n.text("text.f509b29b1f58"),
-                                                confirmLabel = i18n.text("text.dd41b3275173")
-                                            ) {
-                                                val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id, i18n = i18n)
-                                                trashItem?.let(onTrashItemCreated)
-                                                onProjectUpdated(updated, i18n.text("text.4e2629d50c9b", dev.technicalName))
-                                            }
-                                        )
-                                    }
-                                )
                             }
                         }
+                        DeleteButton(dev.technicalName, label = i18n.text("text.dd41b3275173"), message = i18n.text("text.f509b29b1f58"), onDelete = {
+                            val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id, i18n = i18n)
+                            trashItem?.let(onTrashItemCreated)
+                            onProjectUpdated(updated, i18n.text("text.4e2629d50c9b", dev.technicalName))
+                        })
                     }
                 }
             }

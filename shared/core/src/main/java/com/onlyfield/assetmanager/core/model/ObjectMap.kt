@@ -117,6 +117,12 @@ data class MapViewport(val width: Float, val height: Float, val contentWidth: Fl
     val top get() = (height - pageHeight) / 2 + panY
     fun screen(point: MapPoint) = MapPoint(left + point.x * pageWidth, top + point.y * pageHeight)
     fun relative(x: Float, y: Float) = MapPoint(((x - left) / pageWidth).coerceIn(0f, 1f), ((y - top) / pageHeight).coerceIn(0f, 1f))
+    /** Pan limited so the page never leaves the view: a smaller page stays inside, a larger one keeps covering it. */
+    fun clamped(): MapViewport {
+        val maxX = kotlin.math.abs(width - pageWidth) / 2
+        val maxY = kotlin.math.abs(height - pageHeight) / 2
+        return copy(panX = panX.coerceIn(-maxX, maxX), panY = panY.coerceIn(-maxY, maxY))
+    }
 }
 
 object ObjectMap {

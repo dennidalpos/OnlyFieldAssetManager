@@ -77,6 +77,13 @@ fun FloorHomeSection(state: DesktopAppState) {
                 goTo = { target, ref -> state.selectedBuId = ObjectMap.floorBusinessUnit(project, target); state.selectedAreaId = target; focus = ref },
                 edit = { draft, page -> editorPage = page; editor = draft },
                 add = { parent, point -> adding = parent to point },
+                trash = { ref ->
+                    val name = ObjectHierarchy.name(project, ref, i18n)
+                    val (updated, item) = if (ref.type == PlacementTargetType.RACK) ProjectEdits.deleteRackToTrash(project, ref.id, i18n)
+                        else ProjectEdits.deleteDeviceToTrash(project, ref.id, i18n)
+                    item?.let(state::addToTrash)
+                    state.update(updated, i18n.text("text.4e2629d50c9b", name))
+                },
             ), Modifier.weight(1f), tools = listOf(
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { selectingPlan = true },

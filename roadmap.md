@@ -13,10 +13,10 @@ Aggiornato al 4 ottobre 2026 dopo confronto con il codice e il tracker.
 
 | ID | Stato | Evidenza richiesta |
 | --- | --- | --- |
-| RES-01 | Parziale | Run su tag v1.0.0 fallita per la toolchain JetBrains 21; correggere la CI e ripubblicare. |
+| RES-01 | Parziale | CI corretta (run manuale verde); resta la ripubblicazione su tag con conferma dell'utente. |
 | RES-13 | Aperto | Checklist foto, scansione, multitouch e lettore USB su hardware reale. |
 | RES-17 | Aperto | Suite UI Android verde su API 37 senza disabilitare controlli. |
-| RES-19 | Aperto | Matrice visiva Android 360/412 dp, tastiera, testo ingrandito e temi chiaro/scuro. |
+| RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti e moto g86. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
 
@@ -141,3 +141,20 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
   - Windows: icone nella barra laterale e menu Operazioni progetto riordinato.
 - **Verifica**: 247 test superati (Core 88, Exchange 37, Desktop 94, Android JVM 28). APK debug provato su emulatore Pixel 9, dove sono stati corretti i pulsanti segmentati e la fascia porte. Dettaglio in [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md). La prova sul moto g86 è aggiunta a RES-19.
 - Consegna per cambio sessione: tracker senza attività aperte; residui RES-19 (prova restyling su moto g86), RES-01 (CI su tag), RES-17, RES-13. Ramo `main` allineato a `origin/main`.
+
+## RES-01, RES-19 su emulatore e correzioni dalla prova — 5 ottobre 2026
+
+- **RES-01**:
+  - criteri del daemon JVM rigenerati senza vincolo di vendor (`gradle/gradle-daemon-jvm.properties`);
+  - lingua dei test JVM fissata a it-IT, perché i runner CI sono en-US e i test verificano i testi italiani;
+  - run manuale 37236462330 su `main` verde: build ok, publish saltato come previsto.
+- **RES-19 su emulatore Pixel 9 (API 37)**:
+  - esiti in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md);
+  - corretti: etichette della barra in basso troncate, pulsanti dell'inserimento impilati, righe del rack ad altezza fissa.
+- **Segnalazioni dell'utente**:
+  - la mappa trascinata usciva dallo schermo: ora la panoramica si ferma ai bordi della pagina (`MapViewport.clamped`);
+  - l'eliminazione era nascosta nel menu ⋮ o assente. Ora c'è un pulsante cestino rosso visibile:
+    - Android: dettagli e schede, comprese le liste Dispositivi e Rack;
+    - Windows: lista dispositivi;
+    - pannello mappa: dispositivi e rack (Sposta nel cestino) e cavo scelto (Elimina).
+  - Nuovi test: `ObjectMapTest.panKeepsThePageOnScreen` e `FloorMapUiTest.selectedObjectHasVisibleConfirmedTrash`. Suite core, Desktop e Android JVM verde; APK provato su emulatore.

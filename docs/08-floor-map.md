@@ -1,6 +1,6 @@
 # Mappa e planimetrie
 
-La navigazione segue progetto, business unit, piano e mappa. Gli oggetti hanno coordinate normalizzate sul piano; zoom e panoramica non le modificano.
+La navigazione segue progetto, business unit, piano e mappa. Gli oggetti hanno coordinate normalizzate sul piano; zoom e panoramica non le modificano. La panoramica è limitata: la pagina più piccola della vista resta tutta visibile, quella ingrandita si ferma ai bordi (`MapViewport.clamped`).
 
 ## Scena e contenitori
 
@@ -42,7 +42,7 @@ Le miniature degli allegati vanno a capo.
 Per un oggetto l'ordine è sempre lo stesso:
 
 1. **Intestazione**: simbolo, nome, tipo e chiusura (annunciata come Chiudi).
-2. **Azioni**: una sola primaria (Apri per i contenitori, altrimenti Modifica), Porte come secondaria; Rimuovi dal contenitore è nel menu Altre azioni e si annulla con Annulla.
+2. **Azioni**: una sola primaria (Apri per i contenitori, altrimenti Modifica), Porte e Rimuovi dal contenitore come secondarie (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
 3. **Stato**: posizione nel rack, contenuto, porte occupate, cavi interni e carico PoE come righe etichetta/valore, con il pannello porte compatto.
 4. **Identificativi**: etichetta, alias, IP, MAC e numero di serie, solo se compilati (`core.display.ObjectSummary`).
 5. **Collegamenti** e **Foto e allegati**, con il numero di elementi.

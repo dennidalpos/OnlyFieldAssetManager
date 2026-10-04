@@ -125,6 +125,7 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     val index = remember(project) { ProjectIndex(project) }
     var creating by remember { mutableStateOf(false) }
     var editingNew by remember { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
+    val confirm = LocalConfirm.current
     AppScaffold(
         i18n.text("text.4cd265c2b8c6"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
         floatingActionButton = { ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.4cd265c2b8c6")) }) }
@@ -135,6 +136,11 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
                 ItemCard(
                     title = r.name,
                     details = listOf(i18n.text("text.4abc2837dcad", index.areaName(r.areaId, i18n.text("text.0eb949b8ab9b")), RackLayout.usedUnits(r, index.devices), r.heightU)),
+                    menu = listOf(MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
+                        confirm(ConfirmRequest(i18n.text("text.87fc0efddabf", r.name), i18n.text("text.309921cb8d51"), i18n.text("text.dd41b3275173")) {
+                            vm.moveToTrash("RACK", r.id, r.name)
+                        })
+                    }),
                     onClick = { vm.navigate(Screen.RackDetail(r.id)) }
                 )
             }

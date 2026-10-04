@@ -86,6 +86,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     goTo = { target, ref -> vm.selectedBuId = ObjectMap.floorBusinessUnit(project, target); vm.selectedAreaId = target; focus = ref },
                     edit = { draft, page -> editorPage = page; editor = draft },
                     add = { parent, point -> if (vm.busy == null) adding = parent to point },
+                    trash = { ref -> vm.moveToTrash(if (ref.type == PlacementTargetType.RACK) "RACK" else "DEVICE", ref.id, ObjectHierarchy.name(project, ref, i18n)) },
                 ), Modifier.weight(1f), tools = listOf(
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { if (vm.busy == null) selectingPlan = true },

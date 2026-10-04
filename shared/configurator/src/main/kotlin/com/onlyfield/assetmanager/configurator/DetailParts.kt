@@ -83,15 +83,34 @@ fun FactRows(facts: List<ObjectSummary.Fact>) {
 
 class PaneAction(val label: String, val onClick: () -> Unit)
 
-/** One filled primary action, outlined secondaries and an overflow menu for structural changes. */
+/** Confirmed removal: [label] on the button and the confirm action. */
+class DeleteRequest(val label: String, val title: String, val message: String, val onConfirm: () -> Unit)
+
+/** One filled primary action, outlined secondaries, an overflow menu and a visible delete button last. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> = emptyList(), overflow: List<PaneAction> = emptyList()) {
+fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> = emptyList(), overflow: List<PaneAction> = emptyList(), delete: DeleteRequest? = null) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         primary?.let { Button(onClick = it.onClick) { Text(it.label) } }
         secondary.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
         OverflowActions(i18n, overflow)
+        delete?.let { DeleteAction(it, i18n) }
     }
+}
+
+/** Red outlined button with a trash icon; always asks for confirmation. */
+@Composable
+fun DeleteAction(request: DeleteRequest, i18n: Messages, modifier: Modifier = Modifier) {
+    var asking by remember { mutableStateOf(false) }
+    val error = MaterialTheme.colorScheme.error
+    OutlinedButton(onClick = { asking = true }, modifier, colors = ButtonDefaults.outlinedButtonColors(contentColor = error)) {
+        Icon(SymbolIcons.delete, contentDescription = null, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(request.label)
+    }
+    if (asking) AlertDialog(onDismissRequest = { asking = false }, title = { Text(request.title) }, text = { Text(request.message) },
+        confirmButton = { TextButton(onClick = { asking = false; request.onConfirm() }, colors = ButtonDefaults.textButtonColors(contentColor = error)) { Text(request.label) } },
+        dismissButton = { TextButton(onClick = { asking = false }) { Text(i18n.text("text.18c9d912a210")) } })
 }
 
 /** "⋮" button with a menu of [actions]; nothing when empty. */

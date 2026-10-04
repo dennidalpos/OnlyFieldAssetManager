@@ -20,6 +20,13 @@ class ObjectMapTest {
         assertEquals(original.x, actual.x, .00001f); assertEquals(original.y, actual.y, .00001f)
         assertEquals(MapPoint(0f, 0f), view.relative(-10000f, -10000f))
     }
+    @Test fun panKeepsThePageOnScreen() {
+        assertEquals(0f, MapViewport(800f, 600f, 1200f, 900f, 1f, 500f, -500f).clamped().panX)
+        val zoomed = MapViewport(800f, 600f, 1200f, 900f, 2f, 1000f, -1000f).clamped()
+        assertEquals(0f, zoomed.left); assertEquals(600f, zoomed.top + zoomed.pageHeight)
+        val small = MapViewport(800f, 600f, 1200f, 900f, .5f, 500f, 0f).clamped()
+        assertEquals(800f, small.left + small.pageWidth)
+    }
     @Test fun newObjectsAppearAndStayOnTheirOwnFloor() {
         val d = MapObjectDraft(type = ObjectCatalog.builtins.first(), buId = bu.id, areaId = area.id)
         val saved = d.copy(device = d.device.copy(technicalName = "SW-01")).apply(project)

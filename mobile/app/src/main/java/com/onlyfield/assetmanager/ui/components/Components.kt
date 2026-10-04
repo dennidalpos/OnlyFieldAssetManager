@@ -16,6 +16,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -102,19 +103,19 @@ fun AppScaffold(
 
 data class MenuAction(val label: String, val destructive: Boolean = false, val onClick: () -> Unit)
 
+/** Destructive actions are a visible trash button; only the others go in the "⋮" menu. */
 @Composable
 fun OverflowMenu(actions: List<MenuAction>, contentDescription: String = LocalMessages.current.text("text.93f019bac960")) {
-
+    actions.filter { it.destructive }.forEach { a ->
+        IconButton(onClick = a.onClick) { Icon(Icons.Default.Delete, contentDescription = a.label, tint = MaterialTheme.colorScheme.error) }
+    }
+    val others = actions.filterNot { it.destructive }
+    if (others.isEmpty()) return
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = contentDescription) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            actions.forEach { a ->
-                DropdownMenuItem(
-                    text = { Text(a.label, color = if (a.destructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) },
-                    onClick = { open = false; a.onClick() }
-                )
-            }
+            others.forEach { a -> DropdownMenuItem(text = { Text(a.label) }, onClick = { open = false; a.onClick() }) }
         }
     }
 }

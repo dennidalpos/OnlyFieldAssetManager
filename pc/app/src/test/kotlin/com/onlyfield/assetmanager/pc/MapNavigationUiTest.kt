@@ -51,7 +51,6 @@ class MapNavigationUiTest {
         map.clickAt(MapPoint(.5f, .5f))
         rule.onNode(hasText("BOX") and hasClickAction().not()).assertExists()
         map.clickAt(MapPoint(.5f, .5f))
-        rule.onNodeWithContentDescription("Altre azioni").performClick()
         rule.onNodeWithText("Rimuovi dal contenitore").performClick()
         rule.runOnIdle {
             assertNull(ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, sw.id)))

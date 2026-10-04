@@ -40,6 +40,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var creating by remember { mutableStateOf(false) }
     var editingNew by remember { mutableStateOf<MapObjectDraft?>(null) }
     var batch by remember { mutableStateOf(false) }
+    val confirm = LocalConfirm.current
 
     val devices = index.devices.filter {
         matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id)
@@ -83,6 +84,11 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                             leading = if (selecting) {
                                 { Checkbox(checked = d.id in selected, onCheckedChange = { selected = if (it) selected + d.id else selected - d.id }) }
                             } else null,
+                            menu = if (selecting) emptyList() else listOf(MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
+                                confirm(ConfirmRequest(i18n.text("text.87fc0efddabf", d.technicalName), i18n.text("text.2548407c6a6b"), i18n.text("text.dd41b3275173")) {
+                                    vm.moveToTrash("DEVICE", d.id, d.technicalName)
+                                })
+                            }),
                             onClick = {
                                 if (selecting) selected = if (d.id in selected) selected - d.id else selected + d.id
                                 else vm.navigate(Screen.DeviceDetail(d.id))

@@ -1,17 +1,17 @@
 {
   "projectName": "OnlyFieldAssetManager",
-  "lastUpdated": "2026-10-04",
-  "currentPhase": "Restyling UI/UX UX-R1…R8 completato (inserimento rapido, tema squadrato, icone disegnate, mappa delimitata, barra in basso Android). Restano residui, tra cui il CI su tag (RES-01) fallito per la toolchain.",
+  "lastUpdated": "2026-10-05",
+  "currentPhase": "Restyling UI/UX completato e corretto dopo la prova (panoramica limitata, cestino visibile). CI corretta; resta la ripubblicazione su tag.",
   "activeTask": null,
-  "nextSession": "Nessuna attività aperta. Priorità: RES-19 sul moto g86 con il nuovo restyling (barra in basso, inserimento rapido, elevazione rack, porte a tutta larghezza, tema chiaro/scuro, TalkBack, testo ingrandito). Poi RES-01: correggere la toolchain JetBrains 21 in CI e ripubblicare v1.0.0 (chiedere conferma prima di spostare o ricreare il tag). Restano RES-17 e RES-13. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Ramo main allineato a origin.",
+  "nextSession": "Nessuna attività aperta. RES-01: chiedere all'utente se spostare/ricreare v1.0.0 o usare un nuovo tag, poi verificare la pubblicazione. RES-19: TalkBack, combinazioni 360 chiaro e 411 scuro, zoom a due dita, moncone/Vai a, collegamenti logici e prova sul moto g86 (progetto «Test rack fibra»). Restano RES-17 e RES-13.",
   "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-01",
       "title": "Verifica CI/CD su tag",
       "status": "PARTIAL",
-      "description": "Workflow, pacchetti e checksum sono implementati. Prima esecuzione su tag v1.0.0 (run 37219874814, 4 ottobre 2026) fallita nel passo di verifica: Gradle non riesce a ottenere la toolchain richiesta {languageVersion=21, vendor=JetBrains}; il JDK scaricato da foojay non soddisfa la specifica (mancano javac, javadoc, jar). Job publish saltato, nessuna release creata; il tag v1.0.0 esiste su origin.",
-      "closureCriteria": "Allineare toolchain e CI (es. distribuzione JetBrains in setup-java oppure vendor non vincolante nella toolchain), poi riprovare: ricreare il tag v1.0.0 sul commit corretto (o usare un nuovo tag) con conferma dell'utente; run verde con APK, ZIP e SHA256SUMS pubblicati."
+      "description": "Workflow, pacchetti e checksum implementati. La run su tag v1.0.0 (37219874814) era fallita per la toolchain JetBrains 21. Corretto il 5 ottobre: criteri daemon senza vendor e test JVM in it-IT; run manuale 37236462330 su main verde (publish saltato). Il tag v1.0.0 punta ancora al commit precedente alla correzione.",
+      "closureCriteria": "Con conferma dell'utente ricreare v1.0.0 sul commit corretto o usare un nuovo tag; run su tag verde con APK, ZIP e SHA256SUMS pubblicati."
     },
     {
       "id": "RES-13",
@@ -31,7 +31,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto. Da provare anche: etichetta del moncone e Vai a verso un altro piano o BU (F06). Sezione e finestra Collegamenti logici (F07). Passo logico nel percorso della porta (F08). Dopo il restyling UX-R1…R8 (4 ottobre, verificato su emulatore Pixel 9) da provare sul telefono: barra in basso e schermata Altro, inserimento rapido (tipo → menu → Aggiungi) da mappa, U libera, inventario e rack, elevazione rack e pannello porte a tutta larghezza, bordo e griglia della mappa, pulsanti squadrati.",
+      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito; corretti barra in basso, pulsanti dell'inserimento, righe rack, panoramica della mappa e cestino visibile. Restano: TalkBack, 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a (F06), Collegamenti logici (F07), passo logico nel percorso (F08), prova sul moto g86. RES-17 rimane aperto.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]

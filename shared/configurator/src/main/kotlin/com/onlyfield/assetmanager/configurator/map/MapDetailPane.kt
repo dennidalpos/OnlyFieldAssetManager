@@ -136,12 +136,16 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
     val portsAction = device?.let { PaneAction(i18n.text("ux.ports")) { edit(ConfiguratorPage.PORTS) } }
     val opens = node.isContainer && !current
     val parentName = scene.container?.let { ObjectHierarchy.name(project, it, i18n) }
+    val removeAction = if (!current && parentName != null) PaneAction(i18n.text("map.removeFromContainer")) {
+        actions.update(ObjectHierarchy.assign(project, node.ref, null, i18n), i18n.text("map.removedFrom", parentName)); onSelect(null)
+    } else null
+    val trash = actions.trash
+    val delete = if (current || trash == null) null else DeleteRequest(i18n.text("text.dd41b3275173"), i18n.text("text.87fc0efddabf", node.name),
+        i18n.text(if (node.ref.type == PlacementTargetType.RACK) "text.309921cb8d51" else "text.2548407c6a6b")) { onSelect(null); trash(node.ref) }
     ActionRow(i18n,
         primary = if (opens) PaneAction(i18n.text("map.open")) { onOpen(node.ref) } else if (current) null else editAction,
-        secondary = listOfNotNull(editAction.takeIf { opens || current }, portsAction),
-        overflow = if (!current && parentName != null) listOf(PaneAction(i18n.text("map.removeFromContainer")) {
-            actions.update(ObjectHierarchy.assign(project, node.ref, null, i18n), i18n.text("map.removedFrom", parentName)); onSelect(null)
-        }) else emptyList())
+        secondary = listOfNotNull(editAction.takeIf { opens || current }, portsAction, removeAction),
+        delete = delete)
 
     val rack = index.rack(node.ref.id).takeIf { node.ref.type == PlacementTargetType.RACK }
     // Only recorded data is shown; empty fields stay in the editor.
@@ -266,6 +270,11 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
                         Text(i18n.text("map.goTo", remote.device.technicalName))
                     }
                 }
+                if (selected) DeleteAction(DeleteRequest(i18n.text("text.7efe336bd548"), i18n.text("text.aca453245e79"), i18n.text("text.4d6a1c85c84a")) {
+                    val rest = link.cableIds - cable.id
+                    onSelect(if (rest.isEmpty()) null else MapSelection.Link(rest))
+                    actions.update(ProjectEdits.deleteCable(project, cable.id), i18n.text("text.20c7dd63256f"))
+                }, i18n)
             }
         }
     }

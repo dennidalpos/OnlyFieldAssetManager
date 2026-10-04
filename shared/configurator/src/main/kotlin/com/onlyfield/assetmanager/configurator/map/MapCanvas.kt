@@ -107,7 +107,9 @@ fun MapCanvas(
     // Gesture code runs in a long-lived coroutine: read the latest scene and selection through State.
     val current by rememberUpdatedState(shown)
     val currentLink by rememberUpdatedState(selectedLink)
-    fun viewport() = MapViewport(width, height, image?.width?.toFloat() ?: MAP_CONTENT_WIDTH, image?.height?.toFloat() ?: MAP_CONTENT_HEIGHT, zoom, pan.x, pan.y)
+    fun viewport(clamp: Boolean = true) = MapViewport(width, height, image?.width?.toFloat() ?: MAP_CONTENT_WIDTH, image?.height?.toFloat() ?: MAP_CONTENT_HEIGHT, zoom, pan.x, pan.y).let { if (clamp) it.clamped() else it }
+    // Store the clamped pan so dragging back past an edge responds at once.
+    fun panBy(delta: Offset) { pan += delta; viewport().let { pan = Offset(it.panX, it.panY) } }
     fun screen(p: MapPoint): Offset = viewport().screen(p).let { Offset(it.x, it.y) }
     fun points(link: SceneLink): List<MapPoint> = if (link == currentLink) routeDraft ?: current.points(link) else current.points(link)
     fun drawn(link: SceneLink): List<MapPoint> = points(link).let { if (it.size == 2 && (link != currentLink || routeDraft == null)) arc(it[0], it[1]) else it }
@@ -134,8 +136,8 @@ fun MapCanvas(
         val rx = (centroid.x - before.left) / before.pageWidth
         val ry = (centroid.y - before.top) / before.pageHeight
         zoom = (zoom * factor).coerceIn(.5f, 8f)
-        val after = viewport()
-        pan += Offset(centroid.x - rx * after.pageWidth - after.left, centroid.y - ry * after.pageHeight - after.top)
+        val after = viewport(clamp = false)
+        panBy(Offset(centroid.x - rx * after.pageWidth - after.left, centroid.y - ry * after.pageHeight - after.top))
     }
 
     val latest by rememberUpdatedState(Triple(onSelect, onOpen, onLongPress))
@@ -208,7 +210,7 @@ fun MapCanvas(
                                         }
                                         routeDraft = route
                                     }
-                                    else -> pan += position - last
+                                    else -> panBy(position - last)
                                 }
                                 last = position
                             }
@@ -222,7 +224,7 @@ fun MapCanvas(
                                     // A second finger turns any edit into zoom and pan.
                                     if (editing) { editing = false; moving = null; routeDraft = null }
                                     zoomAround(e.calculateZoom(), e.calculateCentroid())
-                                    pan += e.calculatePan()
+                                    panBy(e.calculatePan())
                                     resync = true
                                 } else if (pressed.size == 1) {
                                     val position = pressed.first().position
