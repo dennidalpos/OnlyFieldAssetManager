@@ -13,7 +13,6 @@ Aggiornato al 4 ottobre 2026 dopo confronto con il codice e il tracker.
 
 | ID | Stato | Evidenza richiesta |
 | --- | --- | --- |
-| RES-01 | Parziale | CI corretta (run manuale verde); resta la ripubblicazione su tag con conferma dell'utente. |
 | RES-13 | Aperto | Checklist foto, scansione, multitouch e lettore USB su hardware reale. |
 | RES-17 | Aperto | Suite UI Android verde su API 37 senza disabilitare controlli. |
 | RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti e moto g86. |
@@ -163,3 +162,9 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 
 - `fixtures/demo/onlyfield-demo.ofam`: 2 BU × 2 piani, 44 apparati, 4 rack, 109 cavi. Contiene switch, patch panel, prese a muro e AP. 6 switch su 8 sono cablati e collegati in fibra con piani diversi. Generato da `DemoSeed` con `:shared:exchange:demoPackage`; dettaglio in [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md).
 - Verifica: `DemoSeedTest` (4 test). Import provato sull'emulatore Pixel 9 con mappa del piano ed elevazione del rack.
+
+## RES-01 chiuso: release v1.0.1 — 5 ottobre 2026
+
+- Su richiesta dell'utente nuovo tag `v1.0.1` (versioni allineate: Android 1.0.1/versionCode 2, portable 1.0.1); `v1.0.0` resta senza release.
+- Run su tag 37238450362: build e publish verdi. Release con `OnlyFieldAssetManager-debug.apk`, `OnlyFieldAssetManager-portable-x64-1.0.1.zip` e `SHA256SUMS`.
+- APK 1.0.1 installato sul moto g86 con il progetto demo importato. Corretta la finestra di importazione: senza copia locale ora indica «Nuovo progetto locale».
