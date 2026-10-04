@@ -16,7 +16,8 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.pc.ui.components.*
 
 @Composable
-internal fun ObjectFields(project: Project, draft: MapObjectDraft, initialSection: com.onlyfield.assetmanager.configurator.ConfiguratorPage = com.onlyfield.assetmanager.configurator.ConfiguratorPage.ESSENTIALS, change: (MapObjectDraft) -> Unit) {
+internal fun ObjectFields(project: Project, draft: MapObjectDraft, initialSection: com.onlyfield.assetmanager.configurator.ConfiguratorPage = com.onlyfield.assetmanager.configurator.ConfiguratorPage.ESSENTIALS,
+                          extraSections: @Composable () -> Unit = {}, change: (MapObjectDraft) -> Unit) {
     val markDirty = LocalMarkDirty.current
-    com.onlyfield.assetmanager.configurator.ObjectConfigurator(project, draft, LocalMessages.current, initialSection = initialSection) { markDirty(); change(it) }
+    com.onlyfield.assetmanager.configurator.ObjectConfigurator(project, draft, LocalMessages.current, initialSection = initialSection, extraSections = extraSections) { markDirty(); change(it) }
 }

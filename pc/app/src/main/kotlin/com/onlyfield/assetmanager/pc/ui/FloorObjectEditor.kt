@@ -43,17 +43,18 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
     EditPanel(configuratorTitle(project, initial, i18n), { slot.requestChange {} }, {
         if (state.saveMapObject(draft, photos.toList(), removed)) close()
     }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, initial, i18n), width = 640.dp) {
-        ObjectFields(project, draft, initialSection) { draft = it }
-        ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n) {
-            project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
-                Text(a.name); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
-                TextButton(onClick = { removed = removed + a.id }) { Text(i18n.text("text.960630ee842c")) }
+        ObjectFields(project, draft, initialSection, extraSections = {
+            ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n, summary = (project.attachments.count { it.targetId == draft.id && it.id !in removed } + photos.size).takeIf { it > 0 }?.let { i18n.text("config.attachmentsCount", it) }) {
+                project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
+                    Text(a.name); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                    TextButton(onClick = { removed = removed + a.id }) { Text(i18n.text("text.960630ee842c")) }
+                }
+                photos.toList().forEach { file ->
+                    Text(file.name); MediaThumbnail(file)
+                    TextButton(onClick = { photos.remove(file) }) { Text(i18n.text("text.f5115aa0e57e")) }
+                }
+                OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile(i18n.text("text.a111cc717443"), i18n.text("text.a9f46a362f48"), "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { photos += it } }) { Text(i18n.text("text.e2ca686d60a1")) }
             }
-            photos.toList().forEach { file ->
-                Text(file.name); MediaThumbnail(file)
-                TextButton(onClick = { photos.remove(file) }) { Text(i18n.text("text.f5115aa0e57e")) }
-            }
-            OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile(i18n.text("text.a111cc717443"), i18n.text("text.a9f46a362f48"), "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { photos += it } }) { Text(i18n.text("text.e2ca686d60a1")) }
-        }
+        }) { draft = it }
     }
 }

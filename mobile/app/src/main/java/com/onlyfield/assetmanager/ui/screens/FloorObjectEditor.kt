@@ -52,25 +52,26 @@ internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: 
     EditScreen(configuratorTitle(project, initial, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty() && vm.busy == null, confirmLabel = configuratorAction(project, initial, i18n)) {
         val dirty = LocalMarkDirty.current
         SideEffect { markDirty = dirty }
-        ObjectFields(project, draft, initialSection) { draft = it }
-        ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n) {
-            project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
-                Text(a.name)
-                MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
-                TextButton(onClick = { removed = removed + a.id; dirty() }) { Text(i18n.text("text.960630ee842c")) }
+        ObjectFields(project, draft, initialSection, extraSections = {
+            ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n, summary = (project.attachments.count { it.targetId == draft.id && it.id !in removed } + photos.size).takeIf { it > 0 }?.let { i18n.text("config.attachmentsCount", it) }) {
+                project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
+                    Text(a.name)
+                    MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                    TextButton(onClick = { removed = removed + a.id; dirty() }) { Text(i18n.text("text.960630ee842c")) }
+                }
+                photos.toList().forEach { uri ->
+                    Text(uri.lastPathSegment ?: i18n.text("text.7490e08564b3"))
+                    UriPhotoThumbnail(uri)
+                    TextButton(onClick = { photos.remove(uri); dirty() }) { Text(i18n.text("text.f5115aa0e57e")) }
+                }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text(i18n.text("text.0f9162856d60")) }
+                    OutlinedButton(onClick = {
+                        if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) shoot() else permission.launch(Manifest.permission.CAMERA)
+                    }) { Text(i18n.text("text.d88211a9e4b9")) }
+                }
             }
-            photos.toList().forEach { uri ->
-                Text(uri.lastPathSegment ?: i18n.text("text.7490e08564b3"))
-                UriPhotoThumbnail(uri)
-                TextButton(onClick = { photos.remove(uri); dirty() }) { Text(i18n.text("text.f5115aa0e57e")) }
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text(i18n.text("text.0f9162856d60")) }
-                OutlinedButton(onClick = {
-                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) shoot() else permission.launch(Manifest.permission.CAMERA)
-                }) { Text(i18n.text("text.d88211a9e4b9")) }
-            }
-        }
+        }) { draft = it }
     }
 }
 
