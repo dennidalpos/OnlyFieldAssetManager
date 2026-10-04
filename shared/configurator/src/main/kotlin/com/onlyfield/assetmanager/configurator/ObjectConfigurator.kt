@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -647,7 +648,10 @@ private fun PortLink(project: Project, ref: ProjectIndex.PortRef, rootId: String
     val trace = graph.trace(port.id, i18n)
     if (trace.isNotEmpty()) SectionTitle(i18n.text("config.traceTitle"))
     trace.forEach { step ->
-        Text("${step.stepIndex}. ${step.description}", style = MaterialTheme.typography.bodyMedium)
+        // Logical steps are not cabling: italic and muted.
+        if (step.logical != null) Text("${step.stepIndex}. ${step.description}", style = MaterialTheme.typography.bodyMedium.copy(fontStyle = FontStyle.Italic),
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        else Text("${step.stepIndex}. ${step.description}", style = MaterialTheme.typography.bodyMedium)
         step.currentDevice?.takeIf { it.id != rootId }?.let { d -> TextButton(onClick = { openDevice(d) }) { Text(d.technicalName) } }
     }
     val mapping = project.panelMappings.singleOrNull { it.portAId == port.id || it.portBId == port.id }

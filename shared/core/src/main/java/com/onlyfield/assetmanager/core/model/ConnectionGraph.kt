@@ -14,6 +14,8 @@ data class ChainStep(
     val panelMapping: PanelMapping? = null,
     val isUnknownPassage: Boolean = false,
     val description: String,
+    /** Set on the closing logical step (WAN/VPN); [currentDevice] is then the far device, if known. */
+    val logical: WanVpnConnection? = null,
 )
 
 /** Physical continuity only: active devices terminate a path. */
@@ -104,9 +106,10 @@ class ConnectionGraph(val project: Project) {
         val visited = mutableSetOf<String>()
         var node = startPortId
         var incoming: String? = null
+        var ended = false
         while (visited.add(node)) {
             val candidates = adjacency[node].orEmpty().filter { it.id != incoming }
-            if (candidates.isEmpty()) break
+            if (candidates.isEmpty()) { ended = true; break }
             if (candidates.count { it.mapping == null } > 1 || candidates.count { it.mapping != null } > 1 || (incoming != null && candidates.size > 1)) {
                 steps.add(ChainStep(steps.size + 1, ports[node], device(node), isUnknownPassage = true, description = i18n.text("config.conflict")))
                 break
@@ -124,6 +127,15 @@ class ConnectionGraph(val project: Project) {
             }
             node = requireNotNull(next)
             incoming = edge.id
+        }
+        // A clean physical end may continue logically: one step per WAN/VPN link of the last device.
+        val last = device(node).takeIf { ended && steps.isNotEmpty() }
+        last?.let { end ->
+            LogicalLinks.of(project, end.id).forEach { link ->
+                val towards = LogicalLinks.farLabel(project, link, end.id) ?: i18n.text("config.undefined")
+                steps.add(ChainStep(steps.size + 1, null, LogicalLinks.far(link, end.id).first?.let(devices::get), logical = link,
+                    description = i18n.text("config.viaLogical", link.type.toDisplayString(i18n), link.name, towards)))
+            }
         }
         return steps
     }

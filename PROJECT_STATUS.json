@@ -1,22 +1,15 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-04",
-  "currentPhase": "F06 e F07 completati; prossimo: percorso porta che prosegue via collegamento logico (F08).",
+  "currentPhase": "F06–F08 completati; F09 (VPN disegnate sulla mappa) in attesa di decisione.",
   "activeTask": null,
-  "nextSession": "Ripartire da F08 (percorso che prosegue via VPN); F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-20, RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
+  "nextSession": "F06–F08 completati; decidere F09 (VPN sulla mappa, rimandato). Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-20, RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
   "remainingTasks": [
-    {
-      "id": "F08",
-      "area": "Core",
-      "title": "Percorso porta: prosegue via VPN",
-      "description": "ConnectionGraph.trace aggiunge come ultimo passo logico \"prosegue via VPN X verso Sede B\" quando il percorso fisico termina su un'estremità di WanVpnConnection; il percorso fisico resta distinto.",
-      "acceptance": "Test del core sul passo logico; nessuna regressione nei test di tracciamento esistenti."
-    },
     {
       "id": "F09",
       "area": "Mappa",
       "title": "VPN disegnate sulla mappa (rimandato)",
-      "description": "Tratto logico distinto da rame e fibra, con simbolo e voce di legenda, senza contare porte occupate; tratto con etichetta se l'estremità è altrove. Da valutare dopo F06–F08.",
+      "description": "Tratto logico distinto da rame e fibra, con simbolo e voce di legenda, senza contare porte occupate; tratto con etichetta se l'estremità è altrove. F06–F08 completati: decisione da prendere.",
       "acceptance": "Decisione presa dopo F07; se implementato, legenda e lettore di schermo distinguono il collegamento logico."
     }
   ],
@@ -53,7 +46,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto. Da provare anche: etichetta del moncone e Vai a verso un altro piano o BU (F06). Sezione e finestra Collegamenti logici (F07).",
+      "description": "Prova nativa parziale su moto g86 5G (Android 16, tema scuro, 1220×2712): inserimento di rack e switch, preset, pannello dettagli, menu Altre azioni, collegamento in fibra e scheda cavo verificati il 4 ottobre; corretti intestazioni tagliate e dispositivi senza posizione U. Non eseguiti: TalkBack, testo ingrandito, tastiera aperta, tema chiaro, 360/412 dp, zoom a due dita, selezione multipla porte con VLAN/PoE. RES-17 rimane aperto. Da provare anche: etichetta del moncone e Vai a verso un altro piano o BU (F06). Sezione e finestra Collegamenti logici (F07). Passo logico nel percorso della porta (F08).",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     },
     {

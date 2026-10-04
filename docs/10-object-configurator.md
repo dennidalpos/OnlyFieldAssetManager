@@ -6,6 +6,8 @@ Rack, apparati e cavi possono usare modelli di progetto. Un modello conserva la 
 
 `ConnectionGraph` segue cavi e passaggi interni. Una porta puo essere disponibile, avere un percorso completo, incompleto o un conflitto. Il colore accompagna sempre un testo; il verde indica solo continuita censita, non traffico reale.
 
+Quando il percorso fisico termina senza conflitti, cicli o passaggi sconosciuti su un dispositivo che è estremità di connessioni WAN, VPN, Internet o Altro, `ConnectionGraph.trace` aggiunge un passo logico per ciascuna: «prosegue via VPN VPN-1 verso FW-B · Sede B». Il passo ha `ChainStep.logical` valorizzato, nessuna porta e come dispositivo l'estremità remota, se censita. Nella scheda porta è in corsivo e attenuato, e il pulsante apre il dispositivo remoto. Il percorso fisico, gli stati e i conteggi delle porte non cambiano.
+
 Il contratto 1.11 conserva hardware, modelli e porte; Room 14 li persiste. Le versioni precedenti non ricevono lato o passaggi inventati.
 
 ## Dati essenziali e dettagli

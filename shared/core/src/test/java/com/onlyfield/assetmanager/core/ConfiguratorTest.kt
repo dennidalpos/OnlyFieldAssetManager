@@ -213,4 +213,19 @@ class ConfiguratorTest {
         val step = ConnectionGraph(p).trace(a.ports.single().id).single().description
         assertFalse(step, step.contains("FIBER_OVERALL"))
     }
+
+    @Test fun physicalEndOnVpnDeviceAddsClosingLogicalStep() {
+        val a = device("SW"); val fw = device("FW"); val remote = device("FW-B")
+        val vpn = WanVpnConnection(name = "VPN-1", type = WanVpnType.VPN, localEndpointDeviceId = fw.id, remoteEndpointDeviceId = remote.id, remoteEndpointSiteDescription = "Sede B")
+        val physical = HardwareConfigurator.connect(project(a, fw, remote), a.ports.single().id, fw.ports.single().id, CableMedium.ETHERNET_COPPER)
+        val trace = ConnectionGraph(physical.copy(wanVpnConnections = listOf(vpn))).trace(a.ports.single().id)
+        assertEquals(2, trace.size)
+        assertNull(trace.first().logical)
+        val step = trace.last()
+        assertEquals(vpn.id, step.logical?.id); assertEquals(remote.id, step.currentDevice?.id); assertNull(step.currentPort)
+        assertTrue(step.description, step.description.contains("VPN-1") && step.description.contains("Sede B"))
+        // Without links, or from an unconnected port, nothing logical is added.
+        assertEquals(1, ConnectionGraph(physical).trace(a.ports.single().id).size)
+        assertTrue(ConnectionGraph(physical.copy(wanVpnConnections = listOf(vpn))).trace(remote.ports.single().id).isEmpty())
+    }
 }
