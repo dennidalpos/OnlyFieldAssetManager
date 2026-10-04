@@ -3,7 +3,7 @@
   "lastUpdated": "2026-10-04",
   "currentPhase": "Restyling UI/UX UX-R1…R8 completato (inserimento rapido, tema squadrato, icone disegnate, mappa delimitata, barra in basso Android). Restano residui, tra cui il CI su tag (RES-01) fallito per la toolchain.",
   "activeTask": null,
-  "nextSession": "Nessuna attività aperta. Priorità: RES-19 sul moto g86 con il nuovo restyling (barra in basso, inserimento rapido, elevazione rack, porte a tutta larghezza, tema chiaro/scuro, TalkBack, testo ingrandito). Poi RES-01: correggere la toolchain JetBrains 21 in CI e ripubblicare v1.0.0 (chiedere conferma prima di spostare o ricreare il tag). Restano RES-17 e RES-13. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile).",
+  "nextSession": "Nessuna attività aperta. Priorità: RES-19 sul moto g86 con il nuovo restyling (barra in basso, inserimento rapido, elevazione rack, porte a tutta larghezza, tema chiaro/scuro, TalkBack, testo ingrandito). Poi RES-01: correggere la toolchain JetBrains 21 in CI e ripubblicare v1.0.0 (chiedere conferma prima di spostare o ricreare il tag). Restano RES-17 e RES-13. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Ramo main allineato a origin.",
   "remainingTasks": [],
   "residuals": [
     {
