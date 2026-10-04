@@ -88,7 +88,7 @@ fun ObjectConfigurator(project: Project, draft: MapObjectDraft, i18n: Messages, 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Messages, modelEditor: Boolean, initialSection: ConfiguratorPage, change: (MapObjectDraft) -> Unit) {
-    val preview = remember(project, draft) { draft.preview(project) }
+    val preview = remember(project, draft, i18n) { draft.preview(project, i18n) }
     val index = remember(preview) { ProjectIndex(preview) }
     val graph = remember(preview) { ConnectionGraph(preview) }
     var activePage by remember(draft.id) { mutableStateOf(initialSection) }
@@ -189,11 +189,17 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
                         if (differences.connectedRemoved.isNotEmpty()) Toggle(i18n.text("config.removeConnected"), draft.allowConnectedRemoval) { change(draft.copy(allowConnectedRemoval = it)) }
                     }
                     val cells = remember(preview, device.id) { PortLogic.panel(preview, device, graph, index) }
-                    fun toggle(id: String) { selectedPorts = if (id in selectedPorts) selectedPorts - id else selectedPorts + id }
-                    PortPanel(cells, i18n, selected = selectedPorts,
-                        onClick = { cell -> if (selectedPorts.isNotEmpty()) toggle(cell.port.id) else if (!modelEditor) { stage(preview); activePage = ConfiguratorPage.PORTS; portId = cell.port.id } },
+                    // Unsaved ports get new ids on every preview: keep only ids still shown.
+                    val selection = selectedPorts.filterTo(mutableSetOf()) { id -> cells.any { it.port.id == id } }
+                    fun toggle(id: String) {
+                        // Staging the preview freezes generated port ids while the selection is in use.
+                        if (selection.isEmpty()) stage(preview)
+                        selectedPorts = if (id in selection) selection - id else selection + id
+                    }
+                    PortPanel(cells, i18n, selected = selection,
+                        onClick = { cell -> if (selection.isNotEmpty()) toggle(cell.port.id) else if (!modelEditor) { stage(preview); activePage = ConfiguratorPage.PORTS; portId = cell.port.id } },
                         onLongClick = { cell: PortCell -> toggle(cell.port.id) }.takeIf { !modelEditor })
-                    if (!modelEditor) BulkPortBar(preview, cells, selectedPorts, i18n, { selectedPorts = it }) { stage(it) }
+                    if (!modelEditor) BulkPortBar(preview, cells, selection, i18n, { if (it.isNotEmpty() && selection.isEmpty()) stage(preview); selectedPorts = it }) { stage(it) }
                 }
             }
             ConfiguratorSection(i18n.text("ux.hardware"), error = if (d.rackId == null) errors["heightU"] else null) {
@@ -386,10 +392,20 @@ private fun PortGroups(project: Project, draft: MapObjectDraft, i18n: Messages, 
                 }
             }
             Choice(i18n.text("config.count"), g.portCount.toString(), (PortGroups.counts + project.deviceModels.flatMap { it.portTemplates }.map { it.portCount }).distinct().sorted().map { it.toString() }) { v -> v.toIntOrNull()?.takeIf { it in 1..512 }?.let { set(g.copy(portCount = it)) } }
-            val naming = namingOf(g, kind)
+            // "Custom" can be chosen even while the prefix still matches a generated scheme.
+            var customChosen by remember(n) { mutableStateOf(false) }
+            val naming = if (customChosen) CUSTOM_NAMING else namingOf(g, kind)
             ValueMenu(i18n.text("port.label"), naming, listOfNotNull(PortNaming.SHORT.name.takeIf { kind != null }, PortNaming.INTERFACE.name.takeIf { kind != null }, CUSTOM_NAMING),
-                { i18n.text("port.naming.$it") }) { value -> if (value != CUSTOM_NAMING && kind != null) rename(PortNaming.valueOf(value).prefix(kind, g.speed)) }
-            if (naming == CUSTOM_NAMING) Field(i18n.text("config.prefix"), g.namePrefix) { if (it.isNotBlank()) rename(it) }
+                { i18n.text("port.naming.$it") }) { value ->
+                customChosen = value == CUSTOM_NAMING
+                if (value != CUSTOM_NAMING && kind != null) rename(PortNaming.valueOf(value).prefix(kind, g.speed))
+            }
+            if (naming == CUSTOM_NAMING) {
+                // Typed locally; applied (and renumbered) only on confirm, so typing never resets the start number.
+                var prefix by remember(n, g.namePrefix) { mutableStateOf(g.namePrefix) }
+                Field(i18n.text("config.prefix"), prefix) { prefix = it }
+                TextButton(onClick = { rename(prefix.trim()) }, enabled = prefix.isNotBlank() && prefix.trim() != g.namePrefix) { Text(i18n.text("port.applyPrefix")) }
+            }
             Field(i18n.text("config.start"), g.startNumber.toString()) { v -> v.toIntOrNull()?.takeIf { it in 0..9999 }?.let { set(g.copy(startNumber = it)) } }
             Text(i18n.text("port.preview", PortGroups.range(g)), style = MaterialTheme.typography.bodySmall)
             if (g.mediaType == "Copper" || kind == PortKind.RJ45)

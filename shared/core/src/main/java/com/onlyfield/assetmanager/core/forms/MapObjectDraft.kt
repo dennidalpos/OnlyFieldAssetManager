@@ -54,14 +54,14 @@ data class MapObjectDraft(
         }
     }
     /** Unvalidated project as it would look with this draft; used for live previews. */
-    fun preview(project: Project): Project {
+    fun preview(project: Project, i18n: Messages = Messages()): Project {
         val configured = session?.apply(project) ?: project
         val p = if (type.id != "legacy" && ObjectCatalog.builtins.none { it.id == type.id })
             configured.copy(objectTypes = configured.objectTypes.filterNot { it.id == type.id } + type) else configured
         return when (type.kind) {
             ObjectKind.DEVICE -> {
                 val existing = p.businessUnits.flatMap { it.devices }.find { it.id == id }
-                val saved = device.toDevice(existing, "Configurator").copy(id = id)
+                val saved = device.toDevice(existing, i18n.text("text.2b71c6a11df1")).copy(id = id)
                 val added = if (existing == null) ProjectEdits.addDevice(p, device.businessUnitId ?: buId, saved) else ProjectEdits.updateDevice(p, saved)
                 val ports = portsConfigured || saved.hardware.portGroups.isNotEmpty()
                 if (ports && HardwareConfigurator.validGroups(saved.hardware.portGroups) && (allowConnectedRemoval || HardwareConfigurator.preview(p, saved, saved.hardware.portGroups).connectedRemoved.isEmpty()))

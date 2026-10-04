@@ -132,7 +132,7 @@ fun MapCanvas(
                     val down = awaitFirstDown(requireUnconsumed = false)
                     val start = down.position
                     var reached = start
-                    val press = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                    val raw = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
                         var state = Press.PENDING
                         while (state == Press.PENDING) {
                             val pressed = awaitPointerEvent().changes.filter { it.pressed }
@@ -145,7 +145,9 @@ fun MapCanvas(
                             }
                         }
                         state
-                    }.let { if (it == null && hitHandle(start) == null && hitNode(start) == null) Press.LONG else it ?: Press.DRAG }
+                    }
+                    // Holding still on a node or handle may still become a drag; elsewhere it is a long press.
+                    val press = if (raw == null && hitHandle(start) == null && hitNode(start) == null) Press.LONG else raw ?: Press.DRAG
                     val (select, open, longPress) = latest
                     when (press) {
                         Press.TAP -> {
@@ -165,18 +167,28 @@ fun MapCanvas(
                             do { val e = awaitPointerEvent(); e.changes.forEach { it.consume() } } while (e.changes.any { it.pressed })
                         }
                         else -> {
-                            val handle = hitHandle(start)
-                            val node = if (handle == null && current.editable) hitNode(start) else null
+                            val handle = if (press != Press.PINCH) hitHandle(start) else null
+                            val node = if (handle == null && press != Press.PINCH && current.editable) hitNode(start) else null
+                            // Keep the finger where it grabbed the node instead of snapping the centre under it.
+                            val grab = node?.let { n -> viewport().relative(start.x, start.y).let { MapPoint(n.point.x - it.x, n.point.y - it.y) } }
+                            var dragging = raw == Press.DRAG
+                            var editing = node != null || handle != null
                             var last = start
                             var route = currentLink?.let { points(it) }
                             fun step(position: Offset) {
+                                if (!dragging && (position - start).getDistance() <= viewConfiguration.touchSlop) return
+                                dragging = true
                                 val p = viewport().relative(position.x, position.y)
                                 when {
-                                    node != null -> moving = node.ref to p
-                                    handle != null && route != null -> {
+                                    editing && node != null && grab != null -> moving = node.ref to MapPoint(p.x + grab.x, p.y + grab.y)
+                                    editing && handle != null && route != null -> {
                                         val r = route!!
-                                        route = if (handle.insert && r.size < 12 && routeDraft == null) r.toMutableList().apply { add(handle.index + 1, p) }
-                                        else r.toMutableList().apply { this[if (handle.insert) handle.index + 1 else handle.index] = p }
+                                        route = when {
+                                            !handle.insert -> r.toMutableList().apply { this[handle.index] = p }
+                                            routeDraft != null -> r.toMutableList().apply { this[handle.index + 1] = p }
+                                            r.size < 12 -> r.toMutableList().apply { add(handle.index + 1, p) }
+                                            else -> return // Bend limit reached: the midpoint does nothing.
+                                        }
                                         routeDraft = route
                                     }
                                     else -> pan += position - last
@@ -184,19 +196,28 @@ fun MapCanvas(
                                 last = position
                             }
                             // The move that crossed the touch slop counts too.
-                            if (press == Press.DRAG) step(reached)
+                            if (raw == Press.DRAG) step(reached)
+                            var resync = false
                             do {
                                 val e = awaitPointerEvent()
                                 val pressed = e.changes.filter { it.pressed }
                                 if (pressed.size > 1) {
+                                    // A second finger turns any edit into zoom and pan.
+                                    if (editing) { editing = false; moving = null; routeDraft = null }
                                     zoomAround(e.calculateZoom(), e.calculateCentroid())
                                     pan += e.calculatePan()
-                                } else if (pressed.size == 1) step(pressed.first().position)
+                                    resync = true
+                                } else if (pressed.size == 1) {
+                                    val position = pressed.first().position
+                                    if (resync) { last = position; resync = false; dragging = true } else step(position)
+                                }
                                 e.changes.forEach { if (it.positionChange() != Offset.Zero) it.consume() }
                             } while (e.changes.any { it.pressed })
-                            val (move, saveRoute) = latestCommit
-                            moving?.let { (ref, p) -> move(ref, p) }
-                            if (handle != null) currentLink?.let { link -> routeDraft?.let { saveRoute(link, it) } }
+                            if (editing && dragging) {
+                                val (move, saveRoute) = latestCommit
+                                moving?.let { (ref, p) -> move(ref, MapPoint(p.x.coerceIn(0f, 1f), p.y.coerceIn(0f, 1f))) }
+                                if (handle != null) currentLink?.let { link -> routeDraft?.let { saveRoute(link, it) } }
+                            }
                             moving = null; routeDraft = null
                         }
                     }

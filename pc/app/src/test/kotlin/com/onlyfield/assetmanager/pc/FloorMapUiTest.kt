@@ -51,6 +51,28 @@ class FloorMapUiTest {
             assertTrue(p.floorplanPlacements.single().yRatio > .4f)
         }
     }
+    @Test fun longPressDoesNotMoveAndDragKeepsGrabOffset() {
+        var p by mutableStateOf(initial)
+        var saves = 0
+        rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
+            MapWorkspace(p, area.id, null, Messages(), MapActions({ updated, _ -> p = updated; saves++ }, { _, _ -> }, { _, _ -> }))
+        } } }
+        val node = rule.onNodeWithTag("floor-map")
+        val v = viewport(node)
+        val centre = v.screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
+        node.performTouchInput { longClick(centre) }
+        rule.runOnIdle { assertEquals(0, saves) }
+        // Grab 8 px right of the centre: the centre moves by the drag delta, not under the finger.
+        node.performTouchInput { down(centre + Offset(8f, 0f)); moveBy(Offset(10f, 2f)); moveBy(Offset(60f, 30f)); up() }
+        rule.runOnIdle {
+            assertEquals(1, saves)
+            val expected = v.relative(centre.x + 70f, centre.y + 32f)
+            val placed = p.floorplanPlacements.single()
+            assertEquals(expected.x, placed.xRatio, .002f)
+            assertEquals(expected.y, placed.yRatio, .002f)
+        }
+    }
+
     @Test fun hierarchySupportsLaterAdditionsBackNavigationAndCatalogCancellation() {
         val dir = Files.createTempDirectory("ofam_navigation_test").toFile()
         val state = DesktopAppState(DesktopStorageManager(dir))

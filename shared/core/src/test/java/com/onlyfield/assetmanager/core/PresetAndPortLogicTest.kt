@@ -65,6 +65,9 @@ class PresetAndPortLogicTest {
         val cells = PortLogic.panel(poe.copy(cables = listOf(Cable(portAId = ids.first()))), device)
         assertEquals(listOf(true, false, false, false), cells.map { it.occupied })
         assertEquals(20, cells.first().vlan?.untaggedVlanId)
+        // Stale ids from a rebuilt preview are ignored instead of creating orphan rows.
+        assertEquals(p, PortLogic.setVlan(p, listOf("gone"), PortVlanMode.ACCESS, 30))
+        assertEquals(p, PortLogic.setPoe(p, listOf("gone"), PoeStandard.IEEE_802_3AF))
     }
 
     @Test fun builtInContainersAreRecognised() {

@@ -30,9 +30,15 @@ object PortLogic {
         }
     }
 
+    /** Ids of ports that exist in [project]; stale UI selections must never create orphan rows. */
+    private fun existing(project: Project, portIds: Collection<String>): List<String> {
+        val ids = project.businessUnits.flatMap { bu -> bu.devices.flatMap { d -> d.ports.map { it.id } } }.toSet()
+        return portIds.filter { it in ids }
+    }
+
     /** [standard] null removes PoE from the ports. */
     fun setPoe(project: Project, portIds: Collection<String>, standard: PoeStandard?, role: PoeRole = PoeRole.PSE_SOURCE): Project =
-        portIds.fold(project) { p, id ->
+        existing(project, portIds).fold(project) { p, id ->
             val existing = p.poeMappings.find { it.portId == id }
             when {
                 standard == null -> existing?.let { ProjectEdits.deletePoeMapping(p, it.id) } ?: p
@@ -44,9 +50,10 @@ object PortLogic {
     fun setVlan(project: Project, portIds: Collection<String>, mode: PortVlanMode, untagged: Int?, tagged: List<Int> = emptyList()): Project {
         val numbers = (listOfNotNull(untagged) + tagged).distinct()
         require(numbers.all { it in 1..4094 }) { "VLAN outside 1..4094" }
+        val ports = existing(project, portIds).ifEmpty { return project }
         val withVlans = numbers.filter { n -> project.vlans.none { it.vlanId == n } }
             .fold(project) { p, n -> ProjectEdits.addVlan(p, Vlan(vlanId = n, name = "VLAN $n")) }
-        return portIds.fold(withVlans) { p, id ->
+        return ports.fold(withVlans) { p, id ->
             val existing = p.portVlanMemberships.find { it.portId == id }
             ProjectEdits.addOrUpdatePortVlanMembership(p, (existing ?: PortVlanMembership(portId = id)).copy(
                 mode = mode, untaggedVlanId = untagged, nativeVlanId = if (mode == PortVlanMode.TRUNK) untagged else null,

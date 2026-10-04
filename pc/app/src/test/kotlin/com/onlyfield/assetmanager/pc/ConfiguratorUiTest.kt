@@ -93,6 +93,9 @@ class ConfiguratorUiTest {
         rule.onNodeWithText("Torna all'oggetto").assertDoesNotExist()
         rule.onAllNodes(isSelected()).assertCountEquals(2)
         rule.onNodeWithText("2 porte selezionate").assertExists()
+        // Editing another field rebuilds the preview: the selection must keep pointing at real ports.
+        rule.runOnIdle { draft.value = draft.value.copy(device = draft.value.device.copy(ipAddress = "10.0.0.2")) }
+        rule.onAllNodes(isSelected()).assertCountEquals(2)
         rule.onNode(hasSetTextAction() and hasText("VLAN (1–4094)")).performScrollTo().performTextInput("20")
         rule.onNodeWithText("Applica VLAN").performScrollTo().performClick()
         rule.runOnIdle {

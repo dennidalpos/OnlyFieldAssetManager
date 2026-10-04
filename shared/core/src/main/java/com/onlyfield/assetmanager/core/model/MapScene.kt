@@ -149,16 +149,33 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
         }
 
         private fun sorted(project: Project, refs: List<ObjectRef>): List<ObjectRef> {
+            val lookup = Lookup(project)
+            return refs.map { it to lookup.name(it).lowercase() }
+                .sortedWith(compareByDescending<Pair<ObjectRef, String>> { lookup.devices[it.first.id]?.positionU ?: -1 }.thenBy { it.second })
+                .map { it.first }
+        }
+
+        /** Id tables for one scene build, so names and container roles are not scanned per node. */
+        private class Lookup(private val project: Project) {
             val devices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
-            return refs.sortedWith(compareByDescending<ObjectRef> { devices[it.id]?.positionU ?: -1 }
-                .thenBy { ObjectHierarchy.name(project, it).lowercase() })
+            private val racks = project.racks.associateBy { it.id }
+            private val types = ObjectCatalog.types(project).reversed().associateBy { it.id } // first match wins, as in ObjectCatalog.type
+            fun name(ref: ObjectRef): String = when (ref.type) {
+                PlacementTargetType.RACK -> racks[ref.id]?.name
+                PlacementTargetType.DEVICE -> devices[ref.id]?.technicalName
+            } ?: ObjectHierarchy.name(project, ref)
+            fun canContain(ref: ObjectRef): Boolean = when (ref.type) {
+                PlacementTargetType.RACK -> ref.id in racks
+                PlacementTargetType.DEVICE -> devices[ref.id]?.let { types[it.objectTypeId] }?.let { it.kind == ObjectKind.DEVICE && it.canContainObjects } == true
+            }
         }
 
         private fun build(project: Project, hierarchy: HierarchyIndex, areaId: String, container: ObjectRef?,
                           placed: List<Pair<ObjectRef, MapPoint>>, visible: (ObjectRef) -> ObjectRef?): MapScene {
             val ends = CableEnds(project)
             val graph = ConnectionGraph(project)
-            val devices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+            val lookup = Lookup(project)
+            val devices = lookup.devices
             val stored = if (container == null) project.cableRoutes.filter { it.areaId == areaId }.associateBy { it.cableId } else emptyMap()
             val internal = mutableMapOf<ObjectRef, MutableList<String>>()
             val groups = linkedMapOf<String, MutableList<Triple<Cable, ObjectRef?, ObjectRef?>>>()
@@ -196,8 +213,8 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
                 val ports = subtree.filter { it.type == PlacementTargetType.DEVICE }.flatMap { devices[it.id]?.ports.orEmpty() }
                 val glyph = if (ref.type == PlacementTargetType.RACK) ObjectGlyph.RACK else ObjectGlyph.of(project, devices[ref.id])
                 val children = hierarchy.children[ref].orEmpty()
-                SceneNode(ref, ObjectHierarchy.name(project, ref), glyph, point,
-                    isContainer = children.isNotEmpty() || ObjectHierarchy.canContain(project, ref), childCount = children.size,
+                SceneNode(ref, lookup.name(ref), glyph, point,
+                    isContainer = children.isNotEmpty() || lookup.canContain(ref), childCount = children.size,
                     portsUsed = ports.count { graph.occupied(it.id) }, portsTotal = ports.size, internalCables = internal[ref].orEmpty())
             }
             return MapScene(areaId, container, nodes, links)

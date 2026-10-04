@@ -61,14 +61,18 @@ fun MapWorkspace(
     media: @Composable (ObjectRef) -> Unit = {},
 ) {
     var path by remember(areaId) { mutableStateOf(emptyList<ObjectRef>()) }
-    val refs = remember(project) { ObjectHierarchy.refs(project).toSet() }
-    // Drop levels that were deleted or moved elsewhere meanwhile.
-    val validPath = path.takeWhile { it in refs }
+    val hierarchy = remember(project) { HierarchyIndex(project) }
+    // Keep levels only while each is still a child of the previous one on this floor (deleted or moved levels are dropped).
+    val validPath = path.withIndex().takeWhile { (i, ref) ->
+        hierarchy.parents[ref] == path.getOrNull(i - 1) && (i > 0 || hierarchy.areaId(ref) == areaId)
+    }.map { it.value }
     if (validPath != path) SideEffect { path = validPath }
     val container = validPath.lastOrNull()
     var selection by remember(areaId, container) { mutableStateOf<MapSelection?>(null) }
     val scene = remember(project, areaId, container) { if (container == null) MapScene.area(project, areaId) else MapScene.container(project, container) }
     if (selection is MapSelection.Node && scene.node((selection as MapSelection.Node).ref) == null) selection = null
+    // Narrow windows hide the pane until something is selected; "List" opens it on demand.
+    var listOpen by remember(areaId) { mutableStateOf(false) }
 
     fun open(ref: ObjectRef) { path = validPath + ref }
     val canvas: @Composable (Modifier) -> Unit = { m ->
@@ -79,7 +83,7 @@ fun MapWorkspace(
             onLongPress = { actions.add(null, it) }, modifier = m)
     }
     val pane: @Composable (Modifier) -> Unit = { m ->
-        MapDetailPane(project, scene, selection, i18n, actions, onSelect = { selection = it }, onOpen = ::open, media = media, modifier = m)
+        MapDetailPane(project, scene, selection, i18n, actions, onSelect = { selection = it }, onOpen = ::open, media = media, modifier = m, hierarchy = hierarchy)
     }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val trail: @Composable RowScope.() -> Unit = {
@@ -92,20 +96,22 @@ fun MapWorkspace(
                 }
             }
         }
-        val commands: @Composable RowScope.() -> Unit = {
+        val commands: @Composable RowScope.(Boolean) -> Unit = { narrow ->
             Button(onClick = { actions.add(container, null) }) { Text(i18n.text("text.84cbef7b19b8")) }
+            if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen }, label = { Text(i18n.text("map.list")) })
             toolbar()
         }
         // Phones get breadcrumb and commands on two rows so neither is clipped.
         BoxWithConstraints(Modifier.fillMaxWidth()) {
-            if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { trail(); commands() }
+            val narrow = maxWidth < 840.dp
+            if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) { trail(); commands(narrow) }
             else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { trail() }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { commands() }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) { commands(true) }
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
-            val showPane = selection != null || container != null || maxWidth >= 840.dp
+            val showPane = selection != null || container != null || listOpen || maxWidth >= 840.dp
             val paneMax = maxHeight * .45f
             if (maxWidth >= 840.dp) Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 canvas(Modifier.weight(1f).fillMaxHeight())
@@ -120,21 +126,26 @@ fun MapWorkspace(
 
 @Composable
 fun MapDetailPane(project: Project, scene: MapScene, selection: MapSelection?, i18n: Messages, actions: MapActions,
-                  onSelect: (MapSelection?) -> Unit, onOpen: (ObjectRef) -> Unit, media: @Composable (ObjectRef) -> Unit, modifier: Modifier = Modifier) {
+                  onSelect: (MapSelection?) -> Unit, onOpen: (ObjectRef) -> Unit, media: @Composable (ObjectRef) -> Unit, modifier: Modifier = Modifier,
+                  hierarchy: HierarchyIndex = remember(project) { HierarchyIndex(project) }) {
     val index = remember(project) { ProjectIndex(project) }
     Surface(modifier.testTag("map-detail"), tonalElevation = 2.dp, shape = RoundedCornerShape(12.dp)) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (selection) {
                 is MapSelection.Node -> scene.node(selection.ref)?.let { node ->
-                    NodeDetails(project, index, scene, node, i18n, actions, onSelect, onOpen, media, current = false)
+                    NodeDetails(project, index, hierarchy, scene, node, i18n, actions, onSelect, onOpen, media, current = false)
                 }
                 is MapSelection.Link -> selection.cableIds.firstNotNullOfOrNull { scene.linkOf(it) }?.let { link ->
                     LinkDetails(project, index, scene, link, selection.cableId, i18n, actions, onSelect)
                 }
-                null -> scene.container?.let { ref ->
-                    val node = remember(project, ref) { containerNode(project, scene.areaId, ref) }
-                    NodeDetails(project, index, scene, node, i18n, actions, onSelect, onOpen, media, current = true)
-                } ?: FloorHint(i18n)
+                null -> {
+                    scene.container?.let { ref ->
+                        val node = remember(project, ref) { containerNode(project, scene.areaId, ref) }
+                        NodeDetails(project, index, hierarchy, scene, node, i18n, actions, onSelect, onOpen, media, current = true)
+                    }
+                    SceneObjects(scene, i18n, onSelect)
+                    if (scene.container == null) FloorHint(i18n, expanded = scene.nodes.isEmpty())
+                }
             }
         }
     }
@@ -154,10 +165,26 @@ private fun GlyphBadge(glyph: Glyph) {
     }
 }
 
+/** Same objects as the canvas, as a list: the non-touch way (screen reader, keyboard) to select them. */
 @Composable
-private fun FloorHint(i18n: Messages) {
-    Text(i18n.text("map.hint"), style = MaterialTheme.typography.bodyMedium)
-    Text(i18n.text("map.legend"), style = MaterialTheme.typography.titleSmall)
+private fun SceneObjects(scene: MapScene, i18n: Messages, onSelect: (MapSelection?) -> Unit) {
+    Text(i18n.text("map.objects", scene.nodes.size), style = MaterialTheme.typography.titleSmall, modifier = Modifier.semantics { heading() })
+    if (scene.nodes.isEmpty()) Text(i18n.text("map.noObjects"), style = MaterialTheme.typography.bodySmall)
+    scene.nodes.sortedBy { it.name.lowercase() }.forEach { node ->
+        TextButton(onClick = { onSelect(MapSelection.Node(node.ref)) }, modifier = Modifier.fillMaxWidth()) {
+            Text(node.glyph.code, style = MaterialTheme.typography.labelSmall, modifier = Modifier.width(40.dp))
+            Text(node.name, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (node.isContainer && node.childCount > 0) Text(i18n.text("map.children", node.childCount), style = MaterialTheme.typography.labelSmall)
+        }
+    }
+}
+
+@Composable
+private fun FloorHint(i18n: Messages, expanded: Boolean) {
+    var open by remember(expanded) { mutableStateOf(expanded) }
+    Text(i18n.text("map.hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    TextButton(onClick = { open = !open }) { Text(i18n.text("map.legend") + if (open) " ▴" else " ▾") }
+    if (!open) return
     LinkMedium.entries.forEach { m ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val color = MapStyle.medium(setOf(m), MaterialTheme.colorScheme.primary)
@@ -172,7 +199,7 @@ private fun FloorHint(i18n: Messages) {
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun NodeDetails(project: Project, index: ProjectIndex, scene: MapScene, node: SceneNode, i18n: Messages, actions: MapActions,
+private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: HierarchyIndex, scene: MapScene, node: SceneNode, i18n: Messages, actions: MapActions,
                         onSelect: (MapSelection?) -> Unit, onOpen: (ObjectRef) -> Unit, media: @Composable (ObjectRef) -> Unit, current: Boolean) {
     val device = index.device(node.ref.id).takeIf { node.ref.type == PlacementTargetType.DEVICE }
     val type = ObjectCatalog.type(project, device?.objectTypeId)
@@ -196,7 +223,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, scene: MapScene, 
     if (facts.isNotEmpty()) Text(facts.joinToString(" · "), style = MaterialTheme.typography.bodySmall)
     if (device != null && device.ports.isNotEmpty()) {
         val cells = remember(project, device.id) { PortLogic.panel(project, device, index = index) }
-        PortPanel(cells, i18n, compact = true, onClick = { actions.edit(editDraft(project, node.ref, scene.areaId, i18n), ConfiguratorPage.PORTS) })
+        PortPanel(cells, i18n, compact = true, onPanelClick = { actions.edit(editDraft(project, node.ref, scene.areaId, i18n), ConfiguratorPage.PORTS) })
     }
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         if (node.isContainer && !current) Button(onClick = { onOpen(node.ref) }) { Text(i18n.text("map.open")) }
@@ -211,12 +238,15 @@ private fun NodeDetails(project: Project, index: ProjectIndex, scene: MapScene, 
         }) { Text(i18n.text("text.38cdc675224c")) }
     }
     if (assigning) {
-        val ancestors = ObjectHierarchy.ancestors(project, node.ref)
-        val candidates = ObjectHierarchy.refs(project).filter { it != node.ref && it !in ancestors && ObjectHierarchy.parent(project, it) != node.ref && ObjectHierarchy.areaId(project, it) == scene.areaId }
+        val candidates = remember(project, node.ref) {
+            val ancestors = hierarchy.ancestors(node.ref).toSet()
+            ObjectHierarchy.refs(project).filter { it != node.ref && it !in ancestors && hierarchy.parents[it] != node.ref && hierarchy.areaId(it) == scene.areaId }
+                .map { it to ObjectHierarchy.name(project, it, i18n) }.sortedBy { it.second.lowercase() }
+        }
         if (candidates.isEmpty()) Text(i18n.text("text.032265877af8"), style = MaterialTheme.typography.bodySmall)
-        candidates.sortedBy { ObjectHierarchy.name(project, it, i18n).lowercase() }.forEach { child ->
+        candidates.forEach { (child, name) ->
             TextButton(onClick = { actions.update(ObjectHierarchy.assign(project, child, node.ref, i18n), i18n.text("text.30541a9c6cee")); assigning = false }, modifier = Modifier.fillMaxWidth()) {
-                Text(ObjectHierarchy.name(project, child, i18n), modifier = Modifier.weight(1f))
+                Text(name, modifier = Modifier.weight(1f))
             }
         }
     }
