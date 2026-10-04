@@ -6,6 +6,9 @@ import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.onlyfield.assetmanager.configurator.RackElevation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -115,7 +118,9 @@ fun RackSection(
                             })
                         }
                         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                            RackElevation(rack, inRack, side, Modifier.weight(1.3f).fillMaxHeight())
+                            Column(Modifier.weight(1.3f).fillMaxHeight().verticalScroll(rememberScrollState())) {
+                                RackElevation(project, rack, side, i18n)
+                            }
                             Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(i18n.text("text.0a7e55b149a2", inRack.size), fontWeight = FontWeight.SemiBold)
                                 if (unplaced.isNotEmpty()) {
@@ -173,36 +178,6 @@ fun RackSection(
             creating = false; editing = null
             if (isNew) selectedRackId = saved.id
             onProjectUpdated(updated, i18n.text("text.e4ffb3690fdf", saved.name))
-        }
-    }
-}
-
-@Composable
-internal fun RackElevation(rack: Rack, devices: List<Device>, side: RackSide, modifier: Modifier) {
-    val i18n = LocalMessages.current
-
-    val slots = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) (rack.heightU downTo 1).toList() else (1..rack.heightU).toList()
-    Card(modifier = modifier, colors = CardDefaults.cardColors(containerColor = Color(0xFF202124))) {
-        LazyColumn(modifier = Modifier.padding(10.dp).fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-            items(slots) { u ->
-                val dev = devices.find { d ->
-                    val pos = d.positionU ?: return@find false
-                    (d.rackSide == RackSide.BOTH || d.rackSide == side) && u >= pos && u < pos + d.heightU
-                }
-                Surface(
-                    modifier = Modifier.fillMaxWidth().height(24.dp),
-                    color = dev?.let { categoryColor(it.category) } ?: Color(0xFF303134),
-                    shape = RoundedCornerShape(2.dp)
-                ) {
-                    Row(modifier = Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text("U$u", fontSize = 10.sp, color = Color(0xFFBDC1C6), modifier = Modifier.width(36.dp))
-                        if (dev != null) {
-                            val top = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) dev.positionU!! + dev.heightU - 1 else dev.positionU!!
-                            if (u == top) Text("${dev.technicalName} · ${dev.category.toDisplayString(i18n = i18n)}", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                }
-            }
         }
     }
 }

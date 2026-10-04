@@ -56,7 +56,7 @@ class ConfiguratorLayoutTest {
     @Test fun rackContentsListOnlyMountedDevicesAndFreeRanges() {
         show(MapObjectDraft.rack(project, bu.id, area.id, rack.id))
         rule.onNodeWithText("Dispositivi nel rack").performScrollTo().performClick()
-        rule.onNodeWithText("U10–11").assertExists()
+        rule.onNodeWithContentDescription("U10–11 SW-01").assertExists()
         rule.onNodeWithText("U libere: 1–9, 12–42").assertExists()
         rule.onNodeWithText("U5").assertDoesNotExist()
         // In the rack without a unit: still listed, so the summary count matches.

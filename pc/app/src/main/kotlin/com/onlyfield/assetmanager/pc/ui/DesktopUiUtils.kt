@@ -14,13 +14,3 @@ fun ComparisonStatus.toDisplayString(i18n: Messages = Messages()): String = when
     ComparisonStatus.DIFFERENT_PROJECT -> i18n.text("text.1fc92901e187")
 }
 
-fun categoryColor(category: DeviceCategory): Color = when (category) {
-    DeviceCategory.NETWORK_SWITCH -> Color(0xFF1565C0)
-    DeviceCategory.PATCH_PANEL -> Color(0xFF2E7D32)
-    DeviceCategory.UPS_PDU -> Color(0xFFD84315)
-    DeviceCategory.SERVER_STORAGE -> Color(0xFF6A1B9A)
-    DeviceCategory.CAMERA_NVR -> Color(0xFF00838F)
-    DeviceCategory.SHELF -> Color(0xFF616161)
-    DeviceCategory.BLANK_PANEL -> Color(0xFF455A64)
-    DeviceCategory.CUSTOM -> Color(0xFF5D4037)
-}

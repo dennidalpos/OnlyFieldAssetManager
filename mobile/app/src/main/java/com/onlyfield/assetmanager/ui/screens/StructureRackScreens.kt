@@ -5,6 +5,9 @@ import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.onlyfield.assetmanager.configurator.RackElevation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -181,32 +184,13 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
                     SegmentedButton(selected = side == s, onClick = { side = s }, shape = SegmentedButtonDefaults.itemShape(i, 2)) { Text(s.toDisplayString(i18n = i18n)) }
                 }
             }
-            val slots = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) (rack.heightU downTo 1).toList() else (1..rack.heightU).toList()
-            LazyColumn(contentPadding = PaddingValues(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                items(slots) { u ->
-                    val dev = inRack.find { d ->
-                        val pos = d.positionU ?: return@find false
-                        (d.rackSide == RackSide.BOTH || d.rackSide == side) && u >= pos && u < pos + d.heightU
-                    }
-                    Surface(
-                        color = if (dev != null) categoryColor(dev.category) else MaterialTheme.colorScheme.surfaceContainerHighest,
-                        shape = RoundedCornerShape(4.dp),
-                        modifier = Modifier.fillMaxWidth().height(32.dp),
-                        onClick = { dev?.let { vm.navigate(Screen.DeviceDetail(it.id)) } ?: run { placing = true } }
-                    ) {
-                        Row(Modifier.padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text("U$u", fontSize = 11.sp, modifier = Modifier.width(40.dp), color = if (dev != null) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (dev != null) {
-                                val top = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) dev.positionU!! + dev.heightU - 1 else dev.positionU!!
-                                if (u == top) Text(dev.technicalName, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
+            // Full-width elevation; tapping a free unit places a device there.
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                RackElevation(index.project, rack, side, i18n, onDevice = { vm.navigate(Screen.DeviceDetail(it.id)) }, onAddAt = { placing = true })
                 val unplaced = inRack.filter { it.positionU == null }
                 if (unplaced.isNotEmpty()) {
-                    item { SectionTitle(i18n.text("text.d75d6ae3881b")) }
-                    items(unplaced.sortedForDisplay(i18n) { it.technicalName }) { d -> ItemCard(d.technicalName, listOf(i18n.text("text.a03528f849dc")), onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }) }
+                    SectionTitle(i18n.text("text.d75d6ae3881b"))
+                    unplaced.sortedForDisplay(i18n) { it.technicalName }.forEach { d -> ItemCard(d.technicalName, listOf(i18n.text("text.a03528f849dc")), onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }) }
                 }
             }
         }
@@ -247,16 +231,6 @@ private fun RackDialog(vm: ProjectViewModel, index: ProjectIndex, rack: Rack?, o
     }
 }
 
-internal fun categoryColor(category: DeviceCategory): Color = when (category) {
-    DeviceCategory.NETWORK_SWITCH -> Color(0xFF1565C0)
-    DeviceCategory.PATCH_PANEL -> Color(0xFF2E7D32)
-    DeviceCategory.UPS_PDU -> Color(0xFFD84315)
-    DeviceCategory.SERVER_STORAGE -> Color(0xFF6A1B9A)
-    DeviceCategory.CAMERA_NVR -> Color(0xFF00838F)
-    DeviceCategory.SHELF -> Color(0xFF616161)
-    DeviceCategory.BLANK_PANEL -> Color(0xFF455A64)
-    DeviceCategory.CUSTOM -> Color(0xFF5D4037)
-}
 
 // --- Models -------------------------------------------------------------------------------------
 

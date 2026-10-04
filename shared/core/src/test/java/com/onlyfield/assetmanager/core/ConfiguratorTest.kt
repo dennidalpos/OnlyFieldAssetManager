@@ -22,6 +22,19 @@ class ConfiguratorTest {
         assertEquals(4, SchematicGeometry.rows(d, PortSide.FRONT).size)
     }
 
+    @Test fun portGridFitsWidthAndWrapsInBalancedBands() {
+        val phone = SchematicGeometry.portGrid(48, 328f, 3f, 30f, 40f)
+        assertEquals(8, phone.columns)
+        assertEquals(3, phone.bands.size)
+        assertEquals(listOf(0, 2, 4, 6, 8, 10, 12, 14), phone.bands[0][0])
+        assertEquals((0 until 48).toSet(), phone.bands.flatten().flatten().toSet())
+        assertTrue(phone.columns * phone.cell + 3f * (phone.columns - 1) <= 328f)
+        val wide = SchematicGeometry.portGrid(24, 560f, 3f, 30f, 40f)
+        assertEquals(listOf(12), wide.bands.map { it[0].size })
+        assertEquals(40f, wide.cell)
+        assertEquals(listOf(listOf((0 until 8).toList())), SchematicGeometry.portGrid(8, 412f, 3f, 30f, 40f).bands)
+    }
+
     @Test fun directConnectionIsCompleteAndIdempotent() {
         val a = device("A"); val b = device("B")
         val p = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)

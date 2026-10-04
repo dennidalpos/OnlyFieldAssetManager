@@ -288,7 +288,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             if (!modelEditor && rack != null && rack.heightU in 1..60) {
                 val inRack = index.devices.filter { it.rackId == rack.id }
                 ConfiguratorSection(i18n.text("ux.rackContents"), summary = i18n.plural("config.devicesCount", inRack.size)) {
-                    RackContents(rack, inRack, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { u ->
+                    RackContents(preview, rack, inRack, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { u ->
                         stage(preview)
                         nested = MapObjectDraft.newObject(preview, ObjectCatalog.builtins.first { it.id == "switch" }, draft.buId, r.areaId.orEmpty(), self)
                             .let { child -> child.copy(device = child.device.copy(positionU = u.toString())) }
@@ -400,10 +400,10 @@ internal fun unitRanges(units: Collection<Int>): String {
     return ranges.joinToString(", ") { if (it.first == it.last) "${it.first}" else "${it.first}–${it.last}" }
 }
 
-/** Mounted devices on one side, free units as ranges, and one menu to add into a free unit. */
+/** Elevation of one side (tap a free unit to add there), free units as ranges and devices without a unit. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun RackContents(rack: Rack, devices: List<Device>, side: PortSide, i18n: Messages, onSide: (PortSide) -> Unit, onOpen: (Device) -> Unit, onAdd: (Int) -> Unit) {
+private fun RackContents(project: Project, rack: Rack, devices: List<Device>, side: PortSide, i18n: Messages, onSide: (PortSide) -> Unit, onOpen: (Device) -> Unit, onAdd: (Int) -> Unit) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(PortSide.FRONT, PortSide.REAR).forEach { s -> FilterChip(selected = side == s, onClick = { onSide(s) }, label = { Text(s.toDisplayString(i18n)) }) }
     }
@@ -413,14 +413,7 @@ private fun RackContents(rack: Rack, devices: List<Device>, side: PortSide, i18n
     // In the rack but without a unit yet: listed apart so the count in the summary always matches.
     val unplaced = devices.filter { it.positionU == null }
     if (mounted.isEmpty() && unplaced.isEmpty()) Text(i18n.text("config.rackEmpty"), style = MaterialTheme.typography.bodySmall)
-    mounted.forEach { d ->
-        val p = d.positionU!!
-        val units = if (d.heightU > 1) "U$p–${p + d.heightU - 1}" else "U$p"
-        OutlinedButton(onClick = { onOpen(d) }, modifier = Modifier.fillMaxWidth()) {
-            Text(units, style = MaterialTheme.typography.labelLarge, modifier = Modifier.width(72.dp))
-            Text(d.technicalName, modifier = Modifier.weight(1f))
-        }
-    }
+    RackElevation(project, rack, if (side == PortSide.REAR) RackSide.REAR else RackSide.FRONT, i18n, onDevice = onOpen, onAddAt = onAdd)
     if (unplaced.isNotEmpty()) {
         Text(i18n.text("config.unplaced"), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         unplaced.sortedBy { it.technicalName.lowercase() }.forEach { d ->
@@ -429,13 +422,6 @@ private fun RackContents(rack: Rack, devices: List<Device>, side: PortSide, i18n
     }
     Text(if (free.isEmpty()) i18n.text("config.noFreeUnits") else i18n.text("config.freeUnits", unitRanges(free)), style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant)
-    if (free.isNotEmpty()) Box {
-        var open by remember { mutableStateOf(false) }
-        OutlinedButton(onClick = { open = true }) { Text(i18n.text("config.addAtUnit")) }
-        DropdownMenu(open, { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
-            free.sortedDescending().forEach { u -> DropdownMenuItem(text = { Text("U$u") }, onClick = { open = false; onAdd(u) }) }
-        }
-    }
 }
 
 /** Built-in preset for the type: menus with values, applied as port groups. */

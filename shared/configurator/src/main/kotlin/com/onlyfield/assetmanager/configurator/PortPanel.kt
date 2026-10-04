@@ -4,9 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -24,6 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.onlyfield.assetmanager.core.forms.PortCell
+import com.onlyfield.assetmanager.core.forms.SchematicGeometry
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.PortSide
 
@@ -44,7 +43,6 @@ fun PortPanel(
     /** Compact panels are one touch target (cells are too small to tap one by one). */
     onPanelClick: (() -> Unit)? = null,
 ) {
-    val size = if (compact) 26.dp else 38.dp
     val occupied = MaterialTheme.colorScheme.primary
     val warning = MaterialTheme.colorScheme.error
     val summary = i18n.text("map.portsUsage", cells.count { it.occupied }, cells.size)
@@ -58,30 +56,40 @@ fun PortPanel(
             if (blocks.size > 1) Text(listOfNotNull(block.first().port.hardware.connector ?: group?.ifBlank { null },
                 side.name.takeIf { cells.any { c -> c.port.hardware.side == PortSide.REAR } }?.let { i18n.text("port.side.$it") })
                 .joinToString(" · "), style = MaterialTheme.typography.labelSmall)
-            val rows = if (block.size > 8) listOf(block.filterIndexed { i, _ -> i % 2 == 0 }, block.filterIndexed { i, _ -> i % 2 == 1 }) else listOf(block)
-            Column(Modifier.horizontalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                rows.forEach { row ->
-                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                        row.forEach { cell ->
-                            val isSelected = cell.port.id in selected
-                            val state = i18n.text(if (cell.occupied) "port.occupied" else "port.free")
-                            val marks = listOfNotNull(state, cell.poe?.let { "PoE" }, cell.vlan?.untaggedVlanId?.let { "VLAN $it" }, cell.peer, i18n.text("port.warning").takeIf { cell.warning })
-                            Surface(
-                                color = if (cell.occupied) occupied else MaterialTheme.colorScheme.surface,
-                                contentColor = if (cell.occupied) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
-                                shape = RoundedCornerShape(4.dp),
-                                modifier = Modifier.size(size)
-                                    .border(if (isSelected) 3.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.tertiary else occupied, RoundedCornerShape(4.dp))
-                                    .then(if (onClick != null) Modifier.combinedClickable(onLongClick = onLongClick?.let { { it(cell) } }) { onClick(cell) } else Modifier)
-                                    .semantics { contentDescription = "${cell.port.name}: ${marks.joinToString(", ")}"; this.selected = isSelected },
-                            ) {
-                                Box(Modifier.fillMaxSize().padding(1.dp)) {
-                                    Text(cell.port.hardware.position?.toString() ?: cell.port.name, Modifier.align(Alignment.TopCenter),
-                                        fontSize = if (compact) 9.sp else 11.sp, textAlign = TextAlign.Center, maxLines = 1)
-                                    if (!compact) cell.vlan?.untaggedVlanId?.let { Text(it.toString(), Modifier.align(Alignment.BottomCenter), fontSize = 8.sp, maxLines = 1) }
-                                    if (cell.poe != null || cell.poeCapable != null) Text("⚡", Modifier.align(Alignment.BottomStart), fontSize = 8.sp,
-                                        color = if (cell.poe != null) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline)
-                                    if (cell.warning) Text("!", Modifier.align(Alignment.TopEnd).padding(end = 2.dp), fontSize = 9.sp, color = warning)
+            // Cell size follows the available width; long blocks wrap into bands instead of scrolling.
+            BoxWithConstraints(Modifier.fillMaxWidth()) {
+                val grid = SchematicGeometry.portGrid(block.size, maxWidth.value, 3f, if (compact) 22f else 30f, if (compact) 26f else 40f)
+                val size = grid.cell.dp
+                val marks = !compact && grid.cell >= 32f
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    grid.bands.forEach { band ->
+                        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            band.forEach { row ->
+                                Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    row.forEach { i ->
+                                        val cell = block[i]
+                                        val isSelected = cell.port.id in selected
+                                        val state = i18n.text(if (cell.occupied) "port.occupied" else "port.free")
+                                        val details = listOfNotNull(state, cell.poe?.let { "PoE" }, cell.vlan?.untaggedVlanId?.let { "VLAN $it" }, cell.peer, i18n.text("port.warning").takeIf { cell.warning })
+                                        Surface(
+                                            color = if (cell.occupied) occupied else MaterialTheme.colorScheme.surface,
+                                            contentColor = if (cell.occupied) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                                            shape = RoundedCornerShape(3.dp),
+                                            modifier = Modifier.size(size)
+                                                .border(if (isSelected) 3.dp else 1.dp, if (isSelected) MaterialTheme.colorScheme.tertiary else occupied, RoundedCornerShape(3.dp))
+                                                .then(if (onClick != null) Modifier.combinedClickable(onLongClick = onLongClick?.let { { it(cell) } }) { onClick(cell) } else Modifier)
+                                                .semantics { contentDescription = "${cell.port.name}: ${details.joinToString(", ")}"; this.selected = isSelected },
+                                        ) {
+                                            Box(Modifier.fillMaxSize().padding(1.dp)) {
+                                                Text(cell.port.hardware.position?.toString() ?: cell.port.name, Modifier.align(Alignment.TopCenter),
+                                                    fontSize = (grid.cell * .3f).coerceIn(9f, 12f).sp, textAlign = TextAlign.Center, maxLines = 1)
+                                                if (marks) cell.vlan?.untaggedVlanId?.let { Text(it.toString(), Modifier.align(Alignment.BottomCenter), fontSize = 8.sp, maxLines = 1) }
+                                                if (cell.poe != null || cell.poeCapable != null) Text("⚡", Modifier.align(Alignment.BottomStart), fontSize = 8.sp,
+                                                    color = if (cell.poe != null) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline)
+                                                if (cell.warning) Text("!", Modifier.align(Alignment.TopEnd).padding(end = 2.dp), fontSize = 9.sp, color = warning)
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
