@@ -13,10 +13,9 @@ Aggiornato al 4 ottobre 2026 dopo confronto con il codice e il tracker.
 
 | ID | Stato | Evidenza richiesta |
 | --- | --- | --- |
-| RES-01 | Parziale | Esecuzione remota del workflow su un tag reale. |
+| RES-01 | Parziale | Run su tag v1.0.0 fallita per la toolchain JetBrains 21; correggere la CI e ripubblicare. |
 | RES-13 | Aperto | Checklist foto, scansione, multitouch e lettore USB su hardware reale. |
 | RES-17 | Aperto | Suite UI Android verde su API 37 senza disabilitare controlli. |
-| RES-18 | Aperto | Rimozione mirata degli scratch preesistenti sotto `build/`, dopo verifica dei percorsi. |
 | RES-19 | Aperto | Matrice visiva Android 360/412 dp, tastiera, testo ingrandito e temi chiaro/scuro. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
@@ -105,4 +104,13 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - RES-20 chiuso: `ModelValidator` segnala come avvisi documentali `WAN_VPN_WITHOUT_ENDPOINTS` (nessun apparato né sede) e `WAN_VPN_SAME_DEVICE` (estremità coincidenti); testi it/en/es, test del validatore.
 - F09 chiuso senza implementazione: le VPN restano nel pannello (F07) e nel percorso porta (F08); la mappa disegna solo cavi fisici. Decisione registrata in [plan.md](plan.md).
 - Verifica: 242 test superati (Core 84, Exchange 37, Desktop 93, Android JVM 28), APK debug compilato, `git diff --check` senza errori.
+
+## RES-18 — Pulizia scratch — 4 ottobre 2026
+
+- Verificato che nessuno script, workflow o documento usa gli scratch sotto `build/`. Rimossi 66 elementi (circa 11 GB): log, script e cataloghi monouso, `ux-audit/`, `ci-fixtures/`, strumenti locali (`wix311`, `actionlint`, `l10n-tools`, `translation-tools`, `translation-models`) e immagini emulatore `qa-avd`/`qa-system35` (API 35). Conservati `build/release/` (output di `prepare-release.ps1`), `build/reports/` e `build/tmp/`. Nessun file tracciato da Git coinvolto.
+
+## RES-01 su tag e consegna per cambio sessione — 4 ottobre 2026
+
+- Tag annotato `v1.0.0` su `dedf863` pubblicato su origin. Run [37219874814](https://github.com/dennidalpos/OnlyFieldAssetManager/actions/runs/37219874814) fallita nel passo «Verify all JVM and Compose suites»: Gradle non trova la toolchain `{languageVersion=21, vendor=JetBrains}` e il JDK scaricato da foojay non ha `javac`, `javadoc` e `jar`. Job publish saltato, nessuna release. In locale la stessa suite passa (242 test).
+- Tracker: nessuna attività aperta; residui RES-01 (CI su tag), RES-13, RES-17, RES-19. Ramo `main` allineato a `origin/main`.
 

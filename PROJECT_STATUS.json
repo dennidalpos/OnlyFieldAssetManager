@@ -1,17 +1,17 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-04",
-  "currentPhase": "Attività F06–F10 completate; F09 chiuso per decisione. Restano i residui.",
+  "currentPhase": "Attività F06–F10 completate (F09 chiuso per decisione); RES-18 e RES-20 chiusi. Restano residui, tra cui il CI su tag (RES-01) fallito per la toolchain.",
   "activeTask": null,
-  "nextSession": "Nessuna attività aperta; F09 chiuso per decisione. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
+  "nextSession": "Nessuna attività aperta. Priorità: RES-01, correggere la toolchain JetBrains 21 in CI e ripubblicare v1.0.0 (chiedere conferma prima di spostare o ricreare il tag). Poi RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli, moncone e Vai a, Collegamenti logici, passo logico nel percorso). Restano RES-17 e RES-13. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Ramo main allineato a origin.",
   "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-01",
       "title": "Verifica CI/CD su tag",
       "status": "PARTIAL",
-      "description": "Workflow, pacchetti e checksum sono implementati; manca un'esecuzione remota su tag.",
-      "closureCriteria": "Esecuzione CI su tag con artefatti verificabili."
+      "description": "Workflow, pacchetti e checksum sono implementati. Prima esecuzione su tag v1.0.0 (run 37219874814, 4 ottobre 2026) fallita nel passo di verifica: Gradle non riesce a ottenere la toolchain richiesta {languageVersion=21, vendor=JetBrains}; il JDK scaricato da foojay non soddisfa la specifica (mancano javac, javadoc, jar). Job publish saltato, nessuna release creata; il tag v1.0.0 esiste su origin.",
+      "closureCriteria": "Allineare toolchain e CI (es. distribuzione JetBrains in setup-java oppure vendor non vincolante nella toolchain), poi riprovare: ricreare il tag v1.0.0 sul commit corretto (o usare un nuovo tag) con conferma dell'utente; run verde con APK, ZIP e SHA256SUMS pubblicati."
     },
     {
       "id": "RES-13",
@@ -26,13 +26,6 @@
       "status": "OPEN",
       "description": "Due test UI si fermano in Espresso su API 37 prima delle asserzioni.",
       "closureCriteria": "Suite strumentale verde su API 37 senza disabilitare controlli."
-    },
-    {
-      "id": "RES-18",
-      "title": "Pulizia scratch",
-      "status": "OPEN",
-      "description": "Restano scratch ignorati sotto build/; artefatti e directory Gradle vanno preservati. La rimozione di build/ux-audit/ creata dalla revisione UI/UX del 4 ottobre è stata rifiutata due volte dalla policy di esecuzione (blocked by policy), anche dopo verifica del percorso assoluto.",
-      "closureCriteria": "Rimozione mirata dopo verifica dei percorsi e controllo stato Git."
     },
     {
       "id": "RES-19",
