@@ -23,6 +23,7 @@ import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.configurator.ConfiguratorPage
 import com.onlyfield.assetmanager.configurator.map.*
+import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.ui.*
 import com.onlyfield.assetmanager.ui.components.*
@@ -111,12 +112,9 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             addingStructure = false
         }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
     }
-    adding?.let { (parent, point) -> if (area != null) ObjectPickerDialog(project, i18n, area.id, parent, onClose = { adding = null }, onPick = { type, preset ->
-        editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(project, type, preset, area.id, parent, point); adding = null
-    }, onCustom = { type ->
-        vm.edit(i18n.text("text.a4d3de9d1b61")) { it.copy(objectTypes = it.objectTypes + type) }
-        editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(project.copy(objectTypes = project.objectTypes + type), type, null, area.id, parent, point); adding = null
-    }) }
+    adding?.let { (parent, point) -> if (area != null) MapObjectPicker(project, i18n, area.id, parent, point, onClose = { adding = null },
+        onAdd = { draft -> adding = null; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
+        onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(vm, project, draft, editorPage) { editor = null } } }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, vm::attachmentFile, { picker.launch(arrayOf("image/*", "application/pdf")) }, { id, page, pages ->
         vm.edit(i18n.text("text.fcd1cc58f46b")) { ProjectEdits.setAreaFloorplan(it, area.id, id, page, pages) }; selectingPlan = false; newPlanId = null

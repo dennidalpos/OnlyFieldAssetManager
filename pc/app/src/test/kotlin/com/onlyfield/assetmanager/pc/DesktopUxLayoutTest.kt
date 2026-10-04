@@ -34,11 +34,13 @@ class DesktopUxLayoutTest(private val width: Int, private val height: Int) {
             onNode(hasText("Dispositivi") and hasClickAction()).assertIsDisplayed()
             capture("navigation")
             onAllNodesWithText("+ Nuovo apparato").onFirst().performClick()
+            // Quick insertion: type, prefilled menus, then the full editor on request.
+            onNodeWithText("Aggiungi oggetto").assertIsDisplayed()
+            onNodeWithText("Cerca tipologia…").performTextInput("switch")
+            onNodeWithText("Switch").performClick()
+            onNode(hasSetTextAction() and hasText("SW-01")).assertIsDisplayed()
+            onNodeWithText("Aggiungi e modifica").performClick()
             onNodeWithText("Aggiungi dispositivo").assertIsDisplayed()
-            onNodeWithText("Aggiungi").assertIsNotEnabled()
-            onNode(hasSetTextAction() and hasText("Nome oggetto")).performTextInput("SW-01")
-            onNode(hasContentDescription("Business unit:", substring = true)).performScrollTo().performClick()
-            onNodeWithText("Operations").performClick()
             onNodeWithText("Aggiungi").assertIsDisplayed().assertIsEnabled()
             onNodeWithText("Numero di serie").assertDoesNotExist()
             capture("editor")
@@ -49,7 +51,6 @@ class DesktopUxLayoutTest(private val width: Int, private val height: Int) {
             runOnIdle { assertEquals("SW-01", state.project!!.businessUnits.single().devices.single().technicalName) }
             onNodeWithText("Porte").performClick()
             onNodeWithText("Configura porte · SW-01").assertIsDisplayed()
-            onNodeWithText("Nessuna porta dichiarata").assertExists()
             onNodeWithText("Salva modifiche").assertIsDisplayed()
             capture("ports")
         } finally {

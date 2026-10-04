@@ -24,6 +24,8 @@ data class MapObjectDraft(
     /** Where a new object was requested on the floor; null places it in the first free slot. */
     val mapPoint: MapPoint? = null,
 ) {
+    /** Same draft as another object type of the same kind (category follows the type). */
+    fun withType(type: ObjectType) = copy(type = type, device = device.copy(objectTypeId = type.id, category = type.category))
     val targetType get() = when (type.kind) { ObjectKind.DEVICE -> AttachmentTargetType.DEVICE; ObjectKind.RACK -> AttachmentTargetType.RACK; ObjectKind.CABLE -> AttachmentTargetType.CABLE }
     fun errors(project: Project, i18n: Messages = Messages()): Map<String, String> {
         val p = session?.apply(project) ?: project

@@ -1,5 +1,9 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.core.forms.QuickAdd
+import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
+import com.onlyfield.assetmanager.configurator.RackUnitPicker
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -47,6 +51,8 @@ fun RackSection(
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
     var placing by remember { mutableStateOf(false) }
+    var addingAt by remember { mutableStateOf<Int?>(null) }
+    var editingNew by remember { mutableStateOf<MapObjectDraft?>(null) }
 
     val racks = project.racks.filter { matchesQuery(query, it.name, index.areaName(it.areaId, "")) }
     val selected = index.rack(selectedRackId) ?: racks.firstOrNull()
@@ -119,7 +125,7 @@ fun RackSection(
                         }
                         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             Column(Modifier.weight(1.3f).fillMaxHeight().verticalScroll(rememberScrollState())) {
-                                RackElevation(project, rack, side, i18n)
+                                RackElevation(project, rack, side, i18n, onAddAt = { u -> changeDetail { addingAt = u } })
                             }
                             Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text(i18n.text("text.0a7e55b149a2", inRack.size), fontWeight = FontWeight.SemiBold)
@@ -173,9 +179,14 @@ fun RackSection(
         }
     }
 
-    if (creating || editing != null) {
-        RackDialog(index, editing, onDismiss = { creating = false; editing = null }) { updated, saved, isNew ->
-            creating = false; editing = null
+    selected?.let { rack -> addingAt?.let { u -> RackUnitPicker(project, rack, u, side, i18n, onClose = { addingAt = null },
+        onAdd = { draft -> addingAt = null; onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) }) } }
+    if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { MapObjectDraft.forRack(project, null) },
+        onAdd = { draft -> creating = false; selectedRackId = draft.id; onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK })
+    if (editingNew != null || editing != null) {
+        RackDialog(index, editing, editingNew, onDismiss = { editingNew = null; editing = null }) { updated, saved, isNew ->
+            editingNew = null; editing = null
             if (isNew) selectedRackId = saved.id
             onProjectUpdated(updated, i18n.text("text.e4ffb3690fdf", saved.name))
         }
@@ -228,9 +239,9 @@ private fun PlaceDeviceDialog(rack: Rack, index: ProjectIndex, initialSide: Rack
 }
 
 @Composable
-private fun RackDialog(index: ProjectIndex, rack: Rack?, onDismiss: () -> Unit, onSave: (Project, Rack, Boolean) -> Unit) {
+private fun RackDialog(index: ProjectIndex, rack: Rack?, initial: MapObjectDraft?, onDismiss: () -> Unit, onSave: (Project, Rack, Boolean) -> Unit) {
     val i18n = LocalMessages.current
-    var draft by remember(LocalDetailSlot.current?.editorVersion, rack) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(index.project, rack)) }
+    var draft by remember(LocalDetailSlot.current?.editorVersion, rack) { mutableStateOf(initial ?: MapObjectDraft.forRack(index.project, rack)) }
     EditPanel(title = configuratorTitle(index.project, draft, i18n), confirmLabel = configuratorAction(index.project, draft, i18n), onDismiss = onDismiss, width = 800.dp,
         validationMessage = configuratorValidation(index.project, draft, i18n), confirmEnabled = draft.errors(index.project, i18n).isEmpty(), onConfirm = {
             val updated = draft.apply(index.project, i18n)

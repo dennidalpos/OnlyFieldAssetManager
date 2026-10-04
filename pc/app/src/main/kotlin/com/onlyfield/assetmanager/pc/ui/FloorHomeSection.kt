@@ -19,6 +19,7 @@ import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.configurator.ConfiguratorPage
 import com.onlyfield.assetmanager.configurator.map.*
+import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.scan.*
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
@@ -100,13 +101,9 @@ fun FloorHomeSection(state: DesktopAppState) {
             addingStructure = false
         }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
     }
-    adding?.let { (parent, point) -> if (area != null) ObjectPickerDialog(project, i18n, area.id, parent, onClose = { adding = null }, onPick = { type, preset ->
-        editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(project, type, preset, area.id, parent, point); adding = null
-    }, onCustom = { type ->
-        val updated = project.copy(objectTypes = project.objectTypes + type)
-        state.update(updated, i18n.text("text.a4d3de9d1b61"))
-        editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(updated, type, null, area.id, parent, point); adding = null
-    }) }
+    adding?.let { (parent, point) -> if (area != null) MapObjectPicker(project, i18n, area.id, parent, point, onClose = { adding = null },
+        onAdd = { draft -> adding = null; state.update(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
+        onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft, editorPage) { editor = null } } }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentFile, {
         DesktopStorageHelper.pickOpenFile(i18n.text("text.04458b820c0e"), i18n.text("text.0c7a70a251fc"), "pdf", "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { file ->

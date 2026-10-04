@@ -1,5 +1,9 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.core.forms.QuickAdd
+import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
+import com.onlyfield.assetmanager.configurator.RackUnitPicker
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
@@ -44,6 +48,7 @@ fun InventorySection(
     var editing by remember { mutableStateOf<Device?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
+    var editingNew by remember { mutableStateOf<MapObjectDraft?>(null) }
     var portsOf by remember { mutableStateOf<String?>(null) }
     var replaceTarget by remember { mutableStateOf<Device?>(null) }
     var mergeTarget by remember { mutableStateOf<Device?>(null) }
@@ -173,12 +178,16 @@ fun InventorySection(
         }
     }
 
-    if (creating || editing != null) {
+    if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { inventoryDeviceDraft(project, null).withType(it) },
+        onAdd = { draft -> creating = false; onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE })
+    if (editingNew != null || editing != null) {
         DeviceDialog(
             project = project,
             device = editing,
-            onDismiss = { creating = false; editing = null },
-            onSave = { updated, message -> creating = false; editing = null; onProjectUpdated(updated, message) }
+            onDismiss = { editingNew = null; editing = null },
+            onSave = { updated, message -> editingNew = null; editing = null; onProjectUpdated(updated, message) },
+            initial = editingNew,
         )
     }
 
@@ -224,9 +233,10 @@ private fun DeviceDialog(
     onDismiss: () -> Unit,
     onSave: (Project, String) -> Unit,
     initialSection: ConfiguratorPage = ConfiguratorPage.ESSENTIALS,
+    initial: MapObjectDraft? = null,
 ) {
     val i18n = LocalMessages.current
-    var draft by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(inventoryDeviceDraft(project, device)) }
+    var draft by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(initial ?: inventoryDeviceDraft(project, device)) }
     EditPanel(title = configuratorTitle(project, draft, i18n, initialSection), confirmLabel = configuratorAction(project, draft, i18n), onDismiss = onDismiss,
         validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), width = 800.dp,
         onConfirm = { onSave(draft.apply(project, i18n), configuratorTitle(project, draft, i18n)) }) {

@@ -13,7 +13,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -22,7 +21,10 @@ import com.onlyfield.assetmanager.configurator.SelectField
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.forms.DevicePresets
+import com.onlyfield.assetmanager.core.forms.HardwareConfigurator
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.PresetResult
+import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
 
@@ -57,50 +59,89 @@ fun placementLabel(project: Project, areaId: String, parent: ObjectRef?, i18n: M
         ?: i18n.text("picker.onFloor", ProjectIndex(project).areaName(areaId))
 
 /**
- * Insertion flow in one dialog: type (grouped by family, searchable) → preset values when the
- * type has one. The title always says where the object goes; the configurator opens afterwards.
- * Cables can only be added on the floor ([parent] null).
+ * Quick insertion from the map: [onAdd] gets a draft ready to save, [onEdit] opens the full editor.
+ * Cables can only be added on the floor ([parent] null) and always open the editor.
+ */
+@Composable
+fun MapObjectPicker(project: Project, i18n: Messages, areaId: String, parent: ObjectRef?, point: MapPoint?, onClose: () -> Unit,
+                    onAdd: (MapObjectDraft) -> Unit, onEdit: (MapObjectDraft) -> Unit) {
+    val subtitle = remember(project, areaId, parent) { placementLabel(project, areaId, parent, i18n) }
+    ObjectPickerDialog(project, i18n, subtitle, onClose, base = { newObjectDraft(project, it, null, areaId, parent, point) }, onAdd = onAdd, onEdit = onEdit,
+        filter = { parent == null || it.kind != ObjectKind.CABLE })
+}
+
+/**
+ * Quick insertion in one dialog: type (grouped, searchable, with icons), then prefilled menus
+ * (name, preset ports, rack height, business unit when missing) and Add, which saves at once.
+ * Types without menus are added with one tap; a single matching type skips the list.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ObjectPickerDialog(project: Project, i18n: Messages, areaId: String, parent: ObjectRef?, onClose: () -> Unit,
-                       onPick: (ObjectType, PresetResult?) -> Unit, onCustom: (ObjectType) -> Unit) {
+fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onClose: () -> Unit,
+                       base: (ObjectType) -> MapObjectDraft, onAdd: (MapObjectDraft) -> Unit, onEdit: ((MapObjectDraft) -> Unit)? = null,
+                       filter: (ObjectType) -> Boolean = { true }) {
+    val allTypes = remember(project) { ObjectCatalog.types(project).filter(filter) }
     var query by remember { mutableStateOf("") }
     var custom by remember { mutableStateOf(false) }
-    var chosen by remember { mutableStateOf<ObjectType?>(null) }
-    val preset = chosen?.let { DevicePresets.forType(it.id) }
-    var values by remember(chosen) { mutableStateOf(preset?.defaults().orEmpty()) }
     var customType by remember { mutableStateOf<ObjectType?>(null) }
-    val placement = remember(project, areaId, parent) { placementLabel(project, areaId, parent, i18n) }
+    var chosen by remember { mutableStateOf(allTypes.singleOrNull()) }
+    val start = remember(chosen) { chosen?.let(base) }
+    val preset = chosen?.let { DevicePresets.forType(it.id) }
+    // A business unit is asked only when the context has none and there is a real choice.
+    val askBu = start?.type?.kind == ObjectKind.DEVICE && start.buId.isBlank() && project.businessUnits.size > 1
+    var values by remember(chosen) { mutableStateOf(preset?.defaults().orEmpty()) }
+    var name by remember(chosen) { mutableStateOf(chosen?.let { suggestName(project, it) }.orEmpty()) }
+    var height by remember(chosen) { mutableStateOf(start?.rack?.heightU?.toIntOrNull() ?: 42) }
+    var buId by remember(chosen) { mutableStateOf(start?.takeIf { it.buId.isBlank() }?.let { project.businessUnits.firstOrNull()?.id }) }
+    val draft = start?.let { QuickAdd.draft(it, name, preset?.result(values), height, buId) }
+    val errors = draft?.errors(project, i18n).orEmpty()
+
+    fun pick(type: ObjectType) {
+        val first = base(type)
+        if (type.kind == ObjectKind.CABLE) { onEdit?.invoke(first); return }
+        val bu = if (first.buId.isBlank()) project.businessUnits.firstOrNull()?.id else null
+        val quick = QuickAdd.draft(first, suggestName(project, type), buId = bu)
+        val needs = QuickAdd.needsDetails(quick, DevicePresets.forType(type.id) != null, quick.errors(project, i18n).isNotEmpty()) ||
+            (first.buId.isBlank() && project.businessUnits.size > 1)
+        if (needs) chosen = type else onAdd(quick)
+    }
+
     val title = when {
-        preset != null -> ObjectCatalog.displayName(chosen!!, i18n)
+        chosen != null -> ObjectCatalog.displayName(chosen!!, i18n)
         custom -> i18n.text("text.7a83d7ae0c15")
         else -> i18n.text("map.addObject")
     }
-    val step = i18n.text(if (preset != null) "picker.step.ports" else "picker.step.type")
     AlertDialog(onDismissRequest = onClose, title = {
         Column {
             Text(title, modifier = Modifier.semantics { heading() })
-            Text("$placement · $step", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
-                preset != null -> {
-                    Text(i18n.text("catalog.presetHint"), style = MaterialTheme.typography.bodySmall)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        preset.params.forEach { param ->
-                            ValueMenu(i18n.text("preset.param.${param.key}"), values.getValue(param.key), param.values,
-                                { if (param.labelled) i18n.text("preset.value.$it") else it }, Modifier.widthIn(min = 160.dp).weight(1f)) { values = values + (param.key to it) }
+                draft != null -> {
+                    OutlinedTextField(name, { name = it }, label = { Text(i18n.text("config.name")) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                        isError = errors["technicalName"] != null || errors["name"] != null)
+                    if (draft.type.kind == ObjectKind.RACK)
+                        ValueMenu(i18n.text("config.units"), height, (HardwareConfigurator.rackHeights + height).distinct().sorted(), { "$it U" }, Modifier.fillMaxWidth()) { height = it }
+                    if (askBu) ValueMenu(i18n.text("config.bu"), project.businessUnits.find { it.id == buId }, project.businessUnits, { it?.name.orEmpty() }, Modifier.fillMaxWidth()) { buId = it?.id }
+                    preset?.let { p ->
+                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            p.params.forEach { param ->
+                                ValueMenu(i18n.text("preset.param.${param.key}"), values.getValue(param.key), param.values,
+                                    { if (param.labelled) i18n.text("preset.value.$it") else it }, Modifier.widthIn(min = 140.dp).weight(1f)) { values = values + (param.key to it) }
+                            }
                         }
+                        Text(presetSummary(p.result(values)), style = MaterialTheme.typography.titleSmall)
                     }
-                    Text(presetSummary(preset.result(values)), style = MaterialTheme.typography.titleSmall)
-                    TextButton(onClick = { onPick(chosen!!, null) }) { Text(i18n.text("picker.manualPorts")) }
+                    errors.values.distinct().takeIf { it.isNotEmpty() }?.let {
+                        Text(it.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
                 }
                 custom -> CustomTypeForm(i18n) { customType = it }
                 else -> {
                     OutlinedTextField(query, { query = it }, label = { Text(i18n.text("text.271a55491c4f")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-                    val types = ObjectCatalog.types(project).filter { (parent == null || it.kind != ObjectKind.CABLE) && ObjectCatalog.displayName(it, i18n).contains(query.trim(), true) }
+                    val types = allTypes.filter { ObjectCatalog.displayName(it, i18n).contains(query.trim(), true) }
                     val grouped = types.groupBy { if (it.kind == ObjectKind.CABLE) null else ObjectGlyph.of(it).family }
                         .toSortedMap(compareBy(nullsLast()) { it?.ordinal })
                     LazyColumn(Modifier.heightIn(max = 380.dp)) {
@@ -110,12 +151,10 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, areaId: String, parent:
                                     color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
                             }
                             items(list.sortedBy { ObjectCatalog.displayName(it, i18n).lowercase() }, key = { it.id }) { type ->
-                                val hasPreset = DevicePresets.forType(type.id) != null
-                                TextButton(onClick = { if (hasPreset) chosen = type else onPick(type, null) }, modifier = Modifier.fillMaxWidth()) {
+                                TextButton(onClick = { pick(type) }, modifier = Modifier.fillMaxWidth()) {
                                     GlyphBadge(ObjectGlyph.of(type), 28.dp)
                                     Spacer(Modifier.width(10.dp))
                                     Text(ObjectCatalog.displayName(type, i18n), modifier = Modifier.weight(1f))
-                                    if (hasPreset) Text("›", Modifier.clearAndSetSemantics {})
                                 }
                             }
                         }
@@ -131,14 +170,16 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, areaId: String, parent:
         }
     }, confirmButton = {
         when {
-            preset != null -> Button(onClick = { onPick(chosen!!, preset.result(values)) }) { Text(i18n.text("catalog.continue")) }
-            custom -> Button(enabled = customType != null, onClick = { customType?.let(onCustom) }) { Text(i18n.text("text.62a5786b6d5a")) }
+            draft != null -> Button(enabled = errors.isEmpty(), onClick = { onAdd(draft) }) { Text(i18n.text("ux.add")) }
+            // A custom type is created together with the object: the draft carries it into the project.
+            custom -> Button(enabled = customType != null, onClick = { custom = false; chosen = customType }) { Text(i18n.text("catalog.continue")) }
         }
     }, dismissButton = {
-        when {
-            preset != null -> TextButton(onClick = { chosen = null }) { Text(i18n.text("map.back")) }
-            custom -> TextButton(onClick = { custom = false; customType = null }) { Text(i18n.text("map.back")) }
-            else -> TextButton(onClick = onClose) { Text(i18n.text("ux.cancel")) }
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            val back = custom || (chosen != null && allTypes.size > 1)
+            if (back) TextButton(onClick = { if (custom) { custom = false; customType = null } else chosen = null }) { Text(i18n.text("map.back")) }
+            else TextButton(onClick = onClose) { Text(i18n.text("ux.cancel")) }
+            if (draft != null && onEdit != null) TextButton(enabled = errors.isEmpty(), onClick = { onEdit(draft) }) { Text(i18n.text("quick.addAndEdit")) }
         }
     })
 }

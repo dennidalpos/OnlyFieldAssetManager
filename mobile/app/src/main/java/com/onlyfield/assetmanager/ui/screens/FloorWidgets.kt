@@ -19,5 +19,7 @@ import com.onlyfield.assetmanager.ui.components.*
 internal fun ObjectFields(project: Project, draft: MapObjectDraft, initialSection: com.onlyfield.assetmanager.configurator.ConfiguratorPage = com.onlyfield.assetmanager.configurator.ConfiguratorPage.ESSENTIALS,
                           extraSections: @Composable () -> Unit = {}, change: (MapObjectDraft) -> Unit) {
     val markDirty = LocalMarkDirty.current
+    // A prefilled new object (quick insertion, "Add and edit") is unsaved work: closing asks first.
+    LaunchedEffect(draft.id) { if (!com.onlyfield.assetmanager.configurator.configuratorExists(project, draft)) markDirty() }
     com.onlyfield.assetmanager.configurator.ObjectConfigurator(project, draft, LocalMessages.current, initialSection = initialSection, extraSections = extraSections) { markDirty(); change(it) }
 }

@@ -30,6 +30,9 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.forms.RackLayout
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.core.forms.QuickAdd
+import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.Screen
 import com.onlyfield.assetmanager.ui.components.*
@@ -121,6 +124,7 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
 
     val index = remember(project) { ProjectIndex(project) }
     var creating by remember { mutableStateOf(false) }
+    var editingNew by remember { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
     AppScaffold(
         i18n.text("text.4cd265c2b8c6"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
         floatingActionButton = { ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.4cd265c2b8c6")) }) }
@@ -136,7 +140,10 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
             }
         }
     }
-    if (creating) RackDialog(vm, index, null) { creating = false }
+    if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(project, null) },
+        onAdd = { draft -> creating = false; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK })
+    editingNew?.let { draft -> RackDialog(vm, index, null, initial = draft) { editingNew = null } }
 }
 
 @Composable
@@ -154,6 +161,8 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     var editing by remember { mutableStateOf(false) }
     var placing by remember { mutableStateOf(false) }
     var side by remember { mutableStateOf(RackSide.FRONT) }
+    var addingAt by remember { mutableStateOf<Int?>(null) }
+    var editingNew by remember { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
     val takePhoto = rememberPhotoCapture(vm)
     val inRack = index.devices.filter { it.rackId == rack.id }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
@@ -186,7 +195,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
             }
             // Full-width elevation; tapping a free unit places a device there.
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                RackElevation(index.project, rack, side, i18n, onDevice = { vm.navigate(Screen.DeviceDetail(it.id)) }, onAddAt = { placing = true })
+                RackElevation(index.project, rack, side, i18n, onDevice = { vm.navigate(Screen.DeviceDetail(it.id)) }, onAddAt = { addingAt = it })
                 val unplaced = inRack.filter { it.positionU == null }
                 if (unplaced.isNotEmpty()) {
                     SectionTitle(i18n.text("text.d75d6ae3881b"))
@@ -197,6 +206,10 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     }
 
     if (editing) RackDialog(vm, index, rack) { editing = false }
+    addingAt?.let { u -> RackUnitPicker(index.project, rack, u, side, i18n, onClose = { addingAt = null },
+        onAdd = { draft -> addingAt = null; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
+        onEdit = { draft -> addingAt = null; editingNew = draft }) }
+    editingNew?.let { draft -> DeviceDialog(vm, index.project, null, initial = draft) { editingNew = null } }
     if (placing) {
         val candidates = index.devices.filter { it.rackId != rack.id || it.positionU == null }
         var device by remember { mutableStateOf<Device?>(null) }
@@ -221,9 +234,9 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 }
 
 @Composable
-private fun RackDialog(vm: ProjectViewModel, index: ProjectIndex, rack: Rack?, onClose: () -> Unit) {
+private fun RackDialog(vm: ProjectViewModel, index: ProjectIndex, rack: Rack?, initial: com.onlyfield.assetmanager.core.forms.MapObjectDraft? = null, onClose: () -> Unit) {
     val i18n = LocalMessages.current
-    var draft by remember(rack) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(index.project, rack)) }
+    var draft by remember(rack) { mutableStateOf(initial ?: com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(index.project, rack)) }
     EditScreen(configuratorTitle(index.project, draft, i18n), onClose, {
         onClose(); vm.edit(configuratorTitle(index.project, draft, i18n)) { draft.apply(it, i18n) }
     }, validationMessage = configuratorValidation(index.project, draft, i18n), confirmEnabled = draft.errors(index.project, i18n).isEmpty(), confirmLabel = configuratorAction(index.project, draft, i18n)) {

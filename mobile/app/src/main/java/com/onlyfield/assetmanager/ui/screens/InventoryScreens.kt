@@ -20,6 +20,9 @@ import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.core.forms.QuickAdd
+import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.Screen
 import com.onlyfield.assetmanager.ui.components.*
@@ -34,6 +37,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
     var creating by remember { mutableStateOf(false) }
+    var editingNew by remember { mutableStateOf<MapObjectDraft?>(null) }
     var batch by remember { mutableStateOf(false) }
 
     val devices = index.devices.filter {
@@ -89,7 +93,10 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     }
 
-    if (creating) DeviceDialog(vm, project, null) { creating = false }
+    if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { inventoryDeviceDraft(project, null).withType(it) },
+        onAdd = { draft -> creating = false; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE })
+    editingNew?.let { draft -> DeviceDialog(vm, project, null, initial = draft) { editingNew = null } }
     if (batch) BatchDialog(vm, project, index, selected) { batch = false; selecting = false; selected = emptySet() }
 }
 
@@ -238,9 +245,9 @@ private fun InfoRow(label: String, value: String?) {
 }
 
 @Composable
-internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device?, initialSerial: String? = null, onClose: () -> Unit) {
+internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device?, initialSerial: String? = null, initial: MapObjectDraft? = null, onClose: () -> Unit) {
     val i18n = LocalMessages.current
-    var draft by remember(device) { mutableStateOf(inventoryDeviceDraft(project, device).let { d -> initialSerial?.let { d.copy(device = d.device.copy(serialNumber = it)) } ?: d }) }
+    var draft by remember(device) { mutableStateOf(initial ?: inventoryDeviceDraft(project, device).let { d -> initialSerial?.let { d.copy(device = d.device.copy(serialNumber = it)) } ?: d }) }
     var scanningSerial by remember { mutableStateOf(false) }
     EditScreen(configuratorTitle(project, draft, i18n), onClose, {
         onClose(); vm.edit(configuratorTitle(project, draft, i18n)) { draft.apply(it, i18n) }

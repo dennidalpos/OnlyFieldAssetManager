@@ -288,10 +288,13 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             if (!modelEditor && rack != null && rack.heightU in 1..60) {
                 val inRack = index.devices.filter { it.rackId == rack.id }
                 ConfiguratorSection(i18n.text("ux.rackContents"), summary = i18n.plural("config.devicesCount", inRack.size)) {
-                    RackContents(preview, rack, inRack, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { u ->
-                        stage(preview)
-                        nested = MapObjectDraft.newObject(preview, ObjectCatalog.builtins.first { it.id == "switch" }, draft.buId, r.areaId.orEmpty(), self)
-                            .let { child -> child.copy(device = child.device.copy(positionU = u.toString())) }
+                    var addingAt by remember(draft.id) { mutableStateOf<Int?>(null) }
+                    RackContents(preview, rack, inRack, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { addingAt = it }
+                    // Added devices join the session and are saved with the rack.
+                    addingAt?.let { u ->
+                        RackUnitPicker(preview, rack, u, if (side == PortSide.REAR) RackSide.REAR else RackSide.FRONT, i18n, onClose = { addingAt = null },
+                            onAdd = { child -> addingAt = null; stage(child.apply(preview, i18n)) },
+                            onEdit = { child -> addingAt = null; stage(preview); nested = child })
                     }
                 }
             }
