@@ -6,11 +6,7 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
 
-/**
- * Minimal, dependency-free PDF 1.4 writer for text reports: A4 pages, Helvetica fonts,
- * automatic word wrapping and pagination. Text is encoded in WinAnsi (Windows-1252), which covers
- * Italian accented letters.
- */
+/** Dependency-free PDF 1.4 writer for paginated WinAnsi text. */
 object SimplePdfWriter {
 
     private const val PAGE_W = 595f
@@ -29,7 +25,7 @@ object SimplePdfWriter {
         ReportLine.Spacer -> Style("F1", 6f, 0f)
     }
 
-    /** Wraps [text] so each line fits [width] points, using an average Helvetica glyph width. */
+    /** Wraps [text] to [width] points. */
     private fun wrap(text: String, size: Float, width: Float): List<String> {
         val maxChars = (width / (size * 0.5f)).toInt().coerceAtLeast(10)
         if (text.length <= maxChars) return listOf(text)
@@ -58,7 +54,6 @@ object SimplePdfWriter {
     }
 
     fun write(lines: List<ReportLine>, title: String, out: OutputStream, i18n: Messages = Messages()) {
-        // Lay out lines into pages of content streams.
         val pages = mutableListOf<ByteArrayOutputStream>()
         var page = ByteArrayOutputStream().also { pages += it }
         var y = PAGE_H - MARGIN
@@ -69,7 +64,6 @@ object SimplePdfWriter {
             val bullet = if (line is ReportLine.Item) "• " else ""
             val wrapped = if (line is ReportLine.Spacer) listOf("") else wrap(bullet + line.text, style.size, PAGE_W - 2 * MARGIN - style.indentPt)
             val needed = style.before + wrapped.size * style.size * 1.3f
-            // Keep headings together with at least one following line.
             val reserve = if (line is ReportLine.Heading || line is ReportLine.SubHeading) style.size * 3 else 0f
             if (y - needed - reserve < MARGIN) newPage()
             y -= style.before
@@ -82,14 +76,12 @@ object SimplePdfWriter {
             }
         }
 
-        // Page numbers in the footer.
         pages.forEachIndexed { i, p ->
             p.write("BT /F1 8 Tf $MARGIN 30 Td (".toByteArray(Charsets.US_ASCII))
             p.write(escape(i18n.text("text.657bcc42ca8e", title, i + 1, pages.size)))
             p.write(") Tj ET\n".toByteArray(Charsets.US_ASCII))
         }
 
-        // Objects: 1 catalog, 2 pages, 3-4 fonts, 5 info, then (page, content) pairs.
         val objects = mutableListOf<ByteArray>()
         val firstPageObj = 6
         val kids = pages.indices.joinToString(" ") { "${firstPageObj + it * 2} 0 R" }

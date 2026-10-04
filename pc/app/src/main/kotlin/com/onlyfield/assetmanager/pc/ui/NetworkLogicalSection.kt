@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.pc.LocalMessages
 
@@ -122,7 +123,7 @@ private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> U
         SectionHeader(i18n.text("text.bfea90e5ae18")) { Button(onClick = { changeDetail { creating = true } }) { Text(i18n.text("text.976cc683faed")) } }
         if (project.subnets.isEmpty()) EmptyState(i18n.text("text.446498be42fe"), actionLabel = i18n.text("text.976cc683faed"), onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.subnets, key = { it.id }) { s ->
+            items(project.subnets.sortedForDisplay(i18n) { it.name ?: it.cidrBlock }, key = { it.id }) { s ->
                 val vlan = project.vlans.find { it.id == s.vlanId }
                 ItemCard(
                     title = s.cidrBlock + (s.name?.let { " · $it" } ?: ""),
@@ -157,7 +158,7 @@ private fun SubnetTab(project: Project, onProjectUpdated: (Project, String) -> U
             FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, i18n.text("text.41ed52921661"), error = errors["gatewayIp"])
             OptionPicker(
                 "VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId },
-                { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) }, { form = form.copy(vlanRefId = it?.id) }, noneLabel = i18n.text("text.b60b955a9981")
+                { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) }, { form = form.copy(vlanRefId = it?.id) }, sortByName = false, noneLabel = i18n.text("text.b60b955a9981")
             )
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.5086900635fe"))
             FormField(form.description, { form = form.copy(description = it) }, i18n.text("text.6fb818621896"))
@@ -179,7 +180,7 @@ private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdate
         }
         if (project.logicalInterfaces.isEmpty()) EmptyState(i18n.text("text.22e22d133b84"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.logicalInterfaces, key = { it.id }) { li ->
+            items(project.logicalInterfaces.sortedForDisplay(i18n) { it.name }, key = { it.id }) { li ->
                 ItemCard(
                     title = "${index.deviceName(li.deviceId, i18n.text("text.befe1ad89357"), i18n = i18n)} › ${li.name}",
                     details = listOf(
@@ -216,7 +217,7 @@ private fun InterfacesTab(project: Project, index: ProjectIndex, onProjectUpdate
             }
             OptionPicker(
                 "VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId },
-                { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) }, { form = form.copy(vlanId = it?.vlanId) }, noneLabel = i18n.text("text.b60b955a9981")
+                { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) }, { form = form.copy(vlanId = it?.vlanId) }, sortByName = false, noneLabel = i18n.text("text.b60b955a9981")
             )
             FormField(form.macAddress, { form = form.copy(macAddress = it) }, "MAC", error = errors["macAddress"])
             LabeledCheckbox(form.isL3, { form = form.copy(isL3 = it) }, i18n.text("text.1a4ad0ed2912"))
@@ -237,7 +238,7 @@ private fun WanTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
         SectionHeader(i18n.text("text.04bc126d165e")) { Button(onClick = { changeDetail { creating = true } }) { Text(i18n.text("text.da56a933d02e")) } }
         if (project.wanVpnConnections.isEmpty()) EmptyState(i18n.text("text.acd5d0fdeec2"), actionLabel = i18n.text("text.da56a933d02e"), onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.wanVpnConnections, key = { it.id }) { c ->
+            items(project.wanVpnConnections.sortedForDisplay(i18n) { it.name }, key = { it.id }) { c ->
                 val local = c.localEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.localEndpointSiteDescription ?: "?"
                 val remote = c.remoteEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.remoteEndpointSiteDescription ?: "?"
                 ItemCard(
@@ -302,7 +303,7 @@ private fun ConfigsTab(project: Project, index: ProjectIndex, onProjectUpdated: 
         }
         if (project.deviceConfigurations.isEmpty()) EmptyState(i18n.text("text.c15c34e10908"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.deviceConfigurations, key = { it.id }) { cfg ->
+            items(project.deviceConfigurations.sortedForDisplay(i18n) { it.title }, key = { it.id }) { cfg ->
                 ItemCard(
                     title = "${index.deviceName(cfg.deviceId, i18n.text("text.befe1ad89357"), i18n = i18n)} › ${cfg.title}",
                     details = listOf(cfg.configText?.lines()?.firstOrNull { it.isNotBlank() }?.take(120).orEmpty(), i18n.text("text.e9b35f11a28b", cfg.configText?.lines()?.size ?: 0))
@@ -361,7 +362,7 @@ private fun ExtraFieldsTab(project: Project, index: ProjectIndex, onProjectUpdat
         }
         if (project.customExtraFields.isEmpty()) EmptyState(i18n.text("text.ca56999e82d8"), actionLabel = i18n.text("text.68e7427942cd"), onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.customExtraFields, key = { it.id }) { f ->
+            items(project.customExtraFields.sortedForDisplay(i18n) { it.fieldKey }, key = { it.id }) { f ->
                 ItemCard(
                     title = "${f.fieldKey}: ${f.fieldValue}",
                     badge = f.classification.takeIf { it != AttachmentClassification.SHAREABLE }?.toDisplayString(i18n = i18n),

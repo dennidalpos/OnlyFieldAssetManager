@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -63,9 +64,9 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                 Text(if (bu == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)
                 Button(onClick = { addingStructure = true }) { Text(if (bu == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (bu == null) items(project.businessUnits, key = { it.id }) { b ->
+                    if (bu == null) items(project.businessUnits.sortedForDisplay(i18n) { it.name }, key = { it.id }) { b ->
                         ItemCard(b.name, listOf(i18n.text("text.e326a5ebe3a5", ObjectMap.areas(b).size)), onClick = { vm.selectedBuId = b.id; vm.selectedAreaId = null })
-                    } else items(ObjectMap.areas(bu), key = { it.id }) { a ->
+                    } else items(ObjectMap.areas(bu).sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
                         ItemCard(ObjectMap.areaLabel(bu, a), listOf(i18n.text("text.76188f884c68", ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)), onClick = { vm.selectedAreaId = a.id })
                     }
                 }

@@ -4,10 +4,7 @@ import com.onlyfield.assetmanager.core.i18n.Messages
 
 import com.onlyfield.assetmanager.core.model.*
 
-/**
- * Read-only lookup over a [Project] that resolves ids to human-readable names,
- * so UIs can offer pickers and never display raw ids.
- */
+/** Read-only project lookup for display labels. */
 class ProjectIndex(val project: Project) {
 
     data class PortRef(val port: Port, val device: Device)
@@ -38,11 +35,11 @@ class ProjectIndex(val project: Project) {
     fun rackName(id: String?, fallback: String = "—"): String = rack(id)?.name ?: fallback
     fun siteName(id: String?, fallback: String = "—"): String = id?.let(siteById::get)?.name ?: fallback
 
-    /** "SW-CORE01 › Gi1/0/1", or [fallback] when the port does not exist. */
+    /** Port label or [fallback]. */
     fun portLabel(id: String?, fallback: String = "—"): String =
         port(id)?.let { "${it.device.technicalName} › ${it.port.name}" } ?: fallback
 
-    /** Name of an entity referenced by a string target type ("DEVICE", "RACK", "PORT", ...). */
+    /** Name for a string target type and ID. */
     fun targetLabel(targetType: String, targetId: String?, i18n: Messages = Messages()): String {
         val name = when (targetType.uppercase()) {
             "PROJECT" -> project.name
@@ -58,15 +55,15 @@ class ProjectIndex(val project: Project) {
         return "${EntityTypeLabels.of(targetType, i18n = i18n)}: ${name ?: i18n.text("text.c86fc6dfbd62")}"
     }
 
-    /** Attachments linked to an entity (photos of a device, rack or area). */
+    /** Entity attachments. */
     fun attachmentsOf(targetId: String): List<Attachment> = project.attachments.filter { it.targetId == targetId }
 
-    /** "Apparato: SW-01" for a linked attachment, null when it belongs to the whole project. */
+    /** Attachment target label, or null for project scope. */
     fun attachmentTarget(attachment: Attachment, i18n: Messages = Messages()): String? = attachment.targetType
         ?.takeIf { it != AttachmentTargetType.PROJECT }
         ?.let { targetLabel(it.name, attachment.targetId, i18n = i18n) }
 
-    /** Best-effort name of any entity in the project, used e.g. for validation issues. */
+    /** Best-effort entity name. */
     fun entityName(id: String?, i18n: Messages = Messages()): String? {
         if (id == null) return null
         return device(id)?.technicalName

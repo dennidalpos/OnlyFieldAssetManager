@@ -22,10 +22,7 @@ import java.util.Locale
 
 object PdfExportManager {
 
-    /**
-     * Generates a readable PDF report for a Rack and writes it to [outputStream].
-     * Excludes all secret fields/credentials.
-     */
+    /** Writes a rack PDF without credentials. */
     fun exportRackPdfToStream(
         project: Project,
         rack: Rack,
@@ -50,7 +47,6 @@ object PdfExportManager {
 
             var y = 40f
 
-            // 1. Header
             paint.color = Color.rgb(24, 76, 120)
             canvas.drawRect(30f, y, 565f, y + 45f, paint)
 
@@ -76,7 +72,6 @@ object PdfExportManager {
 
             y += 30f
 
-            // 2. Rack Diagram (Front View vs Rear View side-by-side)
             val rackXFront = 40f
             val rackXRear = 180f
             val rackWidth = 110f
@@ -85,13 +80,11 @@ object PdfExportManager {
 
             val diagramStartY = y
 
-            // Draw Front Rack Frame
             paint.color = Color.LTGRAY
             paint.style = Paint.Style.STROKE
             paint.strokeWidth = 2f
             canvas.drawRect(rackXFront, diagramStartY, rackXFront + rackWidth, diagramStartY + rackTotalHeight, paint)
 
-            // Draw Rear Rack Frame
             canvas.drawRect(rackXRear, diagramStartY, rackXRear + rackWidth, diagramStartY + rackTotalHeight, paint)
 
             paint.style = Paint.Style.FILL
@@ -103,7 +96,6 @@ object PdfExportManager {
             textPaint.isFakeBoldText = false
             textPaint.textSize = 7f
 
-            // Draw U slots grid
             for (u in 1..rack.heightU) {
                 val slotY = diagramStartY + ((rack.heightU - u) * rackUHeight)
                 paint.color = Color.rgb(230, 230, 230)
@@ -114,7 +106,6 @@ object PdfExportManager {
                 canvas.drawText("U$u", 22f, slotY + 9f, textPaint)
             }
 
-            // Render device rectangles on Front view
             val drawnDevicesFront = mutableSetOf<String>()
             for (dev in devicesInRack) {
                 if (dev.rackSide == RackSide.REAR) continue
@@ -122,7 +113,7 @@ object PdfExportManager {
                 if (drawnDevicesFront.contains(dev.id)) continue
                 drawnDevicesFront.add(dev.id)
 
-                val devTopY = diagramStartY + (rack.heightU - (startU + dev.heightU - 1)) * rackUHeight
+                val devTopY = diagramStartY + ((rack.heightU - (startU + dev.heightU - 1)) * rackUHeight)
                 val devHeightPx = dev.heightU * rackUHeight
 
                 paint.color = Color.rgb(220, 235, 252)
@@ -140,7 +131,6 @@ object PdfExportManager {
                 canvas.drawText(dev.technicalName.take(18), rackXFront + 4f, devTopY + devHeightPx / 2f + 3f, textPaint)
             }
 
-            // Render device rectangles on Rear view
             val drawnDevicesRear = mutableSetOf<String>()
             for (dev in devicesInRack) {
                 if (dev.rackSide == RackSide.FRONT) continue
@@ -166,7 +156,6 @@ object PdfExportManager {
                 canvas.drawText(dev.technicalName.take(18), rackXRear + 4f, devTopY + devHeightPx / 2f + 3f, textPaint)
             }
 
-            // 3. Equipment Summary Table on the right
             val tableX = 310f
             var tableY = diagramStartY
 
@@ -175,7 +164,6 @@ object PdfExportManager {
             textPaint.isFakeBoldText = true
             canvas.drawText(i18n.text("text.ac7f2dbf5993", devicesInRack.size), tableX, tableY - 8f, textPaint)
 
-            // Table Header
             paint.color = Color.rgb(240, 240, 240)
             paint.style = Paint.Style.FILL
             canvas.drawRect(tableX, tableY, 565f, tableY + 18f, paint)
@@ -214,10 +202,7 @@ object PdfExportManager {
         }
     }
 
-    /**
-     * Genera un report PDF composto multipagina con sezioni personalizzate e sommario.
-     * Esclude esplicitamente ogni campo segreto e gestisce filtri e classificazioni.
-     */
+    /** Writes a filtered multi-page PDF without credentials. */
     fun exportCompositeReportPdfToStream(
         project: Project,
         filterConfig: ExportFilterConfig,
@@ -239,7 +224,6 @@ object PdfExportManager {
 
             var pageNumber = 1
 
-            // Page 1: Copertina e Sommario KPI
             val pageInfo1 = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
             val page1 = pdfDoc.startPage(pageInfo1)
             if (page1 != null) {
@@ -253,7 +237,6 @@ object PdfExportManager {
 
                 var y = 40f
 
-                // Top Header Banner
                 paint.color = Color.rgb(24, 76, 120)
                 canvas.drawRect(30f, y, 565f, y + 60f, paint)
 
@@ -281,7 +264,6 @@ object PdfExportManager {
 
                 y += 35f
 
-                // KPI Grid
                 paint.color = Color.rgb(245, 247, 250)
                 paint.style = Paint.Style.FILL
                 canvas.drawRoundRect(RectF(35f, y, 560f, y + 100f), 6f, 6f, paint)
@@ -310,7 +292,6 @@ object PdfExportManager {
 
                 y += 130f
 
-                // Table of Contents
                 textPaint.textSize = 12f
                 textPaint.isFakeBoldText = true
                 canvas.drawText(i18n.text("text.d764b2e1bfed"), 35f, y, textPaint)
@@ -323,12 +304,11 @@ object PdfExportManager {
                 if (selection.includeCablingAndPorts) { canvas.drawText(i18n.text("text.d6ca39b21683"), 45f, y, textPaint); y += 18f }
                 if (selection.includeLogicalNetwork) { canvas.drawText(i18n.text("text.454ad4a7351a"), 45f, y, textPaint); y += 18f }
                 if (selection.includePowerAndBadges) { canvas.drawText(i18n.text("text.d96349382a35"), 45f, y, textPaint); y += 18f }
-                if (selection.includeNotesAndAttachments) { canvas.drawText(i18n.text("text.ab6767f4e650"), 45f, y, textPaint); y += 18f }
+                if (selection.includeNotesAndAttachments) canvas.drawText(i18n.text("text.ab6767f4e650"), 45f, y, textPaint)
 
                 pdfDoc.finishPage(page1)
             }
 
-            // Page 2: Tabella Inventario Apparati (if selected)
             if (selection.includeInventoryTable && filteredDevices.isNotEmpty()) {
                 pageNumber++
                 val pageInfo2 = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
@@ -344,7 +324,6 @@ object PdfExportManager {
                     canvas.drawText(i18n.text("text.334e5b0cffff"), 35f, y, textPaint)
                     y += 25f
 
-                    // Table Header
                     paint.color = Color.rgb(230, 235, 245)
                     paint.style = Paint.Style.FILL
                     canvas.drawRect(35f, y, 560f, y + 20f, paint)
@@ -368,7 +347,7 @@ object PdfExportManager {
                         canvas.drawText(dev.ipAddress ?: "-", 160f, y + 12f, textPaint)
                         canvas.drawText(dev.category.toDisplayString(i18n), 260f, y + 12f, textPaint)
                         canvas.drawText(rackPos, 370f, y + 12f, textPaint)
-                        canvas.drawText((dev.observation?.status ?: com.onlyfield.assetmanager.core.model.ObservationStatus.VERIFIED).toDisplayString(i18n), 480f, y + 12f, textPaint)
+                        canvas.drawText((dev.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n), 480f, y + 12f, textPaint)
 
                         paint.color = Color.LTGRAY
                         paint.strokeWidth = 0.5f

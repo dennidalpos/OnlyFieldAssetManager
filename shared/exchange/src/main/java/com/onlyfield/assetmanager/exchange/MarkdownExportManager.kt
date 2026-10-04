@@ -12,10 +12,7 @@ import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 
-/**
- * Genera un report tecnico e schede di documentazione in formato Markdown (.md).
- * Esclude esplicitamente i campi segreti ed applica i filtri di selezione e riservatezza.
- */
+/** Writes filtered Markdown without credentials. */
 object MarkdownExportManager {
 
     fun exportMarkdownToStream(
@@ -24,11 +21,11 @@ object MarkdownExportManager {
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
         val filteredDevices = project.businessUnits
-            .filter { filterConfig.selectedBusinessUnitId == null || it.id == filterConfig.selectedBusinessUnitId }
+            .filter { (filterConfig.selectedBusinessUnitId == null) || (it.id == filterConfig.selectedBusinessUnitId) }
             .flatMap { bu -> bu.devices.filter { device ->
                 val siteId = device.siteId ?: bu.sites.find { site -> site.areas.any { it.id == device.areaId } }?.id
-                (filterConfig.selectedSiteId == null || siteId == filterConfig.selectedSiteId) &&
-                    (filterConfig.selectedAreaId == null || device.areaId == filterConfig.selectedAreaId)
+                ((filterConfig.selectedSiteId == null) || (siteId == filterConfig.selectedSiteId)) &&
+                    ((filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId))
             } }
             .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
             .distinctBy { it.id }
@@ -40,7 +37,6 @@ object MarkdownExportManager {
 
         val sb = StringBuilder()
 
-        // 1. Header & Metadata
         sb.append(i18n.text("text.51d55eca0da1", filterConfig.titleOverride ?: project.name))
         sb.append(i18n.text("text.a9f159e06d8c", project.name))
         if (project.description != null) {
@@ -52,7 +48,6 @@ object MarkdownExportManager {
 
         sb.append("---\n\n")
 
-        // 2. Summary KPI
         sb.append(i18n.text("text.e064d5838d84"))
         sb.append(i18n.text("text.763262b5c2db"))
         sb.append("| :--- | :--- |\n")
@@ -67,7 +62,6 @@ object MarkdownExportManager {
 
         sb.append("---\n\n")
 
-        // 3. Equipment Inventory Table
         sb.append(i18n.text("text.b94006e17dfd"))
         sb.append(i18n.text("text.e1f506cffab5"))
         sb.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
@@ -75,7 +69,7 @@ object MarkdownExportManager {
         for (dev in filteredDevices) {
             val rackName = project.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
             val rackLoc = if (dev.rackId != null) i18n.text("text.6a25a1235a6f", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
-            val statusStr = (dev.observation?.status ?: com.onlyfield.assetmanager.core.model.ObservationStatus.VERIFIED).toDisplayString(i18n)
+            val statusStr = (dev.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n)
 
             sb.append("| **${dev.technicalName}** | `${dev.ipAddress ?: "-"}` | ${dev.category.toDisplayString(i18n)} | $rackLoc | ${dev.ports.size} | `$statusStr` |\n")
         }
@@ -97,7 +91,6 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        // 4. Rack Details
         if (project.racks.isNotEmpty()) {
             sb.append(i18n.text("text.6ebb98387f5e"))
             for (rack in project.racks) {
@@ -117,7 +110,6 @@ object MarkdownExportManager {
             }
         }
 
-        // 5. Cables & Connections
         if (project.cables.isNotEmpty()) {
             sb.append(i18n.text("text.4d78d18352a8"))
             sb.append(i18n.text("text.453b1efb174a"))
@@ -147,7 +139,6 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        // 6. Logical Network & VLANs
         if (project.vlans.isNotEmpty()) {
             sb.append(i18n.text("text.bc013965b27a"))
             sb.append(i18n.text("text.013a63422a55"))
@@ -163,7 +154,6 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        // 7. Power & Badges
         if (project.powerFeeds.isNotEmpty() || project.documentBadges.isNotEmpty()) {
             sb.append(i18n.text("text.1577688da00d"))
             sb.append(i18n.text("text.083528e3bd57"))
@@ -185,7 +175,6 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        // 8. Attachments & Notes
         sb.append(i18n.text("text.ddf3a938a4e2"))
         for (att in project.attachments) {
             if (att.classification == AttachmentClassification.CONFIDENTIAL && !filterConfig.includeConfidential) {

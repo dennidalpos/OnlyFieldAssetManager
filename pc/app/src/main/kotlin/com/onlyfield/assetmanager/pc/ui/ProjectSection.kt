@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -129,7 +130,7 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
                 OutlinedButton(onClick = { changeDetail { newBu = true } }) { Text(i18n.text("text.a3236c18a4f4")) }
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(project.businessUnits, key = { it.id }) { bu ->
+                items(project.businessUnits.sortedForDisplay(i18n) { it.name }, key = { it.id }) { bu ->
                     val buAreas = bu.areas + bu.sites.flatMap { it.areas }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         ItemCard(

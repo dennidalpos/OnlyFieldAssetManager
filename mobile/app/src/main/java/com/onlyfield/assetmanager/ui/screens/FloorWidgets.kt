@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.compose.foundation.layout.*
@@ -15,9 +16,9 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.ui.components.*
 
 @Composable
-internal fun ObjectFields(project: Project, draft: MapObjectDraft, change: (MapObjectDraft) -> Unit) {
+internal fun ObjectFields(project: Project, draft: MapObjectDraft, initialSection: com.onlyfield.assetmanager.configurator.ConfiguratorPage = com.onlyfield.assetmanager.configurator.ConfiguratorPage.ESSENTIALS, change: (MapObjectDraft) -> Unit) {
     val markDirty = LocalMarkDirty.current
-    com.onlyfield.assetmanager.configurator.ObjectConfigurator(project, draft, LocalMessages.current) { markDirty(); change(it) }
+    com.onlyfield.assetmanager.configurator.ObjectConfigurator(project, draft, LocalMessages.current, initialSection = initialSection) { markDirty(); change(it) }
 }
 
 @Composable
@@ -39,7 +40,7 @@ internal fun ObjectCatalogDialog(project: Project, onClose: () -> Unit, onSelect
                 Button(enabled = name.isNotBlank(), onClick = { onCustom(ObjectType(name = name.trim(), category = category, canContainObjects = container)) }) { Text(i18n.text("text.62a5786b6d5a")) }
             } else {
                 LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                    items(ObjectCatalog.types(project).filter { ObjectCatalog.displayName(it, i18n).contains(query, true) && (allowCables || it.kind != ObjectKind.CABLE) }, key = { it.id }) { type ->
+                    items(ObjectCatalog.types(project).filter { ObjectCatalog.displayName(it, i18n).contains(query, true) && (allowCables || it.kind != ObjectKind.CABLE) }.sortedForDisplay(i18n) { ObjectCatalog.displayName(it, i18n) }, key = { it.id }) { type ->
                         TextButton(onClick = { onSelect(type) }, modifier = Modifier.fillMaxWidth()) { Text(ObjectCatalog.displayName(type, i18n)) }
                     }
                 }

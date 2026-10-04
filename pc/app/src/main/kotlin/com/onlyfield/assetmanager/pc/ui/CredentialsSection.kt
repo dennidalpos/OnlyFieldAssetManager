@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
@@ -31,7 +32,7 @@ fun CredentialsSection(project: Project, update: (Project, String) -> Unit) {
         }
         Text(i18n.text("text.ac82e5f35ae8"), style = MaterialTheme.typography.bodySmall)
         LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(project.credentials, key = { it.id }) { credential ->
+            items(project.credentials.sortedForDisplay(i18n) { "${it.groupName.orEmpty()} ${it.username}" }, key = { it.id }) { credential ->
                 ItemCard(title = credential.username, badge = credential.type.toDisplayString(i18n = i18n), details = listOf(
                     listOfNotNull(credential.deviceId?.let { index.deviceName(it, i18n = i18n) }, credential.groupName).joinToString(" · "),
                     if (credential.id in revealed) credential.secret else "••••••••"

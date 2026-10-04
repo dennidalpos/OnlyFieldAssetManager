@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
@@ -88,7 +90,7 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
             EmptyState(if (project.cables.isEmpty()) i18n.text("text.9fbf0fecd44a") else i18n.text("text.bcc05b916ded"),
                 actionLabel = i18n.text("text.f72283c631b5").takeIf { project.cables.isEmpty() }, onAction = { creating = true })
         } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(cables, key = { it.id }) { cable ->
+            items(cables.sortedForDisplay(i18n) { it.codeOrLabel.orEmpty() }, key = { it.id }) { cable ->
                 ItemCard(
                     title = cable.codeOrLabel ?: i18n.text("text.cfe760f7574e"),
                     badge = cable.medium.toDisplayString(i18n = i18n),
@@ -112,9 +114,9 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 
     if (creating || editing != null) {
         var draft by remember(LocalDetailSlot.current?.editorVersion, editing) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forCable(project, editing)) }
-        EditPanel(title = i18n.text("config.title"), onDismiss = { creating = false; editing = null }, width = 800.dp,
-            confirmEnabled = draft.errors(project, i18n).isEmpty(), onConfirm = {
-                onProjectUpdated(draft.apply(project, i18n), i18n.text("config.title")); creating = false; editing = null
+        EditPanel(title = configuratorTitle(project, draft, i18n), confirmLabel = configuratorAction(project, draft, i18n), onDismiss = { creating = false; editing = null }, width = 800.dp,
+            validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), onConfirm = {
+                onProjectUpdated(draft.apply(project, i18n), configuratorTitle(project, draft, i18n)); creating = false; editing = null
             }) { ObjectFields(project, draft) { draft = it } }
     }
 }
@@ -134,7 +136,7 @@ private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
         if (project.sharedPathSegments.isEmpty()) {
             EmptyState(i18n.text("text.431afe23dcf7"), actionLabel = i18n.text("text.100a25dadfbc"), onAction = { creating = true })
         } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.sharedPathSegments, key = { it.id }) { seg ->
+            items(project.sharedPathSegments.sortedForDisplay(i18n) { it.name }, key = { it.id }) { seg ->
                 val used = project.cables.count { seg.id in it.sharedPathSegmentIds }
                 ItemCard(
                     title = seg.name,

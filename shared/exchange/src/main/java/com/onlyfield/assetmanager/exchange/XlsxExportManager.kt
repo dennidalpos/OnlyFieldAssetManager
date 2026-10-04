@@ -11,12 +11,7 @@ import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 
-/**
- * Genera un foglio di calcolo Excel (.xlsx) nativo basato sulla struttura OpenXML.
- * Garantisce zero dipendenze esterne ed esclude esplicitamente i campi segreti.
- * Tutte le celle di testo libero vengono formattate come stringhe esplicite (inlineStr),
- * evitando l'interpretazione indotta di formule (es. =SUM, =CMD).
- */
+/** Writes OpenXML XLSX without credentials or formula interpretation. */
 object XlsxExportManager {
 
     fun exportXlsxToStream(
@@ -25,64 +20,54 @@ object XlsxExportManager {
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
         val filteredDevices = project.businessUnits
-            .filter { filterConfig.selectedBusinessUnitId == null || it.id == filterConfig.selectedBusinessUnitId }
+            .filter { (filterConfig.selectedBusinessUnitId == null) || (it.id == filterConfig.selectedBusinessUnitId) }
             .flatMap { bu -> bu.devices.filter { device ->
                 val siteId = device.siteId ?: bu.sites.find { site -> site.areas.any { it.id == device.areaId } }?.id
-                (filterConfig.selectedSiteId == null || siteId == filterConfig.selectedSiteId) &&
-                    (filterConfig.selectedAreaId == null || device.areaId == filterConfig.selectedAreaId)
+                ((filterConfig.selectedSiteId == null) || (siteId == filterConfig.selectedSiteId)) &&
+                    ((filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId))
             } }
-            .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
+            .filter { (filterConfig.selectedCategory == null) || (it.category == filterConfig.selectedCategory) }
             .distinctBy { it.id }
 
         val filteredDeviceIds = filteredDevices.map { it.id }.toSet()
 
         ZipOutputStream(outputStream).use { zip ->
-            // 1. [Content_Types].xml
             zip.putNextEntry(ZipEntry("[Content_Types].xml"))
             zip.write(buildContentTypesXml().toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 2. _rels/.rels
             zip.putNextEntry(ZipEntry("_rels/.rels"))
             zip.write(buildRelsXml().toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 3. xl/workbook.xml
             zip.putNextEntry(ZipEntry("xl/workbook.xml"))
             zip.write(buildWorkbookXml(i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 4. xl/_rels/workbook.xml.rels
             zip.putNextEntry(ZipEntry("xl/_rels/workbook.xml.rels"))
             zip.write(buildWorkbookRelsXml().toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 5. xl/styles.xml
             zip.putNextEntry(ZipEntry("xl/styles.xml"))
             zip.write(buildStylesXml().toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 6. xl/worksheets/sheet1.xml (Inventario Apparati)
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet1.xml"))
             zip.write(buildSheet1Xml(project, filteredDevices, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 7. xl/worksheets/sheet2.xml (Porte e Cablaggio)
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet2.xml"))
             zip.write(buildSheet2Xml(project, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 8. xl/worksheets/sheet3.xml (Rete Logica e VLAN)
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet3.xml"))
             zip.write(buildSheet3Xml(project, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 9. xl/worksheets/sheet4.xml (Alimentazione e Badge)
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet4.xml"))
             zip.write(buildSheet4Xml(project, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
-            // 10. xl/worksheets/sheet5.xml (Note e Osservazioni)
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet5.xml"))
             zip.write(buildSheet5Xml(project, filterConfig, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
@@ -403,7 +388,6 @@ object XlsxExportManager {
 
         var rowIdx = 2
 
-        // Allegati
         for (att in project.attachments) {
             if (att.classification == AttachmentClassification.CONFIDENTIAL && !filterConfig.includeConfidential) {
                 continue
@@ -419,7 +403,6 @@ object XlsxExportManager {
             rowIdx++
         }
 
-        // Apparati con note di osservazione
         for (dev in project.businessUnits.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }) {
             val obs = dev.observation
             if (obs != null) {

@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.compose.foundation.Image
@@ -63,7 +64,7 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, file
                     }
                 }
             } else LazyColumn(Modifier.heightIn(max = 340.dp)) {
-                items(project.attachments.filter { it.fileType == AttachmentType.IMAGE || it.fileType == AttachmentType.PDF }, key = { it.id }) { a ->
+                items(project.attachments.filter { it.fileType == AttachmentType.IMAGE || it.fileType == AttachmentType.PDF }.sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
                     TextButton(onClick = { if (a.fileType == AttachmentType.IMAGE) onAssign(a.id, 0, 1) else selectedId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(a.name + if (a.fileType == AttachmentType.PDF) i18n.text("text.0bd78b344dac") else "") }
                 }
             }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
@@ -41,7 +42,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
             EmptyState(if (project.deviceModels.isEmpty()) i18n.text("text.401ace91c1b5") else i18n.text("text.ed7e7e392823"),
                 actionLabel = i18n.text("text.d166b2503fad").takeIf { project.deviceModels.isEmpty() }, onAction = { creating = true })
         } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(models, key = { it.id }) { m ->
+            items(models.sortedForDisplay(i18n) { it.name }, key = { it.id }) { m ->
                 val usage = index.devices.count { it.deviceModelId == m.id }
                 ItemCard(
                     title = m.name,
@@ -71,8 +72,8 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
     applying?.let { model ->
         var target by remember(model) { mutableStateOf<Device?>(null) }
         var draft by remember(model) { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
-        EditPanel(title = i18n.text("config.model"), onDismiss = { applying = null }, width = 800.dp,
-            confirmEnabled = draft?.errors(project, i18n)?.isEmpty() == true, onConfirm = {
+        EditPanel(title = i18n.text("ux.applyModel", model.name), confirmLabel = i18n.text("ux.apply"), onDismiss = { applying = null }, width = 800.dp,
+            validationMessage = draft?.let { com.onlyfield.assetmanager.configurator.configuratorValidation(project, it, i18n) }, confirmEnabled = draft?.errors(project, i18n)?.isEmpty() == true, onConfirm = {
                 onProjectUpdated(requireNotNull(draft).apply(project, i18n), i18n.text("config.model")); applying = null
             }) {
             DevicePicker(i18n.text("config.device"), index, target?.id, { id ->
@@ -88,7 +89,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
 private fun ModelDialog(project: Project, model: DeviceModel?, onDismiss: () -> Unit, onSave: (DeviceModel, Boolean) -> Unit) {
     val i18n = LocalMessages.current
     var edited by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model ?: DeviceModel(name = "", category = DeviceCategory.NETWORK_SWITCH)) }
-    EditPanel(title = i18n.text("config.model"), onDismiss = onDismiss, width = 800.dp,
+    EditPanel(title = if (model == null) i18n.text("ux.add.model") else i18n.text("ux.edit.model", model.name), confirmLabel = i18n.text(if (model == null) "ux.add" else "ux.saveChanges"), onDismiss = onDismiss, width = 800.dp,
         confirmEnabled = edited.name.isNotBlank() && com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(edited.portTemplates) && edited.defaultHeightU in 1..60, onConfirm = { onSave(edited, model == null) }) {
         val markDirty = LocalMarkDirty.current
         com.onlyfield.assetmanager.configurator.ModelConfigurator(project, edited, i18n) { markDirty(); edited = it }

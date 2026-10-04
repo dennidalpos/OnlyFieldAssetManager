@@ -47,23 +47,20 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.io.OutputStream
 
-/** A short message for the snackbar, optionally with an "Annulla" action. */
+/** Snackbar message with an optional undo. */
 data class UiMessage(val text: String, val undo: (() -> Unit)? = null, val isError: Boolean = false)
 
-/** State of an in-progress import of a .ofam package. */
+/** Pending `.ofam` import. */
 sealed interface ImportState {
     data class NeedsPassword(val uri: Uri, val wrongPassword: Boolean = false) : ImportState
     data class Review(val evaluation: PackageImportEvaluation) : ImportState
-    /** Conflicts of a merge, answered one at a time (F04). */
+    /** Merge conflicts resolved one at a time. */
     data class Merging(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap()) : ImportState {
         val current: MergeConflict? get() = result.conflicts.getOrNull(choices.size)
     }
 }
 
-/**
- * Single ViewModel of the app. Every project change goes through [edit], which applies a pure
- * transformation (see [ProjectEdits]), saves the whole project and offers a one-step undo.
- */
+/** App state; [edit] saves each change and supports one undo. */
 class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() {
 
     var language by mutableStateOf(AppLanguage.SYSTEM)
@@ -72,7 +69,6 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     var saveLanguage: (AppLanguage) -> Boolean = { true }
 
     fun changeLanguage(value: AppLanguage) {
-        // Language controls are available outside edit screens and the site wizard.
         if (!saveLanguage(value)) { fail(i18n.text("language.saveFailed")); return }
         language = value
         _issues.value = _project.value?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
@@ -102,7 +98,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     var busy by mutableStateOf<String?>(null)
         private set
 
-    /** Navigation back stack; it lives here so it survives rotation. */
+    /** Navigation retained across rotation. */
     val backStack = mutableStateListOf<Screen>(Screen.Projects)
     val currentScreen: Screen get() = backStack.last()
 
@@ -110,7 +106,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         backStack.add(screen)
     }
 
-    /** Returns false when already at the root, so the activity can close. */
+    /** Returns false at the root. */
     fun back(): Boolean {
         if (currentScreen == Screen.NewSite && !newSite.isFirst) {
             newSite = newSite.back()
@@ -135,7 +131,6 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         _issues.value = p?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
     }
 
-    // --- Projects ------------------------------------------------------------------------------
 
     fun openProject(projectId: String) {
         viewModelScope.launch {
@@ -166,7 +161,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         backStack.add(Screen.Projects)
     }
 
-    /** State of the "Nuovo sito" wizard; kept here so it survives rotation. */
+    /** Wizard state retained across rotation. */
     var newSite by mutableStateOf(NewSiteWizard())
 
     fun startNewSite() {
@@ -213,9 +208,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         }
     }
 
-    // --- Editing -------------------------------------------------------------------------------
 
-    /** Applies [transform] to the open project, saves it and shows [message] with an undo action. */
+    /** Applies and saves [transform], then offers undo. */
     fun editMap(updated: Project, message: String) = edit(message) { current ->
         require(current.id == updated.id)
         updated
@@ -261,7 +255,6 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         refreshTrash()
     }
 
-    // --- Trash and device operations (stored in the database trash table) ----------------------
 
     private suspend fun refreshTrash() {
         val id = _project.value?.id ?: return
@@ -337,7 +330,6 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         }
     }
 
-    // --- Password --------------------------------------------------------------------------------
 
     fun changePassword(current: String, newPassword: String, onResult: (String?) -> Unit) {
         val p = _project.value ?: return
@@ -354,7 +346,6 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         }
     }
 
-    // --- Exchange (.ofam) ------------------------------------------------------------------------
 
     fun exportPackage(resolver: ContentResolver, uri: Uri, password: String?) {
         val p = _project.value ?: return
@@ -424,7 +415,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         _importState.value = null
     }
 
-    /** Three-way merge of the package with the local copy; without conflicts it is applied at once. */
+    /** Merges a package with the local copy. */
     fun startMerge() {
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
@@ -461,7 +452,6 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         }
     }
 
-    // --- Documents -------------------------------------------------------------------------------
 
     private fun writeDocument(resolver: ContentResolver, uri: Uri, label: String, block: suspend (String, OutputStream) -> Boolean) {
         val p = _project.value ?: return
@@ -490,7 +480,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         writeDocument(resolver, uri, i18n.text("text.6f1caee9d678")) { id, out -> repository.exportMarkdownToStream(id, filter, out, i18n = i18n) }
     }
 
-    /** QR labels of every device, rack and labelled cable (F03). */
+    /** QR labels for devices, racks and labelled cables. */
     fun exportLabels(resolver: ContentResolver, uri: Uri) = i18n.let { i18n ->
         writeDocument(resolver, uri, i18n.text("text.601ccac1ac2a")) { _, out ->
             _project.value?.let { LabelSheetPdf.write(LabelSheetPdf.labelsFor(it, i18n = i18n), out); true } ?: false
@@ -566,9 +556,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         }
     }
 
-    // --- Attachments -----------------------------------------------------------------------------
 
-    /** Copies the picked file into app storage and registers it as an attachment. */
+    /** Copies a picked file into app storage. */
     fun addAttachment(context: Context, uri: Uri, name: String, classification: AttachmentClassification) {
         val p = _project.value ?: return
         viewModelScope.launch {
@@ -607,12 +596,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         }
     }
 
-    // --- Camera (F01) ---------------------------------------------------------------------------
 
-    /** Photo being taken: the attachment to add and the file the camera app writes. */
+    /** Pending camera attachment and target file. */
     private var pendingPhoto: Pair<Attachment, File>? = null
 
-    /** Creates the target file for a new photo linked to [type]/[targetId]; null without a project. */
+    /** Creates a photo target for [type]/[targetId]. */
     fun preparePhoto(type: AttachmentTargetType, targetId: String?): File? {
         val p = _project.value ?: return null
         val root = repository.attachmentsRoot() ?: return null
@@ -647,9 +635,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun notifyError(text: String) = fail(text)
 
-    // --- Code scanning (F02) --------------------------------------------------------------------
 
-    /** Opens what a scanned code points to; an unknown code is returned so the UI can offer a new device. */
+    /** Opens a scanned entity or returns an unknown code. */
     fun openScannedCode(code: String): String? {
         val p = _project.value ?: return null
         return when (val match = CodeLookup.find(ProjectIndex(p), code, i18n = i18n)) {
@@ -663,9 +650,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
 
-    // --- Maps (F05) -----------------------------------------------------------------------------
 
-    /** Downloads a 3x3-tile map around the point on explicit request and stores it as an image attachment. */
+    /** Downloads and stores the requested 3x3 tile map. */
     fun downloadMap(request: MapSnapshotRequest, name: String) {
         val p = _project.value ?: return
         viewModelScope.launch {

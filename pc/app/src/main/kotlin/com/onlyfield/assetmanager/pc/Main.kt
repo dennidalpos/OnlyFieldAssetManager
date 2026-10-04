@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.configurator.ProjectDestination
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.graphics.toComposeImageBitmap
@@ -63,14 +64,13 @@ fun main() = application {
                 CheckboxItem(i18n.text("text.d25e5999cc28"), checked = state.darkTheme, onCheckedChange = { state.toggleDarkTheme() })
             }
             Menu(i18n.text("text.d0cfbdc71dab"), mnemonic = 'V') {
-                val digits = listOf(Key.One, Key.Two, Key.Three, Key.Four, Key.Five, Key.Six, Key.Seven, Key.Eight, Key.Nine)
-                AppSection.entries.forEachIndexed { i, section ->
-                    Item(
-                        section.localizedTitle(i18n),
-                        shortcut = digits.getOrNull(i)?.let { KeyShortcut(it, ctrl = true) },
-                        enabled = hasProject || !section.needsProject,
-                        onClick = { state.section = section }
-                    )
+                val shortcuts = mapOf(AppSection.INVENTORY to Key.One, AppSection.RACKS to Key.Two, AppSection.MODELS to Key.Three,
+                    AppSection.FLOORPLANS to Key.Four, AppSection.CREDENTIALS to Key.Five, AppSection.MEDIA to Key.Six,
+                    AppSection.CABLING to Key.Seven, AppSection.NETWORK to Key.Eight, AppSection.POWER to Key.Nine)
+                ProjectDestination.entries.filter { it != ProjectDestination.DOCUMENTS }.forEach { destination ->
+                    val section = requireNotNull(destination.appSection())
+                    Item(destination.title(i18n), shortcut = shortcuts[section]?.let { KeyShortcut(it, ctrl = true) },
+                        enabled = hasProject || !section.needsProject, onClick = { state.section = section })
                 }
                 Separator()
                 Item(i18n.text("text.5cb1b3fb4d8d"), enabled = hasProject, onClick = { state.dialog = AppDialog.Validation })

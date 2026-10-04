@@ -124,10 +124,8 @@ class ProjectRepositoryTest {
             deviceModels = listOf(model)
         )
 
-        // Save project
         repository.saveProject(project)
 
-        // Reload project
         val reloaded = repository.getProjectById(projId)
         assertNotNull(reloaded)
         assertEquals(projId, reloaded!!.id)
@@ -177,27 +175,21 @@ class ProjectRepositoryTest {
 
         repository.saveProject(project)
 
-        // Initially no password
         assertTrue(repository.verifyProjectPassword(projId, "any_pass"))
 
-        // Set password
         val setOk = repository.setProjectPassword(projId, currentPassword = null, newPassword = "MySecretPassword")
         assertTrue(setOk)
 
-        // Verify password
         assertFalse(repository.verifyProjectPassword(projId, "WrongPass"))
         assertTrue(repository.verifyProjectPassword(projId, "MySecretPassword"))
 
-        // Change password with wrong current password -> should fail
         val changeWrong = repository.setProjectPassword(projId, currentPassword = "WrongPass", newPassword = "NewSecretPassword")
         assertFalse(changeWrong)
 
-        // Change password with correct current password -> should succeed
         val changeRight = repository.setProjectPassword(projId, currentPassword = "MySecretPassword", newPassword = "NewSecretPassword")
         assertTrue(changeRight)
         assertTrue(repository.verifyProjectPassword(projId, "NewSecretPassword"))
 
-        // Remove password
         val removeRight = repository.removeProjectPassword(projId, currentPassword = "NewSecretPassword")
         assertTrue(removeRight)
         val reloaded = repository.getProjectById(projId)
@@ -234,7 +226,7 @@ class ProjectRepositoryTest {
     fun legacySha256PasswordIsUpgradedOnUnlock() = runBlocking {
         val projId = UUID.randomUUID().toString()
         repository.saveProject(Project(id = projId, name = "Legacy", createdEpochMs = 1L, updatedEpochMs = 1L))
-        // Pre-v1.1 unsalted SHA-256 of "password"
+        // Legacy SHA-256 of "password".
         val legacy = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
         val dao = db.projectDao()
         dao.updateProject(dao.getProjectById(projId)!!.copy(isPasswordProtected = true, passwordHash = legacy))
@@ -297,22 +289,18 @@ class ProjectRepositoryTest {
 
         repository.saveProject(project)
 
-        // 1. Search by technical name
         val res1 = repository.searchInventory(projId, "router")
         assertEquals(1, res1.size)
         assertEquals("router-core-hq", res1[0].device.technicalName)
 
-        // 2. Search by IP
         val res2 = repository.searchInventory(projId, "10.0.0.50")
         assertEquals(1, res2.size)
         assertEquals("sw-poe-floor1", res2[0].device.technicalName)
 
-        // 3. Search by Physical Label
         val res3 = repository.searchInventory(projId, "RTR-01")
         assertEquals(1, res3.size)
         assertEquals("router-core-hq", res3[0].device.technicalName)
 
-        // 4. Search by Alias
         val res4 = repository.searchInventory(projId, "Telecamere")
         assertEquals(1, res4.size)
         assertEquals("sw-poe-floor1", res4[0].device.technicalName)
@@ -331,7 +319,6 @@ class ProjectRepositoryTest {
 
         repository.saveProject(project)
 
-        // Export to Stream
         val baos = ByteArrayOutputStream()
         val exportSuccess = repository.exportProjectPackageToStream(projId, baos)
         assertTrue(exportSuccess)
@@ -339,7 +326,6 @@ class ProjectRepositoryTest {
         val zipBytes = baos.toByteArray()
         assertTrue(zipBytes.isNotEmpty())
 
-        // Evaluate Import on a fresh database instance
         val db2 = Room.inMemoryDatabaseBuilder(
             ApplicationProvider.getApplicationContext(),
             AppDatabase::class.java
@@ -352,7 +338,6 @@ class ProjectRepositoryTest {
         assertNotNull(eval.comparison)
         assertEquals(ComparisonStatus.NEWER_REVISION, eval.comparison!!.status)
 
-        // Import project package
         val importSuccess = repo2.importProjectPackage(eval.importResult.pkg!!)
         assertTrue(importSuccess)
 
@@ -383,7 +368,6 @@ class ProjectRepositoryTest {
         assertNull(eval.importResult.pkg)
         assertNull(eval.comparison)
 
-        // Ensure database state was NOT altered
         val reloaded = repository.getProjectById(projId)
         assertNotNull(reloaded)
         assertEquals("Original Intact Project", reloaded!!.name)
@@ -455,7 +439,6 @@ class ProjectRepositoryTest {
             floorplanPlacements = listOf(placement)
         )
 
-        // 1. Save and reload
         repository.saveProject(project)
 
         val reloaded = repository.getProjectById(projId)
@@ -469,7 +452,6 @@ class ProjectRepositoryTest {
         assertEquals(1, reloaded.floorplanPlacements.size)
         assertEquals(0.4f, reloaded.floorplanPlacements[0].xRatio, 0.001f)
 
-        // 2. Update floorplan background image and ensure placements are preserved
         val newAttId = UUID.randomUUID().toString()
         val newAttachment = com.onlyfield.assetmanager.core.model.Attachment(
             id = newAttId,
@@ -488,7 +470,6 @@ class ProjectRepositoryTest {
         val updatedArea = updatedReloaded!!.businessUnits[0].areas.find { it.id == areaId }
         assertNotNull(updatedArea)
         assertEquals(newAttId, updatedArea!!.floorplanAttachmentId)
-        // Placement coordinate must be preserved
         assertEquals(1, updatedReloaded.floorplanPlacements.size)
         assertEquals(0.4f, updatedReloaded.floorplanPlacements[0].xRatio, 0.001f)
     }
@@ -574,7 +555,6 @@ class ProjectRepositoryTest {
             panelMappings = listOf(panelMapping)
         )
 
-        // 1. Save & reload
         repository.saveProject(project)
 
         val reloaded = repository.getProjectById(projId)
@@ -589,7 +569,6 @@ class ProjectRepositoryTest {
         assertEquals(1, reloaded.panelMappings.size)
         assertEquals("INTERNAL_PASS_THROUGH", reloaded.panelMappings[0].mappingType)
 
-        // 2. Modifying shared path segment updates shared path info for both cables
         val updatedSegment = sharedPath.copy(name = "Cavedio Principale Modificato")
         repository.saveSharedPathSegment(projId, updatedSegment)
 
@@ -598,7 +577,6 @@ class ProjectRepositoryTest {
         val segName = reloadedAfterSegmentUpdate!!.sharedPathSegments.find { it.id == pathSegId }?.name
         assertEquals("Cavedio Principale Modificato", segName)
 
-        // 3. Trace Cable Chain from Port 1
         val chain = repository.traceCableChain(reloadedAfterSegmentUpdate, port1Id)
         assertTrue(chain.isNotEmpty())
         assertEquals(3, chain.size)

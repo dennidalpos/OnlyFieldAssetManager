@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -49,7 +50,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     ) { padding ->
         if (project.attachments.isEmpty()) EmptyState(i18n.text("text.0631006a320a"), Modifier.padding(padding))
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(project.attachments, key = { it.id }) { a ->
+            items(project.attachments.sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
                 val usedBy = index.areas.filter { it.floorplanAttachmentId == a.id }.map { it.name }
                 ItemCard(
                     title = a.name,
@@ -124,7 +125,7 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     ) { padding ->
         if (project.credentials.isEmpty()) EmptyState(i18n.text("text.77ff79424562"), Modifier.padding(padding))
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(project.credentials, key = { it.id }) { c ->
+            items(project.credentials.sortedForDisplay(i18n) { "${it.groupName.orEmpty()} ${it.username}" }, key = { it.id }) { c ->
                 val shown = c.id in revealed
                 ItemCard(
                     title = c.username,

@@ -52,8 +52,7 @@ class DesktopStorageTest {
 
         try {
             unWritableStorage.saveProjectLocally(proj)
-            // On Windows, setWritable(false) might not prevent writes for admin users,
-            // but if an exception occurs it must be an IllegalStateException.
+            // Windows administrators may bypass setWritable(false).
         } catch (e: Exception) {
             assertTrue("Expected IllegalStateException for unwritable dir", e is IllegalStateException)
         } finally {
@@ -76,14 +75,12 @@ class DesktopStorageTest {
         assertTrue("Target file should exist", targetFile.exists())
         assertTrue("Target file should not be empty", targetFile.length() > 0)
 
-        // Check stored projects list
         val stored = storageManager.listStoredProjects()
         assertEquals(1, stored.size)
         assertEquals(projId, stored[0].id)
         assertEquals("Atomic Save Desktop Test", stored[0].name)
         assertFalse("Project should not be encrypted", stored[0].isEncrypted)
 
-        // Load project back
         val importRes = storageManager.loadLocalProject(projId)
         val restored = importRes.pkg?.project
         assertNotNull("Restored project should not be null", restored)
@@ -98,15 +95,12 @@ class DesktopStorageTest {
         val projId = "proj-lock-test-1"
         storageManager.acquireProjectLock(projId)
 
-        // Second lock attempt on same project ID should fail
         try {
             storageManager.acquireProjectLock(projId)
-            // Re-acquiring in same map returns early
         } catch (e: Exception) {
             fail("Re-acquiring lock in same manager should be safe or handled")
         }
 
-        // Another manager trying to lock same project file should fail
         val storageManager2 = DesktopStorageManager(initialDataDir = dataDir)
         try {
             storageManager2.acquireProjectLock(projId)
@@ -126,7 +120,6 @@ class DesktopStorageTest {
         assertEquals("Progetto Campione Infrastruttura v1", fixture.name)
         assertEquals(2, fixture.businessUnits.size)
 
-        // Model validation
         val validation = ModelValidator.validateProject(fixture)
         assertTrue("Fixture should pass structural validation", validation.isValid)
         assertTrue("Fixture should contain documentary warnings", validation.hasWarnings)
@@ -141,7 +134,6 @@ class DesktopStorageTest {
     fun testAndroidFixtureUnencryptedAndEncryptedPackageRoundtrip() {
         val fixture = storageManager.loadAndroidFixtureFile()
 
-        // 1. Unencrypted export / import
         val unencryptedFile = File(tempFolder.root, "fixture_unencrypted.ofam")
         storageManager.exportPackageToFile(fixture, unencryptedFile)
         assertTrue(unencryptedFile.exists())
@@ -152,23 +144,19 @@ class DesktopStorageTest {
         assertEquals(fixture.id, unencryptedProj?.id)
         assertEquals(fixture.name, unencryptedProj?.name)
 
-        // 2. Encrypted export / import
         val encryptedFile = File(tempFolder.root, "fixture_encrypted.ofam")
         val password = "SecretW01Password!"
         storageManager.exportPackageToFile(fixture, encryptedFile, password = password)
         assertTrue(encryptedFile.exists())
 
-        // Import without password -> PASSWORD_REQUIRED
         val noPassRes = storageManager.importPackageFromFile(encryptedFile)
         assertNull(noPassRes.pkg)
         assertTrue(noPassRes.validationResult.issues.any { it.code == "PASSWORD_REQUIRED" })
 
-        // Import with wrong password -> INVALID_PACKAGE_PASSWORD
         val wrongPassRes = storageManager.importPackageFromFile(encryptedFile, password = "WrongPassword")
         assertNull(wrongPassRes.pkg)
         assertTrue(wrongPassRes.validationResult.issues.any { it.code == "INVALID_PACKAGE_PASSWORD" })
 
-        // Import with correct password -> Success
         val correctPassRes = storageManager.importPackageFromFile(encryptedFile, password = password)
         val encryptedProj = correctPassRes.pkg?.project
         assertNotNull(encryptedProj)
@@ -197,11 +185,9 @@ class DesktopStorageTest {
         val importRes = PackageSerializer.importPackage(pkgBytes)
         val pkg = importRes.pkg!!
 
-        // 1. Identical
         val compIdentical = ProjectComparisonEvaluator.evaluate(fixture, pkg.manifest, pkg)
         assertEquals(ComparisonStatus.IDENTICAL, compIdentical.status)
 
-        // 2. Modified local vs imported -> Newer or Divergent
         val modifiedFixture = fixture.copy(name = "Progetto Modificato Locale", updatedEpochMs = fixture.updatedEpochMs + 1000)
         val compDivergent = ProjectComparisonEvaluator.evaluate(modifiedFixture, pkg.manifest, pkg)
         assertTrue(

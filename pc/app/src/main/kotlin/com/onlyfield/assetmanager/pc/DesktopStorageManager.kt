@@ -87,11 +87,10 @@ class DesktopStorageManager(
     fun getProjectsFolder(): File = File(dataDir, "projects")
     fun getTempFolder(): File = File(dataDir, "tmp")
 
-    // --- Merge base (F04): the project as the other device last saw it -----------------------
 
     private fun syncBaseFile(projectId: String) = File(dataDir, "sync/$projectId.ofam")
 
-    /** The merge base is a separate snapshot, protected with the project password. */
+    /** Password-protected merge snapshot. */
     fun saveSyncBase(project: Project, password: String?) = withProjectLock(project.id) {
         atomicWrite(syncBaseFile(project.id), PackageSerializer.exportPackage(project, password = password, i18n = i18n))
     }
@@ -122,7 +121,7 @@ class DesktopStorageManager(
         try { replaceFile(temp, target) } finally { Files.deleteIfExists(temp.toPath()) }
     }
 
-    /** Prepare both packages before changing protection; preserve the original merge snapshot. */
+    /** Prepares project and merge snapshot for password changes. */
     fun changeProjectPassword(project: Project, oldPassword: String?, newPassword: String?, trashItems: List<TrashItem>) = withProjectLock(project.id) {
         val target = File(getProjectsFolder(), "${project.id}.ofam")
         val syncFile = syncBaseFile(project.id)
@@ -152,13 +151,13 @@ class DesktopStorageManager(
         }
     }
 
-    /** Folder holding the files of the attachments, one sub-folder per project. */
+    /** Per-project attachment folder. */
     fun getMediaFolder(): File = File(dataDir, "media")
 
     fun attachmentFile(projectId: String, attachment: Attachment): File =
         AttachmentFiles.localFile(getMediaFolder(), projectId, attachment)
 
-    /** Copies [source] into the media folder as the file of [attachment]. */
+    /** Copies [source] as [attachment]. */
     fun storeAttachmentFile(projectId: String, attachment: Attachment, source: File): File {
         val target = attachmentFile(projectId, attachment)
         target.parentFile?.mkdirs()
@@ -166,7 +165,7 @@ class DesktopStorageManager(
         return target
     }
 
-    /** Saves the attachment files contained in an imported package; returns how many were written. */
+    /** Saves imported attachment files. */
     fun extractAttachments(pkg: ProjectPackage): Int = AttachmentFiles.extract(pkg, getMediaFolder())
 
     private val trashJson = Json { ignoreUnknownKeys = true }
@@ -177,7 +176,7 @@ class DesktopStorageManager(
 
     companion object { const val LOCAL_TRASH_ENTRY = "attachments/local/trash.json" }
 
-    /** Read only local state; a corrupt archive must never become an empty trash. */
+    /** Reads local state without replacing corrupt data. */
     fun loadTrash(projectId: String, password: String? = null): List<TrashItem> {
         val local = File(getProjectsFolder(), "$projectId.ofam")
         val bytes = if (local.isFile) {

@@ -130,15 +130,11 @@ class DocumentExportTest {
         assertTrue("XLSX must contain xl/workbook.xml", entryNames.contains("xl/workbook.xml"))
         assertTrue("XLSX must contain xl/worksheets/sheet1.xml", entryNames.contains("xl/worksheets/sheet1.xml"))
 
-        // Verify Device SW-CORE-01 is present
         assertTrue("Sheet 1 must contain SW-CORE-01", sheet1Content.contains("SW-CORE-01"))
-        // Verify inlineStr formatting
         assertTrue("Sheet 1 must use inlineStr cells", sheet1Content.contains("t=\"inlineStr\""))
 
-        // Verify confidential attachment is excluded when includeConfidential = false
         assertFalse("Confidential attachment must be excluded", sheet5Content.contains("Password_Backup.txt"))
 
-        // Verify zero credential secret leakage
         val fullZipString = String(zipBytes, Charsets.ISO_8859_1)
         assertFalse("XLSX must NOT contain credential password secret", fullZipString.contains("SUPER_SECRET_PASSWORD_123"))
         assertFalse("XLSX must NOT contain credential username", fullZipString.contains("admin_secret"))
@@ -161,11 +157,9 @@ class DocumentExportTest {
         assertTrue("Markdown must contain cable C-001", mdText.contains("C-001"))
         assertTrue("Markdown must contain VLAN MANAGEMENT", mdText.contains("MANAGEMENT"))
 
-        // Confidential attachment excluded
         assertFalse("Confidential attachment must be excluded", mdText.contains("Password_Backup.txt"))
         assertTrue("Public attachment must be included", mdText.contains("Schema_Pubblico.pdf"))
 
-        // Zero secret leakage
         assertFalse("Markdown must NOT contain credential password secret", mdText.contains("SUPER_SECRET_PASSWORD_123"))
         assertFalse("Markdown must NOT contain credential username", mdText.contains("admin_secret"))
     }

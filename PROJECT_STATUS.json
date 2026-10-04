@@ -1,38 +1,45 @@
 {
   "projectName": "OnlyFieldAssetManager",
-  "lastUpdated": "2026-10-03",
-  "currentPhase": "Configuratore grafico CFG01 completato e pubblicato su main; restano i residui CI su tag, hardware, API 37 e scratch.",
+  "lastUpdated": "2026-10-04",
+  "currentPhase": "Funzionalita implementate; restano residui di verifica e pulizia.",
   "activeTask": null,
-  "nextSession": "Lavoro salvato e pubblicato su main: commit 8ba2f0094a67a394bbbf515fb45a87a4ec5faa23, SHA remoto verificato; RES-19 chiuso. Configuratore e manutenzione completati: 206 test JVM/Compose verdi, build Android/Windows riuscite; evidenze in roadmap.md e docs/10-object-configurator.md. Riprendere da RES-17 (Espresso/API 37) e RES-18 (scratch precedenti); RES-13 resta rinviato al collaudo hardware. RES-01 richiede una vera esecuzione CI su tag e distinta autorizzazione alla pubblicazione. Nessuna attività in corso. APK aggiornati in mobile/app/build/outputs/apk e portable in dist/; build/release conserva gli artefatti della manutenzione precedente.",
+  "nextSession": "Riprendere da docs/testing/hardware-checklist.md per RES-19 (Android 360/412 dp, tastiera, testo ingrandito e temi). Poi RES-17 (test UI API 37) e RES-18 (scratch build/ux-audit e preesistenti). Restano RES-13 e RES-01. Nessuna attività in corso; ramo di lavoro main.",
   "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-01",
-      "title": "Integrazione CI/CD Automation",
+      "title": "Verifica CI/CD su tag",
       "status": "PARTIAL",
-      "description": "Workflow tag v*/manuale e preparazione APK debug/ZIP portable/SHA-256 implementati, verificati localmente e pubblicati su main. Manca una vera esecuzione remota su tag; la creazione del tag e la pubblicazione della release richiedono autorizzazione separata.",
-      "closureCriteria": "Workflow documentati, eseguiti su tag e con artefatti verificabili."
+      "description": "Workflow, pacchetti e checksum sono implementati; manca un'esecuzione remota su tag.",
+      "closureCriteria": "Esecuzione CI su tag con artefatti verificabili."
     },
     {
       "id": "RES-13",
-      "title": "Collaudo manuale di acquisizione e multitouch",
+      "title": "Collaudo hardware manuale",
       "status": "OPEN",
-      "description": "Checklist docs/testing/hardware-checklist.md pronta; tutti gli scenari foto/QR/barcode/multitouch/lettore USB reali NON ESEGUITI. Collaudo hardware rinviato.",
-      "closureCriteria": "Checklist eseguita su hardware reale e risultati registrati in roadmap e documentazione QA."
+      "description": "Foto, scanner, multitouch e lettore USB non sono stati verificati su hardware reale.",
+      "closureCriteria": "Checklist hardware compilata con esiti ed evidenze."
     },
     {
       "id": "RES-17",
-      "title": "Compatibilità dei test UI Android API 37",
+      "title": "Test UI Android API 37",
       "status": "OPEN",
-      "description": "Su emulatore API 37.1 due test Compose si arrestano in Espresso con NoSuchMethodException: android.hardware.input.InputManager.getInstance; le stesse prove passano su API 35. Toolchain conservata come richiesto.",
-      "closureCriteria": "Suite strumentale completa verde su API 37 con una versione o integrazione supportata di AndroidX Test, senza disattivare controlli."
+      "description": "Due test UI si fermano in Espresso su API 37 prima delle asserzioni.",
+      "closureCriteria": "Suite strumentale verde su API 37 senza disabilitare controlli."
     },
     {
       "id": "RES-18",
-      "title": "Pulizia scratch della sessione bloccata dal controllo automatico",
+      "title": "Pulizia scratch",
       "status": "OPEN",
-      "description": "Il controllo automatico ha rifiutato due comandi di rimozione dei temporanei sotto build/ con errore blocked by policy, incluso il singolo percorso verificato build/qa-system35. Emulatori arrestati. Restano immagini/AVD temporanei, strumenti di traduzione/actionlint, fixture CI e script/log della sessione; sono ignorati da Git. Preservare build/release e gli output Gradle.",
-      "closureCriteria": "Rimuovere soltanto scratch della sessione da build/ dopo verifica dei percorsi, conservando artefatti e directory Gradle; rieseguire controllo stato Git."
+      "description": "Restano scratch ignorati sotto build/; artefatti e directory Gradle vanno preservati. La rimozione di build/ux-audit/ creata dalla revisione UI/UX del 4 ottobre è stata rifiutata due volte dalla policy di esecuzione (blocked by policy), anche dopo verifica del percorso assoluto.",
+      "closureCriteria": "Rimozione mirata dopo verifica dei percorsi e controllo stato Git."
+    },
+    {
+      "id": "RES-19",
+      "title": "Verifica visiva UI/UX Android",
+      "status": "OPEN",
+      "description": "Configuratore condiviso e layout desktop verificati con Compose; non eseguita la matrice Android nativa 360/412 dp con tastiera, testo ingrandito e temi chiaro/scuro. Nessun dispositivo collegato nella sessione; RES-17 rimane aperto.",
+      "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]
 }

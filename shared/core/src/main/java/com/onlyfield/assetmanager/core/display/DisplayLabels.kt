@@ -5,10 +5,7 @@ import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 
-/**
- * Localized user-facing labels for domain enums, shared by the Android and Windows UIs.
- * UIs must never show raw enum names to the user.
- */
+/** Shared localized domain labels. */
 
 fun ObservationStatus.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     ObservationStatus.VERIFIED -> i18n.text("text.32bbb08a6f47")
@@ -195,7 +192,7 @@ fun ValidationSeverity.toDisplayString(i18n: Messages = Messages()): String = wh
     ValidationSeverity.DOCUMENTARY_WARNING -> i18n.text("text.d8a8733a7084")
 }
 
-/** Target types stored as strings in [DocumentBadge], [CustomExtraField] and [TrashItem]. */
+/** Stored target types. */
 object EntityTypeLabels {
     fun of(type: String, i18n: Messages = Messages()): String = when (type.uppercase()) {
         "PROJECT" -> i18n.text("text.b7700d71d0ce")

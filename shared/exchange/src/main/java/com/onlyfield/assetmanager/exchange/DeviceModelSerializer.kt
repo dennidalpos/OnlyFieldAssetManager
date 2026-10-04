@@ -11,32 +11,22 @@ object DeviceModelSerializer {
         encodeDefaults = true
     }
 
-    /**
-     * Serializes a single [DeviceModel] to JSON.
-     * Ensures only model definitions (templates, height, category, brand) are exported,
-     * with no instance credentials, IPs, MACs or cables.
-     */
+    /** Serializes a model definition without instance data. */
     fun serializeModel(model: DeviceModel): String {
         return json.encodeToString(model)
     }
 
-    /**
-     * Serializes a list of [DeviceModel]s to JSON.
-     */
+    /** Serializes model definitions. */
     fun serializeModels(models: List<DeviceModel>): String {
         return json.encodeToString(models)
     }
 
-    /**
-     * Deserializes a single [DeviceModel] from JSON.
-     */
+    /** Deserializes one model. */
     fun deserializeModel(jsonString: String): DeviceModel {
         return json.decodeFromString<DeviceModel>(jsonString)
     }
 
-    /**
-     * Deserializes a list of [DeviceModel]s from JSON.
-     */
+    /** Deserializes models. */
     fun deserializeModels(jsonString: String): List<DeviceModel> {
         return json.decodeFromString<List<DeviceModel>>(jsonString)
     }

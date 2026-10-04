@@ -6,12 +6,7 @@ import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.FieldValidators.parseDecimal
 import com.onlyfield.assetmanager.core.forms.FieldValidators.parseInt
 
-/*
- * Editable form state for each entity edited on the desktop.
- *
- * Every `toX(existing)` starts from the existing entity and `copy()`s only the fields the form
- * shows, so fields that have no control in the dialog are preserved on save.
- */
+/** Form states preserve unedited entity fields. */
 
 private fun String.orNull(): String? = trim().ifBlank { null }
 
@@ -478,7 +473,7 @@ data class PoeForm(
     }
 }
 
-/** Target of badges and extra fields: one of the [TARGET_TYPES] plus the chosen entity id. */
+/** Badge or extra-field target. */
 data class TargetRef(val type: String = "PROJECT", val id: String? = null) {
     companion object {
         val TARGET_TYPES = listOf("PROJECT", "DEVICE", "RACK", "PORT", "AREA")

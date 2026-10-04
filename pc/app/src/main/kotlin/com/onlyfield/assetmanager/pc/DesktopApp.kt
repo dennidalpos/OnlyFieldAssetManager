@@ -2,6 +2,9 @@ package com.onlyfield.assetmanager.pc
 
 import com.onlyfield.assetmanager.pc.LocalMessages
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.onlyfield.assetmanager.configurator.ProjectDestination
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
@@ -48,12 +51,15 @@ fun DesktopApp(state: DesktopAppState) {
         com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
-                        ProjectToolbar(state)
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val panel = if (state.detailSlot.content != null) state.detailSlot.panelWidth.coerceIn(440.dp, 640.dp) + 16.dp else 0.dp
+                    val sidebarVisible = state.project != null && maxWidth - 208.dp - 32.dp - panel >= 360.dp
+                    Column(Modifier.fillMaxSize()) {
+                        ProjectToolbar(state, sidebarVisible)
                         state.error?.let { ErrorBanner(it) { state.error = null } }
-                        MasterDetailHost(Modifier.weight(1f).fillMaxWidth().padding(16.dp)) {
-                            SectionContent(state)
+                        Row(Modifier.weight(1f).fillMaxWidth()) {
+                            if (sidebarVisible) ProjectSidebar(state)
+                            MasterDetailHost(Modifier.weight(1f).fillMaxHeight().padding(16.dp)) { SectionContent(state) }
                         }
                         HorizontalDivider()
                         StatusBar(state)
@@ -68,8 +74,44 @@ fun DesktopApp(state: DesktopAppState) {
 
 }
 
+internal fun ProjectDestination.appSection(): AppSection? = when (this) {
+    ProjectDestination.MAP -> AppSection.FLOORPLANS
+    ProjectDestination.DEVICES -> AppSection.INVENTORY
+    ProjectDestination.RACKS -> AppSection.RACKS
+    ProjectDestination.CABLING -> AppSection.CABLING
+    ProjectDestination.NETWORK -> AppSection.NETWORK
+    ProjectDestination.POWER -> AppSection.POWER
+    ProjectDestination.MODELS -> AppSection.MODELS
+    ProjectDestination.ATTACHMENTS -> AppSection.MEDIA
+    ProjectDestination.CREDENTIALS -> AppSection.CREDENTIALS
+    ProjectDestination.PROJECT -> AppSection.PROJECT
+    ProjectDestination.TRASH -> AppSection.TRASH
+    ProjectDestination.DOCUMENTS -> null
+}
+
+private fun DesktopAppState.navigate(destination: ProjectDestination) {
+    val target = destination.appSection()
+    if (target != null) section = target else requestChange { dialog = AppDialog.Documents }
+}
+
 @Composable
-private fun ProjectToolbar(state: DesktopAppState) {
+private fun ProjectSidebar(state: DesktopAppState) {
+    val i18n = LocalMessages.current
+    Surface(Modifier.width(208.dp).fillMaxHeight(), tonalElevation = 1.dp) {
+        Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, entries) ->
+                Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp))
+                entries.forEach { destination ->
+                    NavigationDrawerItem(label = { Text(destination.title(i18n)) }, selected = destination.appSection() == state.section,
+                        onClick = { state.navigate(destination) }, modifier = Modifier.heightIn(min = 48.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectToolbar(state: DesktopAppState, sidebarVisible: Boolean) {
     val i18n = LocalMessages.current
 
     val project = state.project
@@ -84,14 +126,22 @@ private fun ProjectToolbar(state: DesktopAppState) {
                 OutlinedButton(onClick = { state.newProject() }) { Text(i18n.text("text.ac667fe865c9")) }
                 OutlinedButton(onClick = state::pickAndImport) { Text(i18n.text("text.a6afc0c52be6")) }
             } else {
-                TextButton(onClick = { state.section = AppSection.FLOORPLANS }) { Text(i18n.text("text.2b71c6a11df1")) }
-                TextButton(onClick = state::undo, enabled = state.canUndo) { Text(i18n.text("text.18c9d912a210")) }
+                if (!sidebarVisible) {
+                    var sections by remember { mutableStateOf(false) }
+                    Box {
+                        OutlinedButton(onClick = { sections = true }) { Text(i18n.text("ux.nav.sections")) }
+                        DropdownMenu(sections, { sections = false }, modifier = Modifier.heightIn(max = 560.dp)) {
+                            ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, entries) ->
+                                Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp))
+                                entries.forEach { destination -> DropdownMenuItem(text = { Text(destination.title(i18n)) }, onClick = { sections = false; state.navigate(destination) }) }
+                            }
+                        }
+                    }
+                }
+                TextButton(onClick = state::undo, enabled = state.canUndo) { Text(i18n.text("action.undo")) }
                 Box {
-                    OutlinedButton(onClick = { tools = true }) { Text(i18n.text("text.bb1ca9a0ad66")) }
+                    OutlinedButton(onClick = { tools = true }) { Text(i18n.text("ux.nav.operations")) }
                     DropdownMenu(expanded = tools, onDismissRequest = { tools = false }) {
-                        AppSection.entries.forEach { section -> DropdownMenuItem(text = { Text(section.localizedTitle(i18n)) }, onClick = { tools = false; state.section = section }) }
-                        HorizontalDivider()
-                        DropdownMenuItem(text = { Text(i18n.text("text.b59593297419")) }, onClick = { tools = false; state.dialog = AppDialog.Documents })
                         DropdownMenuItem(text = { Text(i18n.text("text.f6a32b19c4b1")) }, onClick = { tools = false; state.dialog = AppDialog.ManagePassword })
                         DropdownMenuItem(text = { Text(i18n.text("text.8a1d8b27e511")) }, onClick = { tools = false; state.exportPackage() })
                         DropdownMenuItem(text = { Text(i18n.text("text.c890f54eece6")) }, onClick = { tools = false; state.pickAndImport() })

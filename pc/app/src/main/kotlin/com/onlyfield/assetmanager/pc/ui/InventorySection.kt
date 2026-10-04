@@ -7,10 +7,12 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
@@ -20,6 +22,7 @@ import com.onlyfield.assetmanager.core.scan.CodeLookup
 import com.onlyfield.assetmanager.core.scan.CodeMatch
 
 @Composable
+@OptIn(ExperimentalLayoutApi::class)
 fun InventorySection(
     project: Project,
     onProjectUpdated: (Project, String) -> Unit,
@@ -43,19 +46,19 @@ fun InventorySection(
     var mergeTarget by remember { mutableStateOf<Device?>(null) }
     var showBatch by remember { mutableStateOf(false) }
 
-    val filtered = remember(index, query, categoryFilter, areaFilter) {
+    val filtered = remember(index, query, categoryFilter, areaFilter, i18n.locale) {
         index.devices.filter { d ->
             matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress, d.serialNumber) &&
                 (categoryFilter == null || d.category == categoryFilter) &&
                 (areaFilter == null || d.areaId == areaFilter?.id)
-        }
+        }.sortedForDisplay(i18n) { it.technicalName }
     }
     // Drop selections of devices that no longer exist.
     LaunchedEffect(index) { selectedIds = selectedIds.filter { index.device(it) != null }.toSet() }
 
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader(
-            title = i18n.text("text.dae8f6194460"),
+            title = i18n.text("ux.nav.devices"),
             subtitle = i18n.text("text.e9f37f3828d1", filtered.size, index.devices.size),
             searchQuery = query,
             onSearchChange = { query = it },
@@ -72,7 +75,7 @@ fun InventorySection(
             Button(onClick = { changeDetail { creating = true } }, enabled = project.businessUnits.isNotEmpty()) { Text(i18n.text("text.8650e4573818")) }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OptionPicker(
                 label = i18n.text("text.54276aa0307f"),
                 options = DeviceCategory.entries,
@@ -80,7 +83,7 @@ fun InventorySection(
                 optionLabel = { it.toDisplayString(i18n = i18n) },
                 onSelected = { categoryFilter = it },
                 noneLabel = i18n.text("text.d67bee20ea14"),
-                modifier = Modifier.width(240.dp)
+                modifier = Modifier.widthIn(max = 240.dp)
             )
             OptionPicker(
                 label = i18n.text("text.024dc204d7ba"),
@@ -89,9 +92,8 @@ fun InventorySection(
                 optionLabel = { it.name },
                 onSelected = { areaFilter = it },
                 noneLabel = i18n.text("text.4c852ffc6db0"),
-                modifier = Modifier.width(240.dp)
+                modifier = Modifier.widthIn(max = 240.dp)
             )
-            Spacer(Modifier.weight(1f))
             if (selectedIds.isNotEmpty()) {
                 Text(i18n.text("text.a3de97a5039a", selectedIds.size), fontWeight = FontWeight.SemiBold)
                 OutlinedButton(onClick = { changeDetail { showBatch = true } }) { Text(i18n.text("text.12fea36b47a9")) }
@@ -121,7 +123,9 @@ fun InventorySection(
                     ItemCard(
                         title = dev.technicalName + (dev.alias?.let { " ($it)" } ?: ""),
                         badge = dev.category.toDisplayString(i18n = i18n),
-                        details = listOf(location, network, i18n.text("text.010018b28736", dev.ports.size, dev.observation?.status?.toDisplayString(i18n = i18n) ?: i18n.text("text.ac4e0792e577"))),
+                        details = listOf(location, listOf(network, i18n.text("text.53a2e3b94696", dev.ports.size)).filter { it.isNotBlank() }.joinToString(" · ")),
+                        selected = editing?.id == dev.id || portsOf == dev.id,
+                        onClick = { changeDetail { editing = dev } },
                         leading = {
                             Checkbox(
                                 checked = dev.id in selectedIds,
@@ -176,7 +180,7 @@ fun InventorySection(
     }
 
     portsOf?.let { id ->
-        index.device(id)?.let { dev -> DeviceDialog(project, dev, { portsOf = null }, onProjectUpdated) }
+        index.device(id)?.let { dev -> DeviceDialog(project, dev, { portsOf = null }, onProjectUpdated, ConfiguratorPage.PORTS) }
             ?: run { portsOf = null }
     }
 
@@ -216,13 +220,14 @@ private fun DeviceDialog(
     device: Device?,
     onDismiss: () -> Unit,
     onSave: (Project, String) -> Unit,
+    initialSection: ConfiguratorPage = ConfiguratorPage.ESSENTIALS,
 ) {
     val i18n = LocalMessages.current
-    var draft by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forDevice(project, device)) }
-    EditPanel(title = i18n.text("config.title"), onDismiss = onDismiss,
-        confirmEnabled = draft.errors(project, i18n).isEmpty(), width = 800.dp,
-        onConfirm = { onSave(draft.apply(project, i18n), i18n.text("config.title")) }) {
-        ObjectFields(project, draft) { draft = it }
+    var draft by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(inventoryDeviceDraft(project, device)) }
+    EditPanel(title = configuratorTitle(project, draft, i18n, initialSection), confirmLabel = configuratorAction(project, draft, i18n), onDismiss = onDismiss,
+        validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), width = 800.dp,
+        onConfirm = { onSave(draft.apply(project, i18n), configuratorTitle(project, draft, i18n)) }) {
+        ObjectFields(project, draft, initialSection) { draft = it }
     }
 }
 

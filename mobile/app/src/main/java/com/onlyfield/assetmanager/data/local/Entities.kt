@@ -704,10 +704,7 @@ data class TrashItemEntity(
     val containmentMetadataJson: String? = null
 )
 
-/**
- * Merge base (F04): the project as the other device last saw it, saved at every export and import.
- * No foreign key on purpose: saveProject replaces the project row, which would cascade-delete it.
- */
+/** Merge base; no foreign key because project replacement would delete it. */
 @Entity(tableName = "sync_snapshots")
 data class SyncSnapshotEntity(
     @PrimaryKey val projectId: String,

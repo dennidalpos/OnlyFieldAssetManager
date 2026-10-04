@@ -6,10 +6,12 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.configurator.ProjectDestination
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -69,11 +71,26 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
                 Text(project.description?.ifBlank { null } ?: i18n.text("text.0a8a8f203dc2"), style = MaterialTheme.typography.titleMedium)
                 TextButton(onClick = { vm.navigate(Screen.Issues) }, enabled = issues.isNotEmpty()) { Text(i18n.text("text.48139e9146f0", errors, warnings)) }
             }
-            items(listOf(i18n.text("text.a26fdd05a46b") to Screen.Inventory, i18n.text("text.4cd265c2b8c6") to Screen.Racks, i18n.text("text.3b40d8bd6081") to Screen.Cabling,
-                i18n.text("text.a0dd274e04a0") to Screen.Network, i18n.text("text.acedc1948e5f") to Screen.Power, i18n.text("text.92a776eacf2a") to Screen.Attachments,
-                i18n.text("text.52f7e6721e97") to Screen.Credentials, i18n.text("text.7351fc8f354e") to Screen.Models, i18n.text("text.caa9e153e1db") to Screen.Structure,
-                i18n.text("text.9a3a36d5fa15") to Screen.Trash, i18n.text("text.f7ac8562de3a") to Screen.Documents)) { (label, screen) ->
-                TextButton(onClick = { vm.navigate(screen) }, modifier = Modifier.fillMaxWidth()) { Text(label) }
+            ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, destinations) ->
+                item { Text(i18n.text(group), style = MaterialTheme.typography.titleMedium, modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)) }
+                items(destinations) { destination ->
+                    val screen = when (destination) {
+                        ProjectDestination.MAP -> Screen.Home
+                        ProjectDestination.DEVICES -> Screen.Inventory
+                        ProjectDestination.RACKS -> Screen.Racks
+                        ProjectDestination.CABLING -> Screen.Cabling
+                        ProjectDestination.NETWORK -> Screen.Network
+                        ProjectDestination.POWER -> Screen.Power
+                        ProjectDestination.MODELS -> Screen.Models
+                        ProjectDestination.ATTACHMENTS -> Screen.Attachments
+                        ProjectDestination.CREDENTIALS -> Screen.Credentials
+                        ProjectDestination.DOCUMENTS -> Screen.Documents
+                        ProjectDestination.PROJECT -> Screen.Structure
+                        ProjectDestination.TRASH -> Screen.Trash
+                    }
+                    ListItem(headlineContent = { Text(destination.title(i18n)) }, trailingContent = { Text("›") },
+                        modifier = Modifier.fillMaxWidth().clickable { vm.navigate(screen) })
+                }
             }
         }
     }

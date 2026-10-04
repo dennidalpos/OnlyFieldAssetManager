@@ -12,6 +12,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -65,7 +67,7 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                         onClick = { areaTarget = bu to null }
                     )
                 }
-                items(areas, key = { it.id }) { area ->
+                items(areas.sortedForDisplay(i18n) { it.name }, key = { it.id }) { area ->
                     ItemCard(
                         title = area.name,
                         details = listOfNotNull(area.floor?.let { i18n.text("text.6e61502a3560", it) }, area.description, index.attachmentsOf(area.id).size.takeIf { it > 0 }?.let { i18n.text("text.5b587bc5bd9e", it) }),
@@ -121,7 +123,7 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     ) { padding ->
         if (project.racks.isEmpty()) EmptyState(i18n.text("text.cc75d410beeb"), Modifier.padding(padding), i18n.text("text.3f21051ccc3f")) { creating = true }
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(project.racks, key = { it.id }) { r ->
+            items(project.racks.sortedForDisplay(i18n) { it.name }, key = { it.id }) { r ->
                 ItemCard(
                     title = r.name,
                     details = listOf(i18n.text("text.4abc2837dcad", index.areaName(r.areaId, i18n.text("text.0eb949b8ab9b")), RackLayout.usedUnits(r, index.devices), r.heightU)),
@@ -203,7 +205,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
                 val unplaced = inRack.filter { it.positionU == null }
                 if (unplaced.isNotEmpty()) {
                     item { SectionTitle(i18n.text("text.d75d6ae3881b")) }
-                    items(unplaced) { d -> ItemCard(d.technicalName, listOf(i18n.text("text.a03528f849dc")), onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }) }
+                    items(unplaced.sortedForDisplay(i18n) { it.technicalName }) { d -> ItemCard(d.technicalName, listOf(i18n.text("text.a03528f849dc")), onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }) }
                 }
             }
         }
@@ -237,9 +239,9 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 private fun RackDialog(vm: ProjectViewModel, index: ProjectIndex, rack: Rack?, onClose: () -> Unit) {
     val i18n = LocalMessages.current
     var draft by remember(rack) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(index.project, rack)) }
-    EditScreen(i18n.text("config.title"), onClose, {
-        onClose(); vm.edit(i18n.text("config.title")) { draft.apply(it, i18n) }
-    }, confirmEnabled = draft.errors(index.project, i18n).isEmpty()) {
+    EditScreen(configuratorTitle(index.project, draft, i18n), onClose, {
+        onClose(); vm.edit(configuratorTitle(index.project, draft, i18n)) { draft.apply(it, i18n) }
+    }, validationMessage = configuratorValidation(index.project, draft, i18n), confirmEnabled = draft.errors(index.project, i18n).isEmpty(), confirmLabel = configuratorAction(index.project, draft, i18n)) {
         ObjectFields(index.project, draft) { draft = it }
     }
 }
@@ -273,7 +275,7 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
     ) { padding ->
         if (project.deviceModels.isEmpty()) EmptyState(i18n.text("text.ee7a9420f94d"), Modifier.padding(padding))
         else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(project.deviceModels, key = { it.id }) { m ->
+            items(project.deviceModels.sortedForDisplay(i18n) { it.name }, key = { it.id }) { m ->
                 ItemCard(
                     title = m.name, badge = m.category.toDisplayString(i18n = i18n),
                     details = listOf(listOfNotNull(m.brand, m.modelNumber, "${m.defaultHeightU}U").joinToString(" · "),
@@ -295,10 +297,10 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
     if (creating || editing != null) {
         val original = editing
         var edited by remember(original) { mutableStateOf(original ?: DeviceModel(name = "", category = DeviceCategory.NETWORK_SWITCH)) }
-        EditScreen(i18n.text("config.model"), { creating = false; editing = null }, {
+        EditScreen(if (original == null) i18n.text("ux.add.model") else i18n.text("ux.edit.model", original.name), { creating = false; editing = null }, {
             vm.edit(i18n.text("config.model")) { if (original == null) ProjectEdits.addDeviceModel(it, edited) else ProjectEdits.updateDeviceModel(it, edited) }
             creating = false; editing = null
-        }, confirmEnabled = edited.name.isNotBlank() && com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(edited.portTemplates) && edited.defaultHeightU in 1..60) {
+        }, confirmLabel = i18n.text(if (original == null) "ux.add" else "ux.saveChanges"), confirmEnabled = edited.name.isNotBlank() && com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(edited.portTemplates) && edited.defaultHeightU in 1..60) {
             val markDirty = LocalMarkDirty.current
             com.onlyfield.assetmanager.configurator.ModelConfigurator(project, edited, i18n) { markDirty(); edited = it }
         }
@@ -307,9 +309,9 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
     applying?.let { model ->
         var deviceId by remember(model) { mutableStateOf<String?>(null) }
         var draft by remember(model) { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
-        EditScreen(i18n.text("config.model"), { applying = null }, {
+        EditScreen(i18n.text("ux.applyModel", model.name), { applying = null }, {
             vm.edit(i18n.text("config.model")) { requireNotNull(draft).apply(it, i18n) }; applying = null
-        }, confirmEnabled = draft?.errors(project, i18n)?.isEmpty() == true) {
+        }, confirmLabel = i18n.text("ux.apply"), validationMessage = draft?.let { configuratorValidation(project, it, i18n) }, confirmEnabled = draft?.errors(project, i18n)?.isEmpty() == true) {
             DevicePicker(i18n.text("config.device"), index, deviceId, { id ->
                 deviceId = id
                 draft = index.device(id)?.let { com.onlyfield.assetmanager.core.forms.HardwareConfigurator.applyModel(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forDevice(project, it), model) }

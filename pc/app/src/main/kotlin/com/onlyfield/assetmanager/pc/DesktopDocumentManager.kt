@@ -20,9 +20,7 @@ import java.io.OutputStream
 
 object DesktopDocumentManager {
 
-    /**
-     * Exports project to OpenXML XLSX spreadsheet using pure JVM XlsxExportManager.
-     */
+    /** Exports XLSX. */
     fun exportXlsx(
         project: Project,
         filterConfig: ExportFilterConfig,
@@ -32,9 +30,7 @@ object DesktopDocumentManager {
         XlsxExportManager.exportXlsxToStream(project, filterConfig, outputStream, i18n = i18n)
     }
 
-    /**
-     * Exports project to Markdown document using pure JVM MarkdownExportManager.
-     */
+    /** Exports Markdown. */
     fun exportMarkdown(
         project: Project,
         filterConfig: ExportFilterConfig,
@@ -44,7 +40,7 @@ object DesktopDocumentManager {
         MarkdownExportManager.exportMarkdownToStream(project, filterConfig, outputStream, i18n = i18n)
     }
 
-    /** Writes the technical report as a real PDF document. Credentials are never included. */
+    /** Writes a PDF without credentials. */
     fun exportCompositePdf(
         project: Project,
         filterConfig: ExportFilterConfig,
@@ -56,7 +52,7 @@ object DesktopDocumentManager {
         outputStream.use { SimplePdfWriter.write(lines, lines.first().text, it, i18n) }
     }
 
-    /** Opens the Windows print dialog and prints the same report, over as many pages as needed. */
+    /** Opens the Windows print dialog. */
     fun printDocumentNative(
         project: Project,
         filterConfig: ExportFilterConfig,
@@ -77,7 +73,7 @@ object DesktopDocumentManager {
         }
     }
 
-    /** Paginates [lines] with Java2D; pages are laid out once per page format. */
+    /** Paginates [lines] with Java2D. */
     private class ReportPrintable(private val lines: List<ReportLine>, private val i18n: Messages) : Printable {
         private var pages: List<List<Pair<ReportLine, List<String>>>>? = null
 

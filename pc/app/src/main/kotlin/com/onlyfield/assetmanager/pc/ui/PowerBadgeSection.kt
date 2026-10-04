@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
@@ -53,7 +54,7 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
         }
         if (feeds.isEmpty()) EmptyState(if (index.devices.isEmpty()) i18n.text("text.0b91a2f27a41") else i18n.text("text.90bbe6100ed6"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(feeds, key = { it.id }) { f ->
+            items(feeds.sortedForDisplay(i18n) { "${index.deviceName(it.deviceId, i18n = i18n)} ${it.feedName}" }, key = { it.id }) { f ->
                 val source = f.sourceDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: f.sourceOutletDescription
                 ItemCard(
                     title = "${index.deviceName(f.deviceId, i18n.text("text.befe1ad89357"), i18n = i18n)} · ${f.feedName}",
@@ -181,7 +182,7 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
         }
         if (project.documentBadges.isEmpty()) EmptyState(i18n.text("text.eb3e34b0bacb"), actionLabel = i18n.text("text.5e9867b48f83"), onAction = { creating = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.documentBadges, key = { it.id }) { b ->
+            items(project.documentBadges.sortedForDisplay(i18n) { it.label }, key = { it.id }) { b ->
                 ItemCard(
                     title = b.label,
                     badge = b.category.toDisplayString(i18n = i18n),

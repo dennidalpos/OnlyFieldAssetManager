@@ -13,10 +13,7 @@ import androidx.core.content.FileProvider
 import com.onlyfield.assetmanager.core.model.AttachmentTargetType
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 
-/**
- * Returns a function that opens the camera app; the photo is written straight into the project's
- * attachment folder (through FileProvider) and linked to [AttachmentTargetType]/id.
- */
+/** Opens the camera and links its output as an attachment. */
 @Composable
 fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) -> Unit {
     val i18n = LocalMessages.current
@@ -28,7 +25,7 @@ fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) 
             launcher.launch(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file))
         }
     }
-    // The manifest declares CAMERA (scanner), so the camera intent also requires it to be granted.
+    // Camera permission is shared with the scanner.
     var pending by remember { mutableStateOf<Pair<AttachmentTargetType, String?>?>(null) }
     val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         pending?.let { (type, id) -> if (ok) shoot(type, id) else vm.notifyError(i18n.text("text.0ac53f93c8a1")) }

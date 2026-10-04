@@ -9,6 +9,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
@@ -53,7 +55,7 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
                         item { SearchField(query, { query = it }, i18n.text("text.7a29a24c6681")) }
                         val cables = project.cables.filter { matchesQuery(query, it.codeOrLabel, it.color, index.portLabel(it.portAId), index.portLabel(it.portBId)) }
                         if (cables.isEmpty()) item { EmptyState(if (project.cables.isEmpty()) i18n.text("text.abaa596f8755") else i18n.text("text.4657d31fd783")) }
-                        items(cables, key = { it.id }) { c ->
+                        items(cables.sortedForDisplay(i18n) { it.codeOrLabel.orEmpty() }, key = { it.id }) { c ->
                             ItemCard(
                                 title = c.codeOrLabel ?: i18n.text("text.cfe760f7574e"), badge = c.medium.toDisplayString(i18n = i18n),
                                 details = listOf(
@@ -69,7 +71,7 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
                     }
                     1 -> {
                         if (project.sharedPathSegments.isEmpty()) item { EmptyState(i18n.text("text.c71767bfd1a4")) }
-                        items(project.sharedPathSegments, key = { it.id }) { s ->
+                        items(project.sharedPathSegments.sortedForDisplay(i18n) { it.name }, key = { it.id }) { s ->
                             val used = project.cables.count { s.id in it.sharedPathSegmentIds }
                             ItemCard(
                                 title = s.name,
@@ -103,9 +105,9 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
 
     if (newCable || cableDialog != null) {
         var draft by remember(cableDialog) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forCable(project, cableDialog)) }
-        EditScreen(i18n.text("config.title"), { newCable = false; cableDialog = null }, {
-            vm.edit(i18n.text("config.title")) { draft.apply(it, i18n) }; newCable = false; cableDialog = null
-        }, confirmEnabled = draft.errors(project, i18n).isEmpty()) {
+        EditScreen(configuratorTitle(project, draft, i18n), { newCable = false; cableDialog = null }, {
+            vm.edit(configuratorTitle(project, draft, i18n)) { draft.apply(it, i18n) }; newCable = false; cableDialog = null
+        }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, draft, i18n)) {
             ObjectFields(project, draft) { draft = it }
         }
     }

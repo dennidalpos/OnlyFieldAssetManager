@@ -35,11 +35,9 @@ object ModelValidator {
         val seenIds = mutableSetOf<String>()
         issues += ObjectHierarchy.errors(project, i18n = i18n).map { ValidationIssue("INVALID_OBJECT_CONTAINMENT", it, ValidationSeverity.STRUCTURAL_ERROR) }
 
-        // 1. Project ID validity
         checkUuid("INVALID_PROJECT_UUID", project.id, i18n.text("text.02a97e1a7888"), issues)
         trackId(project.id, "DUPLICATE_PROJECT_ID", i18n.text("text.ab40e25c2fe0", project.id), seenIds, issues)
 
-        // Validate Racks
         val racksById = mutableMapOf<String, Rack>()
         for (rack in project.racks) {
             checkUuid("INVALID_RACK_UUID", rack.id, i18n.text("text.739f725784ad"), issues)
@@ -57,7 +55,6 @@ object ModelValidator {
             racksById[rack.id] = rack
         }
 
-        // Validate DeviceModels
         for (model in project.deviceModels) {
             checkUuid("INVALID_MODEL_UUID", model.id, i18n.text("text.e704f269fdf5"), issues)
             trackId(model.id, "DUPLICATE_MODEL_ID", i18n.text("text.18975c9e34a8", model.id), seenIds, issues)
@@ -69,12 +66,10 @@ object ModelValidator {
         val allPorts = mutableMapOf<String, Port>()
         val allDevices = mutableListOf<Pair<String, Device>>() // Pair(BU_ID, Device)
 
-        // Traverse Business Units
         for (bu in project.businessUnits) {
             checkUuid("INVALID_BU_UUID", bu.id, i18n.text("text.95d1c4267bec"), issues)
             trackId(bu.id, "DUPLICATE_BU_ID", i18n.text("text.cb0e7cb5a360", bu.id), seenIds, issues)
 
-            // Traverse Sites
             for (site in bu.sites) {
                 checkUuid("INVALID_SITE_UUID", site.id, i18n.text("text.91cc7ead7552"), issues)
                 trackId(site.id, "DUPLICATE_SITE_ID", i18n.text("text.3a57f298c821", site.id), seenIds, issues)
@@ -85,19 +80,16 @@ object ModelValidator {
                 }
             }
 
-            // Traverse BU Direct Areas
             for (area in bu.areas) {
                 checkUuid("INVALID_AREA_UUID", area.id, i18n.text("text.b4bcc3ce0e37"), issues)
                 trackId(area.id, "DUPLICATE_AREA_ID", i18n.text("text.951d5d37b4da", area.id), seenIds, issues)
             }
 
-            // Collect Devices
             for (device in bu.devices) {
                 allDevices.add(bu.id to device)
                 checkUuid("INVALID_DEVICE_UUID", device.id, i18n.text("text.7bcae484093f"), issues)
                 trackId(device.id, "DUPLICATE_DEVICE_ID", i18n.text("text.8b3f7ead59e2", device.id), seenIds, issues)
 
-                // Unpositioned device check (Documentary warning)
                 if ((device.siteId == null) && (device.areaId == null) && (device.rackId == null)) {
                     issues.add(
                         ValidationIssue(
@@ -109,7 +101,6 @@ object ModelValidator {
                     )
                 }
 
-                // Rack placement validation
                 device.rackId?.let { rackId ->
                     val rack = racksById[rackId]
                     if (rack == null) {
@@ -138,7 +129,6 @@ object ModelValidator {
                     }
                 }
 
-                // Observation check
                 if (device.observation?.status == ObservationStatus.TO_VERIFY ||
                     device.observation?.status == ObservationStatus.CONFLICT
                 ) {
@@ -152,7 +142,6 @@ object ModelValidator {
                     )
                 }
 
-                // Collect Ports
                 if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(device.hardware.portGroups)) {
                     issues.add(ValidationIssue("INVALID_DEVICE_HARDWARE", i18n.text("config.invalidHardware"), ValidationSeverity.STRUCTURAL_ERROR, device.id))
                 }
@@ -187,7 +176,6 @@ object ModelValidator {
             }
         }
 
-        // Check for U slot overlaps in racks
         val devicesByRack = allDevices.map { it.second }.filter { it.rackId != null && it.positionU != null }.groupBy { it.rackId!! }
         for ((rackId, rackDevices) in devicesByRack) {
             val rackName = racksById[rackId]?.name ?: rackId
@@ -200,9 +188,7 @@ object ModelValidator {
                     val pos2Start = d2.positionU!!
                     val pos2End = pos2Start + d2.heightU - 1
 
-                    // Check U range overlap
                     val uOverlaps = kotlin.math.max(pos1Start, pos2Start) <= kotlin.math.min(pos1End, pos2End)
-                    // Check side overlap
                     val sideOverlaps = d1.rackSide == RackSide.BOTH || d2.rackSide == RackSide.BOTH || d1.rackSide == d2.rackSide
 
                     if (uOverlaps && sideOverlaps) {
@@ -226,7 +212,6 @@ object ModelValidator {
             }
         }
 
-        // Port connection targets integrity check
         for (port in allPorts.values) {
             port.connectedPortId?.let { targetPortId ->
                 val targetPort = allPorts[targetPortId]
@@ -243,7 +228,6 @@ object ModelValidator {
             }
         }
 
-        // Scope validation for duplicate technical names / IPs within the same Business Unit
         val devicesByBu = allDevices.groupBy { it.first }
         for ((buId, buDevices) in devicesByBu) {
             val namesInBu = mutableMapOf<String, String>() // name -> deviceId
@@ -284,7 +268,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Credentials
         for (cred in project.credentials) {
             checkUuid("INVALID_CREDENTIAL_UUID", cred.id, i18n.text("text.c1257b966e13"), issues)
             trackId(cred.id, "DUPLICATE_CREDENTIAL_ID", i18n.text("text.46f1ab481fed", cred.id), seenIds, issues)
@@ -301,7 +284,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Attachments
         val attachmentsById = project.attachments.associateBy { it.id }
         for (att in project.attachments) {
             checkUuid("INVALID_ATTACHMENT_UUID", att.id, i18n.text("text.44d4461cb53d"), issues)
@@ -319,7 +301,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Area Floorplans
         val allAreaIds = mutableSetOf<String>()
         for (bu in project.businessUnits) {
             for (site in bu.sites) {
@@ -356,7 +337,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Floorplan Placements
         val allDeviceIds = allDevices.map { it.second.id }.toSet()
         val allRackIds = racksById.keys
         for (placement in project.floorplanPlacements) {
@@ -425,7 +405,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Annotations
         for (ann in project.annotations) {
             checkUuid("INVALID_ANNOTATION_UUID", ann.id, i18n.text("text.89907d0dbe9a"), issues)
             trackId(ann.id, "DUPLICATE_ANNOTATION_ID", i18n.text("text.e179516c1b1b", ann.id), seenIds, issues)
@@ -453,7 +432,6 @@ object ModelValidator {
             }
         }
 
-        // Validate SharedPathSegments
         val sharedPathSegmentsById = project.sharedPathSegments.associateBy { it.id }
         val cableCountBySegmentId = mutableMapOf<String, Int>()
 
@@ -488,7 +466,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Cables
         for (cable in project.cables) {
             checkUuid("INVALID_CABLE_UUID", cable.id, i18n.text("text.c879515e30e7"), issues)
             trackId(cable.id, "DUPLICATE_CABLE_ID", i18n.text("text.eebfcf38b5b5", cable.id), seenIds, issues)
@@ -559,7 +536,6 @@ object ModelValidator {
             }
         }
 
-        // Check SharedPathSegment Capacity
         for (segment in project.sharedPathSegments) {
             val maxCap = segment.capacityMaxCables
             if (maxCap != null) {
@@ -577,7 +553,6 @@ object ModelValidator {
             }
         }
 
-        // Validate PanelMappings
         for (mapping in project.panelMappings) {
             checkUuid("INVALID_PANEL_MAPPING_UUID", mapping.id, i18n.text("text.7dc146223b7b"), issues)
             trackId(mapping.id, "DUPLICATE_PANEL_MAPPING_ID", i18n.text("text.04f94f16bbbf", mapping.id), seenIds, issues)
@@ -618,7 +593,6 @@ object ModelValidator {
             }
         }
 
-        // Validate VLANs
         val vlanNumbersByScope = mutableMapOf<String, MutableSet<Int>>()
         val knownVlanIds = project.vlans.map { it.vlanId }.toSet()
 
@@ -653,7 +627,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Subnets
         for (subnet in project.subnets) {
             checkUuid("INVALID_SUBNET_UUID", subnet.id, i18n.text("text.61df76270ad5"), issues)
             trackId(subnet.id, "DUPLICATE_SUBNET_ID", i18n.text("text.481a7568314f", subnet.id), seenIds, issues)
@@ -670,7 +643,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Port VLAN Memberships
         for (membership in project.portVlanMemberships) {
             checkUuid("INVALID_PORT_VLAN_MEMBERSHIP_UUID", membership.id, i18n.text("text.17b7672895e6"), issues)
             trackId(membership.id, "DUPLICATE_PORT_VLAN_MEMBERSHIP_ID", i18n.text("text.587e47123a02", membership.id), seenIds, issues)
@@ -713,7 +685,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Logical Interfaces
         for (l3Int in project.logicalInterfaces) {
             checkUuid("INVALID_LOGICAL_INTERFACE_UUID", l3Int.id, i18n.text("text.352cc3385a7d"), issues)
             trackId(l3Int.id, "DUPLICATE_LOGICAL_INTERFACE_ID", i18n.text("text.ee0a1b225328", l3Int.id), seenIds, issues)
@@ -730,7 +701,6 @@ object ModelValidator {
             }
         }
 
-        // Validate LAG Groups
         for (lag in project.lagGroups) {
             checkUuid("INVALID_LAG_GROUP_UUID", lag.id, i18n.text("text.afe6ae0705a1"), issues)
             trackId(lag.id, "DUPLICATE_LAG_GROUP_ID", i18n.text("text.975f7803ace9", lag.id), seenIds, issues)
@@ -760,7 +730,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Device Configurations
         for (config in project.deviceConfigurations) {
             checkUuid("INVALID_DEVICE_CONFIG_UUID", config.id, i18n.text("text.0cc55dc2828d"), issues)
             trackId(config.id, "DUPLICATE_DEVICE_CONFIG_ID", i18n.text("text.768e86492ada", config.id), seenIds, issues)
@@ -790,7 +759,6 @@ object ModelValidator {
             }
         }
 
-        // Validate WAN/VPN Connections
         for (conn in project.wanVpnConnections) {
             checkUuid("INVALID_WAN_VPN_UUID", conn.id, i18n.text("text.d652ce41458f"), issues)
             trackId(conn.id, "DUPLICATE_WAN_VPN_ID", i18n.text("text.d6d376f48002", conn.id), seenIds, issues)
@@ -822,7 +790,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Video Surveillance Mappings
         for (video in project.videoSurveillanceMappings) {
             checkUuid("INVALID_VIDEO_MAPPING_UUID", video.id, i18n.text("text.bee37c27f111"), issues)
             trackId(video.id, "DUPLICATE_VIDEO_MAPPING_ID", i18n.text("text.5d71ad933b74", video.id), seenIds, issues)
@@ -852,7 +819,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Custom Extra Fields
         for (field in project.customExtraFields) {
             checkUuid("INVALID_CUSTOM_FIELD_UUID", field.id, i18n.text("text.1fc3d96ea2ea"), issues)
             trackId(field.id, "DUPLICATE_CUSTOM_FIELD_ID", i18n.text("text.b092fca6fb3c", field.id), seenIds, issues)
@@ -869,7 +835,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Power Feeds
         val allPortIds = allDevices.flatMap { it.second.ports }.map { it.id }.toSet()
         val powerFeedsByDevice = project.powerFeeds.groupBy { it.deviceId }
         for (feed in project.powerFeeds) {
@@ -900,7 +865,6 @@ object ModelValidator {
                 }
             }
 
-            // Cycle detection in power feed supply chain
             if (feed.sourceDeviceId != null) {
                 var currentSourceId: String? = feed.sourceDeviceId
                 val visitedDevices = mutableSetOf(feed.deviceId)
@@ -926,7 +890,6 @@ object ModelValidator {
                 }
             }
 
-            // Prohibit unverified calculated runtime (observed runtime requires source and timestamp)
             if (feed.observedRuntimeMinutes != null && (feed.observedSource.isNull_or_blank() || feed.observedEpochMs == null)) {
                 issues.add(
                     ValidationIssue(
@@ -939,7 +902,6 @@ object ModelValidator {
             }
         }
 
-        // Single feed partial coverage warnings for main devices
         for ((_, device) in allDevices) {
             val feeds = powerFeedsByDevice[device.id] ?: emptyList()
             if (feeds.isNotEmpty() && device.category != com.onlyfield.assetmanager.core.model.DeviceCategory.SHELF && device.category != com.onlyfield.assetmanager.core.model.DeviceCategory.BLANK_PANEL) {
@@ -958,7 +920,6 @@ object ModelValidator {
             }
         }
 
-        // Validate PoE Mappings
         for (poe in project.poeMappings) {
             checkUuid("INVALID_POE_MAPPING_UUID", poe.id, i18n.text("text.b9bb89ac9d9e"), issues)
             trackId(poe.id, "DUPLICATE_POE_MAPPING_ID", i18n.text("text.b72c3e18b174", poe.id), seenIds, issues)
@@ -975,7 +936,6 @@ object ModelValidator {
             }
         }
 
-        // Validate Document Badges
         for (badge in project.documentBadges) {
             checkUuid("INVALID_DOCUMENT_BADGE_UUID", badge.id, i18n.text("text.41c5560480fd"), issues)
             trackId(badge.id, "DUPLICATE_DOCUMENT_BADGE_ID", i18n.text("text.d9a9317b5874", badge.id), seenIds, issues)
@@ -987,20 +947,17 @@ object ModelValidator {
     fun deriveBadges(project: Project, targetType: String, targetId: String, i18n: Messages = Messages()): List<com.onlyfield.assetmanager.core.model.DocumentBadge> {
         val result = mutableListOf<com.onlyfield.assetmanager.core.model.DocumentBadge>()
 
-        // 1. Existing stored free labels
         val freeLabels = project.documentBadges.filter {
             it.targetType == targetType && it.targetId == targetId && !it.isDerived
         }
         result.addAll(freeLabels)
 
-        // 2. Derive badges based on target
         when (targetType) {
             "DEVICE" -> {
                 val device = project.businessUnits.flatMap { it.devices }.firstOrNull { it.id == targetId }
                 if (device != null) {
                     val portIds = device.ports.map { it.id }.toSet()
 
-                    // VLAN Badges
                     val memberships = project.portVlanMemberships.filter { portIds.contains(it.portId) }
                     val vlanIds = mutableSetOf<Int>()
                     memberships.forEach { m ->
@@ -1019,7 +976,6 @@ object ModelValidator {
                         )
                     }
 
-                    // Medium Badges
                     val cables = project.cables.filter { c ->
                         (c.portAId != null && portIds.contains(c.portAId)) ||
                                 (c.portBId != null && portIds.contains(c.portBId))
@@ -1037,7 +993,6 @@ object ModelValidator {
                         )
                     }
 
-                    // PoE Badges
                     val poes = project.poeMappings.filter { portIds.contains(it.portId) }
                     if (poes.isNotEmpty()) {
                         val poeText = poes.map { "${it.role} ${it.standard}" }.distinct().joinToString()
@@ -1052,7 +1007,6 @@ object ModelValidator {
                         )
                     }
 
-                    // Power Coverage Badges
                     val feeds = project.powerFeeds.filter { it.deviceId == targetId }
                     if (feeds.isNotEmpty()) {
                         val hasA = feeds.any { it.feedType == com.onlyfield.assetmanager.core.model.PowerFeedType.PRIMARY_A }
@@ -1068,7 +1022,6 @@ object ModelValidator {
                             )
                         )
 
-                        // UPS Dependency Badges
                         val hasUps = feeds.any { f ->
                             f.feedType == com.onlyfield.assetmanager.core.model.PowerFeedType.UPS_BACKUP ||
                                     (f.sourceDeviceId != null && project.businessUnits.flatMap { it.devices }
@@ -1086,7 +1039,6 @@ object ModelValidator {
                         )
                     }
 
-                    // Open Issue Badges
                     if (device.observation?.status == com.onlyfield.assetmanager.core.model.ObservationStatus.TO_VERIFY ||
                         device.observation?.status == com.onlyfield.assetmanager.core.model.ObservationStatus.CONFLICT
                     ) {

@@ -7,18 +7,14 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-/**
- * Read-only field that opens a dropdown of [options]. With more than a few options a search box
- * is shown at the top of the list, so long lists of devices or ports stay usable.
- *
- * When [noneLabel] is set, an extra entry lets the user clear the selection ([onSelected] receives null).
- */
+/** Read-only searchable picker; [noneLabel] permits clearing. */
 @Composable
 fun <T> OptionPicker(
     label: String,
@@ -33,6 +29,7 @@ fun <T> OptionPicker(
     supportingText: String? = null,
     isError: Boolean = false,
     enabled: Boolean = true,
+    sortByName: Boolean = true,
 ) {
     val i18n = LocalMessages.current
 
@@ -44,9 +41,10 @@ fun <T> OptionPicker(
     val searchable = options.size > 7
 
     val shownText = selected?.let(optionLabel) ?: noneLabel ?: ""
-    val filtered = remember(options, query) {
-        if (query.isBlank()) options
-        else options.filter { opt ->
+    val ordered = if (sortByName && options.firstOrNull() !is Number) options.sortedForDisplay(i18n, optionLabel) else options
+    val filtered = remember(ordered, query, i18n.locale) {
+        if (query.isBlank()) ordered
+        else ordered.filter { opt ->
             optionLabel(opt).contains(query, ignoreCase = true) ||
                 (optionDetail?.invoke(opt)?.contains(query, ignoreCase = true) == true)
         }
@@ -66,7 +64,6 @@ fun <T> OptionPicker(
             singleLine = true,
             modifier = Modifier.fillMaxWidth()
         )
-        // Transparent overlay: a read-only text field does not open the menu on click by itself.
         Box(
             modifier = Modifier
                 .matchParentSize()
@@ -131,7 +128,7 @@ fun <T> OptionPicker(
     }
 }
 
-/** Picker over every value of an enum, shown with its Italian label. */
+/** Enum picker with localized labels. */
 @Composable
 fun <E : Enum<E>> EnumPicker(
     label: String,
@@ -144,6 +141,7 @@ fun <E : Enum<E>> EnumPicker(
     OptionPicker(
         label = label,
         options = values,
+        sortByName = false,
         selected = selected,
         optionLabel = valueLabel,
         onSelected = { it?.let(onSelected) },

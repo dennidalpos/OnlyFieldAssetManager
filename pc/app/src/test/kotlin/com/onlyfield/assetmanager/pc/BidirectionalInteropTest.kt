@@ -89,7 +89,6 @@ class BidirectionalInteropTest {
 
         val cable = Cable(id = UUID.randomUUID().toString(), portAId = portId1, portBId = portId2, color = "BLUE", lengthValue = 5.0)
 
-        // A08 Network entities
         val vlan = Vlan(vlanId = 10, name = "MGMT_VLAN", description = "Management Subnet")
         val subnet = Subnet(cidrBlock = "10.0.1.0/24", gatewayIp = "10.0.1.1", vlanId = "10")
         val portVlan = PortVlanMembership(portId = portId1, mode = PortVlanMode.TAGGED, taggedVlanIds = listOf(10))
@@ -100,7 +99,6 @@ class BidirectionalInteropTest {
         val video = VideoSurveillanceMapping(cameraDeviceId = devId2, channelNumber = 1)
         val customField = CustomExtraField(targetType = "DEVICE", targetId = devId1, fieldKey = "VendorWarranty", fieldValue = "Active-2028")
 
-        // A09 Power, PoE, Badges
         val powerFeed = PowerFeed(
             deviceId = devId1,
             feedName = "Feed A - UPS 1",
@@ -114,10 +112,8 @@ class BidirectionalInteropTest {
         val poe = PoeMapping(portId = portId1, role = PoeRole.PSE_SOURCE, standard = PoeStandard.IEEE_802_3BT, allocatedPowerWatts = 60.0)
         val badge = DocumentBadge(targetType = "DEVICE", targetId = devId1, label = "CORE_SWITCH", category = BadgeCategory.FREE_LABEL)
 
-        // Credentials
         val cred = Credential(id = UUID.randomUUID().toString(), username = "admin", secret = "EncryptedPass123!", type = CredentialType.PASSWORD)
 
-        // Attachment metadata
         val attachment = Attachment(
             id = UUID.randomUUID().toString(),
             name = "Piantina CED",
@@ -168,14 +164,12 @@ class BidirectionalInteropTest {
     fun testAndroidToWindowsUnencryptedRoundtrip() {
         val (originalProject, attachments) = createFullDomainProject()
 
-        // 1. Android Export Simulation (.ofam v1.7 package created via PackageSerializer)
         val exportedZipBytes = PackageSerializer.exportPackage(originalProject, attachments)
         assertTrue("Exported ZIP bytes should not be empty", exportedZipBytes.isNotEmpty())
 
         val exportedFile = File(tempFolder.root, "android_export.ofam")
         exportedFile.writeBytes(exportedZipBytes)
 
-        // 2. Windows Desktop Import
         val desktopImportRes = storageManager.importPackageFromFile(exportedFile)
         if (!desktopImportRes.validationResult.isValid) {
             println("Validation failed with issues: " + desktopImportRes.validationResult.issues)
@@ -186,11 +180,9 @@ class BidirectionalInteropTest {
         assertNotNull("Imported package should not be null", importedPkg)
         val importedProj = importedPkg!!.project
 
-        // Structural and model validation on imported project
         val valResult = ModelValidator.validateProject(importedProj)
         assertTrue("Imported project should pass structural validation", valResult.isValid)
 
-        // Verify preservation of all domain entities
         assertEquals(originalProject.id, importedProj.id)
         assertEquals(originalProject.name, importedProj.name)
         assertEquals(1, importedProj.businessUnits.size)
@@ -206,12 +198,10 @@ class BidirectionalInteropTest {
         assertEquals(1, importedProj.attachments.size)
         assertEquals(1, importedProj.credentials.size)
 
-        // Verify attachments
         assertEquals(3, importedPkg.attachments.size)
         assertTrue(importedPkg.attachments.keys.any { it.endsWith("rack_elevation.png") })
         assertTrue(importedPkg.attachments.keys.any { it.endsWith("floor_plan.jpg") })
 
-        // 3. Windows Modification and Local Atomic Save
         Thread.sleep(10) // Ensure timestamp progression for semantic version check
         val newDev = Device(
             id = UUID.randomUUID().toString(),
@@ -222,12 +212,10 @@ class BidirectionalInteropTest {
         val targetLocalFile = storageManager.saveProjectLocally(modifiedProj)
         assertTrue("Local atomic save target file should exist", targetLocalFile.exists())
 
-        // 4. Windows Export back to Android
         val windowsExportFile = File(tempFolder.root, "windows_export.ofam")
         storageManager.exportPackageToFile(modifiedProj, windowsExportFile, attachments = importedPkg.attachments)
         assertTrue(windowsExportFile.exists())
 
-        // 5. Android Import Simulation
         val androidReImportBytes = windowsExportFile.readBytes()
         val androidImportRes = PackageSerializer.importPackage(androidReImportBytes)
         assertTrue("Android re-import should be valid", androidImportRes.validationResult.isValid)
@@ -239,7 +227,6 @@ class BidirectionalInteropTest {
         assertNotNull(androidRestoredProj.businessUnits[0].devices.find { it.technicalName == "SRV-WIN-01" })
         assertEquals(3, androidRestoredPkg.attachments.size)
 
-        // Verify Semantic Comparison against the imported Android package manifest
         val comparison = ProjectComparisonEvaluator.evaluate(originalProject, importedPkg.manifest, androidRestoredPkg)
         assertEquals("Re-imported project should be NEWER_REVISION relative to original", ComparisonStatus.NEWER_REVISION, comparison.status)
 
@@ -252,19 +239,16 @@ class BidirectionalInteropTest {
         val encryptedProj = originalProject.copy(isPasswordProtected = true)
         val password = "StrongInterOpPass123!"
 
-        // 1. Android Encrypted Export
         val encryptedZipBytes = PackageSerializer.exportPackage(encryptedProj, attachments, password = password)
         assertTrue(encryptedZipBytes.isNotEmpty())
 
         val encryptedFile = File(tempFolder.root, "encrypted_android.ofam")
         encryptedFile.writeBytes(encryptedZipBytes)
 
-        // 2. Windows Import attempt without password -> fails with PASSWORD_REQUIRED
         val noPassRes = storageManager.importPackageFromFile(encryptedFile)
         assertNull(noPassRes.pkg)
         assertTrue(noPassRes.validationResult.issues.any { it.code == "PASSWORD_REQUIRED" })
 
-        // 3. Windows Import with correct password
         val correctPassRes = storageManager.importPackageFromFile(encryptedFile, password = password)
         assertTrue(correctPassRes.validationResult.isValid)
         val importedPkg = correctPassRes.pkg!!
@@ -272,12 +256,10 @@ class BidirectionalInteropTest {
         assertEquals(1, importedPkg.project.credentials.size)
         assertEquals("admin", importedPkg.project.credentials[0].username)
 
-        // 4. Windows Encrypted Export back to Android
         val reExportFile = File(tempFolder.root, "encrypted_windows.ofam")
         storageManager.exportPackageToFile(importedPkg.project, reExportFile, attachments = importedPkg.attachments, password = password)
         assertTrue(reExportFile.exists())
 
-        // 5. Android Re-import with correct password
         val reImportRes = PackageSerializer.importPackage(reExportFile.readBytes(), password = password)
         assertTrue(reImportRes.validationResult.isValid)
         assertNotNull(reImportRes.pkg)
@@ -294,11 +276,9 @@ class BidirectionalInteropTest {
         }
         val pkg1 = import1.pkg!!
 
-        // Identical comparison
         val compIdentical = ProjectComparisonEvaluator.evaluate(p1, pkg1.manifest, pkg1)
         assertEquals(ComparisonStatus.IDENTICAL, compIdentical.status)
 
-        // Newer revision
         val p1Newer = p1.copy(updatedEpochMs = p1.updatedEpochMs + 5000L)
         val zip2 = PackageSerializer.exportPackage(p1Newer)
         val pkg2 = PackageSerializer.importPackage(zip2).pkg!!
@@ -306,12 +286,10 @@ class BidirectionalInteropTest {
         val compNewer = ProjectComparisonEvaluator.evaluate(p1, pkg1.manifest, pkg2)
         assertEquals(ComparisonStatus.NEWER_REVISION, compNewer.status)
 
-        // Older revision
         val compOlder = ProjectComparisonEvaluator.evaluate(p1Newer, pkg2.manifest, pkg1)
         assertEquals(ComparisonStatus.OLDER_REVISION, compOlder.status)
         assertNotNull(compOlder.warningMessage)
 
-        // Different project
         val p2 = p1.copy(id = UUID.randomUUID().toString(), name = "Other Project")
         val zipOther = PackageSerializer.exportPackage(p2)
         val pkgOther = PackageSerializer.importPackage(zipOther).pkg!!

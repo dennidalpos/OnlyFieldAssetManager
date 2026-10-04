@@ -43,7 +43,7 @@ class ContainerUiTest {
             rule.onNodeWithText("R1 › BOX › SW").assertIsDisplayed()
             rule.onNodeWithText("Modifica oggetto").performClick()
             rule.onNode(hasSetTextAction() and hasText("SW")).performTextReplacement("SW aggiornato")
-            rule.onNodeWithText("Salva").performClick()
+            rule.onNodeWithText("Salva modifiche").performClick()
             rule.onNodeWithText("R1 › BOX › SW aggiornato").assertIsDisplayed()
             rule.onNodeWithText("Indietro").performClick()
             rule.onNodeWithText("SW aggiornato").assertIsDisplayed()

@@ -14,10 +14,7 @@ import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import java.io.FileOutputStream
 
-/**
- * Adattatore per l'integrazione con il framework di stampa nativo Android (PrintManager).
- * Consente l'anteprima di stampa, la selezione della stampante o il salvataggio diretto in PDF.
- */
+/** Android print adapter for preview, printer selection and PDF output. */
 class ProjectPrintDocumentAdapter(
     private val project: Project,
     private val filterConfig: ExportFilterConfig = ExportFilterConfig(),

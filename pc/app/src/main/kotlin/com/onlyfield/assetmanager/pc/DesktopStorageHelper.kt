@@ -7,9 +7,7 @@ import java.io.File
 import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 
-/**
- * Helper class for Windows Desktop storage, directory picking, file picking, and printing integration.
- */
+/** Desktop storage, picker and print helpers. */
 object DesktopStorageHelper {
 
     fun pickDirectory(

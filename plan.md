@@ -1,95 +1,24 @@
-# OnlyFieldAssetManager — Piano Operativo e Fasi di Sviluppo
+# Piano prodotto
 
-Data aggiornamento: 3 ottobre 2026
+Aggiornato al 4 ottobre 2026 dopo confronto con il codice.
 
-## 1. Contesto Operativo e Moduli
+## Obiettivo e limiti
 
-Editor offline per tecnici di networking e telecomunicazioni.
+OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, alimentazione, media e documenti di un progetto tecnico. Funziona offline; export e import sono manuali. Non include server, sincronizzazione automatica, cloud obbligatorio o merge automatico.
 
-- **`shared/core/`**: Modello di dominio, regole di validazione, senza dipendenze Android UI.
-- **`shared/exchange/`**: Serializzazione pacchetti `.ofam` v1.11 (legge 1.7–1.10), fusione all'import, etichette QR, cifratura AES-GCM, OpenXML XLSX, Markdown.
-- **`mobile/app/`**: App Android 14+ Jetpack Compose, Room DB, fotocamera, mappe offline, stampa.
-- **`pc/app/`**: Editor Windows 11 x64 Compose Desktop, storage esplicito, salvataggio atomico e blocco `.lock`.
+## Decisioni applicate
 
-## 2. Sintesi delle Fasi di Sviluppo
+- Android 14+ e Windows 11 x64 portable condividono modello, regole, form, configuratore e formato di scambio.
+- Il formato `.ofam` e un archivio ZIP 1.11; importa 1.7--1.10 e rifiuta le altre versioni.
+- La password del pacchetto cifra progetto e allegati con AES-GCM; la password di progetto usa PBKDF2-HMAC-SHA256.
+- Gli errori strutturali bloccano l'import; gli avvisi documentali non bloccano il salvataggio.
+- I modelli sono separati dalle istanze. Le modifiche dei modelli vengono applicate solo con un'azione esplicita.
+- La mappa usa coordinate normalizzate, contenitori annidati e percorsi cavo; immagini e PDF sono allegati offline.
+- I documenti non esportano credenziali. Il testo utente resta invariato dalla localizzazione.
+- Configuratori: dati essenziali prima, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la business unit richiede una scelta esplicita.
+- Navigazione condivisa per gruppi Lavoro, Dati tecnici, Supporto e Progetto. Gli elenchi nominali sono ordinati solo nella presentazione; porte, VLAN e unità rack mantengono il loro ordine tecnico.
+- Titolo operativo, corpo scorrevole e azioni persistenti distinguono gli editor. L'espansione delle sezioni non modifica i dati né il contratto di scambio.
 
-### Fase Android (A00–A13) — COMPLETATA (14/14)
-- **A00 [COMPLETATO]**: Struttura multi-modulo, Gradle wrapper e Compose minima.
-- **A01 [COMPLETATO]**: Modello core e contratto pacchetto `.ofam` v1.0.
-- **A02 [COMPLETATO]**: Persistenza Room, DAO, Repository e ricerca inventario.
-- **A03 [COMPLETATO]**: Export/import SAF, valutatore di confronto pacchetti.
-- **A04 [COMPLETATO]**: Credenziali integrate, cifratura PBKDF2/AES-GCM e gestione password.
-- **A05 [COMPLETATO]**: Armadi rack, modelli apparati e export PDF scheda rack.
-- **A06 [COMPLETATO]**: Planimetrie, foto, allegati media e annotazioni grafiche.
-- **A07 [COMPLETATO]**: Cablaggio fisico, percorsi condivisi e mapping pannelli.
-- **A08 [COMPLETATO]**: Rete logica, VLAN, CIDR subnet, SVI L3, LAG, WAN/VPN, videosorveglianza, campi extra.
-- **A09 [COMPLETATO]**: Alimentazione A/B, PDU, UPS, PoE e derivazione badge.
-- **A10 [COMPLETATO]**: Cestino locale, undo, sostituzione apparati, fusione duplicati e batch edit.
-- **A11 [COMPLETATO]**: Esportazione XLSX OpenXML (`t="inlineStr"`), Markdown, PDF composti e Stampa Android.
-- **A12 [COMPLETATO]**: Acquisizione mappe cartografiche offline con attribuzione (OpenTopoMap).
-- **A13 [COMPLETATO]**: Pilota Android (100 apparati), benchmarking e consegna contratto v1.7.
+## Stato
 
-### Fase Windows (W00–W05) — COMPLETATA (6/6)
-- **W00 [COMPLETATO]**: Configurazione `:pc:app`, Compose Desktop 1.12.1, JDK 21 e integrazione shared core/exchange.
-- **W01 [COMPLETATO]**: Storage Desktop, salvataggio atomico, blocco concorrente `.lock`, dialoghi password e verifica fixtures Android.
-- **W02 [COMPLETATO]**: Adattamento UI Desktop (mouse/tastiera), vista rack elevation 2D, modelli, planimetrie canvas, media, cestino e modifiche batch.
-- **W03 [COMPLETATO]**: Porting Desktop di cablaggio fisico, percorsi condivisi, permutazioni, rete logica, VLAN, CIDR subnet, SVI L3, LAG, WAN/VPN, videosorveglianza, configurazioni, campi extra, alimentazione A/B, PoE e badge documentali.
-- **W04 [COMPLETATO]**: Anteprima e stampa nativa Windows 11 (`PrinterJob`), esportazione XLSX/PDF/Markdown, cartografia Desktop e risoluzione anomalie UI Android/Desktop (`UI-01` .. `UI-07`).
-- **W05 [COMPLETATO]**: Collaudo finale di interoperabilità bidirezionale Android ↔ Windows e pacchettizzazione portable x64 (`BidirectionalInteropTest`, `createDistributable`, 73 unit test passati).
-
-### Fase v1.1 (S/O/R/F) — COMPLETATA (14/14)
-- **S01 [COMPLETATO]**: Database Android cifrato con SQLCipher, chiave protetta dal Keystore, migrazione del DB in chiaro, backup disattivato.
-- **S02 [COMPLETATO]**: Password di progetto con PBKDF2-HMAC-SHA256 e salt; hash SHA-256 legacy ricalcolati al primo sblocco.
-- **O01 [COMPLETATO]**: Procedura guidata «Nuovo sito» condivisa (`core.onboarding`) su Android e Windows.
-- **O02 [COMPLETATO]**: Schermata iniziale con azioni grandi e «Continua: «ultimo progetto»».
-- **O03 [COMPLETATO]**: Home progetto Android con ricerca e azioni rapide; flusso sostituito da MAP02.
-- **R01 [COMPLETATO]**: Editor a pagina intera su Android (`EditScreen`), rotazione e Indietro senza perdita di dati.
-- **R02 [COMPLETATO]**: Editor nel pannello laterale su Windows (`MasterDetailHost`/`EditPanel`), Ctrl+S / Esc.
-- **R03 [COMPLETATO]**: Icone Material Symbols e tema scuro su entrambe le app.
-- **R04 [COMPLETATO]**: Livello dati Android diviso per area dietro `ProjectRepository`; mapper per area.
-- **F01 [COMPLETATO]**: Foto dalla fotocamera collegate ad apparato, rack, area o progetto.
-- **F02 [COMPLETATO]**: Scansione QR/barcode offline (CameraX + ML Kit), numero di serie (contratto 1.8), lettore USB su Windows.
-- **F03 [COMPLETATO]**: Etichette QR `ofam://` e foglio etichette PDF condiviso.
-- **F04 [COMPLETATO]**: Fusione a tre vie all'import con scelta per elemento.
-- **F05 [COMPLETATO]**: Mappe su Android scaricate su richiesta (chiude RES-07).
-
-## 3. Manutenzione dopo v1.1
-
-- **RES-08 completato**: conferma prima di cambiare elemento, aprire un altro editor o cambiare tab interne Windows; lo scarto inizializza un nuovo form anche per lo stesso elemento.
-- **MAP01 completato (chiude RES-09)**: Windows scarica 3 × 3 tessere OpenTopoMap su richiesta, mostra un'anteprima e salva un allegato PNG con attribuzione nei pixel e nei metadati. Riutilizzabile come planimetria, nei documenti e nello scambio `.ofam`. Fonte unica OpenTopoMap su entrambe le app, zoom 1–17, nessuna chiave API.
-- Il tracker `PROJECT_STATUS.json` contiene soltanto lavoro aperto; le evidenze degli interventi completati restano in `roadmap.md`.
-
-
-## 4. MAP02 — Navigazione BU/piano e mappa interattiva
-
-Implementazione del piano approvato: Android e Windows usano progetto → BU → piano → mappa. Area resta l'entità dei piani/locali/zone, mantenendo ID, sedi e riferimenti. Nuovo sito richiede una BU e un piano e accetta ulteriori BU vuote; password facoltativa, nessun primo apparato obbligatorio. Oggetti aggiunti dal catalogo generico ricercabile e tipologie personalizzate con categoria di base e campi extra.
-
-Mappa sempre disponibile, informazioni/foto nella stessa scheda, posizioni salvate al rilascio, disposizione iniziale deterministica, zoom/panoramica/adattamento condividono le conversioni del core. I cavi hanno percorsi per piano e riferimenti a porte/apparati, con estremità ignote e contesto delle destinazioni fuori piano. Il pulsante QR conserva lo scanner esistente. Inventario e altri strumenti sono nel menu.
-
-Planimetria dal dispositivo o dagli allegati, copiata nell'archivio: immagine diretta, PDF con pagina selezionata e anteprime numerate. PdfRenderer Android e PDFBox 3.0.8 Windows, rendering fuori dal thread UI. Coordinate riferite alla superficie effettiva e schema disponibile su errore o senza sfondo.
-
-Contratto `.ofam` 1.10 approvato, lettura 1.7–1.9 e rifiuto di versioni non supportate; tipologie, geometrie, foto e contenimento incluse nella fusione. Migrazione Android 12 → 13 additiva, transazionale e preceduta da backup cifrato. Scambio dei nuovi dati richiede due app aggiornate. Verifiche ed eventuali limiti di collaudo in [roadmap.md](roadmap.md) e [docs/05-testing-and-benchmarks.md](docs/05-testing-and-benchmarks.md).
-
-## 5. MAP03 — Contenitori e cablaggio logico sulla mappa
-
-Rack e apparati di una tipologia che abilita «Può contenere oggetti» possono contenere rack o apparati in più livelli; i cavi non sono contenitori. Ogni figlio ha al massimo un genitore. Riferimenti mancanti, autoriferimenti, cicli e assegnazioni a oggetti non contenitori sono errori strutturali.
-
-La gerarchia è la sorgente condivisa per mappa, form, spostamenti, modifiche multiple, cestino, undo, Room e pacchetti. L’associazione `rackId` preesistente è convertita in una relazione senza alterare il pacchetto letto; continua a indicare il rack fisico più vicino e conserva U, lato, porte e campi non mostrati. Il piano deriva dal contenitore radice, mentre la BU resta l’appartenenza organizzativa. Eliminare un contenitore trasferisce i figli al suo genitore, oppure al piano se era radice; il ripristino ricrea relazione, collocazione e montaggio.
-
-La mappa mostra solo radici e oggetti indipendenti. Aprire un contenitore porta a una sola sottomodale con percorso leggibile; Indietro/Esc risale senza cambiare piano, zoom o panoramica. Rack mantiene fronte/retro e U; gli altri contenitori mostrano i figli. Da qui è possibile creare un figlio, assegnare un oggetto sullo stesso piano o rimuoverlo dal contenitore. Prima di abbandonare una bozza è richiesta conferma; al ritorno la scheda legge il progetto aggiornato.
-
-Le linee provengono esclusivamente dai cavi configurati. Ogni estremità è proiettata sulla radice visibile e segue lo spostamento di quella radice. Cavi fra la stessa coppia sono una linea con conteggio e scelta del singolo cavo; quelli con entrambe le estremità nella stessa radice sono un indicatore selezionabile. Il percorso dell’aggregato è quello del primo ID, mentre ciascun cavo conserva il proprio percorso modificabile. Restano distinti destinazioni fuori piano ed estremità ignote o scollegate.
-
-Il contratto 1.10 include relazioni e proprietà dei contenitori, anche cifrate. La fusione usa l’identità del figlio: genitori concorrenti sono un conflitto sul figlio. Room 13 aggiunge le relazioni al progetto con migrazione 12 → 13 e backup SQLCipher della versione sorgente. Sono leggibili 1.7–1.9; versioni successive vengono rifiutate.
-
-## 6. Requisiti consolidati e limiti aperti
-
-Il prodotto resta offline-first: nessun server, sincronizzazione automatica, merge automatico o cloud obbligatorio. Identificativi stabili, osservazioni con fonte/data, errori strutturali distinti dagli avvisi documentali, allegati originali, export manuali PDF/XLSX/Markdown e esclusione dei segreti rimangono requisiti applicati. Modelli di apparato sono definizioni separate dalle istanze; mapping di pannelli, rete logica, alimentazione e percorsi di cavo restano documentali e non generano inferenze.
-
-I limiti verificati e il lavoro non completato sono nel tracker; la roadmap conserva la cronologia e le prove. Il precedente piano per step A00–W05 è stato ritirato perché sostituito da questo piano e dai documenti di dominio.
-
-## 7. Configuratore grafico degli oggetti
-
-Piano approvato: configuratore condiviso Android/Windows, disegno tecnico parametrico, rack → apparato → porta → collegamento → destinazione, gruppi rame/fibra/console/management/alimentazione, pannelli fronte/retro con passaggi espliciti, attacchi liberi e combo, catene tra rack e cavallotti. Verde significa percorso censito completo; nessuna misura di traffico. Modelli circoscritti al progetto per tutte le famiglie, selezione separata dal nome e aggiornamento delle istanze soltanto tramite applicazione esplicita con anteprima e scelta sulle rimozioni collegate.
-
-Persistenza Room 14, migrazione additiva con backup cifrato; `.ofam` 1.11 legge 1.7–1.10. Nessuna inferenza sui lati dei progetti precedenti. Operazioni annidate salvate con un’unica modifica annullabile; preset integrati con i valori del progetto. Implementazione e fonti in [docs/10-object-configurator.md](docs/10-object-configurator.md); prove del clic/destinazione/salvataggio e della protezione delle bozze superate. Le evidenze finali restano nella roadmap.
+Le funzionalita Android, Desktop e configuratore presenti nel codice sono completate. I residui operativi sono mantenuti esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile e in [roadmap.md](roadmap.md).

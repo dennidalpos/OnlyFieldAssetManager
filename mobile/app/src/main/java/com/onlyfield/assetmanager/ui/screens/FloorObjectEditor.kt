@@ -10,6 +10,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -23,6 +24,7 @@ import com.onlyfield.assetmanager.ui.components.*
 import java.io.File
 import java.util.UUID
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: MapObjectDraft, close: () -> Unit) {
     val i18n = LocalMessages.current
@@ -47,26 +49,27 @@ internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: 
         if (allowed) shoot() else vm.notifyError(i18n.text("text.0ac53f93c8a1"))
     }
     DisposableEffect(Unit) { onDispose { temporary.forEach { it.delete() } } }
-    EditScreen(com.onlyfield.assetmanager.core.model.ObjectCatalog.displayName(initial.type, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, confirmEnabled = draft.errors(project, i18n = i18n).isEmpty() && vm.busy == null) {
+    EditScreen(configuratorTitle(project, initial, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty() && vm.busy == null, confirmLabel = configuratorAction(project, initial, i18n)) {
         val dirty = LocalMarkDirty.current
         SideEffect { markDirty = dirty }
         ObjectFields(project, draft) { draft = it }
-        Text(i18n.text("text.db7291baccc1"), style = MaterialTheme.typography.titleMedium)
-        project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
-            Text(a.name)
-            MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
-            TextButton(onClick = { removed = removed + a.id; dirty() }) { Text(i18n.text("text.960630ee842c")) }
-        }
-        photos.toList().forEach { uri ->
-            Text(uri.lastPathSegment ?: i18n.text("text.7490e08564b3"))
-            UriPhotoThumbnail(uri)
-            TextButton(onClick = { photos.remove(uri); dirty() }) { Text(i18n.text("text.f5115aa0e57e")) }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text(i18n.text("text.0f9162856d60")) }
-            OutlinedButton(onClick = {
-                if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) shoot() else permission.launch(Manifest.permission.CAMERA)
-            }) { Text(i18n.text("text.d88211a9e4b9")) }
+        ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n) {
+            project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
+                Text(a.name)
+                MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                TextButton(onClick = { removed = removed + a.id; dirty() }) { Text(i18n.text("text.960630ee842c")) }
+            }
+            photos.toList().forEach { uri ->
+                Text(uri.lastPathSegment ?: i18n.text("text.7490e08564b3"))
+                UriPhotoThumbnail(uri)
+                TextButton(onClick = { photos.remove(uri); dirty() }) { Text(i18n.text("text.f5115aa0e57e")) }
+            }
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = { picker.launch(arrayOf("image/*")) }) { Text(i18n.text("text.0f9162856d60")) }
+                OutlinedButton(onClick = {
+                    if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) shoot() else permission.launch(Manifest.permission.CAMERA)
+                }) { Text(i18n.text("text.d88211a9e4b9")) }
+            }
         }
     }
 }

@@ -36,7 +36,7 @@ class MasterDetailTest {
         }
         rule.onNodeWithText("Modifica apparato").assertIsDisplayed()
         rule.onNodeWithText("SW-01").performTextReplacement("SW-02")
-        rule.onNodeWithText("Annulla").performClick()
+        rule.onNodeWithText("Annulla modifiche").performClick()
         rule.onNodeWithText("Scartare le modifiche?").assertIsDisplayed()
         rule.onNodeWithText("Continua a modificare").performClick()
         rule.onNodeWithText("Salva").performClick()
@@ -66,7 +66,7 @@ class MasterDetailTest {
         rule.onNodeWithText("Secondo").performClick()
         rule.onNodeWithText("Scarta").performClick()
         rule.onNodeWithText("Apparato 2").assertIsDisplayed()
-        rule.onNodeWithText("Annulla").performClick()
+        rule.onNodeWithText("Annulla modifiche").performClick()
         rule.onNodeWithText("Scartare le modifiche?").assertDoesNotExist()
     }
 
@@ -94,7 +94,7 @@ class MasterDetailTest {
         rule.onNode(hasSetTextAction() and hasText("SW-01 modificato")).assertExists()
         rule.onNodeWithText("+ Nuovo apparato").performSemanticsAction(SemanticsActions.OnClick) { it() }
         rule.onNodeWithText("Continua a modificare").performClick()
-        rule.onNodeWithText("Salva").performClick()
+        rule.onNodeWithText("Salva modifiche").performClick()
         assertEquals("SW-01 modificato", project.businessUnits.single().devices[0].technicalName)
         assertEquals("SW-02", project.businessUnits.single().devices[1].technicalName)
         rule.onNodeWithText("Modifica").performSemanticsAction(SemanticsActions.OnClick) { it() }

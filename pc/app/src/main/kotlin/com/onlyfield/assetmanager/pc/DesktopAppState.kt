@@ -28,7 +28,7 @@ import com.onlyfield.assetmanager.exchange.MergeSide
 import com.onlyfield.assetmanager.exchange.ProjectMerger
 import java.io.File
 
-/** Main areas of the editor, in navigation-rail order. */
+/** Editor areas in navigation order. */
 enum class AppSection(private val titleKey: String, val icon: ImageVector, val needsProject: Boolean = true) {
     INVENTORY("text.a26fdd05a46b", SymbolIcons.inventory2),
     RACKS("text.4cd265c2b8c6", SymbolIcons.dns),
@@ -50,7 +50,7 @@ sealed interface AppDialog {
     data class ImportPassword(val file: File, val error: String? = null) : AppDialog
     data object ManagePassword : AppDialog
     data class Compare(val comparison: ProjectComparison, val pkg: ProjectPackage, val password: String?) : AppDialog
-    /** Merge conflicts answered one at a time (F04). */
+    /** Merge conflicts resolved one at a time. */
     data class Merge(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap()) : AppDialog {
         val current: MergeConflict? get() = result.conflicts.getOrNull(choices.size)
     }
@@ -58,10 +58,7 @@ sealed interface AppDialog {
     data object Validation : AppDialog
 }
 
-/**
- * State and actions of the desktop editor, independent from the composables that render it.
- * Every project change goes through [update], which re-validates and auto-saves to the data folder.
- */
+/** Desktop state; [update] validates and saves project changes. */
 class DesktopAppState(val storage: DesktopStorageManager) {
 
     var project by mutableStateOf<Project?>(null)
@@ -73,7 +70,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     private var trashBeforeEdit: List<TrashItem>? = null
 
-    /** Confirmed trash changes share the same local package as the project. */
+    /** Persisted trash for the open project. */
     var trash: List<TrashItem>
         get() = trashState
         set(value) {
@@ -85,7 +82,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             } catch (e: Exception) { error = i18n.text("trash.saveFailed", e.message) }
         }
 
-    /** Previous versions of the open project, for "Annulla" (most recent last). */
+    /** Project history for undo. */
     private val history = ArrayDeque<Triple<Project, List<TrashItem>, String>>()
     var canUndo by mutableStateOf(false)
         private set
@@ -112,7 +109,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     var dataDir by mutableStateOf(storage.checkDataDirectoryStatus())
         private set
 
-    // UI preferences live next to the data, so the portable copy keeps them.
+    // Portable settings live beside project data.
     private val settingsFile get() = File(storage.dataDir, "settings.properties")
 
     var darkTheme by mutableStateOf(loadSettings().getProperty("theme") == "dark")
@@ -124,7 +121,6 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             val props = loadSettings().apply { setProperty("theme", if (darkTheme) "dark" else "light") }
             settingsFile.outputStream().use { props.store(it, null) }
         } catch (_: Exception) {
-            // Preference not saved: the theme still applies to this session.
         }
     }
 
@@ -180,7 +176,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     }
 
     fun saveMapObject(draft: com.onlyfield.assetmanager.core.forms.MapObjectDraft, photos: List<File>, removed: Set<String>): Boolean =
-        saveMapEdit(photos, draft.targetType, draft.id, { p -> draft.apply(p, i18n = i18n).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } }) != null
+        saveMapEdit(photos, draft.targetType, draft.id) { p -> draft.apply(p, i18n = i18n).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } } != null
 
     fun importFloorplan(file: File, areaId: String): Attachment? =
         saveMapEdit(listOf(file), AttachmentTargetType.AREA, areaId, { it })?.singleOrNull()
@@ -199,7 +195,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
                     targetType = type, targetId = targetId)
                 created += storage.attachmentFile(before.id, att)
                 storage.storeAttachmentFile(before.id, att, source)
-                att.copy(relativePath = com.onlyfield.assetmanager.exchange.AttachmentFiles.entryName(att))
+                att.copy(relativePath = AttachmentFiles.entryName(att))
             }
             val edited = transform(before)
             val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
@@ -216,7 +212,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         }
     }
 
-    /** Copies [file] into the data folder and adds it to the project as an attachment. */
+    /** Copies [file] into project attachments. */
     fun addAttachment(file: File, name: String, classification: AttachmentClassification) {
         val p = project ?: return
         val attachment = Attachment(
@@ -255,19 +251,19 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             attributionText = snapshot.attributionText,
         ).let { it.copy(relativePath = AttachmentFiles.entryName(it)) }
         val target = storage.attachmentFile(p.id, attachment)
-        try {
+        return try {
             java.nio.file.Files.createDirectories(target.parentFile.toPath())
             java.nio.file.Files.write(target.toPath(), snapshot.imageBytes)
             update(ProjectEdits.addAttachment(p, attachment), i18n.text("text.18c905e167a3", attachment.name))
-            return error == null
+            error == null
         } catch (e: java.io.IOException) {
             java.nio.file.Files.deleteIfExists(target.toPath())
             error = i18n.text("text.def5b23c35ea", e.message)
-            return false
+            false
         }
     }
 
-    /** Restores the project as it was before the last change. */
+    /** Restores the previous project state. */
     fun undo() = requestChange { undoNow() }
 
     private fun undoNow() {
@@ -298,7 +294,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     fun addToTrash(item: TrashItem) {
         if (trashBeforeEdit == null) trashBeforeEdit = trashState
-        trashState = trashState + item
+        trashState += item
     }
 
     fun restoreTrash(item: TrashItem) {
@@ -341,9 +337,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         }
     }
 
-    // --- Project lifecycle -------------------------------------------------------------------
 
-    /** Creates the project built by the "Nuovo sito" wizard and opens it. */
+    /** Creates and opens the wizard project. */
     fun createProject(wizard: NewSiteWizard) {
         val newPassword = wizard.password
         val newProject = wizard.buildProject().copy(isPasswordProtected = newPassword != null)
@@ -369,7 +364,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         DesktopStorageHelper.pickOpenFile(i18n = i18n)?.let { importFile(it) }
     }
 
-    /** Opens a project saved in the data folder, replacing the current one without comparison. */
+    /** Opens a saved project without comparison. */
     fun openStored(file: File) = requestChange { importFile(file, password = null, compare = false) }
 
     fun importFile(file: File, password: String? = null, compare: Boolean = true) {
@@ -381,7 +376,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             return
         }
         val issuesFound = result.validationResult.issues
-        if (issuesFound.any { it.code == "PASSWORD_REQUIRED" || it.code == "INVALID_PACKAGE_PASSWORD" }) {
+        if (issuesFound.any { ((it.code == "PASSWORD_REQUIRED") || (it.code == "INVALID_PACKAGE_PASSWORD")) }) {
             dialog = AppDialog.ImportPassword(file, error = if (password != null) i18n.text("text.972b256c2416") else null)
             return
         }
@@ -414,7 +409,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         }
     }
 
-    /** Three-way merge of the package into the open copy; without conflicts it is applied at once. */
+    /** Merges a package into the open project. */
     fun startMerge(pkg: ProjectPackage) {
         val current = project ?: return
         var baseError: String? = null
@@ -436,7 +431,6 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     private fun applyMerge(merge: AppDialog.Merge) {
         dialog = null
         storage.extractAttachments(merge.pkg)
-        // Through update(): the merge can be undone with Ctrl+Z like any other change.
         update(merge.result.resolve(merge.choices, i18n = i18n), i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size))
         rememberSyncBase(merge.pkg.project, password)
     }
@@ -459,7 +453,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         }
     }
 
-    /** Returns an error message, or null when the password was changed. */
+    /** Returns null when the password changes. */
     fun changePassword(current: String, newPassword: String, confirm: String): String? {
         val p = project ?: return i18n.text("text.f6a2e7b34cdb")
         if (password != null && current != password) return i18n.text("text.0ab6e626d98f")
@@ -488,9 +482,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         storage.releaseAllLocks()
     }
 
-    // --- Validation navigation ---------------------------------------------------------------
 
-    /** Section where the entity with [id] is edited, if it exists. */
+    /** Editor section for [id], when present. */
     fun sectionOf(id: String?): AppSection? {
         val p = project ?: return null
         if (id == null) return null

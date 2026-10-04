@@ -13,7 +13,7 @@ import com.onlyfield.assetmanager.core.model.ReportSelection
 import java.text.SimpleDateFormat
 import java.util.Date
 
-/** One line of a printed/PDF report. */
+/** Printed or PDF report line. */
 sealed interface ReportLine {
     val text: String
 
@@ -25,10 +25,7 @@ sealed interface ReportLine {
     data object Spacer : ReportLine { override val text = "" }
 }
 
-/**
- * Builds the content of the technical report from the project, honouring the section selection and
- * the confidentiality filter. Credentials are never included.
- */
+/** Builds selected report content without credentials. */
 object ReportContent {
 
     private fun allowed(classification: AttachmentClassification, filter: ExportFilterConfig) = when (classification) {

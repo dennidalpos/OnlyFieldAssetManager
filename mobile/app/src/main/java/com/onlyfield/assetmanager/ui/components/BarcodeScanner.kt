@@ -24,10 +24,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import com.google.mlkit.vision.barcode.BarcodeScanning
 
-/**
- * Full-page camera view that reads the first QR code or barcode and returns its text.
- * ML Kit's model is bundled in the APK, so scanning works offline.
- */
+/** Full-page offline QR/barcode scanner. */
 @Composable
 fun BarcodeScanner(onCode: (String) -> Unit, onClose: () -> Unit, hint: String = LocalMessages.current.text("text.75bf8546adbd")) {
     val i18n = LocalMessages.current
@@ -57,8 +54,8 @@ fun BarcodeScanner(onCode: (String) -> Unit, onClose: () -> Unit, hint: String =
                     executor,
                     MlKitAnalyzer(listOf(scanner), ImageAnalysis.COORDINATE_SYSTEM_VIEW_REFERENCED, executor) { result ->
                         val code = result?.getValue(scanner)?.firstOrNull()?.rawValue
-                        // The analyzer keeps running until disposed: deliver only the first read.
-                        if (code != null && !delivered) {
+                        // Deliver only the first read.
+                        if ((code != null) && !delivered) {
                             delivered = true
                             currentOnCode(code)
                         }

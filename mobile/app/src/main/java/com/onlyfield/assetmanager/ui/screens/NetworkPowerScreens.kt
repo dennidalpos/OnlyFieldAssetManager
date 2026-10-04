@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.compose.foundation.layout.*
@@ -70,30 +71,30 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
                         ItemCard(i18n.text("text.15fd0dfb7614", v.vlanId, v.name), listOf(v.scopeType.toDisplayString(i18n = i18n), v.description.orEmpty()), onClick = { vlan = EditTarget(v) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i18n.text("text.da4da5c165af", v.vlanId), i18n.text("text.17c0edc568d1")) { ProjectEdits.deleteVlan(it, v.id) } }))
                     }
-                    1 -> entityItems(project.subnets, i18n.text("text.446498be42fe"), { it.id }) { s ->
+                    1 -> entityItems(project.subnets.sortedForDisplay(i18n) { it.name ?: it.cidrBlock }, i18n.text("text.446498be42fe"), { it.id }) { s ->
                         val v = project.vlans.find { it.id == s.vlanId }
                         ItemCard(s.cidrBlock + (s.name?.let { " · $it" } ?: ""), listOf(listOfNotNull(s.gatewayIp?.let { i18n.text("text.87b3d4c8eb9f", it) }, v?.let { i18n.text("text.da4da5c165af", it.vlanId) }).joinToString(" · ")),
                             onClick = { subnet = EditTarget(s) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(s.cidrBlock, i18n.text("text.2c102aea66fb")) { ProjectEdits.deleteSubnet(it, s.id) } }))
                     }
-                    2 -> entityItems(project.logicalInterfaces, i18n.text("text.22e22d133b84"), { it.id }) { i ->
+                    2 -> entityItems(project.logicalInterfaces.sortedForDisplay(i18n) { it.name }, i18n.text("text.22e22d133b84"), { it.id }) { i ->
                         ItemCard("${index.deviceName(i.deviceId, i18n = i18n)} › ${i.name}", listOf(listOfNotNull(i.ipAddress, i.subnetCidr, vlanLabel(i.vlanId)).joinToString(" · ")),
                             onClick = { iface = EditTarget(i) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i.name, i18n.text("text.15971cc8f189")) { ProjectEdits.deleteLogicalInterface(it, i.id) } }))
                     }
-                    3 -> entityItems(project.wanVpnConnections, i18n.text("text.acd5d0fdeec2"), { it.id }) { c ->
+                    3 -> entityItems(project.wanVpnConnections.sortedForDisplay(i18n) { it.name }, i18n.text("text.acd5d0fdeec2"), { it.id }) { c ->
                         val local = c.localEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.localEndpointSiteDescription ?: "?"
                         val remote = c.remoteEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.remoteEndpointSiteDescription ?: "?"
                         ItemCard(c.name, listOf("$local → $remote", listOfNotNull(c.providerOrCarrier, c.bandwidth).joinToString(" · ")), badge = c.type.toDisplayString(i18n = i18n),
                             onClick = { wan = EditTarget(c) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(c.name, i18n.text("text.36f755a3cda8")) { ProjectEdits.deleteWanVpnConnection(it, c.id) } }))
                     }
-                    4 -> entityItems(project.deviceConfigurations, i18n.text("text.c15c34e10908"), { it.id }) { c ->
+                    4 -> entityItems(project.deviceConfigurations.sortedForDisplay(i18n) { it.title }, i18n.text("text.c15c34e10908"), { it.id }) { c ->
                         ItemCard("${index.deviceName(c.deviceId, i18n = i18n)} › ${c.title}", listOf(i18n.text("text.adab2670eb2a", c.configText?.lines()?.size ?: 0, formatDateTime(c.capturedEpochMs))),
                             onClick = { config = EditTarget(c) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(c.title, i18n.text("text.fb507a93e55d")) { ProjectEdits.deleteDeviceConfiguration(it, c.id) } }))
                     }
-                    else -> entityItems(project.customExtraFields, i18n.text("text.ca56999e82d8"), { it.id }) { f ->
+                    else -> entityItems(project.customExtraFields.sortedForDisplay(i18n) { it.fieldKey }, i18n.text("text.ca56999e82d8"), { it.id }) { f ->
                         ItemCard("${f.fieldKey}: ${f.fieldValue}", listOf(index.targetLabel(f.targetType, f.targetId, i18n = i18n)), onClick = { extra = EditTarget(f) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(f.fieldKey, i18n.text("text.b43abaee4bcd")) { ProjectEdits.deleteCustomExtraField(it, f.id) } }))
                     }
@@ -135,7 +136,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, i18n.text("text.a1f614a904b2"), error = errors["cidrBlock"], hint = i18n.text("text.ee4725fa1904"), kind = FieldKind.IP)
             FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, i18n.text("text.41ed52921661"), error = errors["gatewayIp"], kind = FieldKind.IP)
             OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
-                { form = form.copy(vlanRefId = it?.id) }, noneLabel = i18n.text("text.b60b955a9981"))
+                { form = form.copy(vlanRefId = it?.id) }, sortByName = false, noneLabel = i18n.text("text.b60b955a9981"))
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.5086900635fe"))
             FormField(form.description, { form = form.copy(description = it) }, i18n.text("text.6fb818621896"))
         }
@@ -154,7 +155,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, i18n.text("text.ebb396f2d486"), error = errors["ipAddress"], kind = FieldKind.IP)
             FormField(form.subnetCidr, { form = form.copy(subnetCidr = it) }, i18n.text("text.7cfdb8aaa25f"), error = errors["subnetCidr"], kind = FieldKind.IP)
             OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
-                { form = form.copy(vlanId = it?.vlanId) }, noneLabel = i18n.text("text.b60b955a9981"))
+                { form = form.copy(vlanId = it?.vlanId) }, sortByName = false, noneLabel = i18n.text("text.b60b955a9981"))
             FormField(form.macAddress, { form = form.copy(macAddress = it) }, "MAC", error = errors["macAddress"])
             LabeledCheckbox(form.isL3, { form = form.copy(isL3 = it) }, i18n.text("text.3d62d85ca195"))
         }
@@ -236,7 +237,7 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
             SubTabs(listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.196b8d6896ac", project.documentBadges.size)), tab) { tab = it }
             LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (tab) {
-                    0 -> entityItems(project.powerFeeds, i18n.text("text.90bbe6100ed6"), { it.id }) { f ->
+                    0 -> entityItems(project.powerFeeds.sortedForDisplay(i18n) { "${index.deviceName(it.deviceId, i18n = i18n)} ${it.feedName}" }, i18n.text("text.90bbe6100ed6"), { it.id }) { f ->
                         ItemCard("${index.deviceName(f.deviceId, i18n = i18n)} · ${f.feedName}", listOf(
                             (f.sourceDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: f.sourceOutletDescription)?.let { i18n.text("text.4bc711ab248c", it) }.orEmpty(),
                             listOfNotNull(f.voltageVolts?.let { i18n.text("text.edb2066c2a30", it) }, f.loadWatts?.let { i18n.text("text.cd49315c743a", formatNumber(it)) }, f.observedRuntimeMinutes?.let { i18n.text("text.2dc280aa0f83", it) }).joinToString(" · ")
@@ -248,7 +249,7 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
                             badge = p.role.toDisplayString(i18n = i18n), onClick = { poe = EditTarget(p) },
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i18n.text("text.3685af18e07a", index.portLabel(p.portId)), i18n.text("text.a4922144c86d")) { ProjectEdits.deletePoeMapping(it, p.id) } }))
                     }
-                    else -> entityItems(project.documentBadges, i18n.text("text.eb3e34b0bacb"), { it.id }) { b ->
+                    else -> entityItems(project.documentBadges.sortedForDisplay(i18n) { it.label }, i18n.text("text.eb3e34b0bacb"), { it.id }) { b ->
                         ItemCard(b.label, listOf(index.targetLabel(b.targetType, b.targetId, i18n = i18n)), badge = b.category.toDisplayString(i18n = i18n),
                             onClick = if (b.isDerived) null else ({ badge = EditTarget(b) }),
                             menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(b.label, i18n.text("text.fc7c2dba7445")) { ProjectEdits.deleteDocumentBadge(it, b.id) } }))

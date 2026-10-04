@@ -3,6 +3,13 @@ package com.onlyfield.assetmanager.pc.ui.components
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -18,7 +25,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-// --- Confirmation of destructive actions -------------------------------------------------------
 
 data class ConfirmRequest(
     val title: String,
@@ -28,7 +34,7 @@ data class ConfirmRequest(
     val onConfirm: () -> Unit,
 )
 
-/** Asks the user to confirm an action. Provided by [ConfirmHost]. */
+/** Requests action confirmation. */
 val LocalConfirm = staticCompositionLocalOf<(ConfirmRequest) -> Unit> { { it.onConfirm() } }
 
 @Composable
@@ -58,9 +64,9 @@ fun ConfirmHost(content: @Composable () -> Unit) {
     }
 }
 
-// --- Dialog and form building blocks -----------------------------------------------------------
 
-/** Dialog for short forms; entity editors use [EditPanel]. */
+/** Dialog for short forms. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun FormDialog(
     title: String,
@@ -69,27 +75,33 @@ fun FormDialog(
     confirmEnabled: Boolean = true,
     confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     width: androidx.compose.ui.unit.Dp = 560.dp,
+    validationMessage: String? = null,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val i18n = LocalMessages.current
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        modifier = Modifier.width(width),
-        title = { Text(title) },
-        text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().heightIn(max = 560.dp).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                content = content
-            )
-        },
-        confirmButton = { Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("text.18c9d912a210")) } }
-    )
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        BoxWithConstraints(Modifier.padding(24.dp)) {
+            Surface(Modifier.widthIn(max = width).heightIn(max = (maxHeight - 48.dp).coerceAtMost(720.dp)),
+                shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
+                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    Text(title, style = MaterialTheme.typography.headlineSmall)
+                    HorizontalDivider()
+                    Column(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
+                    HorizontalDivider()
+                    if (!confirmEnabled) Text(validationMessage ?: i18n.text("ux.completeRequired"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) }
+                        Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) }
+                    }
+                }
+            }
+        }
+    }
 }
 
-/** Text field that shows [error] below itself and turns red when it is not null. */
+/** Field that displays [error]. */
 @Composable
 fun FormField(
     value: String,
@@ -101,7 +113,6 @@ fun FormField(
     singleLine: Boolean = true,
     minLines: Int = 1,
 ) {
-    // Errors appear only once the user has typed something, not on a freshly opened form.
     var touched by remember { mutableStateOf(value.isNotEmpty()) }
     val shownError = error?.takeIf { touched }
     val markDirty = LocalMarkDirty.current
@@ -120,15 +131,15 @@ fun FormField(
 @Composable
 fun LabeledCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
     val markDirty = LocalMarkDirty.current
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Checkbox(checked = checked, onCheckedChange = { markDirty(); onCheckedChange(it) })
-        Text(label)
+    Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(checked, role = Role.Checkbox, onValueChange = { markDirty(); onCheckedChange(it) }), verticalAlignment = Alignment.CenterVertically) {
+        Checkbox(checked = checked, onCheckedChange = null)
+        Text(label, modifier = Modifier.weight(1f))
     }
 }
 
-// --- Section layout ------------------------------------------------------------------------------
 
-/** Title row of a section with an optional search box and the primary actions on the right. */
+/** Section header with search and actions. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SectionHeader(
     title: String,
@@ -137,16 +148,16 @@ fun SectionHeader(
     searchQuery: String? = null,
     onSearchChange: ((String) -> Unit)? = null,
     searchPlaceholder: String = LocalMessages.current.text("text.30109da716dd"),
-    /** Enter in the search box; USB barcode readers type the code and press Enter. */
+    /** Enter handles keyboard and USB-reader input. */
     onSearchSubmit: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
-    Row(
+    FlowRow(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(modifier = Modifier.weight(1f)) {
+        Column(modifier = Modifier.widthIn(min = 180.dp).weight(1f)) {
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
             subtitle?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -158,7 +169,7 @@ fun SectionHeader(
                 onValueChange = onSearchChange,
                 placeholder = { Text(searchPlaceholder) },
                 singleLine = true,
-                modifier = Modifier.width(280.dp).onPreviewKeyEvent { e ->
+                modifier = Modifier.widthIn(max = 280.dp).onPreviewKeyEvent { e ->
                     if (onSearchSubmit != null && e.type == KeyEventType.KeyDown && (e.key == Key.Enter || e.key == Key.NumPadEnter)) {
                         onSearchSubmit(); true
                     } else false
@@ -172,7 +183,8 @@ fun SectionHeader(
     }
 }
 
-/** One entity in a list: title, detail lines and the row actions (edit, delete…). */
+/** List entity with row actions. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ItemCard(
     title: String,
@@ -180,28 +192,30 @@ fun ItemCard(
     modifier: Modifier = Modifier,
     badge: String? = null,
     leading: (@Composable () -> Unit)? = null,
+    selected: Boolean = false,
+    onClick: (() -> Unit)? = null,
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        modifier = modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick).semantics { this.selected = selected } else it },
+        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
-        Row(
+        FlowRow(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            leading?.invoke()
-            Column(modifier = Modifier.weight(1f)) {
+            leading?.let { Row(verticalAlignment = Alignment.CenterVertically) { it() } }
+            Column(modifier = Modifier.widthIn(min = 200.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(title, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(title, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     badge?.let { Tag(it) }
                 }
                 details.filter { it.isNotBlank() }.forEach {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically, content = actions)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) { actions() }
         }
     }
 }
@@ -221,7 +235,7 @@ fun EditButton(onClick: () -> Unit) {
     TextButton(onClick = { changeDetail(onClick) }) { Text(i18n.text("text.49e493ba9d9c")) }
 }
 
-/** Delete action that always asks for confirmation first. */
+/** Delete action with confirmation. */
 @Composable
 fun DeleteButton(itemName: String, onDelete: () -> Unit, label: String = LocalMessages.current.text("text.7efe336bd548"), message: String? = null) {
     val i18n = LocalMessages.current
@@ -255,7 +269,7 @@ fun EmptyState(message: String, modifier: Modifier = Modifier, actionLabel: Stri
     }
 }
 
-/** Sub-navigation inside a section (e.g. Cavi / Percorsi / Permutazioni). */
+/** Section sub-navigation. */
 @Composable
 fun SubTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     val changeDetail = LocalDetailChange.current

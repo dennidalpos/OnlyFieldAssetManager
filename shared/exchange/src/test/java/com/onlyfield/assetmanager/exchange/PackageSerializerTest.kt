@@ -44,11 +44,9 @@ class PackageSerializerTest {
         val attachmentBytes = "Sample Rack Diagram Content".toByteArray(Charsets.UTF_8)
         val attachments = mapOf("rack_diagram.png" to attachmentBytes)
 
-        // 1. Export package
         val zipBytes = PackageSerializer.exportPackage(project, attachments)
         assertTrue(zipBytes.isNotEmpty())
 
-        // 2. Import package
         val importResult = PackageSerializer.importPackage(zipBytes)
         assertTrue(importResult.validationResult.isValid)
 
@@ -58,7 +56,6 @@ class PackageSerializerTest {
         assertEquals(project.name, importedPkg.project.name)
         assertEquals(1, importedPkg.project.businessUnits.size)
 
-        // Verify attachment
         val importedAttachment = importedPkg.attachments["attachments/rack_diagram.png"]
         assertNotNull(importedAttachment)
         assertArrayEquals(attachmentBytes, importedAttachment)
@@ -83,23 +80,19 @@ class PackageSerializerTest {
 
         val password = "ProjectPassword456"
 
-        // 1. Export with password
         val encryptedZipBytes = PackageSerializer.exportPackage(project, password = password)
         assertTrue(encryptedZipBytes.isNotEmpty())
 
-        // 2. Import without password -> should fail with PASSWORD_REQUIRED
         val importNoPass = PackageSerializer.importPackage(encryptedZipBytes)
         assertFalse(importNoPass.validationResult.isValid)
         assertNull(importNoPass.pkg)
         assertTrue(importNoPass.validationResult.issues.any { it.code == "PASSWORD_REQUIRED" })
 
-        // 3. Import with wrong password -> should fail with INVALID_PACKAGE_PASSWORD
         val importWrongPass = PackageSerializer.importPackage(encryptedZipBytes, password = "WrongPassword")
         assertFalse(importWrongPass.validationResult.isValid)
         assertNull(importWrongPass.pkg)
         assertTrue(importWrongPass.validationResult.issues.any { it.code == "INVALID_PACKAGE_PASSWORD" })
 
-        // 4. Import with correct password -> should succeed
         val importCorrect = PackageSerializer.importPackage(encryptedZipBytes, password = password)
         assertTrue(importCorrect.validationResult.isValid)
         assertNotNull(importCorrect.pkg)
@@ -122,7 +115,6 @@ class PackageSerializerTest {
 
         val projectJsonBytes = PackageSerializer.jsonConfig.encodeToString(Project.serializer(), project).toByteArray(Charsets.UTF_8)
         
-        // Create manifest with a deliberately wrong checksum for project.json
         val manifest = PackageManifest(
             formatVersion = PackageManifest.CURRENT_FORMAT_VERSION,
             exportId = UUID.randomUUID().toString(),
@@ -177,15 +169,12 @@ class PackageSerializerTest {
             project = p1
         )
 
-        // 1. Comparison with no local project -> NEWER_REVISION
         val compNew = ProjectComparisonEvaluator.evaluate(null, null, pkg1)
         assertEquals(ComparisonStatus.NEWER_REVISION, compNew.status)
 
-        // 2. Comparison with identical local project -> IDENTICAL
         val compIdentical = ProjectComparisonEvaluator.evaluate(p1, pkg1.manifest, pkg1)
         assertEquals(ComparisonStatus.IDENTICAL, compIdentical.status)
 
-        // 3. Comparison with older local project -> NEWER_REVISION
         val p1Updated = p1.copy(updatedEpochMs = 2000L)
         val pkg1Newer = ProjectPackage(
             manifest = PackageManifest(exportId = "e2", exportedEpochMs = 2000L, projectId = projId, projectName = "Project Alpha"),
@@ -194,12 +183,10 @@ class PackageSerializerTest {
         val compNewer = ProjectComparisonEvaluator.evaluate(p1, pkg1.manifest, pkg1Newer)
         assertEquals(ComparisonStatus.NEWER_REVISION, compNewer.status)
 
-        // 4. Comparison with newer local project -> OLDER_REVISION
         val compOlder = ProjectComparisonEvaluator.evaluate(p1Updated, pkg1Newer.manifest, pkg1)
         assertEquals(ComparisonStatus.OLDER_REVISION, compOlder.status)
         assertNotNull(compOlder.warningMessage)
 
-        // 5. Comparison with different project ID -> DIFFERENT_PROJECT
         val p2 = Project(id = UUID.randomUUID().toString(), name = "Project Beta", createdEpochMs = 1000L, updatedEpochMs = 1000L)
         val pkg2 = ProjectPackage(
             manifest = PackageManifest(exportId = "e3", exportedEpochMs = 1000L, projectId = p2.id, projectName = p2.name),

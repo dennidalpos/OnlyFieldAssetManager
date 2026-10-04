@@ -9,9 +9,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
@@ -34,10 +36,10 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
 
     val devices = index.devices.filter {
         matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id)
-    }
+    }.sortedForDisplay(i18n) { it.technicalName }
 
     AppScaffold(
-        title = i18n.text("text.a26fdd05a46b"),
+        title = i18n.text("ux.nav.devices"),
         subtitle = i18n.text("text.e9f37f3828d1", devices.size, index.devices.size),
         onBack = { vm.back() },
         snackbarHost = snackbar,
@@ -60,7 +62,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             }
             when {
                 index.devices.isEmpty() -> EmptyState(i18n.text("text.8d6015db495b"))
-                devices.isEmpty() -> EmptyState(i18n.text("text.bf8d3eb36403"))
+                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaFilter = null })
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(devices, key = { it.id }) { d ->
                         ItemCard(
@@ -129,7 +131,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                 )
             )
         },
-        floatingActionButton = { ExtendedFloatingActionButton(onClick = { editing = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("config.title")) }) }
+        floatingActionButton = { ExtendedFloatingActionButton(onClick = { editing = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.1f52745e2c43")) }) }
     ) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
@@ -236,13 +238,15 @@ private fun InfoRow(label: String, value: String?) {
 @Composable
 internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device?, initialSerial: String? = null, onClose: () -> Unit) {
     val i18n = LocalMessages.current
-    var draft by remember(device) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forDevice(project, device).let { d -> initialSerial?.let { d.copy(device = d.device.copy(serialNumber = it)) } ?: d }) }
+    var draft by remember(device) { mutableStateOf(inventoryDeviceDraft(project, device).let { d -> initialSerial?.let { d.copy(device = d.device.copy(serialNumber = it)) } ?: d }) }
     var scanningSerial by remember { mutableStateOf(false) }
-    EditScreen(i18n.text("config.title"), onClose, {
-        onClose(); vm.edit(i18n.text("config.title")) { draft.apply(it, i18n) }
-    }, confirmEnabled = draft.errors(project, i18n).isEmpty()) {
+    EditScreen(configuratorTitle(project, draft, i18n), onClose, {
+        onClose(); vm.edit(configuratorTitle(project, draft, i18n)) { draft.apply(it, i18n) }
+    }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, draft, i18n)) {
         ObjectFields(project, draft) { draft = it }
-        OutlinedButton(onClick = { scanningSerial = true }) { Text("QR") }
+        ConfiguratorSection(i18n.text("ux.scanSerial"), i18n = i18n) {
+            OutlinedButton(onClick = { scanningSerial = true }) { Text(i18n.text("ux.scanSerial")) }
+        }
     }
     if (scanningSerial) BarcodeScanner(onCode = { code -> scanningSerial = false; draft = draft.copy(device = draft.device.copy(serialNumber = code)) }, onClose = { scanningSerial = false }, hint = i18n.text("text.02b33d3895e8"))
 }

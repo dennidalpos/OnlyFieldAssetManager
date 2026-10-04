@@ -5,6 +5,8 @@ import com.onlyfield.assetmanager.ui.LocalMessages
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +17,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -22,7 +25,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
-// --- Confirmation -------------------------------------------------------------------------------
 
 data class ConfirmRequest(
     val title: String,
@@ -57,7 +59,6 @@ fun ConfirmHost(content: @Composable () -> Unit) {
     }
 }
 
-// --- Screen scaffold ----------------------------------------------------------------------------
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -116,9 +117,8 @@ fun OverflowMenu(actions: List<MenuAction>, contentDescription: String = LocalMe
     }
 }
 
-// --- Lists --------------------------------------------------------------------------------------
 
-/** One entity in a list. Tapping it opens it; the ⋮ menu holds the secondary actions. */
+/** List entity with primary and secondary actions. */
 @Composable
 fun ItemCard(
     title: String,
@@ -188,9 +188,8 @@ fun SubTabs(tabs: List<String>, selected: Int, onSelect: (Int) -> Unit) {
 fun matchesQuery(query: String, vararg fields: String?): Boolean =
     query.isBlank() || fields.any { it?.contains(query.trim(), ignoreCase = true) == true }
 
-// --- Forms --------------------------------------------------------------------------------------
 
-/** Small dialog for short forms (rename, password). Entity editors use [EditScreen]. */
+/** Dialog for short forms. */
 @Composable
 fun FormDialog(
     title: String,
@@ -204,22 +203,22 @@ fun FormDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title) },
+        title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
         text = {
             Column(
                 modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
                 content = content
             )
         },
-        confirmButton = { TextButton(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("text.18c9d912a210")) } }
+        confirmButton = { Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) } }
     )
 }
 
 enum class FieldKind { TEXT, NUMBER, DECIMAL, IP }
 
-/** Text field whose [error] appears only after the user has typed in it. */
+/** Field that delays [error] until input. */
 @Composable
 fun FormField(
     value: String,
@@ -259,8 +258,8 @@ fun FormField(
 fun LabeledCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label: String) {
     val markDirty = LocalMarkDirty.current
     val change = { v: Boolean -> markDirty(); onCheckedChange(v) }
-    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().clickable { change(!checked) }) {
-        Checkbox(checked = checked, onCheckedChange = change)
+    Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(checked, role = Role.Checkbox, onValueChange = change)) {
+        Checkbox(checked = checked, onCheckedChange = null)
         Text(label)
     }
 }
@@ -270,10 +269,7 @@ fun SectionTitle(text: String) {
     Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
 }
 
-/**
- * Read-only field that opens a searchable list in a dialog — better than a dropdown on a phone
- * when there are dozens of devices or ports to choose from.
- */
+/** Read-only field that opens a searchable dialog. */
 @Composable
 fun <T> OptionPicker(
     label: String,
@@ -287,6 +283,7 @@ fun <T> OptionPicker(
     supportingText: String? = null,
     isError: Boolean = false,
     enabled: Boolean = true,
+    sortByName: Boolean = true,
 ) {
     val i18n = LocalMessages.current
 
@@ -313,7 +310,8 @@ fun <T> OptionPicker(
     }
     if (open) {
         var query by remember { mutableStateOf("") }
-        val filtered = options.filter { o -> matchesQuery(query, optionLabel(o), optionDetail?.invoke(o)) }
+        val ordered = if (sortByName && options.firstOrNull() !is Number) options.sortedForDisplay(i18n, optionLabel) else options
+        val filtered = ordered.filter { o -> matchesQuery(query, optionLabel(o), optionDetail?.invoke(o)) }
         AlertDialog(
             onDismissRequest = { open = false },
             title = { Text(label.removeSuffix(" *")) },
@@ -346,5 +344,5 @@ fun <T> OptionPicker(
 
 @Composable
 fun <E : Enum<E>> EnumPicker(label: String, values: List<E>, selected: E, valueLabel: (E) -> String, onSelected: (E) -> Unit, modifier: Modifier = Modifier) {
-    OptionPicker(label, values, selected, valueLabel, { it?.let(onSelected) }, modifier)
+    OptionPicker(label, values, selected, valueLabel, { it?.let(onSelected) }, modifier, sortByName = false)
 }

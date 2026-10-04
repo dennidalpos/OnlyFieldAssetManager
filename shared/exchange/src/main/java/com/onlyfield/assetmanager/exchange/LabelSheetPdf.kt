@@ -13,13 +13,10 @@ import java.io.ByteArrayOutputStream
 import java.io.OutputStream
 import java.nio.charset.Charset
 
-/** One label: QR with [code], a bold [title] and a smaller [subtitle]. */
+/** QR label content. */
 data class QrLabel(val code: LabelCode, val title: String, val subtitle: String)
 
-/**
- * A4 sheet of QR labels (3 x 7 grid) as a plain PDF 1.4, shared by Android and Windows.
- * QR modules are drawn as filled rectangles, so no image encoding is needed.
- */
+/** Shared A4 PDF sheet of QR labels. */
 object LabelSheetPdf {
     private const val PAGE_W = 595f
     private const val PAGE_H = 842f
@@ -28,11 +25,11 @@ object LabelSheetPdf {
     private const val MARGIN_X = 20f
     private const val MARGIN_Y = 25f
     private const val QR_SIZE = 78f
-    /** White margin around the code (~4 modules, as the QR standard asks). */
+    /** Quiet zone around the code. */
     private const val QUIET = 12f
     private val winAnsi: Charset = Charset.forName("windows-1252")
 
-    /** Labels for every device, rack and labelled cable of the project. */
+    /** Labels project devices, racks and cables. */
     fun labelsFor(project: Project, i18n: Messages = Messages()): List<QrLabel> {
         val index = ProjectIndex(project)
         val devices = index.devices.map { d ->
@@ -56,7 +53,6 @@ object LabelSheetPdf {
             pageLabels.forEachIndexed { i, label ->
                 val left = MARGIN_X + (i % COLS) * cellW
                 val top = PAGE_H - MARGIN_Y - (i / COLS) * cellH
-                // Thin cut guide around each label.
                 content.ascii("0.85 G 0.5 w $left ${top - cellH} $cellW $cellH re S 0 g\n")
                 drawQr(content, label.code.toString(), left + QUIET, top - QUIET - QR_SIZE)
                 val textX = left + QR_SIZE + QUIET + 4f
@@ -80,7 +76,7 @@ object LabelSheetPdf {
         val sb = StringBuilder()
         for (row in 0 until matrix.height) for (col in 0 until matrix.width) {
             if (matrix.get(col, row)) {
-                // PDF origin is bottom-left: row 0 is the top of the code.
+                // PDF origin is bottom-left.
                 sb.append("%.2f %.2f %.2f %.2f re ".format(java.util.Locale.ROOT, x + col * module, y + QR_SIZE - (row + 1) * module, module, module))
             }
         }
@@ -100,7 +96,6 @@ object LabelSheetPdf {
     }
 
     private fun writePdf(pages: List<ByteArray>, out: OutputStream) {
-        // Objects: 1 catalog, 2 pages, 3-4 fonts, then (page, content) pairs.
         val objects = mutableListOf<ByteArray>()
         val kids = pages.indices.joinToString(" ") { "${5 + it * 2} 0 R" }
         objects += "<< /Type /Catalog /Pages 2 0 R >>".toByteArray()

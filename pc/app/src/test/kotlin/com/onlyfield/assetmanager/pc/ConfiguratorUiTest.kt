@@ -53,6 +53,7 @@ class ConfiguratorUiTest {
         val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(a, b))))
         val draft = mutableStateOf(MapObjectDraft.forDevice(project, a))
         rule.setContent { MaterialTheme { Column(Modifier.width(800.dp).height(700.dp).testTag("editor").verticalScroll(rememberScrollState())) { ObjectConfigurator(project, draft.value, Messages()) { draft.value = it } } } }
+        rule.onNodeWithText("Porte").performScrollTo().performClick()
         rule.onNodeWithText("A · 1U").performScrollTo()
         val portNode = rule.onNodeWithContentDescription("A P1").fetchSemanticsNode()
         val editorBounds = rule.onNodeWithTag("editor").fetchSemanticsNode().boundsInRoot

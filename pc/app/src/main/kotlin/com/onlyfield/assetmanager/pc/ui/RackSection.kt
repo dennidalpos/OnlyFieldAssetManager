@@ -10,6 +10,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,7 +64,7 @@ fun RackSection(
 
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LazyColumn(modifier = Modifier.width(300.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(racks, key = { it.id }) { rack ->
+                items(racks.sortedForDisplay(i18n) { it.name }, key = { it.id }) { rack ->
                     val isSelected = rack.id == selected?.id
                     val used = RackLayout.usedUnits(rack, index.devices)
                     Card(
@@ -252,8 +254,8 @@ private fun PlaceDeviceDialog(rack: Rack, index: ProjectIndex, initialSide: Rack
 private fun RackDialog(index: ProjectIndex, rack: Rack?, onDismiss: () -> Unit, onSave: (Project, Rack, Boolean) -> Unit) {
     val i18n = LocalMessages.current
     var draft by remember(LocalDetailSlot.current?.editorVersion, rack) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(index.project, rack)) }
-    EditPanel(title = i18n.text("config.title"), onDismiss = onDismiss, width = 800.dp,
-        confirmEnabled = draft.errors(index.project, i18n).isEmpty(), onConfirm = {
+    EditPanel(title = configuratorTitle(index.project, draft, i18n), confirmLabel = configuratorAction(index.project, draft, i18n), onDismiss = onDismiss, width = 800.dp,
+        validationMessage = configuratorValidation(index.project, draft, i18n), confirmEnabled = draft.errors(index.project, i18n).isEmpty(), onConfirm = {
             val updated = draft.apply(index.project, i18n)
             onSave(updated, updated.racks.first { it.id == draft.id }, rack == null)
         }) { ObjectFields(index.project, draft) { draft = it } }

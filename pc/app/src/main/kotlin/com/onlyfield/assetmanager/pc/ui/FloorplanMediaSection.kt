@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
@@ -70,7 +71,7 @@ private fun AttachmentsTab(
         }
         if (project.attachments.isEmpty()) EmptyState(i18n.text("text.4bb26fa604b4"), actionLabel = i18n.text("text.eb6a4870f326"), onAction = { adding = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(project.attachments, key = { it.id }) { att ->
+            items(project.attachments.sortedForDisplay(i18n) { it.name }, key = { it.id }) { att ->
                 val usedBy = index.areas.filter { it.floorplanAttachmentId == att.id }.map { it.name }
                 ItemCard(
                     title = att.name,

@@ -3,10 +3,11 @@ package com.onlyfield.assetmanager.core.edit
 import com.onlyfield.assetmanager.core.i18n.Messages
 
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.model.Annotation
 import kotlinx.serialization.json.Json
 import java.util.UUID
 
-/** Pure, immutable edit operations on a [Project], shared by the Android and Windows apps. */
+/** Immutable project edits shared by both apps. */
 object ProjectEdits {
 
     private val jsonSerializer = Json {
@@ -15,7 +16,6 @@ object ProjectEdits {
         encodeDefaults = true
     }
 
-    // --- STRUCTURE (business units and areas) ---
 
     fun addBusinessUnit(project: Project, name: String): Project = project.copy(
         businessUnits = project.businessUnits + BusinessUnit(name = name),
@@ -27,7 +27,7 @@ object ProjectEdits {
         updatedEpochMs = System.currentTimeMillis()
     )
 
-    /** Deletes an empty business unit; returns null when it still contains devices or areas. */
+    /** Deletes an empty business unit or returns null. */
     fun deleteBusinessUnit(project: Project, buId: String): Project? {
         val bu = project.businessUnits.find { it.id == buId } ?: return project
         if (bu.devices.isNotEmpty() || bu.areas.isNotEmpty() || bu.sites.any { it.areas.isNotEmpty() }) return null
@@ -49,7 +49,7 @@ object ProjectEdits {
         updatedEpochMs = System.currentTimeMillis()
     )
 
-    /** Deletes an area; returns null when devices, racks or placements still reference it. */
+    /** Deletes an unreferenced area or returns null. */
     fun deleteArea(project: Project, areaId: String): Project? {
         val inUse = project.businessUnits.any { bu -> bu.devices.any { it.areaId == areaId } } ||
             project.racks.any { it.areaId == areaId } ||
@@ -66,7 +66,6 @@ object ProjectEdits {
         )
     }
 
-    // --- DEVICES ---
 
     fun addDevice(project: Project, buId: String, device: Device): Project {
         val updatedBus = project.businessUnits.map { bu ->
@@ -108,10 +107,10 @@ object ProjectEdits {
         val jsonStr = jsonSerializer.encodeToString(Device.serializer(), device)
         val affectedPortIds = device.ports.map { it.id }.toSet()
 
-        // Disconnect cables attached to deleted device ports
+        // Disconnect deleted-device ports.
         var updatedCablesCount = 0
         val updatedCables = project.cables.map { cable ->
-            if (affectedPortIds.contains(cable.portAId) || affectedPortIds.contains(cable.portBId) || cable.deviceAId == deviceId || cable.deviceBId == deviceId) {
+            if (affectedPortIds.contains(cable.portAId) || affectedPortIds.contains(cable.portBId) || (cable.deviceAId == deviceId) || (cable.deviceBId == deviceId)) {
                 updatedCablesCount++
                 cable.copy(
                     deviceAId = cable.deviceAId?.takeUnless { it == deviceId },
@@ -153,7 +152,7 @@ object ProjectEdits {
             cableRoutes = project.businessUnits.flatMap { ObjectMap.areas(it) }.flatMap { ObjectMap.routes(project, it.id) }.map { route ->
                 route.copy(points = ObjectMap.routePoints(project, route, ObjectMap.nodes(project, route.areaId)))
             },
-            floorplanPlacements = project.floorplanPlacements.filterNot { it.targetType == PlacementTargetType.DEVICE && it.targetId == deviceId },
+            floorplanPlacements = project.floorplanPlacements.filterNot { (it.targetType == PlacementTargetType.DEVICE) && (it.targetId == deviceId) },
             updatedEpochMs = System.currentTimeMillis()
         )
 
@@ -345,7 +344,6 @@ object ProjectEdits {
         )
     }
 
-    // --- RACKS ---
 
     fun addRack(project: Project, rack: Rack): Project {
         return project.copy(
@@ -398,7 +396,6 @@ object ProjectEdits {
         return Pair(ObjectHierarchy.afterDeletion(project, updatedProject, ref), ObjectHierarchy.snapshot(project, ref, trashItem))
     }
 
-    // --- DEVICE MODELS ---
 
     fun addDeviceModel(project: Project, model: DeviceModel): Project {
         return project.copy(
@@ -443,7 +440,6 @@ object ProjectEdits {
     }
 
     fun deleteAttachment(project: Project, attachmentId: String): Project {
-        // Clear references from areas
         val updatedBus = project.businessUnits.map { bu ->
             val updatedSites = bu.sites.map { site ->
                 val updatedAreas = site.areas.map { area ->
@@ -471,7 +467,7 @@ object ProjectEdits {
         if (attachmentId != null) {
             val attachment = project.attachments.first { it.id == attachmentId }
             require(attachment.fileType == AttachmentType.IMAGE || attachment.fileType == AttachmentType.PDF)
-            // Legacy imports may have pageCount=1; the picker refreshes it from the actual file.
+            // The picker refreshes legacy page counts from the file.
             require(attachment.fileType != AttachmentType.IMAGE || pageIndex == 0)
         }
         val updatedBus = project.businessUnits.map { bu ->
@@ -515,7 +511,7 @@ object ProjectEdits {
         )
     }
 
-    fun addAnnotation(project: Project, annotation: com.onlyfield.assetmanager.core.model.Annotation): Project {
+    fun addAnnotation(project: Project, annotation: Annotation): Project {
         return project.copy(
             annotations = project.annotations + annotation,
             updatedEpochMs = System.currentTimeMillis()
@@ -529,7 +525,6 @@ object ProjectEdits {
         )
     }
 
-    // --- TRASH RESTORE ---
 
     fun restoreFromTrash(project: Project, trashItem: TrashItem, i18n: Messages = Messages()): Project {
         val restored = when (trashItem.itemType.uppercase()) {
@@ -547,7 +542,6 @@ object ProjectEdits {
         return ObjectHierarchy.restore(restored, trashItem, i18n = i18n)
     }
 
-    // --- CABLING & PHYSICAL PATHS (W03) ---
 
     fun addCable(project: Project, cable: Cable): Project {
         return project.copy(
@@ -625,7 +619,6 @@ object ProjectEdits {
         )
     }
 
-    // --- LOGICAL NETWORK (W03) ---
 
     fun addVlan(project: Project, vlan: Vlan): Project {
         return project.copy(
@@ -823,7 +816,6 @@ object ProjectEdits {
         )
     }
 
-    // --- POWER & BADGES (W03) ---
 
     fun addPowerFeed(project: Project, feed: PowerFeed): Project {
         return project.copy(

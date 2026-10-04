@@ -2,10 +2,7 @@ package com.onlyfield.assetmanager.core.forms
 
 import com.onlyfield.assetmanager.core.i18n.Messages
 
-/**
- * Field-level checks used by the desktop forms. Each function returns an error in the selected language (Italian by default),
- * or null when the value is acceptable. Empty optional values are always accepted.
- */
+/** Localized form validators; optional blanks are valid. */
 object FieldValidators {
 
     fun required(text: String, what: String? = null, i18n: Messages = Messages()): String? =
@@ -46,7 +43,7 @@ object FieldValidators {
         return if (ok) null else i18n.text("text.eaa6199e8b97")
     }
 
-    /** Accepts both "1.5" and the Italian "1,5". */
+    /** Parses dot or comma decimals. */
     fun parseDecimal(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
 
     fun parseInt(text: String): Int? = text.trim().toIntOrNull()

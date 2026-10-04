@@ -61,7 +61,7 @@ fun TargetPicker(index: ProjectIndex, target: TargetRef, onChange: (TargetRef) -
                 isError = error != null, supportingText = error)
             "PORT" -> OptionPicker(
                 i18n.text("text.57c2ec879203"), index.ports, index.port(target.id), { "${it.device.technicalName} › ${it.port.name}" }, { onChange(target.copy(id = it?.port?.id)) },
-                pickerModifier, isError = error != null, supportingText = error
+                pickerModifier, sortByName = false, isError = error != null, supportingText = error
             )
             else -> OptionPicker(i18n.text("text.b7700d71d0ce"), listOf(index.project.name), index.project.name, { it }, {}, pickerModifier, enabled = false)
         }

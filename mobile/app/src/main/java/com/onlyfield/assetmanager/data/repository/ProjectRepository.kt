@@ -33,13 +33,10 @@ data class PackageImportEvaluation(
     val comparison: ProjectComparison?,
 )
 
-/**
- * Entry point of the Android data layer. Each area lives in its own class
- * (ProjectStore, DocumentExports, PackageExchange, InventorySearch, TrashOperations).
- */
+/** Android data facade over focused repository services. */
 class ProjectRepository(
-    private val db: AppDatabase,
-    /** Folder holding attachment files (`<root>/<projectId>/<attachmentId>/<name>`); null in tests without storage. */
+    db: AppDatabase,
+    /** Attachment root; null in storage-free tests. */
     private val attachmentsRoot: java.io.File? = null,
 ) {
     private val projectDao = db.projectDao()
@@ -70,7 +67,7 @@ class ProjectRepository(
         val existing = projectDao.getProjectById(projectId) ?: return
         val updated = existing.copy(
             name = newName,
-            updatedEpochMs = System.currentTimeMillis()
+            updatedEpochMs = System.currentTimeMillis(),
         )
         projectDao.updateProject(updated)
     }
@@ -98,7 +95,7 @@ class ProjectRepository(
         val updated = projEntity.copy(
             isPasswordProtected = true,
             passwordHash = withContext(Dispatchers.Default) { PasswordHasher.hash(newPassword) },
-            updatedEpochMs = System.currentTimeMillis()
+            updatedEpochMs = System.currentTimeMillis(),
         )
         projectDao.updateProject(updated)
         return true
@@ -112,7 +109,7 @@ class ProjectRepository(
         val updated = projEntity.copy(
             isPasswordProtected = false,
             passwordHash = null,
-            updatedEpochMs = System.currentTimeMillis()
+            updatedEpochMs = System.currentTimeMillis(),
         )
         projectDao.updateProject(updated)
         return true
@@ -180,7 +177,7 @@ class ProjectRepository(
         }
         val updatedProject = project.copy(
             businessUnits = updatedBus,
-            updatedEpochMs = System.currentTimeMillis()
+            updatedEpochMs = System.currentTimeMillis(),
         )
         saveProject(updatedProject)
     }

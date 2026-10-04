@@ -15,10 +15,10 @@ import java.util.UUID
 
 enum class MergeSide { LOCAL, INCOMING }
 
-/** One mergeable element: `kind` is the JSON list it lives in ("devices", "vlans", ...), or "project". */
+/** Mergeable JSON element. */
 data class MergeKey(val kind: String, val id: String)
 
-/** An element changed differently in the two copies; the user picks a side. Null json = absent. */
+/** Concurrent element change; null JSON means absent. */
 data class MergeConflict(
     val key: MergeKey,
     val kindLabel: String,
@@ -34,7 +34,7 @@ data class MergeConflict(
             else -> i18n.text("text.2f861673cd6a")
         }
 
-    /** Changed fields as "campo: mio → importato" (nested values are shown compactly). */
+    /** Compact changed-field labels. */
     fun differences(i18n: Messages = Messages()): List<String> {
         if (local == null || incoming == null) return emptyList()
         return (local.keys + incoming.keys).filter { local[it] != incoming[it] }.map { k ->
@@ -50,10 +50,10 @@ data class MergeConflict(
     }
 }
 
-/** Outcome of [ProjectMerger.merge]: automatic changes are already decided, conflicts wait for [resolve]. */
+/** Merge result with automatic changes and conflicts. */
 class MergeResult internal constructor(
     val conflicts: List<MergeConflict>,
-    /** Elements taken from the package without asking. */
+    /** Elements imported automatically. */
     val autoApplied: Int,
     private val decided: Map<MergeKey, ProjectMerger.Node?>,
     private val local: Map<MergeKey, ProjectMerger.Node>,
@@ -61,7 +61,7 @@ class MergeResult internal constructor(
     private val order: List<MergeKey>,
     private val listKinds: List<String>,
 ) {
-    /** Builds the merged project; a conflict without a choice keeps the local version. */
+    /** Builds the merged project; unresolved conflicts stay local. */
     fun resolve(choices: Map<MergeKey, MergeSide>, nowMs: Long = System.currentTimeMillis(), i18n: Messages = Messages()): Project {
         val nodes = LinkedHashMap<MergeKey, ProjectMerger.Node>()
         for (key in order) {
@@ -73,11 +73,7 @@ class MergeResult internal constructor(
     }
 }
 
-/**
- * Three-way merge of two copies of the same project, element by element (matched by id).
- * With a base (last synced snapshot) a change made on one side only is applied automatically;
- * without it every difference is a conflict.
- */
+/** Three-way, ID-based project merge. */
 object ProjectMerger {
 
     internal data class Node(val json: JsonObject, val parent: MergeKey?)
@@ -110,11 +106,10 @@ object ProjectMerger {
         return MergeResult(conflicts, auto, decided, l, i, order, listKinds)
     }
 
-    // --- Flatten / rebuild ------------------------------------------------------------------
 
     private fun root(p: Project) = json.encodeToJsonElement(Project.serializer(), com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(p)).jsonObject
 
-    /** Top-level lists of entities with an id (all of them except business units). */
+    /** ID-keyed project collections, excluding business units. */
     private fun listKindsOf(p: Project) = root(p).filter { (k, v) -> k != BU && isEntityList(v) }.keys.toList()
 
     private fun isEntityList(v: JsonElement) = v is JsonArray && v.all { it is JsonObject && "id" in it.jsonObject }
@@ -126,7 +121,7 @@ object ProjectMerger {
     private fun flatten(p: Project): LinkedHashMap<MergeKey, Node> {
         val r = root(p)
         val out = LinkedHashMap<MergeKey, Node>()
-        // Project fields; updatedEpochMs changes on every save and is set again on rebuild.
+        // Rebuild assigns updatedEpochMs.
         out[MergeKey("project", "project")] = Node(JsonObject(r.filter { (k, v) -> k != "updatedEpochMs" && k != BU && !isEntityList(v) }), null)
         for (buEl in r.getValue(BU).jsonArray) {
             val bu = buEl.jsonObject
@@ -151,7 +146,7 @@ object ProjectMerger {
     internal fun rebuild(nodes: Map<MergeKey, Node>, listKinds: List<String>, nowMs: Long, i18n: Messages = Messages()): Project {
         fun children(kind: String, parent: MergeKey) = nodes.filter { (k, n) -> k.kind == kind && n.parent == parent }
         val bus = nodes.filterKeys { it.kind == BU }.toMutableMap()
-        // Children whose parent no longer exists are kept under the first business unit (no data loss).
+        // Keep orphaned children under the first business unit.
         val orphans = nodes.filter { (k, n) -> k.kind in nested && n.parent != null && n.parent !in nodes }
         if (orphans.isNotEmpty() && bus.isEmpty()) {
             val id = UUID.randomUUID().toString()
@@ -177,7 +172,6 @@ object ProjectMerger {
         return com.onlyfield.assetmanager.core.model.ObjectHierarchy.synchronize(json.decodeFromJsonElement(Project.serializer(), project))
     }
 
-    // --- Labels -----------------------------------------------------------------------------
 
     private fun nameOf(node: Node?, i18n: Messages = Messages()): String {
         val j = node?.json ?: return "—"

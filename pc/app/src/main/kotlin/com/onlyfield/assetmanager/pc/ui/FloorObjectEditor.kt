@@ -5,7 +5,9 @@ import com.onlyfield.assetmanager.pc.LocalMessages
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.Modifier
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.pc.*
@@ -16,9 +18,8 @@ import java.io.File
 internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial: MapObjectDraft, close: () -> Unit) {
     val i18n = LocalMessages.current
 
-    if (LocalDetailSlot.current == null) {
-        val slot = remember { DetailSlot() }
-        DetailChangeHost(slot) { FloorObjectEditor(state, project, initial, close) }
+    if (!LocalHasMasterDetail.current) {
+        MasterDetailHost(Modifier.fillMaxSize()) { FloorObjectEditor(state, project, initial, close) }
         return
     }
     var draft by remember { mutableStateOf(initial) }
@@ -39,19 +40,20 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
         }
     }
     SideEffect { slot.dirty = dirty }
-    FormDialog(com.onlyfield.assetmanager.core.model.ObjectCatalog.displayName(initial.type, i18n), { slot.requestChange {} }, {
+    EditPanel(configuratorTitle(project, initial, i18n), { slot.requestChange {} }, {
         if (state.saveMapObject(draft, photos.toList(), removed)) close()
-    }, confirmEnabled = draft.errors(project, i18n = i18n).isEmpty(), width = 680.dp) {
+    }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, initial, i18n), width = 640.dp) {
         ObjectFields(project, draft) { draft = it }
-        Text(i18n.text("text.db7291baccc1"), style = MaterialTheme.typography.titleMedium)
-        project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
-            Text(a.name); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
-            TextButton(onClick = { removed = removed + a.id }) { Text(i18n.text("text.960630ee842c")) }
+        ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n) {
+            project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
+                Text(a.name); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                TextButton(onClick = { removed = removed + a.id }) { Text(i18n.text("text.960630ee842c")) }
+            }
+            photos.toList().forEach { file ->
+                Text(file.name); MediaThumbnail(file)
+                TextButton(onClick = { photos.remove(file) }) { Text(i18n.text("text.f5115aa0e57e")) }
+            }
+            OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile(i18n.text("text.a111cc717443"), i18n.text("text.a9f46a362f48"), "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { photos += it } }) { Text(i18n.text("text.e2ca686d60a1")) }
         }
-        photos.toList().forEach { file ->
-            Text(file.name); MediaThumbnail(file)
-            TextButton(onClick = { photos.remove(file) }) { Text(i18n.text("text.f5115aa0e57e")) }
-        }
-        OutlinedButton(onClick = { DesktopStorageHelper.pickOpenFile(i18n.text("text.a111cc717443"), i18n.text("text.a9f46a362f48"), "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { photos += it } }) { Text(i18n.text("text.e2ca686d60a1")) }
     }
 }
