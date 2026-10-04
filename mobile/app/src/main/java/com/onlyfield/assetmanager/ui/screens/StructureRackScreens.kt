@@ -192,7 +192,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
         Column(Modifier.padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 listOf(RackSide.FRONT, RackSide.REAR).forEachIndexed { i, s ->
-                    SegmentedButton(selected = side == s, onClick = { side = s }, shape = SegmentedButtonDefaults.itemShape(i, 2)) { Text(s.toDisplayString(i18n = i18n)) }
+                    SegmentedButton(selected = side == s, onClick = { side = s }, shape = SegmentedButtonDefaults.itemShape(i, 2, baseShape = MaterialTheme.shapes.small)) { Text(s.toDisplayString(i18n = i18n)) }
                 }
             }
             // Full-width elevation; tapping a free unit places a device there.

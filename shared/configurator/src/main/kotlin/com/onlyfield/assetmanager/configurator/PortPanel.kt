@@ -58,7 +58,7 @@ fun PortPanel(
                 .joinToString(" · "), style = MaterialTheme.typography.labelSmall)
             // Cell size follows the available width; long blocks wrap into bands instead of scrolling.
             BoxWithConstraints(Modifier.fillMaxWidth()) {
-                val grid = SchematicGeometry.portGrid(block.size, maxWidth.value, 3f, if (compact) 22f else 30f, if (compact) 26f else 40f)
+                val grid = SchematicGeometry.portGrid(block.size, maxWidth.value, 3f, if (compact) 20f else 24f, if (compact) 26f else 40f)
                 val size = grid.cell.dp
                 val marks = !compact && grid.cell >= 32f
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -110,7 +110,7 @@ fun RackSection(
                             }
                             SingleChoiceSegmentedButtonRow {
                                 listOf(RackSide.FRONT, RackSide.REAR).forEachIndexed { i, s ->
-                                    SegmentedButton(selected = side == s, onClick = { side = s }, shape = SegmentedButtonDefaults.itemShape(i, 2)) {
+                                    SegmentedButton(selected = side == s, onClick = { side = s }, shape = SegmentedButtonDefaults.itemShape(i, 2, baseShape = MaterialTheme.shapes.small)) {
                                         Text(s.toDisplayString(i18n = i18n))
                                     }
                                 }

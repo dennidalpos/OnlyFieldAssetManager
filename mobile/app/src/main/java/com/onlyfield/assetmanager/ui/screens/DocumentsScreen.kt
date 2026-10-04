@@ -59,7 +59,7 @@ fun DocumentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             SectionTitle(i18n.text("text.73e1804eb968"))
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 DocFormat.entries.forEachIndexed { i, f ->
-                    SegmentedButton(selected = format == f, onClick = { format = f }, shape = SegmentedButtonDefaults.itemShape(i, DocFormat.entries.size)) { Text(f.localizedLabel(i18n)) }
+                    SegmentedButton(selected = format == f, onClick = { format = f }, shape = SegmentedButtonDefaults.itemShape(i, DocFormat.entries.size, baseShape = MaterialTheme.shapes.small)) { Text(f.localizedLabel(i18n)) }
                 }
             }
             FormField(author, { author = it }, i18n.text("text.80e3789ff0b4"), hint = i18n.text("text.46c9badc9878"))
