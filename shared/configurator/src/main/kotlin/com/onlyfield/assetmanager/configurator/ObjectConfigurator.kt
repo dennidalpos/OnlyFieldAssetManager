@@ -157,7 +157,6 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
 
     // Essentials: what the object is. Where it is lives in Position.
     SectionTitle(i18n.text("config.section.essentials"))
-    Text(i18n.text("ux.essentialHint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     Field(i18n.text("config.name"), rootName, error = errors["technicalName"] ?: errors["name"]) { value ->
         change(when (kind) {
             ObjectKind.DEVICE -> draft.copy(device = draft.device.copy(technicalName = value))
@@ -171,7 +170,8 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     val models = preview.deviceModels.filter { it.kind == kind && (it.objectTypeId == null || it.objectTypeId == draft.type.id || (kind == ObjectKind.DEVICE && it.category == draft.device.category)) }
     if (!modelEditor) {
         val selectedModelId = when (kind) { ObjectKind.DEVICE -> draft.device.deviceModelId; ObjectKind.RACK -> draft.rack.deviceModelId; ObjectKind.CABLE -> draft.cable.deviceModelId }
-        Pick(i18n.text("config.model"), models.find { it.id == selectedModelId }, models, i18n, { it.name }) { model ->
+        // Shown only when there is something to pick or a model is already set.
+        if (models.isNotEmpty() || selectedModelId != null) Pick(i18n.text("config.model"), models.find { it.id == selectedModelId }, models, i18n, { it.name }) { model ->
             if (model != null) {
                 val oldExtras = draft.extraFields ?: preview.customExtraFields.filter { it.targetId == draft.id }
                 change(HardwareConfigurator.applyModel(draft.copy(extraFields = oldExtras), model).copy(allowConnectedRemoval = false))
@@ -218,7 +218,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             val cells = remember(preview, draft.id) { device?.let { PortLogic.panel(preview, it, graph, index) }.orEmpty() }
             val portsSummary = if (cells.isNotEmpty()) i18n.text("config.portsSummary", cells.size, cells.count { it.occupied }) else portGroupsSummary(h.portGroups)
             ConfiguratorSection(i18n.text("ux.ports"), activePage == ConfiguratorPage.PORTS, errors["ports"], focusOnOpen = returnToPorts,
-                summary = portsSummary.ifBlank { i18n.text("config.noPorts") }) {
+                summary = portsSummary.ifBlank { null }) {
                 PresetBar(draft, i18n, change)
                 PortGroups(preview, draft, i18n, change)
                 if (device != null) {
@@ -335,7 +335,9 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             ObjectKind.CABLE -> preview.cables.any { it.id == field.targetId && it.objectTypeId == draft.type.id }
         }
     }
-    ConfiguratorSection(i18n.text("ux.customFields"), summary = extras.takeIf { it.isNotEmpty() }?.let { i18n.text("config.fieldsCount", it.size) }) {
+    val fieldsSummary = extras.takeIf { it.isNotEmpty() }?.let { i18n.text("config.fieldsCount", it.size) }
+    @Composable
+    fun customFields() {
         extras.forEach { field ->
             fun update(transform: (CustomExtraField) -> CustomExtraField) = change(draft.copy(extraFields = extras.map { if (it.id == field.id) transform(it) else it }))
             // One card per field so key, value and options read as one item.
@@ -351,7 +353,12 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         }
         OutlinedButton(onClick = { change(draft.copy(extraFields = extras + CustomExtraField(targetType = draft.targetType.name, targetId = draft.id, fieldKey = "", fieldValue = ""))) }) { Text(i18n.text("config.addField")) }
     }
-    if (!modelEditor) ConfiguratorSection(i18n.text("config.section.advanced")) {
+    // Rarely used options share one closed section at the end of object editors.
+    if (modelEditor) ConfiguratorSection(i18n.text("ux.customFields"), summary = fieldsSummary) { customFields() }
+    else ConfiguratorSection(i18n.text("config.section.more"), summary = fieldsSummary) {
+        SectionTitle(i18n.text("ux.customFields"))
+        customFields()
+        SectionTitle(i18n.text("config.section.advanced"))
         Text(i18n.text("config.saveModelHint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Field(i18n.text("config.model"), modelName) { modelName = it }
         val duplicate = preview.deviceModels.any { it.kind == kind && it.name.equals(modelName.trim(), true) }

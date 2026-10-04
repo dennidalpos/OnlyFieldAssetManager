@@ -171,7 +171,9 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 
     AppScaffold(
         rack.name, onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
-        subtitle = i18n.text("text.494764b80774", rack.heightU, index.areaName(rack.areaId, i18n.text("text.1abc7243c3dd")), index.attachmentsOf(rack.id).size),
+        // Height plus only what is recorded: floor and attachments when present.
+        subtitle = listOfNotNull("${rack.heightU} U", rack.areaId?.let { index.areaName(it, "") }?.ifBlank { null },
+            index.attachmentsOf(rack.id).size.takeIf { it > 0 }?.let { i18n.text("config.attachmentsCount", it) }).joinToString(" · "),
         actions = {
             TextButton(onClick = { takePhoto(AttachmentTargetType.RACK, rack.id) }) { Text(i18n.text("text.494e0843d958")) }
             TextButton(onClick = { editing = true }) { Text(i18n.text("text.49e493ba9d9c")) }

@@ -45,11 +45,12 @@ class ConfiguratorLayoutTest {
         rule.onNodeWithText("Dati essenziali").assertExists()
     }
 
-    @Test fun hostSectionsComeBeforeCustomFieldsAndAdvancedOptions() {
+    @Test fun hostSectionsComeBeforeTheOtherSectionWithCustomFieldsAndAdvancedOptions() {
         show(MapObjectDraft.device(project, bu.id, area.id, sw.id)) { Text("HOST-SECTION") }
         fun top(text: String) = rule.onNodeWithText(text).fetchSemanticsNode().positionInRoot.y
         assertTrue(top("Note e rilievo") < top("HOST-SECTION"))
-        assertTrue(top("HOST-SECTION") < top("Campi personalizzati"))
+        assertTrue(top("HOST-SECTION") < top("Altro"))
+        rule.onNodeWithText("Altro").performScrollTo().performClick()
         assertTrue(top("Campi personalizzati") < top("Opzioni avanzate"))
     }
 

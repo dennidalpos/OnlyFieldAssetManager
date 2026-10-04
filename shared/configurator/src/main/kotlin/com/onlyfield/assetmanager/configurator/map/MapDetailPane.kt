@@ -28,6 +28,7 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.PortLogic
+import com.onlyfield.assetmanager.core.forms.RackLayout
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
 
@@ -142,7 +143,11 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
             actions.update(ObjectHierarchy.assign(project, node.ref, null, i18n), i18n.text("map.removedFrom", parentName)); onSelect(null)
         }) else emptyList())
 
+    val rack = index.rack(node.ref.id).takeIf { node.ref.type == PlacementTargetType.RACK }
+    // Only recorded data is shown; empty fields stay in the editor.
     val status = listOfNotNull(
+        rack?.let { ObjectSummary.Fact(i18n.text("map.fact.rackUnits"), i18n.text("map.rackUnitsValue", RackLayout.usedUnits(it, index.devices), it.heightU)) },
+        rack?.depthMm?.let { ObjectSummary.Fact(i18n.text("map.fact.depth"), "$it mm") },
         summary.mount?.let { ObjectSummary.Fact(i18n.text("map.fact.mount"), it) },
         node.childCount.takeIf { node.isContainer && !current }?.let { ObjectSummary.Fact(i18n.text("map.contents"), i18n.plural("map.objectCount", it)) },
         node.portsTotal.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.ports"), "${node.portsUsed}/$it") },
@@ -158,10 +163,9 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
             PortPanel(cells, i18n, compact = true, onPanelClick = { edit(ConfiguratorPage.PORTS) })
         }
     }
-    if (device != null && !current) {
+    if (device != null && !current && summary.identity.isNotEmpty()) {
         SectionTitle(i18n.text("map.identifiers"))
-        if (summary.identity.isEmpty()) Text(i18n.text("map.noIdentifiers"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        else FactRows(summary.identity)
+        FactRows(summary.identity)
     }
 
     val links = scene.links.filter { it.a == node.ref || it.b == node.ref }

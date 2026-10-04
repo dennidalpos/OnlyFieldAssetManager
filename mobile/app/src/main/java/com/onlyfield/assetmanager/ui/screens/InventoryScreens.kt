@@ -22,6 +22,7 @@ import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.QuickAdd
+import com.onlyfield.assetmanager.core.forms.PortLogic
 import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.Screen
@@ -115,6 +116,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
         return
     }
     var editing by remember { mutableStateOf(false) }
+    var editingPorts by remember { mutableStateOf(false) }
     var replacing by remember { mutableStateOf(false) }
     var merging by remember { mutableStateOf(false) }
     val takePhoto = rememberPhotoCapture(vm)
@@ -140,7 +142,6 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                 )
             )
         },
-        floatingActionButton = { ExtendedFloatingActionButton(onClick = { editing = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.1f52745e2c43")) }) }
     ) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
@@ -155,7 +156,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                         InfoRow("MAC", device.macAddress)
                         InfoRow(i18n.text("text.488b09e885d9"), device.serialNumber)
                         InfoRow(i18n.text("text.90c2d339a9d5"), project.deviceModels.find { it.id == device.deviceModelId }?.name)
-                        InfoRow(i18n.text("text.9ac631f3dde4"), device.observation?.status?.toDisplayString(i18n = i18n) ?: i18n.text("text.ac4e0792e577"))
+                        InfoRow(i18n.text("text.9ac631f3dde4"), device.observation?.status?.toDisplayString(i18n = i18n))
                         device.observation?.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
                     }
                 }
@@ -180,25 +181,19 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                     ItemCard(title = a.name, details = listOf("${a.fileType.toDisplayString(i18n = i18n)} · ${a.originalFileName}"))
                 }
             }
-            item { SectionTitle(i18n.text("text.625d94dac5fc", device.ports.size)) }
-            if (device.ports.isEmpty()) item { Text(i18n.text("text.c4698e451ffc"), style = MaterialTheme.typography.bodySmall) }
-            items(device.ports, key = { it.id }) { port ->
-                val cable = project.cables.find { it.portAId == port.id || it.portBId == port.id }
-                val peer = cable?.let { if (it.portAId == port.id) it.portBId else it.portAId }
-                ItemCard(
-                    title = port.name,
-                    details = listOf(port.label.orEmpty(), if (cable != null) i18n.text("text.92723978d61e", index.portLabel(peer, i18n.text("text.5c26c2c2406a"))) else i18n.text("text.f9c656f8a849")),
-                    menu = listOf(MenuAction(i18n.text("text.442a0ee7040c"), destructive = true) {
-                        confirm(ConfirmRequest(i18n.text("text.81adf4548f43", port.name), if (cable != null) i18n.text("text.df2a07ce28c1") else i18n.text("text.8a20492d4606")) {
-                            vm.edit(i18n.text("text.3eb469352665", port.name)) { ProjectEdits.deletePortFromDevice(it, device.id, port.id) }
-                        })
-                    })
-                )
+            // Ports as the panel drawing; tapping one opens the editor on Ports.
+            if (device.ports.isNotEmpty()) {
+                item { SectionTitle(i18n.text("text.625d94dac5fc", device.ports.size)) }
+                item {
+                    val cells = remember(project, device.id) { PortLogic.panel(project, device, index = index) }
+                    PortPanel(cells, i18n, onClick = { editingPorts = true })
+                }
             }
         }
     }
 
     if (editing) DeviceDialog(vm, project, device) { editing = false }
+    if (editingPorts) DeviceDialog(vm, project, device, initialSection = ConfiguratorPage.PORTS) { editingPorts = false }
     if (replacing) {
         var name by remember { mutableStateOf("") }
         var category by remember { mutableStateOf(device.category) }
@@ -245,14 +240,15 @@ private fun InfoRow(label: String, value: String?) {
 }
 
 @Composable
-internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device?, initialSerial: String? = null, initial: MapObjectDraft? = null, onClose: () -> Unit) {
+internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device?, initialSerial: String? = null, initial: MapObjectDraft? = null,
+                          initialSection: ConfiguratorPage = ConfiguratorPage.ESSENTIALS, onClose: () -> Unit) {
     val i18n = LocalMessages.current
     var draft by remember(device) { mutableStateOf(initial ?: inventoryDeviceDraft(project, device).let { d -> initialSerial?.let { d.copy(device = d.device.copy(serialNumber = it)) } ?: d }) }
     var scanningSerial by remember { mutableStateOf(false) }
     EditScreen(configuratorTitle(project, draft, i18n), onClose, {
         onClose(); vm.edit(configuratorTitle(project, draft, i18n)) { draft.apply(it, i18n) }
     }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, draft, i18n)) {
-        ObjectFields(project, draft) { draft = it }
+        ObjectFields(project, draft, initialSection) { draft = it }
         ConfiguratorSection(i18n.text("ux.scanSerial"), i18n = i18n) {
             OutlinedButton(onClick = { scanningSerial = true }) { Text(i18n.text("ux.scanSerial")) }
         }
