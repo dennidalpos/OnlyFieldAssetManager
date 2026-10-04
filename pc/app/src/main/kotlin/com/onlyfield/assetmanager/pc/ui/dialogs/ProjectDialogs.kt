@@ -185,7 +185,7 @@ private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(i18n.text("text.620d36696411", d.pkg.project.name), fontWeight = FontWeight.SemiBold)
-                Text(i18n.text("text.9d284912dcdd", d.comparison.status.toDisplayString(i18n = i18n)))
+                Text(i18n.text("text.9d284912dcdd", if (d.comparison.currentProjectId == null) d.comparison.summary else d.comparison.status.toDisplayString(i18n = i18n)))
                 d.comparison.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 Text(
                     i18n.text("text.bdd5139031cd") +

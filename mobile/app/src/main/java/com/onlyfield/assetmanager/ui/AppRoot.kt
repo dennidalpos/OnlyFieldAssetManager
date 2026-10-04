@@ -141,7 +141,8 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
                         Text(pkg.project.name, fontWeight = FontWeight.SemiBold)
                         Text(i18n.text("text.6d23c6d3c065", pkg.project.businessUnits.sumOf { it.devices.size }, pkg.project.racks.size, pkg.project.cables.size))
                         comparison?.let { c ->
-                            Text(comparisonLabel(c.status.name, i18n = i18n))
+                            // Without a local copy there is nothing to compare: show "new local project".
+                            Text(if (c.currentProjectId == null) c.summary else comparisonLabel(c.status.name, i18n = i18n))
                             c.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         }
                         if (sameProjectExists) Text(i18n.text("text.260e5b89f7f2"), style = MaterialTheme.typography.bodySmall)
