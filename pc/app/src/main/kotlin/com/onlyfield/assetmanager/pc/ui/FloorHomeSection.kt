@@ -2,6 +2,7 @@ package com.onlyfield.assetmanager.pc.ui
 
 import com.onlyfield.assetmanager.pc.LocalMessages
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -74,8 +75,14 @@ fun FloorHomeSection(state: DesktopAppState) {
                 OutlinedButton(onClick = { selectingPlan = true }) { Text(i18n.text("text.68f86d09412c")) }
             }, media = { ref ->
                 val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
-                project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
-                    Text(a.name, style = MaterialTheme.typography.bodySmall); MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                // The pane draws the section title; thumbnails scroll sideways to keep it compact.
+                Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
+                        Column(Modifier.width(120.dp)) {
+                            MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                            Text(a.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                    }
                 }
             })
         }
@@ -87,7 +94,7 @@ fun FloorHomeSection(state: DesktopAppState) {
             addingStructure = false
         }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
     }
-    adding?.let { (parent, point) -> if (area != null) ObjectPickerDialog(project, i18n, allowCables = parent == null, onClose = { adding = null }, onPick = { type, preset ->
+    adding?.let { (parent, point) -> if (area != null) ObjectPickerDialog(project, i18n, area.id, parent, onClose = { adding = null }, onPick = { type, preset ->
         editorPage = ConfiguratorPage.ESSENTIALS; editor = newObjectDraft(project, type, preset, area.id, parent, point); adding = null
     }, onCustom = { type ->
         val updated = project.copy(objectTypes = project.objectTypes + type)

@@ -85,10 +85,10 @@ class FloorMapUiTest {
             rule.onNodeWithText("BU-A · 2 piani / zone").performClick()
             rule.onNodeWithText("Terra · 1 oggetti").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
-            rule.onNodeWithText("Aggiungi").performClick()
+            rule.onNodeWithText("Aggiungi oggetto").performClick()
             rule.onNodeWithText("Cerca tipologia…").performTextInput("modem")
             rule.onNodeWithText("Modem").assertIsDisplayed()
-            rule.onNodeWithText("Chiudi").performClick()
+            rule.onNodeWithText("Annulla").performClick()
             rule.runOnIdle { assertEquals(1, state.project!!.businessUnits.first().devices.size) }
             rule.onNodeWithText("› BU-A").performClick()
             rule.onNodeWithText("Primo · 0 oggetti").performClick()
@@ -143,14 +143,14 @@ class FloorMapUiTest {
         rule.onNodeWithText("2 cavi", substring = true).assertIsDisplayed()
         rule.onNodeWithText("INT").assertDoesNotExist()
         rule.onNodeWithText("C2").performScrollTo().performClick()
-        rule.onNodeWithText("Scheda cavo e foto").performScrollTo().performClick()
+        rule.onNodeWithText("Modifica cavo").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(c2.id, opened) }
         // Opening the rack shows the internal cable between its children.
         canvas.clickAt(viewport(canvas), MapPoint(.2f, .5f))
         rule.onNodeWithText("‹ Indietro").assertIsDisplayed()
         canvas.clickAt(viewport(canvas), middle(MapPoint(.5f, .25f), MapPoint(.5f, .75f)))
         rule.onNodeWithText("INT").performScrollTo().performClick()
-        rule.onNodeWithText("Scheda cavo e foto").performScrollTo().performClick()
+        rule.onNodeWithText("Modifica cavo").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(internal.id, opened) }
     }
 
@@ -165,11 +165,11 @@ class FloorMapUiTest {
         val node = rule.onNodeWithTag("floor-map")
         node.clickAt(viewport(node), arc(MapPoint(.4f, .5f), MapPoint(.6f, .5f)).let { it[it.size / 2] })
         rule.onNodeWithText("C1").performScrollTo().performClick()
-        rule.onNodeWithText("Scheda cavo e foto").assertIsDisplayed()
+        rule.onNodeWithText("Modifica cavo").assertIsDisplayed()
         val end = viewport(node).screen(MapPoint(.6f, .5f))
         node.performTouchInput { down(Offset(end.x, end.y)); moveBy(Offset(10f, 2f)); moveBy(Offset(40f, 25f)); up() }
         rule.runOnIdle { assertTrue(p.cableRoutes.single().points.last().x > .6f) }
-        rule.onNodeWithText("Scheda cavo e foto").performScrollTo().performClick()
+        rule.onNodeWithText("Modifica cavo").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(cable.id, opened) }
     }
 }

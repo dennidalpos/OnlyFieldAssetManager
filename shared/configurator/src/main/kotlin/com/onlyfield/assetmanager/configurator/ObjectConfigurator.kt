@@ -26,6 +26,7 @@ import com.onlyfield.assetmanager.core.forms.*
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.configurator.map.ValueMenu
+import com.onlyfield.assetmanager.configurator.map.portGroupsSummary
 import com.onlyfield.assetmanager.configurator.map.presetSummary
 
 @Composable
@@ -337,6 +338,16 @@ private fun Trail(items: List<String>) {
 @Composable
 private fun PresetBar(draft: MapObjectDraft, i18n: Messages, change: (MapObjectDraft) -> Unit) {
     val preset = DevicePresets.forType(draft.type.id) ?: return
+    val groups = draft.device.hardware.portGroups
+    // Ports already defined (from the picker or a model): show them, and the menus only on request.
+    var open by remember(draft.id, preset.id) { mutableStateOf(groups.isEmpty()) }
+    if (!open) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(portGroupsSummary(groups), style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            TextButton(onClick = { open = true }) { Text(i18n.text("config.changePreset")) }
+        }
+        return
+    }
     var values by remember(draft.id, preset.id) { mutableStateOf(preset.defaults()) }
     Text(i18n.text("preset.title"), style = MaterialTheme.typography.titleSmall)
     Text(i18n.text("preset.hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -348,7 +359,7 @@ private fun PresetBar(draft: MapObjectDraft, i18n: Messages, change: (MapObjectD
     }
     val result = preset.result(values)
     Text(presetSummary(result), style = MaterialTheme.typography.bodySmall)
-    OutlinedButton(onClick = { change(DevicePresets.apply(draft, result)) }) { Text(i18n.text("preset.apply")) }
+    OutlinedButton(onClick = { change(DevicePresets.apply(draft, result)); open = false }) { Text(i18n.text("preset.apply")) }
 }
 
 private const val CUSTOM_NAMING = "CUSTOM"
