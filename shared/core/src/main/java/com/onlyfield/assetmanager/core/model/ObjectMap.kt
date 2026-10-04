@@ -163,7 +163,9 @@ object ObjectMap {
         val occupied = nodes(project, areaId).filterNot { it.id == id }.map { it.point }
         val slots = (occupied.size + 1).coerceAtLeast(36) * 4
         val gap = .25f / sqrt(slots.toFloat())
-        val point = (0 until slots).map { freePoint(it, slots) }.first { p -> occupied.none { hypot(it.x - p.x, it.y - p.y) < gap } }
+        // Free slot nearest the centre: edge slots would clip the node and its label.
+        val point = (0 until slots).map { freePoint(it, slots) }.sortedBy { hypot(it.x - .5f, it.y - .5f) }
+            .first { p -> occupied.none { hypot(it.x - p.x, it.y - p.y) < gap } }
         return place(project, areaId, type, id, point)
     }
 

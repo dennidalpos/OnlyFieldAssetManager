@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.core.model
 
+import com.onlyfield.assetmanager.core.display.mappingTypeLabel
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.i18n.Messages
 
 enum class ConnectionState { AVAILABLE, COMPLETE, INCOMPLETE, CONFLICT }
@@ -114,7 +116,7 @@ class ConnectionGraph(val project: Project) {
             val unknown = next == null || !exists(next) || edge.mapping?.isUnknownPassage == true
             val destination = next?.let { n -> listOfNotNull(device(n)?.technicalName, ports[n]?.name).joinToString(" › ") }.orEmpty()
             steps.add(ChainStep(steps.size + 1, ports[node], device(node), edge.cable, edge.mapping, unknown,
-                listOfNotNull(edge.cable?.codeOrLabel ?: edge.cable?.medium?.name, edge.mapping?.mappingType, destination.ifBlank { i18n.text("config.undefined") }).joinToString(" → ")))
+                listOfNotNull(edge.cable?.codeOrLabel ?: edge.cable?.medium?.toDisplayString(i18n), edge.mapping?.mappingType?.let { mappingTypeLabel(it, i18n) }, destination.ifBlank { i18n.text("config.undefined") }).joinToString(" → ")))
             if (unknown) break
             if (next in visited) {
                 steps.add(ChainStep(steps.size + 1, ports[next], device(next), isUnknownPassage = true, description = i18n.text("config.cycle")))

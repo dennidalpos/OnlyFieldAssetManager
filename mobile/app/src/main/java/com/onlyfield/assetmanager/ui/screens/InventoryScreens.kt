@@ -71,7 +71,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                             details = listOf(
                                 listOfNotNull(d.areaId?.let { index.areaName(it) }, d.rackId?.let { i18n.text("text.f5ba7982ad75", index.rackName(it)) + (d.positionU?.let { u -> i18n.text("text.bf28e779d560", u) } ?: "") })
                                     .joinToString(" › "),
-                                listOfNotNull(d.ipAddress, i18n.text("text.53a2e3b94696", d.ports.size)).joinToString(" · ")
+                                listOfNotNull(d.ipAddress, i18n.plural("text.53a2e3b94696", d.ports.size)).joinToString(" · ")
                             ),
                             leading = if (selecting) {
                                 { Checkbox(checked = d.id in selected, onCheckedChange = { selected = if (it) selected + d.id else selected - d.id }) }

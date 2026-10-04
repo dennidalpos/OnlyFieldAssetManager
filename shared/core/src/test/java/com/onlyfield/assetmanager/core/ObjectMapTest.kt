@@ -29,6 +29,12 @@ class ObjectMapTest {
         assertEquals(MapPoint(.8f, .2f), ObjectMap.nodes(placed, area.id).single().point)
         assertEquals(1, placed.floorplanPlacements.size)
     }
+    @Test fun objectAddedWithoutPointStartsAwayFromTheEdges() {
+        val d = MapObjectDraft(type = ObjectCatalog.builtins.first(), buId = bu.id, areaId = area.id)
+        val saved = d.copy(device = d.device.copy(technicalName = "RK-01")).apply(project)
+        val point = ObjectMap.nodes(saved, area.id).single().point
+        assertTrue(point.toString(), point.x in .3f..(.7f) && point.y in .3f..(.7f))
+    }
     @Test fun legacyLayoutHasNoRepeatedPositionsForOneHundredDevices() {
         val p = project.copy(businessUnits = listOf(bu.copy(devices = (1..100).map { Device(technicalName = "D$it", areaId = area.id) })))
         val nodes = ObjectMap.nodes(p, area.id)

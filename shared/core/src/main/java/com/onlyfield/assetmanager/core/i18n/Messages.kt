@@ -21,6 +21,9 @@ class Messages(val locale: Locale = Locale.ITALIAN) {
     fun text(key: String, vararg arguments: Any?): String =
         MessageFormat(bundle.getString(key), locale).format(arguments.map { it.toString() }.toTypedArray())
 
+    /** CLDR it/en/es cardinals: "one" is exactly 1; "many" (millions) is not needed for counts. */
+    fun plural(key: String, count: Int): String = text(if (count == 1) "$key.one" else key, count)
+
     companion object {
         private val bundles = listOf("it", "en", "es").associateWith { language ->
             val path = "com/onlyfield/assetmanager/core/i18n/messages_$language.properties"

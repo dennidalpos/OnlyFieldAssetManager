@@ -49,7 +49,7 @@ fun RackSection(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SectionHeader(
             i18n.text("text.4cd265c2b8c6"),
-            subtitle = i18n.text("text.2c2d174aee1f", project.racks.size),
+            subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
             searchQuery = query,
             onSearchChange = { query = it },
             searchPlaceholder = i18n.text("text.0c4a991d1c4b")

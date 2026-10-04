@@ -1,9 +1,9 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-04",
-  "currentPhase": "Pannello, inserimento e configuratore rifattorizzati e provati su Android; prossimi: collegamenti tra piani/BU e VPN (F06–F08).",
+  "currentPhase": "Difetti F10 corretti; prossimi: collegamenti tra piani/BU e VPN (F06–F08).",
   "activeTask": null,
-  "nextSession": "Ripartire da F06 (estremità remote dei cavi tra piani e BU con Vai a e dorsale) e F07 (sezione Collegamenti logici VPN/WAN nel pannello), poi F08 e F10; F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
+  "nextSession": "Ripartire da F06 (estremità remote dei cavi tra piani e BU con Vai a e dorsale) e F07 (sezione Collegamenti logici VPN/WAN nel pannello), poi F08; F09 rimandato. Completare RES-19 su Android (TalkBack, testo ingrandito, tastiera, tema chiaro, zoom a due dita, VLAN/PoE multipli). Restano RES-17, RES-18, RES-13 e RES-01. Sul moto g86 c'è il progetto di prova «Test rack fibra» (eliminabile). Nessuna attività in corso; ramo main.",
   "remainingTasks": [
     {
       "id": "F06",
@@ -32,13 +32,6 @@
       "title": "VPN disegnate sulla mappa (rimandato)",
       "description": "Tratto logico distinto da rame e fibra, con simbolo e voce di legenda, senza contare porte occupate; tratto con etichetta se l'estremità è altrove. Da valutare dopo F06–F08.",
       "acceptance": "Decisione presa dopo F07; se implementato, legenda e lettore di schermo distinguono il collegamento logico."
-    },
-    {
-      "id": "F10",
-      "area": "UI",
-      "title": "Difetti emersi dalla prova su Android del 4 ottobre",
-      "description": "Rack aggiunto senza punto posizionato nell'angolo e tagliato; passo del percorso con nome interno FIBER_OVERALL invece del mezzo tradotto; plurali \"1 cavi\" e \"1 dispositivi\"; menu del preset nella finestra di inserimento non a tutta larghezza.",
-      "acceptance": "Ogni difetto corretto con test o verifica su telefono."
     }
   ],
   "residuals": [

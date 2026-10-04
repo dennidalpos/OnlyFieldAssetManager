@@ -6,7 +6,10 @@ Le app supportano Sistema, Italiano, English ed Espanol. Una lingua di sistema d
 
 Le chiavi dei cataloghi devono essere presenti nelle tre lingue. Le credenziali restano escluse da PDF, XLSX e Markdown.
 
+I conteggi visibili usano `Messages.plural(chiave, n)`: per n = 1 legge `chiave.one` (es. «1 cavo»), altrimenti la chiave base («3 cavi»). Basta la categoria CLDR *one*: in it/en/es vale solo per 1, mentre *many* riguarda i milioni. Enum interni (mezzo del cavo, tipo di mappatura) passano sempre da `core.display` e non compaiono come nomi di codice.
+
 ## Fonti
 
 - [PropertyResourceBundle](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/PropertyResourceBundle.html)
+- [Regole di plurale CLDR](https://www.unicode.org/cldr/charts/latest/supplemental/language_plural_rules.html)
 - [MessageFormat](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/text/MessageFormat.html)

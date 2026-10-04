@@ -75,7 +75,7 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
                             val used = project.cables.count { s.id in it.sharedPathSegmentIds }
                             ItemCard(
                                 title = s.name,
-                                details = listOf("${index.areaName(s.sourceAreaId, "?")} → ${index.areaName(s.targetAreaId, "?")}", i18n.text("text.e512d1fed715", used) + (s.capacityMaxCables?.let { i18n.text("text.c942a2363719", it) } ?: "")),
+                                details = listOf("${index.areaName(s.sourceAreaId, "?")} → ${index.areaName(s.targetAreaId, "?")}", i18n.plural("text.e512d1fed715", used) + (s.capacityMaxCables?.let { i18n.text("text.c942a2363719", it) } ?: "")),
                                 badge = s.capacityMaxCables?.takeIf { used > it }?.let { i18n.text("text.fd4332f58e2b") },
                                 onClick = { pathDialog = s },
                                 menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), destructive = true) {

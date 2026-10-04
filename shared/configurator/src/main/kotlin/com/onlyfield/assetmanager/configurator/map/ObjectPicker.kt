@@ -8,6 +8,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.heading
@@ -26,9 +28,12 @@ import com.onlyfield.assetmanager.core.model.*
 @Composable
 fun <T> ValueMenu(label: String, value: T, values: List<T>, display: (T) -> String, modifier: Modifier = Modifier, change: (T) -> Unit) {
     var open by remember { mutableStateOf(false) }
-    Box(modifier) {
+    var width by remember { mutableStateOf(0.dp) }
+    val density = LocalDensity.current
+    // The popup matches the field width, so long labels stay readable on phones.
+    Box(modifier.onSizeChanged { width = with(density) { it.width.toDp() } }) {
         SelectField(label, display(value)) { open = true }
-        DropdownMenu(open, { open = false }, modifier = Modifier.heightIn(max = 360.dp)) {
+        DropdownMenu(open, { open = false }, modifier = Modifier.width(width).heightIn(max = 360.dp)) {
             values.forEach { v -> DropdownMenuItem(text = { Text(display(v)) }, onClick = { change(v); open = false }) }
         }
     }
@@ -84,7 +89,7 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, areaId: String, parent:
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         preset.params.forEach { param ->
                             ValueMenu(i18n.text("preset.param.${param.key}"), values.getValue(param.key), param.values,
-                                { if (param.labelled) i18n.text("preset.value.$it") else it }, Modifier.widthIn(min = 140.dp, max = 220.dp)) { values = values + (param.key to it) }
+                                { if (param.labelled) i18n.text("preset.value.$it") else it }, Modifier.widthIn(min = 160.dp).weight(1f)) { values = values + (param.key to it) }
                         }
                     }
                     Text(presetSummary(preset.result(values)), style = MaterialTheme.typography.titleSmall)

@@ -61,7 +61,7 @@ object ReportContent {
                             d.ipAddress,
                             d.rackId?.let { i18n.text("text.4d2d924e8402", index.rackName(it)) + (d.positionU?.let { u -> i18n.text("text.bf28e779d560", u) } ?: "") },
                             d.physicalLabel?.let { i18n.text("text.49ac7ff5098a", it) },
-                            i18n.text("text.53a2e3b94696", d.ports.size).takeIf { d.ports.isNotEmpty() }
+                            i18n.plural("text.53a2e3b94696", d.ports.size).takeIf { d.ports.isNotEmpty() }
                         )
                         item("${d.technicalName} — ${extra.joinToString(" · ")}", indent = 1)
                     }

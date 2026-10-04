@@ -206,4 +206,11 @@ class ConfiguratorTest {
         val conflicting = a.copy(ports = listOf(a.ports.single().copy(connectedPortId = c.ports.single().id)))
         assertEquals(ConnectionState.CONFLICT, ConnectionGraph(project(conflicting, b, c).copy(cables = listOf(cable))).state(a.ports.single().id))
     }
+
+    @Test fun traceShowsTranslatedMediumInsteadOfEnumName() {
+        val a = device("A"); val b = device("B")
+        val p = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.FIBER_OVERALL)
+        val step = ConnectionGraph(p).trace(a.ports.single().id).single().description
+        assertFalse(step, step.contains("FIBER_OVERALL"))
+    }
 }

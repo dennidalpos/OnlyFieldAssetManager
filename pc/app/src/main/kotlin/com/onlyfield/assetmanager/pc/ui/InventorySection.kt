@@ -123,7 +123,7 @@ fun InventorySection(
                     ItemCard(
                         title = dev.technicalName + (dev.alias?.let { " ($it)" } ?: ""),
                         badge = dev.category.toDisplayString(i18n = i18n),
-                        details = listOf(location, listOf(network, i18n.text("text.53a2e3b94696", dev.ports.size)).filter { it.isNotBlank() }.joinToString(" · ")),
+                        details = listOf(location, listOf(network, i18n.plural("text.53a2e3b94696", dev.ports.size)).filter { it.isNotBlank() }.joinToString(" · ")),
                         selected = editing?.id == dev.id || portsOf == dev.id,
                         onClick = { changeDetail { editing = dev } },
                         leading = {

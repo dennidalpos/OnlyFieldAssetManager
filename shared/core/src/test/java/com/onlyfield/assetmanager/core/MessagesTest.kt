@@ -48,4 +48,12 @@ class MessagesTest {
         assertNotEquals(italian.issues.first().message, spanish.issues.first().message)
         assertTrue(FieldValidators.required("", "Mi equipo", Messages(Locale.forLanguageTag("es")))!!.contains("Mi equipo"))
     }
+
+    @Test
+    fun pluralUsesSingularOnlyForOne() {
+        val it = Messages()
+        assertEquals("1 cavo", it.plural("map.cableCount", 1))
+        assertEquals("0 cavi", it.plural("map.cableCount", 0))
+        assertEquals("2 devices", Messages(Locale.ENGLISH).plural("config.devicesCount", 2))
+    }
 }

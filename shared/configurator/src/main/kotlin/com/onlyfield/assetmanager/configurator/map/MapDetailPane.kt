@@ -88,7 +88,7 @@ private fun SceneObjects(scene: MapScene, i18n: Messages, onSelect: (MapSelectio
                 GlyphBadge(node.glyph, 28.dp)
                 Spacer(Modifier.width(10.dp))
                 Text(node.name, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (node.isContainer && node.childCount > 0) Text(i18n.text("map.objectCount", node.childCount), style = MaterialTheme.typography.labelSmall)
+                if (node.isContainer && node.childCount > 0) Text(i18n.plural("map.objectCount", node.childCount), style = MaterialTheme.typography.labelSmall)
             }
         }
     }
@@ -138,7 +138,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
 
     val status = listOfNotNull(
         summary.mount?.let { ObjectSummary.Fact(i18n.text("map.fact.mount"), it) },
-        node.childCount.takeIf { node.isContainer && !current }?.let { ObjectSummary.Fact(i18n.text("map.contents"), i18n.text("map.objectCount", it)) },
+        node.childCount.takeIf { node.isContainer && !current }?.let { ObjectSummary.Fact(i18n.text("map.contents"), i18n.plural("map.objectCount", it)) },
         node.portsTotal.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.ports"), "${node.portsUsed}/$it") },
         node.internalCables.size.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.internal"), it.toString()) },
         device?.hardware?.poeBudgetWatts?.let { ObjectSummary.Fact(i18n.text("map.fact.poe"), "${PortLogic.poeLoad(project, device).toInt()}/${it.toInt()} W") },
@@ -169,7 +169,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
                     Text(link.media.joinToString(" · ") { i18n.text("map.medium.${it.name}") }, style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                Text(i18n.text("map.cableCount", link.cableIds.size), style = MaterialTheme.typography.labelMedium)
+                Text(i18n.plural("map.cableCount", link.cableIds.size), style = MaterialTheme.typography.labelMedium)
             }
         }
     }
@@ -192,7 +192,7 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
         return (port?.let(index::portLabel) ?: device.technicalName) + where
     }
     PaneHeader(null, "${scene.node(link.a)?.name ?: i18n.text("map.outside")} ⟷ ${scene.node(link.b)?.name ?: i18n.text("map.outside")}",
-        (listOf(i18n.text("map.cableCount", link.cableIds.size)) + link.media.map { i18n.text("map.medium.${it.name}") }).joinToString(" · "),
+        (listOf(i18n.plural("map.cableCount", link.cableIds.size)) + link.media.map { i18n.text("map.medium.${it.name}") }).joinToString(" · "),
         i18n, onClose = { onSelect(null) })
     SectionTitle(i18n.text("map.cablesTitle"), link.cableIds.size)
     link.cableIds.mapNotNull { id -> project.cables.find { it.id == id } }.forEach { cable ->

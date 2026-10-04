@@ -279,7 +279,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             val rack = index.rack(draft.id)
             if (!modelEditor && rack != null && rack.heightU in 1..60) {
                 val inRack = index.devices.filter { it.rackId == rack.id }
-                ConfiguratorSection(i18n.text("ux.rackContents"), summary = i18n.text("config.devicesCount", inRack.size)) {
+                ConfiguratorSection(i18n.text("ux.rackContents"), summary = i18n.plural("config.devicesCount", inRack.size)) {
                     RackContents(rack, inRack, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { u ->
                         stage(preview)
                         nested = MapObjectDraft.newObject(preview, ObjectCatalog.builtins.first { it.id == "switch" }, draft.buId, r.areaId.orEmpty(), self)
@@ -548,7 +548,7 @@ private fun BulkPortBar(project: Project, cells: List<PortCell>, selected: Set<S
     val taggedVlans = tagged.split(',', ' ', ';').mapNotNull { it.trim().toIntOrNull() }.filter { it in 1..4094 }
     Surface(color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = RoundedCornerShape(8.dp)) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(i18n.text("port.selected", selected.size), style = MaterialTheme.typography.titleSmall)
+            Text(i18n.plural("port.selected", selected.size), style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = { select(cells.map { it.port.id }.toSet()) }) { Text(i18n.text("port.selectAll")) }
                 TextButton(onClick = { select(cells.filter { !it.occupied }.map { it.port.id }.toSet()) }) { Text(i18n.text("port.selectFree")) }

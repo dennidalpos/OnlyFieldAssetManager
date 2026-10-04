@@ -70,7 +70,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     if (bu == null) items(project.businessUnits.sortedForDisplay(i18n) { it.name }, key = { it.id }) { b ->
                         ItemCard(b.name, listOf(i18n.text("text.e326a5ebe3a5", ObjectMap.areas(b).size)), onClick = { vm.selectedBuId = b.id; vm.selectedAreaId = null })
                     } else items(ObjectMap.areas(bu).sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
-                        ItemCard(ObjectMap.areaLabel(bu, a), listOf(i18n.text("text.76188f884c68", ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)), onClick = { vm.selectedAreaId = a.id })
+                        ItemCard(ObjectMap.areaLabel(bu, a), listOf(i18n.plural("text.76188f884c68", ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)), onClick = { vm.selectedAreaId = a.id })
                     }
                 }
             } else {

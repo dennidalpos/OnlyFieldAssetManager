@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
+import com.onlyfield.assetmanager.core.display.mappingTypeLabel
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.pc.ui.components.*
@@ -100,7 +101,7 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
                             cable.lengthValue?.let { "${formatLength(it)} ${cable.lengthUnit ?: "m"}" },
                             cable.color,
                             cable.observedSpeed?.let { i18n.text("text.a77dfe6ce617", it) },
-                            cable.sharedPathSegmentIds.takeIf { it.isNotEmpty() }?.let { i18n.text("text.b6cc702cad30", it.size) }
+                            cable.sharedPathSegmentIds.takeIf { it.isNotEmpty() }?.let { i18n.plural("text.b6cc702cad30", it.size) }
                         ).joinToString(" · "),
                         cable.notes.orEmpty()
                     )
@@ -142,7 +143,7 @@ private fun PathsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
                     title = seg.name,
                     details = listOf(
                         "${index.areaName(seg.sourceAreaId, "?")} → ${index.areaName(seg.targetAreaId, "?")}",
-                        i18n.text("text.e512d1fed715", used) + (seg.capacityMaxCables?.let { i18n.text("text.c942a2363719", it) } ?: ""),
+                        i18n.plural("text.e512d1fed715", used) + (seg.capacityMaxCables?.let { i18n.text("text.c942a2363719", it) } ?: ""),
                         seg.description.orEmpty()
                     ),
                     badge = seg.capacityMaxCables?.takeIf { used > it }?.let { i18n.text("text.fd4332f58e2b") }
@@ -233,13 +234,5 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
 }
 
 private val MAPPING_TYPES = listOf("CROSS_CONNECT", "PATCH_PANEL", "INTERCONNECT", "OTHER")
-
-private fun mappingTypeLabel(type: String, i18n: Messages = Messages()) = when (type) {
-    "CROSS_CONNECT" -> i18n.text("text.3b9962b19010")
-    "PATCH_PANEL" -> i18n.text("text.e97fc26f3676")
-    "INTERCONNECT" -> i18n.text("text.14f06d35aa12")
-    "OTHER" -> i18n.text("text.78f5742268e4")
-    else -> type
-}
 
 private fun formatLength(value: Double): String = if (value % 1.0 == 0.0) value.toLong().toString() else value.toString().replace('.', ',')

@@ -118,7 +118,7 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     val index = remember(project) { ProjectIndex(project) }
     var creating by remember { mutableStateOf(false) }
     AppScaffold(
-        i18n.text("text.4cd265c2b8c6"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.text("text.2c2d174aee1f", project.racks.size),
+        i18n.text("text.4cd265c2b8c6"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
         floatingActionButton = { ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.4cd265c2b8c6")) }) }
     ) { padding ->
         if (project.racks.isEmpty()) EmptyState(i18n.text("text.cc75d410beeb"), Modifier.padding(padding), i18n.text("text.3f21051ccc3f")) { creating = true }
