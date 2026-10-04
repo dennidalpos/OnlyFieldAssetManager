@@ -17,4 +17,19 @@ enum class ProjectDestination(val labelKey: String, val groupKey: String) {
     TRASH("text.9a3a36d5fa15", "ux.nav.project");
 
     fun title(i18n: Messages): String = i18n.text(labelKey)
+
+    val icon get() = when (this) {
+        MAP -> SymbolIcons.map
+        DEVICES -> SymbolIcons.inventory2
+        RACKS -> SymbolIcons.dns
+        CABLING -> SymbolIcons.cable
+        NETWORK -> SymbolIcons.lan
+        POWER -> SymbolIcons.bolt
+        MODELS -> SymbolIcons.category
+        ATTACHMENTS -> SymbolIcons.attachFile
+        CREDENTIALS -> SymbolIcons.key
+        DOCUMENTS -> SymbolIcons.description
+        PROJECT -> SymbolIcons.settings
+        TRASH -> SymbolIcons.delete
+    }
 }

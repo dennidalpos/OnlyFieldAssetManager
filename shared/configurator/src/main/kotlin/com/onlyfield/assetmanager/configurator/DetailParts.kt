@@ -3,6 +3,7 @@ package com.onlyfield.assetmanager.configurator
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +12,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.font.FontWeight
@@ -22,11 +24,14 @@ import com.onlyfield.assetmanager.core.display.ObjectSummary
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.Glyph
 
-/** Family colour with the non-translated symbol (SW, AP…); the same badge on map, lists and editors. */
+/** Family colour with the drawn icon (or the code for custom types); the same badge on map, lists and editors. */
 @Composable
 fun GlyphBadge(glyph: Glyph, size: Dp = 40.dp) {
-    Box(Modifier.size(size).background(MapStyle.family(glyph.family), RoundedCornerShape(size / 5)), contentAlignment = Alignment.Center) {
-        Text(glyph.code, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1,
+    val icon = ObjectIcon.of(glyph)
+    Box(Modifier.size(size).background(MapStyle.family(glyph.family), RoundedCornerShape(size / 8)), contentAlignment = Alignment.Center) {
+        if (icon != null) Canvas(Modifier.fillMaxSize().padding(size / 8).semantics { contentDescription = glyph.code }) {
+            drawObjectIcon(icon, Offset.Zero, this.size.minDimension, Color.White)
+        } else Text(glyph.code, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1,
             style = if (size >= 36.dp) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelSmall)
     }
 }

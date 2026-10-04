@@ -1,4 +1,4 @@
-package com.onlyfield.assetmanager.pc.ui
+package com.onlyfield.assetmanager.configurator
 
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor

@@ -8,7 +8,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.onlyfield.assetmanager.core.display.ProjectIndex
-import com.onlyfield.assetmanager.pc.ui.SymbolIcons
+import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.validation.ModelValidator

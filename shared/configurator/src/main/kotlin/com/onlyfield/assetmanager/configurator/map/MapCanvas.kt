@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.configurator.map
 
+import com.onlyfield.assetmanager.configurator.ObjectIcon
+import com.onlyfield.assetmanager.configurator.drawObjectIcon
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -310,8 +313,8 @@ private fun DrawScope.drawNodes(scene: MapScene, screen: (MapPoint) -> Offset, s
         if (node.ref == selected) drawCircle(highlight, radius + unit * 3, c, style = Stroke(unit * 2))
         if (node.isContainer) {
             val r = radius * .9f
-            drawRoundRect(color.copy(alpha = .35f), c - Offset(r - unit * 2, r + unit * 2), Size(r * 2, r * 2), CornerRadius(unit * 3))
-            drawRoundRect(color, c - Offset(r, r), Size(r * 2, r * 2), CornerRadius(unit * 3))
+            drawRoundRect(color.copy(alpha = .35f), c - Offset(r - unit * 2, r + unit * 2), Size(r * 2, r * 2), CornerRadius(unit * 1.5f))
+            drawRoundRect(color, c - Offset(r, r), Size(r * 2, r * 2), CornerRadius(unit * 1.5f))
         } else drawCircle(color, radius * .85f, c)
         if (node.portsTotal > 0) {
             val sweep = 360f * node.portsUsed / node.portsTotal
@@ -319,8 +322,11 @@ private fun DrawScope.drawNodes(scene: MapScene, screen: (MapPoint) -> Offset, s
             drawArc(onSurface.copy(alpha = .15f), -90f, 360f, false, c - Offset(r, r), Size(r * 2, r * 2), style = Stroke(unit * 1.2f))
             drawArc(onSurface.copy(alpha = .55f), -90f, sweep, false, c - Offset(r, r), Size(r * 2, r * 2), style = Stroke(unit * 1.2f))
         }
-        val glyph = measurer.measure(AnnotatedString(node.glyph.code), TextStyle(color = Color.White, fontSize = if (node.glyph.code.length > 2) 10.sp else 12.sp, fontWeight = FontWeight.Bold))
-        drawText(glyph, topLeft = c - Offset(glyph.size.width / 2f, glyph.size.height / 2f))
+        val icon = ObjectIcon.of(node.glyph)
+        if (icon != null) radius.let { drawObjectIcon(icon, c - Offset(it * .55f, it * .55f), it * 1.1f, Color.White) } else {
+            val glyph = measurer.measure(AnnotatedString(node.glyph.code), TextStyle(color = Color.White, fontSize = if (node.glyph.code.length > 2) 10.sp else 12.sp, fontWeight = FontWeight.Bold))
+            drawText(glyph, topLeft = c - Offset(glyph.size.width / 2f, glyph.size.height / 2f))
+        }
         if (node.isContainer && node.childCount > 0) {
             val badge = measurer.measure(AnnotatedString(node.childCount.toString()), TextStyle(color = surface, fontSize = 10.sp, fontWeight = FontWeight.Bold))
             val at = c + Offset(radius * .8f, -radius * .8f)

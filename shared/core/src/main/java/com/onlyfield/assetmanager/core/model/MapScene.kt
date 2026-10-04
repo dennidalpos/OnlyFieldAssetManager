@@ -7,11 +7,12 @@ enum class ObjectFamily { NETWORK, SECURITY, SERVER, POWER, PASSIVE, STRUCTURE, 
 
 enum class LinkMedium { COPPER, FIBER, POWER, OTHER }
 
-data class Glyph(val code: String, val family: ObjectFamily)
+/** [typeId] is set only for built-in types, so UIs can pick a drawn icon without matching codes. */
+data class Glyph(val code: String, val family: ObjectFamily, val typeId: String? = null)
 
 /** Short, unique map symbols: never derived from translated names for built-in types. */
 object ObjectGlyph {
-    val RACK = Glyph("R", ObjectFamily.STRUCTURE)
+    val RACK = Glyph("R", ObjectFamily.STRUCTURE, "rack")
     private val builtins = mapOf(
         "switch" to Glyph("SW", ObjectFamily.NETWORK), "router" to Glyph("RT", ObjectFamily.NETWORK),
         "modem" to Glyph("MD", ObjectFamily.NETWORK), "ont" to Glyph("ONT", ObjectFamily.NETWORK),
@@ -37,8 +38,12 @@ object ObjectGlyph {
         DeviceCategory.CUSTOM -> ObjectFamily.OTHER
     }
 
-    fun of(type: ObjectType): Glyph = builtins[type.id]?.takeIf { ObjectCatalog.builtins.any { b -> b.id == type.id } }
-        ?: Glyph(initials(type.name), if (type.kind == ObjectKind.RACK) ObjectFamily.STRUCTURE else family(type.category))
+    fun of(type: ObjectType): Glyph {
+        val builtin = ObjectCatalog.builtins.any { it.id == type.id }
+        val glyph = builtins[type.id]?.takeIf { builtin }
+            ?: Glyph(initials(type.name), if (type.kind == ObjectKind.RACK) ObjectFamily.STRUCTURE else family(type.category))
+        return if (builtin) glyph.copy(typeId = type.id) else glyph
+    }
 
     fun of(project: Project, device: Device?): Glyph {
         val type = ObjectCatalog.type(project, device?.objectTypeId)
