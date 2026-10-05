@@ -26,6 +26,36 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 - La foto è un'azione primaria e sempre presente su apparati, rack, porte e cavi (allegati con destinazione `PORT` inclusa). Nel pannello mappa la sezione Foto compare anche vuota; identificativi e dati tecnici sono in Altri dettagli.
 - Preset hardware e logica delle porte solo nel codice (`DevicePresets`, `PortLogic`): nessun cambio a contratto o Room. Porte in tre passi (tipologia → quantità → etichetta); VLAN e PoE multipli sulle entità esistenti.
 
+## Evoluzione: censimento rete (intervista del 5 ottobre 2026)
+
+**Profilo.** Tecnico singolo o integratore; progetti medi (3–20 sedi, 100–1000 apparati); rilievo manuale. Il rilievo si fa su Android, la rifinitura e la consegna su Windows con scambio `.ofam`. Al cliente si consegnano PDF di documentazione ed Excel di inventario.
+
+**Valutazione.** Il modello fisico (porta → cavo → passanti → porta, `ConnectionGraph`) è adatto al censimento e va mantenuto. I limiti sono:
+
+- la sola vista planimetrica;
+- la gerarchia BU/sede/piano ambigua;
+- l'inserimento lento dei cavi in blocco;
+- il PDF Desktop solo testuale.
+
+**Decisioni.**
+
+- **Nessun modulo viene rimosso.** Videosorveglianza, credenziali, configurazioni e badge restano nel modello. Nella UI diventano sintetici: chiusi o nascosti se vuoti, espandibili in futuro.
+- **Gerarchia Sede → Piano.** La BU diventa un raggruppamento facoltativo delle sedi. Un apparato appartiene a un piano; la sede si ricava dal piano. È una modifica incompatibile ammessa dal greenfield v1; il demo va rigenerato.
+- **Stato operativo dell'apparato** (in servizio, spento, dismesso, da verificare). È distinto da `Observation`, che resta lo stato del rilievo.
+- **Mappa visiva su tre viste:**
+  - la planimetria esistente;
+  - la topologia fisica degli apparati attivi, con passanti collassati e percorsi completi come archi, filtrabile per sede e piano;
+  - lo schema del singolo percorso end-to-end.
+- **Esclusioni.** Niente mappa geografica delle sedi, discovery automatica (LLDP/SNMP), import da Excel o altri strumenti, né lavoro su più telefoni in parallelo.
+
+**Ordine di lavoro** (dettaglio in [PROJECT_STATUS.json](PROJECT_STATUS.json)):
+
+1. Modello: EVO-01 gerarchia, EVO-02 stato operativo. Si fanno prima perché sono modifiche incompatibili.
+2. Campo: EVO-03 cablaggio in blocco, EVO-04 ricerca globale con "Vai a", EVO-05 foto più rapide.
+3. Viste: EVO-06 schema del percorso, EVO-07 topologia fisica.
+4. Consegna: EVO-08 PDF Desktop con planimetrie, rack, percorsi e topologia; EVO-09 Excel con foglio dei percorsi end-to-end.
+5. EVO-10 moduli secondari sintetici.
+
 ## Stato
 
 Le funzionalita Android, Desktop e configuratore presenti nel codice sono completate. I residui operativi sono mantenuti esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile e in [roadmap.md](roadmap.md).

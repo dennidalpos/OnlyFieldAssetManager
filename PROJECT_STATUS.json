@@ -4,7 +4,78 @@
   "currentPhase": "Tracciamento fisico (greenfield v1), scheda rapida porte, foto primaria, ponte radio e demo comunale completati e verificati sui test JVM/Desktop.",
   "activeTask": null,
   "nextSession": "Emulatore Pixel 9: APK aggiornato e «Demo Comune» importato. Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam («Demo Comune») da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Restano RES-17 e RES-01.",
-  "remainingTasks": [],
+  "remainingTasks": [
+    {
+      "id": "EVO-01",
+      "title": "Gerarchia Sede → Piano",
+      "status": "TODO",
+      "description": "BU come raggruppamento facoltativo di sedi; il piano appartiene a una sede; l'apparato (e il rack) appartiene solo a un piano e la sede si ricava. Rimuovere `BusinessUnit.areas/devices` e `Device.siteId`, aggiornare core, Room, `.ofam` 1, validatore, wizard, export e demo. Modifica incompatibile ammessa (greenfield).",
+      "closureCriteria": "Modello senza percorsi geografici duplicati; demo rigenerato; suite core/exchange/Desktop/Android JVM verdi."
+    },
+    {
+      "id": "EVO-02",
+      "title": "Stato operativo apparato",
+      "status": "TODO",
+      "description": "Campo `operationalStatus` (in servizio, spento, dismesso, da verificare) distinto da `Observation`; visibile nel pannello mappa, filtri elenco ed export.",
+      "closureCriteria": "Campo in modello, Room, `.ofam`, form ed export con test."
+    },
+    {
+      "id": "EVO-03",
+      "title": "Cablaggio in blocco",
+      "status": "TODO",
+      "description": "Collega in serie porte 1..N di un apparato a 1..N di un altro (es. patch panel ↔ switch) con anteprima ed etichette proposte; in Collega a… avanzamento automatico alla porta successiva mantenendo l'apparato di destinazione.",
+      "closureCriteria": "Un pannello da 24 porte si cabla in un'unica operazione annullabile."
+    },
+    {
+      "id": "EVO-04",
+      "title": "Ricerca globale e Vai a",
+      "status": "TODO",
+      "description": "Ricerca unica per nome, etichetta, IP, MAC, seriale ed etichetta cavo; il risultato apre la mappa sul piano con contenitori aperti e oggetto selezionato (riuso `MapActions.goTo`). Elementi recenti.",
+      "closureCriteria": "Da qualsiasi schermata si raggiunge un apparato, una porta o un cavo in al massimo due tocchi dopo la ricerca."
+    },
+    {
+      "id": "EVO-05",
+      "title": "Foto più rapide",
+      "status": "TODO",
+      "description": "Scatto in serie sul medesimo oggetto; proposta di foto dopo Collega; indicatore di foto mancanti su porte/cavi collegati.",
+      "closureCriteria": "Flusso collega → foto senza uscire dalla scheda rapida; contatore foto mancanti nel pannello."
+    },
+    {
+      "id": "EVO-06",
+      "title": "Schema del percorso",
+      "status": "TODO",
+      "description": "Disegno end-to-end di un percorso (apparato/porta → cavo → passante fronte/retro → … → apparato) da `PortSummaries`, nella scheda rapida, nella pagina porta e riusabile nel PDF.",
+      "closureCriteria": "Componente condiviso in `shared/configurator` con test sul percorso del demo attraverso scatola di giunzione e ponte radio."
+    },
+    {
+      "id": "EVO-07",
+      "title": "Topologia fisica",
+      "status": "TODO",
+      "description": "Grafo degli apparati attivi: archi = percorsi completi con passanti collassati, percorsi incompleti come monconi; filtri sede/piano; layout automatico a livelli; tocco apre l'apparato. Logica in `core.model` da `ConnectionGraph`, vista in `configurator`.",
+      "closureCriteria": "Vista su Android e Windows leggibile sul demo (44 apparati) senza scorrimento orizzontale dei comandi."
+    },
+    {
+      "id": "EVO-08",
+      "title": "PDF Desktop completo",
+      "status": "TODO",
+      "description": "Oggi `SimplePdfWriter` produce solo testo. Aggiungere planimetrie con oggetti, elevazioni rack, tabella dei percorsi e topologia (PDFBox già presente).",
+      "closureCriteria": "PDF di consegna del demo con tutte le sezioni grafiche e senza credenziali."
+    },
+    {
+      "id": "EVO-09",
+      "title": "Excel con percorsi end-to-end",
+      "status": "TODO",
+      "description": "Foglio Percorsi: apparato/porta A, passanti attraversati, apparato/porta B, etichette cavo, stato (completo/incompleto/conflitto); verificare i fogli esistenti per la consegna al cliente.",
+      "closureCriteria": "XLSX del demo apribile in Excel con foglio Percorsi coerente con `ConnectionGraph`."
+    },
+    {
+      "id": "EVO-10",
+      "title": "Moduli secondari sintetici",
+      "status": "TODO",
+      "description": "Videosorveglianza, credenziali, configurazioni e badge restano nel modello ma in UI sono richiusi o nascosti se vuoti, senza voci di navigazione dedicate quando non usati.",
+      "closureCriteria": "Su un progetto senza questi dati la navigazione non li mostra in primo piano; i dati esistenti restano raggiungibili."
+    }
+  ],
   "residuals": [
     {
       "id": "RES-13",
