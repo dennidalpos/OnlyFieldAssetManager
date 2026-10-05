@@ -6,6 +6,12 @@
 
 Gli export descrivono inventario (con sede, gruppo e stato operativo), porte e cablaggio, rete, alimentazione, media e campi documentali. Le credenziali sono escluse. Il testo libero viene esportato come testo, evitando formule XLSX interpretate.
 
+## Filtri comuni
+
+`DocumentSelection` applica sede, piano effettivo (anche ereditato da rack/contenitori), categoria e classificazione a inventario, rack, rete, alimentazione, allegati e disegni. Rete e allegati con ambito progetto restano comuni; quelli associati a sedi o oggetti esclusi non compaiono. Le planimetrie riservate non sono disegnate senza inclusione esplicita. Nei percorsi XLSX/PDF e nella topologia sono presenti anche estremi e passanti esterni necessari a spiegare un percorso che tocca un apparato selezionato; non altre reti. I nodi esterni della topologia PDF sono grigi.
+
+Il PDF Android usa la stessa selezione, ma la paginazione e le sezioni offerte sono incomplete (RES-21); la completezza dei formati Desktop non attesta quella Android.
+
 ## Excel
 
 Fogli: Inventario apparati, Porte e cablaggio, Rete logica e VLAN, Alimentazione e badge, Note e osservazioni, **Percorsi**. Ogni foglio ha la prima riga in grassetto e bloccata e una larghezza di colonna leggibile. Il foglio Percorsi riporta una riga per percorso (`PathSchematics.all`) che tocca gli apparati esportati: apparato, porta e ubicazione dei due estremi (con fine aperta), passanti attraversati con le porte, etichette dei cavi, mezzi, lunghezza totale quando tutti i cavi ne hanno una, stato.
@@ -28,3 +34,7 @@ La lingua viene acquisita all'avvio della generazione. Etichette e intestazioni 
 Allegati, immagini e PDF restano nel progetto e sono inclusi nel pacchetto quando presenti. La cartografia e un'immagine allegata: il download e esplicito e l'attribuzione resta con il file.
 
 Vedi [localizzazione](09-localization.md) e [mappa](08-floor-map.md).
+
+## Generazione e stampa in background
+
+Android e Windows generano documenti fuori dal thread UI. Android mantiene le callback di stampa sul Main e distingue cancellazione ed errore; Windows conserva l’esito sincrono mantenendo attivo l’event loop. Un errore di stampa Windows è visibile, distinto dall’annullamento. La prova dei dialoghi nativi resta nei residui RES-19 e RES-23.

@@ -24,12 +24,22 @@ import java.io.File
 
 @Composable
 internal fun MediaThumbnail(file: File?, pdf: Boolean = false, page: Int = 0, modifier: Modifier = Modifier) {
+    MediaThumbnailSource(file, { file?.readBytes() }, pdf, page, modifier)
+}
+
+@Composable
+internal fun MediaThumbnail(bytes: ByteArray?, pdf: Boolean = false, page: Int = 0, modifier: Modifier = Modifier, key: Any? = bytes) {
+    MediaThumbnailSource(key, { bytes }, pdf, page, modifier)
+}
+
+@Composable
+private fun MediaThumbnailSource(key: Any?, read: () -> ByteArray?, pdf: Boolean, page: Int, modifier: Modifier) {
     val i18n = LocalMessages.current
 
-    var bitmap by remember(file, page) { mutableStateOf<ImageBitmap?>(null) }
-    var failure by remember(file, page) { mutableStateOf<String?>(null) }
-    LaunchedEffect(file, page) {
-        try { bitmap = withContext(Dispatchers.IO) { PlanMedia.image(file ?: error(i18n.text("text.dad522b5d9b7")), pdf, page, 512, i18n = i18n) } }
+    var bitmap by remember(key, page) { mutableStateOf<ImageBitmap?>(null) }
+    var failure by remember(key, page) { mutableStateOf<String?>(null) }
+    LaunchedEffect(key, page) {
+        try { bitmap = withContext(Dispatchers.IO) { PlanMedia.image(read() ?: error(i18n.text("text.dad522b5d9b7")), pdf, page, 512, i18n = i18n) } }
         catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; failure = e.message ?: i18n.text("text.1d24f1640f57") }
     }
     bitmap?.let { Image(it, i18n.text("text.e9bcaec77820"), modifier.height(120.dp), contentScale = ContentScale.Fit) }
@@ -37,7 +47,7 @@ internal fun MediaThumbnail(file: File?, pdf: Boolean = false, page: Int = 0, mo
 }
 
 @Composable
-internal fun PlanChooser(project: Project, area: Area, importedId: String?, file: (Attachment) -> File?, onPick: () -> Unit, onAssign: (String?, Int, Int) -> Unit, onClose: () -> Unit) {
+internal fun PlanChooser(project: Project, area: Area, importedId: String?, bytes: (Attachment) -> ByteArray?, onPick: () -> Unit, onAssign: (String?, Int, Int) -> Unit, onClose: () -> Unit) {
     val i18n = LocalMessages.current
 
     var selectedId by remember(importedId) { mutableStateOf(importedId) }
@@ -47,7 +57,7 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, file
     var failure by remember(selectedId) { mutableStateOf<String?>(null) }
     LaunchedEffect(selectedId) {
         if (selected?.fileType == AttachmentType.PDF) {
-            try { pages = withContext(Dispatchers.IO) { PlanMedia.pageCount(file(selected) ?: error(i18n.text("text.dad522b5d9b7")), i18n = i18n) } }
+            try { pages = withContext(Dispatchers.IO) { PlanMedia.pageCount(bytes(selected) ?: error(i18n.text("text.dad522b5d9b7")), i18n = i18n) } }
             catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; failure = e.message ?: i18n.text("text.cff201c9dd3a") }
         }
     }
@@ -61,7 +71,7 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, file
                     items((0 until pages).toList()) { index ->
                         Card(Modifier.fillMaxWidth().padding(bottom = 6.dp).clickable { page = index }, colors = CardDefaults.cardColors(containerColor = if (index == page) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
                             Text(i18n.text("text.c192249f9066", index + 1), Modifier.padding(8.dp))
-                            MediaThumbnail(file(selected), true, index, Modifier.fillMaxWidth())
+                            MediaThumbnail(bytes(selected), true, index, Modifier.fillMaxWidth(), key = selected.id)
                         }
                     }
                 }

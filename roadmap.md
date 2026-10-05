@@ -15,13 +15,35 @@ Aggiornato al 5 ottobre 2026 dopo confronto con il codice e il tracker.
 | --- | --- | --- |
 | RES-13 | Aperto | Checklist foto, scansione, multitouch e lettore USB su hardware reale. |
 | RES-17 | Aperto | Suite UI Android verde su API 37 senza disabilitare controlli. |
-| RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti e moto g86. |
+| RES-20 | Aperto | Prova manuale Esporta e apri Windows con programmi esterni. |
+| RES-21 | Aperto | Completezza e paginazione PDF Android. |
+| RES-22 | Aperto | Memoria e tempi degli import grandi su hardware. |
+| RES-23 | Aperto | Pannello occupato Windows, focus/input e stampa nativa. |
+| RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti, conferma import con molti avvisi e moto g86. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
 
+## Correzioni dell'audit — 5 ottobre 2026
+
+Il [rapporto critico](docs/audit-2026-10-05.md) registra nove rilievi: tre P1 e sei P2. AUD-01, AUD-02, AUD-04, AUD-05, AUD-06, AUD-07, AUD-08 e AUD-09 sono stati corretti e verificati; l’unica correzione ancora aperta, con priorità, descrizione e criteri di chiusura, è in [PROJECT_STATUS.json](PROJECT_STATUS.json). Prima del collaudo di aggiornamento sul telefono risolvere AUD-03.
+
+| ID | Priorità | Stato | Rilievo | Verifica disponibile |
+| --- | --- | --- | --- | --- |
+| AUD-01 | P1 | Chiuso | Verificatore inizializzato nell'import; fusione conserva protezione locale. | 6 regressioni Android JVM superate. |
+| AUD-02 | P1 | Chiuso | Eliminato il fallback a file locali esterni. | 2 regressioni Android JVM superate. |
+| AUD-03 | P1 | Aperto | Identità Room diversa mantenendo v1: apertura bloccata. | Riprodotto con Room/Robolectric; SQLCipher su telefono da verificare. |
+| AUD-04 | P2 | Chiuso | Avvisi per payload assenti prima della conferma. | 5 regressioni Exchange e 2 Desktop superate. |
+| AUD-05 | P2 | Chiuso | Tutti i media locali nel pacchetto cifrato, visualizzazione in memoria. | 5 regressioni e suite Desktop superate. |
+| AUD-06 | P2 | Chiuso | Lettura limitata e metadati KDF validati. | 6 regressioni e suite dei tre moduli superate. |
+| AUD-07 | P2 | Chiuso | Worker Android e Windows; elenco dal manifest. | 8 regressioni e 320 test completi superati. |
+| AUD-08 | P2 | Chiuso | Selezione comune e contesto esterno limitato ai percorsi selezionati. | 4 regressioni e 302 test completi superati. |
+| AUD-09 | P2 | Chiuso | Password locale distinta; recupero cestino esplicito. | 4 regressioni e 118 test Desktop superati. |
+
+Baseline eseguita con directory di build isolate dall'altra attività: `BUILD SUCCESSFUL in 1m 21s`, 278 test esistenti superati (Core 100, Exchange 48, Desktop 106, Android JVM 24), nessun errore né test saltato. Otto prove temporanee aggiuntive hanno riprodotto sette difetti; sono fallite asserendo il comportamento corretto e non sono conteggiate come test superati. Nell'audit iniziale non sono state applicate correzioni dell'app; le correzioni successive sono documentate sotto. Comandi, limiti e fonti ufficiali sono nel rapporto.
+
 ## Tracciamento fisico, scheda rapida porte e foto — 5 ottobre 2026
 
-- **Greenfield v1**: `.ofam` riparte dalla versione "1" (rifiutati 1.7–1.11) e Room dalla versione 1, senza migrazioni né backup pre-aggiornamento; uno schema diverso viene ricreato vuoto (`fallbackToDestructiveMigration`, anche in downgrade). Rimossi schemi 13/14, migrazioni, conversione da database in chiaro e relativi test. I telefoni di prova vanno reimportati dal demo.
+- **Greenfield v1**: `.ofam` riparte dalla versione "1" (rifiutati 1.7–1.11) e Room dalla versione 1, senza migrazioni né backup pre-aggiornamento; una versione diversa viene ricreata vuota (`fallbackToDestructiveMigration`, anche in downgrade). Un'identità diversa mantenendo v1 non attiva il fallback: difetto AUD-03, riprodotto nell'audit. Rimossi schemi 13/14, migrazioni, conversione da database in chiaro e relativi test. I telefoni di prova vanno reimportati dal demo.
 - **Modello snello**: rimossi dorsali (`SharedPathSegment` e sezione Percorsi in Cablaggio su Android e Windows), `Port.connectedPortId`, tipo e note dei passaggi, connettori A/B, orientamento, caratteristiche nominali e velocità osservata del cavo (anche dai modelli di cavo); il percorso porta non aggiunge più passi logici WAN/VPN. Export Markdown/XLSX: colonna Orientamento sostituita da Colore.
 - **Correzione**: eliminare un apparato lasciava passaggi, VLAN, PoE e LAG orfani delle sue porte (errori strutturali e conflitti); ora vengono rimossi e il ripristino dal cestino ricrea i passaggi interni.
 - **Passaggi intermedi**: nuovo tipo e preset Scatola di giunzione (1/2/4 passanti RJ45, LC o SC); `HardwareConfigurator.insertPassage`, `freePassages`, `disconnect`; `Device.isPassive()` unico per grafo e configuratore. Il demo instrada il primo cavo AP dei piani Nord attraverso GB-N0-01/GB-N1-01.
@@ -51,7 +73,7 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - Ramo `main`, commit e push su `origin/main` di tracciamento fisico, scheda rapida delle porte, foto primaria e ripartenza greenfield v1, con documentazione e tracker aggiornati.
 - Verifica: 249 test superati, APK debug e portable Windows generati; demo rigenerato in `fixtures/demo/onlyfield-demo.ofam`.
 - Seconda consegna dello stesso giorno: commit e push di ponte radio e «Demo Comune»; lavori sul telefono in sospeso (vedi sezione precedente).
-- Ripartenza: sui telefoni di prova il database v1 si ricrea vuoto, quindi reimportare il demo; poi RES-19 (scheda rapida della porta su Android nativo, TalkBack, moto g86) e FOTO-04 in RES-13. Restano RES-17 e RES-01.
+- Ripartenza aggiornata dall'audit: risolvere AUD-03 e verificare la procedura di aggiornamento del database sui telefoni di prova prima di reimportare il demo; poi RES-19 (scheda rapida della porta su Android nativo, TalkBack, moto g86) e FOTO-04 in RES-13. Restano RES-17 e RES-01.
 
 ## UI/UX — 4 ottobre 2026
 
@@ -268,3 +290,68 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 
 - `configurator.SecondaryModule` (Credenziali, Configurazioni apparati, Badge documentali): visibili solo se usati; voce Altri moduli con l'elenco dei moduli nascosti (barra laterale e menu Sezioni su Windows, Altro su Android) e stato di sessione `showSecondary`; schede Configurazioni (Rete) e Badge (Alimentazione) filtrate con `visibleTabs`. Modello, export e `Ctrl+5` invariati; la videosorveglianza resta solo nel modello.
 - Verifica: core 100, exchange 48, Desktop 106, Android JVM 24 test superati, test strumentali Android compilati; nuovo `SecondaryModulesUiTest` (moduli assenti dalla navigazione su un progetto vuoto, raggiungibili da Altri moduli; un modulo usato resta visibile). Android non verificato a vista (RES-19).
+
+## AUD-01: protezione degli import Android — 5 ottobre 2026
+
+- Creazione e sostituzione inizializzano il verificatore PBKDF2 con la password incoming nella transazione del progetto; sostituzione non protetta azzera il verificatore. La fusione conserva la protezione locale. Password pending privata, rilasciata alla conferma, annullamento e fusione.
+- Baseline Android JVM: `:mobile:app:testDebugUnitTest --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 1m 7s`. Sei regressioni in `ImportedProtectionTest` (database su file chiuso e riaperto): password corretta/errata, modifica, sostituzione, rimozione della protezione, password assente senza perdita dei dati, fusione protetta/non protetta. Comando `:mobile:app:testDebugUnitTest --tests '*ImportedProtectionTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 15s`, 6 test, 0 fallimenti/errori/saltati.
+
+## AUD-02: confinamento degli allegati Android — 5 ottobre 2026
+
+- Eliminato il fallback a percorsi locali derivati dal JSON; lettura solo dal percorso del progetto. Gli alias di pacchetto restano supportati durante l'estrazione dei payload presenti.
+- `:mobile:app:testDebugUnitTest --tests '*AttachmentConfinementTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 8s`, 2 test, nessun fallimento. Quattro percorsi esterni/relativi/traversal non leggono né esportano il file fittizio; un payload legittimo con alias legacy viene estratto e riesportato.
+
+## AUD-04: allegati mancanti prima della conferma — 5 ottobre 2026
+
+- Serializer comune: confronto catalogo/payload dopo la decifratura e confronto con le entry dichiarate nei checksum, con avvisi documentali per ogni file mancante. Riferimenti conservati, alias legacy supportati, payload presenti disponibili. Avvisi localizzati it/en/es visibili in elenchi scorrevoli nella conferma Android e Desktop; su Desktop anche il nuovo progetto e il pacchetto identico richiedono conferma se incompleti.
+- Baseline Exchange/Desktop: `:shared:exchange:test :pc:app:test --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 1m 18s`; avvisi Kotlin preesistenti, nessun test fallito.
+- `:shared:exchange:test --tests '*MissingPayloadTest' :pc:app:test --tests '*ImportPayloadReviewTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 8s`, 5 test Exchange e 2 Desktop superati, incluso avviso visibile prima della conferma. Verifica visiva Android aggiunta a RES-19.
+- AUD-03: cambio schema non applicato; richiesta decisione su Room v2 con ricreazione dei dati di prova oppure conservazione automatica. Corrette le indicazioni che promettevano ricreazione per identità diversa a versione invariata.
+
+## Verifica delle correzioni audit — 5 ottobre 2026
+
+- `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 1m 20s`. Core 100, Exchange 53, Desktop 108, Android JVM 32: **293 test, zero fallimenti, errori o saltati** (15 regressioni aggiunte).
+- Tracker: rimossi AUD-01, AUD-02 e AUD-04; restano AUD-03 e AUD-05…AUD-09. RES-19 include la verifica visiva della conferma import Android con molti avvisi. Database SQLCipher su dispositivo e collaudo hardware non eseguiti.
+
+## AUD-05: media locali Windows protetti — 5 ottobre 2026
+
+- Decisione esplicita: la password comprende tutti i media locali. Persistenza nel pacchetto cifrato esistente, cache dei payload sbloccati in memoria, rendering immagini/PDF da byte array senza file temporanei in chiaro. Le vecchie copie vengono adeguate al primo sblocco corretto; le sorgenti e gli export espliciti restano nelle destinazioni utente. Esporta e apri richiede la destinazione di una copia in chiaro.
+- `:pc:app:test --tests '*ProtectedMediaTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 6s`, 5 test superati. Suite Desktop completa `:pc:app:test --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 29s`, 113 test senza fallimenti/errori/saltati.
+- RES-20 registra la prova manuale con i programmi esterni; nessun collaudo di viewer esterni simulato.
+
+## AUD-08: filtri documentali comuni — 5 ottobre 2026
+
+- `exchange.DocumentSelection`: sede, piano ereditato, categoria, cataloghi associati e classificazione applicati nei generatori Markdown/XLSX/PDF. PDF e stampa Desktop usano il progetto selezionato anche per planimetrie e rack. Percorsi completi e topologia includono solo il contesto esterno necessario ai percorsi degli apparati selezionati.
+- Quattro regressioni permanenti (`DocumentSelectionTest`, `FilteredReportTest`); corretta anche la rete di una sede senza apparati della categoria selezionata. Verifica completa: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 1m 23s`; 302 test (100/56/114/32), nessun fallimento, errore o test saltato.
+- AUD-08 rimosso dal tracker. RES-21 registra troncamento e sezioni incomplete del PDF Android individuati nel codice; collaudo PDF nativo Android non eseguito.
+
+## AUD-06: limiti comuni di import — 5 ottobre 2026
+
+- Limiti confermati dall’utente: ZIP 256 MiB, file in chiaro 32 MiB, totale decompresso 512 MiB, 10.000 entry, PBKDF2 massimo 1.000.000. Lettura ZIP diretta da stream, conteggio reale e rifiuto durante la lettura; niente copia preventiva dell’intero input compresso. Validazione di salt/IV/costo prima della KDF. Export e salvataggi rispettano gli stessi limiti.
+- `:shared:exchange:test --tests '*PackageImportLimitsTest' :pc:app:test --tests '*ProtectedMediaTest' :mobile:app:testDebugUnitTest --tests '*ImportedProtectionTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 25s`. Suite dei tre moduli `:shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 1m 22s`, 208 test (62/114/32), nessun fallimento, errore o test saltato.
+- AUD-06 rimosso dal tracker; RES-22 registra le misure di memoria/tempi su hardware ai limiti.
+
+## AUD-09: sostituzione con password diverse — 5 ottobre 2026
+
+- Richiesta della password della copia locale chiusa solo quando quella incoming non la apre. Recupero di cestino e payload prima della sostituzione; progetto attivo usa lo stato in memoria. Password errata, annullamento, cestino corrotto e fallimento della scrittura preservano la vecchia copia. La nuova usa protezione e password incoming.
+- `:pc:app:test --tests '*ReplacementPasswordTest' --tests '*ProtectedMediaTest' --tests '*ProtectedTrashTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 15s`. Suite completa Desktop: `BUILD SUCCESSFUL in 32s`, 118 test superati; AUD-09 rimosso dal tracker.
+
+## AUD-07: worker e interfaccia responsiva — 5 ottobre 2026
+
+- Android: `PackageExchange`/`DocumentExports` con dispatcher I/O iniettabile; stream ContentResolver sul worker; cancellazione propagata nei flussi modificati. `ProjectPrintDocumentAdapter` genera sul worker, notifica sul Main e termina con `onFinish`.
+- Desktop: elenco dal solo manifest (anche cifrato), errori di lettura visibili. `DesktopIo` usa worker seriale e loop secondario AWT per conservare i risultati sincroni mantenendo gli eventi attivi; stato occupato, modifiche bloccate, overlay e menu disabilitati. I/O, ZIP/KDF, validazione, media, fusione e documenti sul worker; nessuna coda di modifiche concorrenti. Errore della stampa distinto da annullamento.
+- Otto regressioni permanenti: tre Android, due metadati Windows, tre worker AWT (incluso progetto protetto da 500 apparati e scrittura atomica bloccata). Targeted: `BUILD SUCCESSFUL in 4s` e `BUILD SUCCESSFUL in 8s`. Suite finale completa: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 1m 26s`; 320 test (100/62/123/35), zero fallimenti/errori/saltati.
+- AUD-07 rimosso; RES-23 registra il collaudo visivo Windows e stampa nativa, RES-19 include la stampa Android. AUD-03 resta aperto: decisione richiesta, nessuna modifica del database. ADB conferma il moto g86 collegato e autorizzato; nessun aggiornamento APK o cancellazione sul telefono in questa sessione.
+
+## Revisione finale delle correzioni audit — 5 ottobre 2026
+
+- Eliminati filtri documentali duplicati nei generatori; selezione comune invariata. Fusione Android sul dispatcher Default con cancellazione propagata.
+- Riprodotto e corretto un nome ZIP con UTF-8 malformato: rifiuto strutturale `INVALID_ZIP_ARCHIVE`, settima regressione `PackageImportLimitsTest` superata (`BUILD SUCCESSFUL in 3s`).
+- Suite completa `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 1m 24s`, **321 test** (100/63/123/35), zero fallimenti/errori/saltati. Diff senza errori di spaziatura; 15 documenti UTF-8 senza BOM e 72 collegamenti locali validi. Nessun commit o push; modifiche preesistenti al demo preservate.
+- Stato finale: solo AUD-03 nel tracker, con decisione richiesta sulla conservazione dei dati; sette residui tracciati. Nessun collaudo hardware/manuale dichiarato completo.
+
+## Passaggio di sessione — 5 ottobre 2026
+
+- L'utente ha richiesto salvataggio, commit e push sul branch principale; branch verificato `main`, upstream e default remoto `origin/main`. Il checkpoint include anche le modifiche preesistenti al demo (identificativo del progetto stabile e fixture aggiornata).
+- Tracker aggiornato con le decisioni confermate, la scelta ancora necessaria per AUD-03 e le verifiche da riprendere prima di intervenire sul telefono. Restano AUD-03 e sette residui; schema e dati del telefono invariati.
+- Ultima verifica del codice: suite completa `BUILD SUCCESSFUL in 1m 24s`, 321 test senza fallimenti/errori/saltati, come documentato sopra. Per il checkpoint sono stati ricontrollati i report e `git diff --check`; nessuna ulteriore modifica al codice.

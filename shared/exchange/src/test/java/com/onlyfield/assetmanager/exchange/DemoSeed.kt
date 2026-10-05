@@ -39,7 +39,7 @@ object DemoSeed {
         val med = Site(name = "Scuola media", code = "MED", group = "Scuole", address = "Via delle Scuole 10", areas = listOf(
             Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
         val mat = Site(name = "Scuola materna", code = "MAT", group = "Scuole", address = "Via dei Giardini 3", areas = listOf(Area(name = "Piano terra", floor = "0"), Area(name = "Copertura", floor = "1")))
-        var p = Project(name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna",
+        var p = Project(id = "d0000000-0000-0000-0000-000000000001", name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna",
             createdEpochMs = now, updatedEpochMs = now, sites = listOf(com, tea, med, mat))
 
         fun add(draft: MapObjectDraft): String { p = draft.apply(p, i18n); return draft.id }

@@ -2,39 +2,19 @@ package com.onlyfield.assetmanager.data.repository
 
 import com.onlyfield.assetmanager.data.repository.mappers.*
 import androidx.room.withTransaction
-import com.onlyfield.assetmanager.core.model.Device
-import com.onlyfield.assetmanager.core.model.DeviceModel
 import com.onlyfield.assetmanager.core.model.Project
-import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.data.local.AppDatabase
 import com.onlyfield.assetmanager.data.local.AreaEntity
 import com.onlyfield.assetmanager.data.local.SiteEntity
 import com.onlyfield.assetmanager.data.local.CredentialEntity
-import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.data.local.DeviceEntity
 import com.onlyfield.assetmanager.data.local.DeviceModelEntity
 import com.onlyfield.assetmanager.data.local.PortEntity
-import android.content.Context
-import android.print.PrintManager
-import com.onlyfield.assetmanager.core.model.ExportFilterConfig
-import com.onlyfield.assetmanager.core.model.ReportSelection
-import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.local.RackEntity
-import com.onlyfield.assetmanager.exchange.DeviceModelSerializer
-import com.onlyfield.assetmanager.exchange.MarkdownExportManager
-import com.onlyfield.assetmanager.exchange.PackageImportResult
 import com.onlyfield.assetmanager.exchange.PackageSerializer
 import com.onlyfield.assetmanager.exchange.PasswordHasher
-import com.onlyfield.assetmanager.exchange.ProjectComparison
-import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
-import com.onlyfield.assetmanager.exchange.ProjectPackage
-import com.onlyfield.assetmanager.exchange.XlsxExportManager
-import com.onlyfield.assetmanager.export.PdfExportManager
-import com.onlyfield.assetmanager.export.ProjectPrintDocumentAdapter
-import kotlinx.coroutines.flow.Flow
-import java.io.InputStream
-import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Reads and writes a whole [Project] as Room rows (one row set per entity type). */
 internal class ProjectStore(private val db: AppDatabase) {
@@ -100,12 +80,21 @@ internal class ProjectStore(private val db: AppDatabase) {
         )
     }
 
-    /** Replaces every row of the project in one transaction; the password hash is kept. */
-    suspend fun save(project: Project) {
+    /** Initializes import protection before replacing any stored data. */
+    suspend fun saveImported(project: Project, password: String?) {
+        val hash = if (project.isPasswordProtected) {
+            require(!password.isNullOrBlank()) { "A protected import requires its package password" }
+            withContext(Dispatchers.Default) { PasswordHasher.hash(password) }
+        } else null
+        save(project, hash)
+    }
+
+    /** Replaces the project atomically; ordinary edits retain its verifier. */
+    suspend fun save(project: Project, importedHash: String? = null) {
         db.withTransaction {
             val existing = projectDao.getProjectById(project.id)
             val updatedProjEntity = toProjectEntity(project).copy(
-                passwordHash = existing?.passwordHash
+                passwordHash = if (project.isPasswordProtected) importedHash ?: existing?.passwordHash else null
             )
 
             // Save project entity

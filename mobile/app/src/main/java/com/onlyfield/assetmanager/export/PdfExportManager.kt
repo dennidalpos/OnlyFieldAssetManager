@@ -209,14 +209,11 @@ object PdfExportManager {
         selection: ReportSelection,
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
+        val selectedProject = com.onlyfield.assetmanager.exchange.DocumentSelection(project, filterConfig).project
         val pdfDoc = PdfDocument()
 
         try {
-            val filteredDevices = project.sites
-                .filter { filterConfig.selectedSiteId == null || it.id == filterConfig.selectedSiteId }
-                .flatMap { site -> site.devices.filter { device -> filterConfig.selectedAreaId == null || device.areaId == filterConfig.selectedAreaId } }
-                .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
-                .distinctBy { it.id }
+            val filteredDevices = selectedProject.sites.flatMap { it.devices }
 
             var pageNumber = 1
 
@@ -281,9 +278,9 @@ object PdfExportManager {
                 val openIssues = filteredDevices.count { it.observation?.status == ObservationStatus.TO_VERIFY || it.observation?.status == ObservationStatus.CONFLICT }
 
                 canvas.drawText(i18n.text("text.46f30e92b9c4", filteredDevices.size), 45f, y + 45f, textPaint)
-                canvas.drawText(i18n.text("text.f70e0fdb83c5", project.racks.size), 280f, y + 45f, textPaint)
-                canvas.drawText(i18n.text("text.2a47e0afd9c5", project.cables.size), 45f, y + 65f, textPaint)
-                canvas.drawText(i18n.text("text.a197c01d82e1", project.vlans.size), 280f, y + 65f, textPaint)
+                canvas.drawText(i18n.text("text.f70e0fdb83c5", selectedProject.racks.size), 280f, y + 45f, textPaint)
+                canvas.drawText(i18n.text("text.2a47e0afd9c5", selectedProject.cables.size), 45f, y + 65f, textPaint)
+                canvas.drawText(i18n.text("text.a197c01d82e1", selectedProject.vlans.size), 280f, y + 65f, textPaint)
                 canvas.drawText(i18n.text("text.62bbfb1e07f1", openIssues), 45f, y + 85f, textPaint)
 
                 y += 130f
@@ -336,7 +333,7 @@ object PdfExportManager {
                     textPaint.isFakeBoldText = false
 
                     for (dev in filteredDevices) {
-                        val rackName = project.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
+                        val rackName = selectedProject.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
                         val rackPos = if (dev.rackId != null) i18n.text("text.5e7c17bc3374", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
 
                         canvas.drawText(dev.technicalName.take(20), 40f, y + 12f, textPaint)
@@ -353,7 +350,7 @@ object PdfExportManager {
                         if (y > 750f) break
                     }
 
-                    if (selection.includeNotesAndAttachments && project.attachments.isNotEmpty()) {
+                    if (selection.includeNotesAndAttachments && selectedProject.attachments.isNotEmpty()) {
                         y += 15f
                         textPaint.textSize = 11f
                         textPaint.isFakeBoldText = true
@@ -362,7 +359,7 @@ object PdfExportManager {
 
                         textPaint.textSize = 8f
                         textPaint.isFakeBoldText = false
-                        for (att in project.attachments.take(5)) {
+                        for (att in selectedProject.attachments.take(5)) {
                             val attrStr = if (!att.attributionText.isNullOrBlank()) " (${att.attributionText})" else ""
                             canvas.drawText("• ${att.name}$attrStr", 40f, y, textPaint)
                             y += 14f

@@ -42,9 +42,9 @@ class ProjectRepository(
     private val inventoryDao = db.inventoryDao()
     private val store = ProjectStore(db)
     private val documents = DocumentExports(store::load)
-    private val exchange = PackageExchange(attachmentsRoot, store::load, store::save, store::saveBase)
+    private val exchange = PackageExchange(attachmentsRoot, store::load, { store.save(it) }, store::saveBase, store::saveImported)
     private val search = InventorySearch(db)
-    private val trash = TrashOperations(db, store::load, store::save)
+    private val trash = TrashOperations(db, store::load, { store.save(it) })
 
     // --- Projects ---
 
@@ -141,7 +141,7 @@ class ProjectRepository(
     suspend fun evaluateImportPackage(inputStream: InputStream, password: String? = null, currentProjectId: String? = null, i18n: Messages = Messages()) =
         exchange.evaluateImportPackage(inputStream, password, currentProjectId, i18n = i18n)
 
-    suspend fun importProjectPackage(pkg: ProjectPackage) = exchange.importProjectPackage(pkg)
+    suspend fun importProjectPackage(pkg: ProjectPackage, password: String? = null) = exchange.importProjectPackage(pkg, password)
 
     suspend fun importMergedPackage(pkg: ProjectPackage, merged: Project) = exchange.importMerged(pkg, merged)
 

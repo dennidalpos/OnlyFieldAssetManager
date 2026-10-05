@@ -6,6 +6,7 @@ import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.exchange.MarkdownExportManager
+import com.onlyfield.assetmanager.exchange.DocumentSelection
 import com.onlyfield.assetmanager.exchange.XlsxExportManager
 import com.onlyfield.assetmanager.core.model.Area
 import com.onlyfield.assetmanager.pc.report.PdfReportWriter
@@ -47,7 +48,8 @@ object DesktopDocumentManager {
         planImage: (Area) -> BufferedImage? = { null },
     ) {
         val lines = ReportContent.build(project, filterConfig, selection, i18n = i18n)
-        outputStream.use { PdfReportWriter(project, i18n, planImage).write(lines, lines.first().text, it) }
+        val selected = DocumentSelection(project, filterConfig).project
+        outputStream.use { PdfReportWriter(selected, i18n, planImage).write(lines, lines.first().text, it) }
     }
 
     /** Opens the Windows print dialog with the same document as the PDF. */
@@ -59,15 +61,11 @@ object DesktopDocumentManager {
         planImage: (Area) -> BufferedImage? = { null },
     ): Boolean {
         val lines = ReportContent.build(project, filterConfig, selection, i18n = i18n)
-        return try {
-            PdfReportWriter(project, i18n, planImage).build(lines, lines.first().text).use { document ->
-                val job = PrinterJob.getPrinterJob()
-                job.setJobName("OnlyField - ${project.name}")
-                job.setPageable(PDFPageable(document))
-                if (job.printDialog()) { job.print(); true } else false
-            }
-        } catch (_: Throwable) {
-            false
+        return PdfReportWriter(DocumentSelection(project, filterConfig).project, i18n, planImage).build(lines, lines.first().text).use { document ->
+            val job = PrinterJob.getPrinterJob()
+            job.setJobName("OnlyField - ${project.name}")
+            job.setPageable(PDFPageable(document))
+            if (job.printDialog()) { job.print(); true } else false
         }
     }
 }

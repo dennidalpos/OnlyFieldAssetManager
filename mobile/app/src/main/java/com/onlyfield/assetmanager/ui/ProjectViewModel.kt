@@ -91,6 +91,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     private val _importState = MutableStateFlow<ImportState?>(null)
     val importState: StateFlow<ImportState?> = _importState.asStateFlow()
+    private var importPassword: String? = null
 
     var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
@@ -369,11 +370,14 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                     return@launch
                 }
                 val bytes = repository.exportProjectPackage(p.id, password, i18n = i18n) ?: error(i18n.text("text.8ad65d90f29b"))
-                resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error(i18n.text("text.f9b9a0075030"))
-                val missing = repository.missingAttachments(p)
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error(i18n.text("text.f9b9a0075030"))
+                }
+                val missing = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.missingAttachments(p) }
                 if (missing.isEmpty()) notify(if (password != null) i18n.text("text.b73d46f629a2") else i18n.text("text.5814b1d61f28"))
                 else fail(i18n.text("text.56a129cb0f6c", missing.size))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.ad15389bdede"), e)
             } finally {
                 busy = null
@@ -382,17 +386,22 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     fun startImport(resolver: ContentResolver, uri: Uri, password: String? = null) {
+        importPassword = null
         viewModelScope.launch {
             busy = i18n.text("text.e73a6312c02c")
             try {
-                val stream = resolver.openInputStream(uri) ?: error(i18n.text("text.fb0c10a218fc"))
-                val evaluation = repository.evaluateImportPackage(stream, password, _project.value?.id, i18n = i18n)
+                val evaluation = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val stream = resolver.openInputStream(uri) ?: error(i18n.text("text.fb0c10a218fc"))
+                    repository.evaluateImportPackage(stream, password, _project.value?.id, i18n = i18n)
+                }
                 val codes = evaluation.importResult.validationResult.issues.map { it.code }
                 when {
                     "PASSWORD_REQUIRED" in codes || "INVALID_PACKAGE_PASSWORD" in codes ->
                         _importState.value = ImportState.NeedsPassword(uri, wrongPassword = password != null)
-                    evaluation.importResult.pkg != null && evaluation.comparison != null ->
+                    evaluation.importResult.pkg != null && evaluation.comparison != null -> {
+                        importPassword = password
                         _importState.value = ImportState.Review(evaluation)
+                    }
                     else -> {
                         _importState.value = null
                         val reasons = evaluation.importResult.validationResult.issues.joinToString("; ") { it.message }
@@ -400,6 +409,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                     }
                 }
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _importState.value = null
                 fail(i18n.text("text.a503d881af39"), e)
             } finally {
@@ -411,13 +421,15 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun confirmImport() {
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
-        _importState.value = null
+        val password = importPassword
+        cancelImport()
         viewModelScope.launch {
             try {
-                repository.importProjectPackage(pkg)
+                repository.importProjectPackage(pkg, password)
                 openProject(pkg.project.id)
                 notify(i18n.text("text.66f7b7ff42d4", pkg.project.name))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.7b94ff9ddb10"), e)
             }
         }
@@ -425,19 +437,24 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun cancelImport() {
         _importState.value = null
+        importPassword = null
     }
 
     /** Merges a package with the local copy. */
     fun startMerge() {
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
+        importPassword = null
         viewModelScope.launch {
             try {
                 val local = repository.getProjectById(pkg.project.id) ?: error(i18n.text("text.03d3a4092bb0"))
-                val result = ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project, i18n = i18n)
+                val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
+                    ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project, i18n = i18n)
+                }
                 if (result.conflicts.isEmpty()) applyMerge(ImportState.Merging(pkg, result))
                 else _importState.value = ImportState.Merging(pkg, result)
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 _importState.value = null
                 fail(i18n.text("text.932f8500aa16"), e)
             }
@@ -455,10 +472,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         _importState.value = null
         viewModelScope.launch {
             try {
-                repository.importMergedPackage(merging.pkg, merging.result.resolve(merging.choices, i18n = i18n))
+                val merged = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { merging.result.resolve(merging.choices, i18n = i18n) }
+                repository.importMergedPackage(merging.pkg, merged)
                 openProject(merging.pkg.project.id)
                 notify(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.932f8500aa16"), e)
             }
         }
@@ -470,9 +489,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         viewModelScope.launch {
             busy = i18n.text("text.7e484517449f", label)
             try {
-                val ok = resolver.openOutputStream(uri)?.use { block(p.id, it) } ?: false
+                val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    resolver.openOutputStream(uri)?.use { block(p.id, it) } ?: false
+                }
                 if (ok) notify(i18n.text("text.edbaabf3f213", label)) else fail(i18n.text("text.91981b4324f5", label))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.41b538bf4cba", label), e)
             } finally {
                 busy = null
@@ -510,7 +532,9 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             val ok = try {
                 repository.printProjectDocument(context, p.id, filter, selection, i18n = i18n)
             } catch (e: Exception) {
-                false
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                fail(i18n.text("text.103f48541a86"), e)
+                return@launch
             }
             if (!ok) fail(i18n.text("text.103f48541a86"))
         }

@@ -36,7 +36,7 @@ fun main() = application {
         state = windowState
     ) {
         MenuBar {
-            Menu(i18n.text("text.50009ce1da4d"), mnemonic = 'F') {
+            Menu(i18n.text("text.50009ce1da4d"), mnemonic = 'F', enabled = !state.busy) {
                 Item(i18n.text("text.7c974f0aa7ba"), shortcut = KeyShortcut(Key.N, ctrl = true), onClick = { state.newProject() })
                 Item(i18n.text("text.93254a75cf03"), shortcut = KeyShortcut(Key.O, ctrl = true), onClick = state::pickAndImport)
                 Item(i18n.text("text.8a1d8b27e511") + "…", shortcut = KeyShortcut(Key.E, ctrl = true), enabled = hasProject, onClick = state::exportPackage)
@@ -47,7 +47,7 @@ fun main() = application {
                 Item(i18n.text("text.c00df9e3726e"), shortcut = KeyShortcut(Key.W, ctrl = true), enabled = hasProject, onClick = state::closeProject)
                 Item(i18n.text("text.58025f3619bf"), onClick = { state.requestChange { state.shutdown(); exitApplication() } })
             }
-            Menu(i18n.text("text.49e493ba9d9c"), mnemonic = 'M') {
+            Menu(i18n.text("text.49e493ba9d9c"), mnemonic = 'M', enabled = !state.busy) {
                 Item(
                     state.undoLabel?.let { i18n.text("text.03441e16eb16", it) } ?: i18n.text("action.undo"),
                     shortcut = KeyShortcut(Key.Z, ctrl = true),
@@ -55,7 +55,7 @@ fun main() = application {
                     onClick = state::undo
                 )
             }
-            Menu(i18n.text("text.9d6f5c19ad04"), mnemonic = 'S') {
+            Menu(i18n.text("text.9d6f5c19ad04"), mnemonic = 'S', enabled = !state.busy) {
                 Menu(i18n.text("language.label")) {
                     com.onlyfield.assetmanager.core.i18n.AppLanguage.entries.forEach { language ->
                         CheckboxItem(if (language == com.onlyfield.assetmanager.core.i18n.AppLanguage.SYSTEM) i18n.text("language.system") else language.nativeName, checked = state.language == language, onCheckedChange = { state.changeLanguage(language) })
@@ -63,7 +63,7 @@ fun main() = application {
                 }
                 CheckboxItem(i18n.text("text.d25e5999cc28"), checked = state.darkTheme, onCheckedChange = { state.toggleDarkTheme() })
             }
-            Menu(i18n.text("text.d0cfbdc71dab"), mnemonic = 'V') {
+            Menu(i18n.text("text.d0cfbdc71dab"), mnemonic = 'V', enabled = !state.busy) {
                 val shortcuts = mapOf(AppSection.INVENTORY to Key.One, AppSection.RACKS to Key.Two, AppSection.MODELS to Key.Three,
                     AppSection.FLOORPLANS to Key.Four, AppSection.CREDENTIALS to Key.Five, AppSection.MEDIA to Key.Six,
                     AppSection.CABLING to Key.Seven, AppSection.NETWORK to Key.Eight, AppSection.POWER to Key.Nine)

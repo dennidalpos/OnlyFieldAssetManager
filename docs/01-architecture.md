@@ -23,3 +23,9 @@ Aspetto comune in `shared/configurator`:
 I progetti sono locali. La rete serve solo al download esplicito della cartografia; i dati restano utilizzabili offline. Android usa Room cifrato, Windows una working copy con salvataggio atomico e file `.lock`.
 
 Le dipendenze e le versioni effettive sono nel catalogo Gradle [libs.versions.toml](../gradle/libs.versions.toml). Per contratto e persistenza vedi [dominio](02-domain-data-contract.md); per build vedi [rilascio](06-release-and-delivery.md).
+
+## Operazioni e thread
+
+Su Android `PackageExchange` e `DocumentExports` eseguono letture, ZIP/KDF, estrazione e documenti con un dispatcher I/O iniettabile. Apertura e chiusura degli stream ContentResolver avvengono fuori dal thread principale. La stampa genera il PDF sul worker e notifica il framework sul Main; il lavoro termina con `onFinish`. Cancellazione distinta da errore.
+
+Windows conserva gli esiti sincroni dei comandi: `DesktopIo` esegue I/O/calcolo sul worker mentre un `SecondaryLoop` AWT continua a distribuire gli eventi. Stato occupato, blocco delle modifiche, overlay e menu disabilitati impediscono salvataggi concorrenti. Gli aggiornamenti del progetto/storia tornano al chiamante UI dopo il salvataggio riuscito. Il worker appartiene a `DesktopAppState` e termina allo shutdown. [Android Developers](https://developer.android.com/kotlin/coroutines/coroutines-best-practices), [Java SecondaryLoop](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/java/awt/SecondaryLoop.html).

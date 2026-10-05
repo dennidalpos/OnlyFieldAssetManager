@@ -259,7 +259,7 @@ private fun StoredProjectRow(item: StoredProjectInfo, isOpen: Boolean, onOpen: (
 
     ItemCard(
         title = item.name,
-        details = listOf(i18n.text("text.c95c16b49c20", formatDate(item.lastModifiedEpochMs))),
+        details = listOfNotNull(i18n.text("text.c95c16b49c20", formatDate(item.lastModifiedEpochMs)), item.readError),
         badge = when {
             isOpen -> i18n.text("text.5f42eb4dd012")
             item.isEncrypted -> "🔒"

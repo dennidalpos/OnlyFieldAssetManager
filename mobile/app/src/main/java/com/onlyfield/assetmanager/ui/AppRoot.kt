@@ -139,7 +139,7 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
                 onDismissRequest = vm::cancelImport,
                 title = { Text(if (sameProjectExists) i18n.text("text.bce1e2ff7206") else i18n.text("text.6a8f2c033f77")) },
                 text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(pkg.project.name, fontWeight = FontWeight.SemiBold)
                         Text(i18n.text("text.6d23c6d3c065", pkg.project.sites.sumOf { it.devices.size }, pkg.project.racks.size, pkg.project.cables.size))
                         comparison?.let { c ->
@@ -148,6 +148,9 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
                             c.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                         }
                         if (sameProjectExists) Text(i18n.text("text.260e5b89f7f2"), style = MaterialTheme.typography.bodySmall)
+                        state.evaluation.importResult.validationResult.issues.forEach {
+                            Text(it.message, color = MaterialTheme.colorScheme.error)
+                        }
                     }
                 },
                 confirmButton = {

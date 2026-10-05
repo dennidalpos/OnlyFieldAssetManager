@@ -12,15 +12,19 @@ import androidx.compose.foundation.verticalScroll
 import com.onlyfield.assetmanager.configurator.ProjectDestination
 import com.onlyfield.assetmanager.configurator.theme.OnlyFieldTheme
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.pointer.pointerInput
 import com.onlyfield.assetmanager.pc.ui.components.MasterDetailHost
 import com.onlyfield.assetmanager.pc.ui.*
 import com.onlyfield.assetmanager.pc.ui.components.ConfirmHost
@@ -38,6 +42,7 @@ fun DesktopApp(state: DesktopAppState) {
         com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
+                Box(Modifier.fillMaxSize()) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val panel = if (state.detailSlot.content != null) state.detailSlot.panelWidth.coerceIn(440.dp, 640.dp) + 16.dp else 0.dp
                     val sidebarVisible = state.project != null && maxWidth - 208.dp - 32.dp - panel >= 360.dp
@@ -52,6 +57,8 @@ fun DesktopApp(state: DesktopAppState) {
                         StatusBar(state)
                     }
                 }
+                if (state.busy) BusyOverlay()
+                }
             }
             ProjectDialogs(state)
         }
@@ -59,6 +66,23 @@ fun DesktopApp(state: DesktopAppState) {
     }
 }
 
+}
+
+@Composable
+private fun BusyOverlay() {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    Box(Modifier.fillMaxSize().focusRequester(focus).onPreviewKeyEvent { true }.focusable()
+        .pointerInput(Unit) {
+            awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
+        }, contentAlignment = Alignment.Center) {
+        Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = .97f), tonalElevation = 8.dp) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                CircularProgressIndicator()
+                Text(LocalMessages.current.text("work.busy"))
+            }
+        }
+    }
 }
 
 internal fun ProjectDestination.appSection(): AppSection? = when (this) {
@@ -219,7 +243,7 @@ private fun SectionContent(state: DesktopAppState) {
         AppSection.MODELS -> DeviceModelsSection(project, update)
         AppSection.FLOORPLANS -> FloorHomeSection(state)
         AppSection.CREDENTIALS -> CredentialsSection(project, update)
-        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentFile, state::addMapSnapshot)
+        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::openAttachment, state.hasPassword, state::addMapSnapshot)
         AppSection.CABLING -> CablingSection(project, update)
         AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary)
         AppSection.POWER -> PowerBadgeSection(project, update, state.showSecondary)

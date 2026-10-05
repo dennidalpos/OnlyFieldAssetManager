@@ -37,7 +37,9 @@ fun FloorplanMediaSection(
     project: Project,
     onProjectUpdated: (Project, String) -> Unit,
     onAddAttachment: (File, String, AttachmentClassification) -> Unit,
-    attachmentFile: (Attachment) -> File?,
+    attachmentBytes: (Attachment) -> ByteArray?,
+    onOpenAttachment: (Attachment) -> Unit,
+    protected: Boolean,
     onAddMapSnapshot: (DesktopMapSnapshot, String) -> Boolean,
 ) {
     val i18n = LocalMessages.current
@@ -47,7 +49,7 @@ fun FloorplanMediaSection(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SubTabs(listOf(i18n.text("text.690325ff1b4c", project.attachments.size), i18n.text("text.2ebfe0133d0c")), tab) { tab = it }
         when (tab) {
-            0 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentFile)
+            0 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentBytes, onOpenAttachment, protected)
             1 -> key(project.id) { CartographyTab(onAddMapSnapshot) }
         }
     }
@@ -59,7 +61,9 @@ private fun AttachmentsTab(
     index: ProjectIndex,
     onProjectUpdated: (Project, String) -> Unit,
     onAddAttachment: (File, String, AttachmentClassification) -> Unit,
-    attachmentFile: (Attachment) -> File?,
+    attachmentBytes: (Attachment) -> ByteArray?,
+    onOpenAttachment: (Attachment) -> Unit,
+    protected: Boolean,
 ) {
     val i18n = LocalMessages.current
 
@@ -80,13 +84,13 @@ private fun AttachmentsTab(
                     title = att.name,
                     badge = att.classification.toDisplayString(i18n = i18n),
                     details = listOf(
-                        "${att.fileType.toDisplayString(i18n = i18n)} · ${att.originalFileName}" + if (attachmentFile(att) == null) i18n.text("text.17abaf4534d2") else "",
+                        "${att.fileType.toDisplayString(i18n = i18n)} · ${att.originalFileName}" + if (attachmentBytes(att) == null) i18n.text("text.17abaf4534d2") else "",
                         index.attachmentTarget(att, i18n = i18n).orEmpty(),
                         usedBy.takeIf { it.isNotEmpty() }?.let { i18n.text("text.a63270a10e72", it.joinToString()) }.orEmpty()
                     )
                 ) {
-                    attachmentFile(att)?.let { f ->
-                        TextButton(onClick = { runCatching { java.awt.Desktop.getDesktop().open(f) } }) { Text(i18n.text("text.12abcf9ee7d6")) }
+                    if (attachmentBytes(att) != null) {
+                        TextButton(onClick = { onOpenAttachment(att) }) { Text(i18n.text(if (protected) "media.exportAndOpen" else "text.12abcf9ee7d6")) }
                     }
                     TextButton(onClick = { changeDetail { floorplanFor = att } }, enabled = index.areas.isNotEmpty()) { Text(i18n.text("text.fa7e72cbd571")) }
                     DeleteButton(att.name, onDelete = { onProjectUpdated(ProjectEdits.deleteAttachment(project, att.id), i18n.text("text.0a1dce905d01")) },
@@ -137,7 +141,7 @@ private fun AttachmentsTab(
                 { areaId = it?.id }, optionDetail = { a -> a.floorplanAttachmentId?.let { i18n.text("text.613f9fe4c7c9") } })
         }
     }
-    if (planAreaId != null && floorplanFor != null) PlanChooser(project, index.area(planAreaId)!!, floorplanFor!!.id, attachmentFile, {}, { id, page, pages ->
+    if (planAreaId != null && floorplanFor != null) PlanChooser(project, index.area(planAreaId)!!, floorplanFor!!.id, attachmentBytes, {}, { id, page, pages ->
         onProjectUpdated(ProjectEdits.setAreaFloorplan(project, planAreaId!!, id, page, pages), i18n.text("text.fcd1cc58f46b")); planAreaId = null; floorplanFor = null
     }, { planAreaId = null; floorplanFor = null })
 

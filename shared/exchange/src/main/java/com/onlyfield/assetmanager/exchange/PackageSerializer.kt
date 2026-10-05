@@ -10,12 +10,16 @@ import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import kotlinx.serialization.json.Json
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.IOException
+import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
+import java.util.zip.ZipFile
 import javax.crypto.Cipher
 import javax.crypto.SecretKeyFactory
 import javax.crypto.spec.GCMParameterSpec
@@ -33,6 +37,20 @@ object PackageSerializer {
         prettyPrint = true
         ignoreUnknownKeys = true
         encodeDefaults = true
+    }
+
+    /** Metadata only; opening a project still requires full validation. */
+    fun readManifest(file: File, i18n: Messages = Messages()): PackageManifest {
+        val limits = PackageImportLimits()
+        require(file.length() <= limits.archiveBytes) { i18n.text("package.importLimit") }
+        return ZipFile(file).use { zip ->
+            val entry = zip.getEntry(PackageManifest.MANIFEST_FILE_NAME) ?: throw IOException(i18n.text("text.11fb368e9db2"))
+            val bytes = zip.getInputStream(entry).use { it.readNBytes(limits.fileBytes.toInt() + 1) }
+            require(bytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }
+            jsonConfig.decodeFromString(PackageManifest.serializer(), bytes.toString(Charsets.UTF_8)).also {
+                require(it.formatVersion == PackageManifest.CURRENT_FORMAT_VERSION) { i18n.text("text.4b03253f0751", it.formatVersion) }
+            }
+        }
     }
 
     fun calculateSha256(data: ByteArray): String {
@@ -78,8 +96,11 @@ object PackageSerializer {
         attachments: Map<String, ByteArray> = emptyMap(),
         password: String? = null,
         exportedEpochMs: Long = System.currentTimeMillis(),
-     i18n: Messages = Messages()): ByteArray {
+        i18n: Messages = Messages()): ByteArray {
         val projectJsonBytes = jsonConfig.encodeToString(Project.serializer(), project).toByteArray(Charsets.UTF_8)
+        val limits = PackageImportLimits()
+        require(projectJsonBytes.size <= limits.fileBytes && attachments.values.all { it.size <= limits.fileBytes }) { i18n.text("package.importLimit") }
+        require(attachments.size + 2 <= limits.entries) { i18n.text("package.importLimit") }
 
         val isEncrypted = !password.isNullOrBlank() || project.isPasswordProtected
         val effectivePassword = password?.takeIf { it.isNotBlank() }
@@ -145,6 +166,8 @@ object PackageSerializer {
         )
 
         val manifestJsonBytes = jsonConfig.encodeToString(PackageManifest.serializer(), manifest).toByteArray(Charsets.UTF_8)
+        require(manifestJsonBytes.size <= limits.fileBytes &&
+            manifestJsonBytes.size.toLong() + payloadBytes.size + processedAttachments.values.sumOf { it.size.toLong() } <= limits.expandedBytes) { i18n.text("package.importLimit") }
 
         val baos = ByteArrayOutputStream()
         ZipOutputStream(baos).use { zos ->
@@ -166,6 +189,7 @@ object PackageSerializer {
             }
         }
 
+        require(baos.size() <= limits.archiveBytes) { i18n.text("package.importLimit") }
         return baos.toByteArray()
     }
 
@@ -183,18 +207,48 @@ object PackageSerializer {
             return PackageImportResult(null, ValidationResult(issues))
         }
 
+        return importPackage(ByteArrayInputStream(zipBytes), password, i18n)
+    }
+
+    fun importPackage(inputStream: InputStream, password: String? = null, i18n: Messages = Messages()): PackageImportResult =
+        importPackage(inputStream, password, i18n, PackageImportLimits())
+
+    internal fun importPackage(inputStream: InputStream, password: String?, i18n: Messages, limits: PackageImportLimits): PackageImportResult {
+        val issues = mutableListOf<ValidationIssue>()
+        fun rejection(code: String) = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = code, message = i18n.text("package.importLimit"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
+        fun invalidZip() = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = "INVALID_ZIP_ARCHIVE", message = i18n.text("text.0e2a1010ee48"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
         var manifestBytes: ByteArray? = null
         var projectPlainBytes: ByteArray? = null
         var projectEncBytes: ByteArray? = null
         val attachments = mutableMapOf<String, ByteArray>()
 
+        val counted = PackageInput(inputStream, limits.archiveBytes)
         try {
-            ZipInputStream(ByteArrayInputStream(zipBytes)).use { zis ->
+            ZipInputStream(counted).use { zis ->
+                var entryCount = 0
+                var expandedBytes = 0L
+                val buffer = ByteArray(8192)
                 var entry = zis.nextEntry
                 while (entry != null) {
+                    if (++entryCount > limits.entries) throw PackageLimitExceeded("PACKAGE_ENTRY_LIMIT_EXCEEDED")
+                    val output = ByteArrayOutputStream()
+                    var entryBytes = 0L
+                    var read = zis.read(buffer)
+                    while (read != -1) {
+                        entryBytes += read
+                        expandedBytes += read
+                        if (entryBytes > limits.fileBytes + PackageImportLimits.GCM_OVERHEAD) throw PackageLimitExceeded("ENTRY_SIZE_LIMIT_EXCEEDED")
+                        if (expandedBytes > limits.expandedBytes) throw PackageLimitExceeded("PACKAGE_CONTENT_LIMIT_EXCEEDED")
+                        if (!entry.isDirectory) output.write(buffer, 0, read)
+                        read = zis.read(buffer)
+                    }
                     if (!entry.isDirectory) {
                         val name = entry.name
-                        val content = zis.readBytes()
+                        val content = output.toByteArray()
                         when (name) {
                             PackageManifest.MANIFEST_FILE_NAME -> manifestBytes = content
                             PackageManifest.PROJECT_FILE_NAME -> projectPlainBytes = content
@@ -204,17 +258,19 @@ object PackageSerializer {
                     }
                     entry = zis.nextEntry
                 }
+                // Count the central directory and trailing input too.
+                while (counted.read(buffer) != -1) { }
             }
-        } catch (e: Exception) {
-            issues.add(
-                ValidationIssue(
-                    code = "INVALID_ZIP_ARCHIVE",
-                    message = i18n.text("text.0e2a1010ee48"),
-                    severity = ValidationSeverity.STRUCTURAL_ERROR
-                )
-            )
-            return PackageImportResult(null, ValidationResult(issues))
+        } catch (e: PackageLimitExceeded) {
+            return rejection(e.code)
+        } catch (_: IOException) {
+            return invalidZip()
+        } catch (_: IllegalArgumentException) {
+            return invalidZip()
         }
+        if (counted.bytesRead == 0L) return PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = "EMPTY_PACKAGE", message = i18n.text("text.0bbc9274b92f"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
 
         if (manifestBytes == null) {
             issues.add(
@@ -247,6 +303,24 @@ object PackageSerializer {
                 severity = ValidationSeverity.STRUCTURAL_ERROR,
             )
             return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        val rawLimit = limits.fileBytes
+        if (manifestBytes.size.toLong() > rawLimit ||
+            (projectPlainBytes?.size?.toLong() ?: 0) > rawLimit ||
+            (projectEncBytes?.size?.toLong() ?: 0) > rawLimit + 16 ||
+            attachments.values.any { it.size.toLong() > rawLimit + if (manifest.attachmentsEncrypted) PackageImportLimits.GCM_OVERHEAD else 0 }) {
+            return rejection("ENTRY_SIZE_LIMIT_EXCEEDED")
+        }
+        if (manifest.isEncrypted) {
+            val iterations = manifest.kdfIterations ?: PackageManifest.DEFAULT_KDF_ITERATIONS
+            if (iterations !in 1..PackageImportLimits.MAX_KDF_ITERATIONS) return rejection("INVALID_KDF_PARAMETERS")
+            fun hex(value: String?, length: Int) = value?.length == length && value.all { it.digitToIntOrNull(16) != null }
+            if (!hex(manifest.kdfSaltHex, 32) || !hex(manifest.cipherIvHex, 24)) {
+                return PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+                    code = "CORRUPTED_ENCRYPTION_METADATA", message = i18n.text("text.0c97f01205a3"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+                ))))
+            }
         }
 
         val projectBytes: ByteArray
@@ -391,13 +465,39 @@ object PackageSerializer {
             return PackageImportResult(null, ValidationResult(issues))
         }
 
+        val imported = ProjectPackage(manifest, project, attachments)
+        val missingPaths = mutableSetOf<String>()
+        for (attachment in project.attachments) {
+            if (AttachmentFiles.bytesIn(imported, attachment) != null) continue
+            missingPaths += AttachmentFiles.entryName(attachment)
+            missingPaths += attachment.relativePath
+            missingPaths += "${PackageManifest.ATTACHMENTS_DIR}${attachment.relativePath.removePrefix("/")}"
+            issues += ValidationIssue(
+                code = "MISSING_ATTACHMENT_PAYLOAD",
+                message = i18n.text("package.missingAttachment", attachment.name),
+                severity = ValidationSeverity.DOCUMENTARY_WARNING,
+                targetEntityId = attachment.id,
+            )
+        }
+        for (path in manifest.checksums.keys) {
+            if (path == PackageManifest.PROJECT_FILE_NAME || path == PackageManifest.PROJECT_ENC_FILE_NAME) continue
+            if (path !in attachments && path !in missingPaths) {
+                issues += ValidationIssue(
+                    code = "MISSING_PACKAGE_ENTRY",
+                    message = i18n.text("package.missingAttachment", path),
+                    severity = ValidationSeverity.DOCUMENTARY_WARNING,
+                    targetEntityId = path,
+                )
+            }
+        }
+
         // Validate model constraints and relationships
         val modelValidation = ModelValidator.validateProject(project, i18n = i18n)
         issues.addAll(modelValidation.issues)
 
         val finalValidation = ValidationResult(issues)
         val pkg = if (finalValidation.isValid) {
-            ProjectPackage(manifest = manifest, project = project, attachments = attachments)
+            imported
         } else {
             null
         }

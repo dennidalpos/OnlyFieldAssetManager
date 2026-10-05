@@ -20,11 +20,9 @@ object MarkdownExportManager {
         filterConfig: ExportFilterConfig,
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
-        val filteredDevices = project.sites
-            .filter { (filterConfig.selectedSiteId == null) || (it.id == filterConfig.selectedSiteId) }
-            .flatMap { site -> site.devices.filter { device -> (filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId) } }
-            .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
-            .distinctBy { it.id }
+        val scope = DocumentSelection(project, filterConfig)
+        val selectedProject = scope.project
+        val filteredDevices = scope.devices
 
         val filteredDeviceIds = filteredDevices.map { it.id }.toSet()
 
@@ -33,10 +31,10 @@ object MarkdownExportManager {
 
         val sb = StringBuilder()
 
-        sb.append(i18n.text("text.51d55eca0da1", filterConfig.titleOverride ?: project.name))
-        sb.append(i18n.text("text.a9f159e06d8c", project.name))
-        if (project.description != null) {
-            sb.append(i18n.text("text.928cda9b0882", project.description))
+        sb.append(i18n.text("text.51d55eca0da1", filterConfig.titleOverride ?: selectedProject.name))
+        sb.append(i18n.text("text.a9f159e06d8c", selectedProject.name))
+        if (selectedProject.description != null) {
+            sb.append(i18n.text("text.928cda9b0882", selectedProject.description))
         }
         sb.append(i18n.text("text.5079451365c9", dateStr))
         sb.append(i18n.text("text.2fc8bcdb6d41", filterConfig.authorName))
@@ -47,11 +45,11 @@ object MarkdownExportManager {
         sb.append(i18n.text("text.e064d5838d84"))
         sb.append(i18n.text("text.763262b5c2db"))
         sb.append("| :--- | :--- |\n")
-        sb.append(i18n.text("text.5213a63a1aab", project.sites.size))
+        sb.append(i18n.text("text.5213a63a1aab", selectedProject.sites.size))
         sb.append(i18n.text("text.d26f1e1ab803", filteredDevices.size))
-        sb.append(i18n.text("text.ba8e0c852cf8", project.racks.size))
-        sb.append(i18n.text("text.d4fb508e5005", project.cables.size))
-        sb.append(i18n.text("text.1676ecf6cdbe", project.vlans.size, project.subnets.size))
+        sb.append(i18n.text("text.ba8e0c852cf8", selectedProject.racks.size))
+        sb.append(i18n.text("text.d4fb508e5005", selectedProject.cables.size))
+        sb.append(i18n.text("text.1676ecf6cdbe", selectedProject.vlans.size, selectedProject.subnets.size))
 
         val openIssues = filteredDevices.count { it.observation?.status == ObservationStatus.TO_VERIFY || it.observation?.status == ObservationStatus.CONFLICT }
         sb.append(i18n.text("text.46d91c6ab242", openIssues))
@@ -63,7 +61,7 @@ object MarkdownExportManager {
         sb.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
 
         for (dev in filteredDevices) {
-            val rackName = project.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
+            val rackName = selectedProject.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
             val rackLoc = if (dev.rackId != null) i18n.text("text.6a25a1235a6f", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
             val statusStr = (dev.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n)
 
@@ -87,9 +85,9 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        if (project.racks.isNotEmpty()) {
+        if (selectedProject.racks.isNotEmpty()) {
             sb.append(i18n.text("text.6ebb98387f5e"))
-            for (rack in project.racks) {
+            for (rack in selectedProject.racks) {
                 val devicesInRack = filteredDevices.filter { it.rackId == rack.id }
                 sb.append(i18n.text("text.9d606200307f", rack.name, rack.heightU))
                 sb.append("${i18n.text("config.depth")}: ${rack.depthMm ?: "-"}; ${i18n.text("config.mountDepth")}: ${rack.mountingDepthMm ?: "-"}\n\n")
@@ -106,15 +104,15 @@ object MarkdownExportManager {
             }
         }
 
-        if (project.cables.isNotEmpty()) {
+        if (selectedProject.cables.isNotEmpty()) {
             sb.append(i18n.text("text.4d78d18352a8"))
             sb.append(i18n.text("text.453b1efb174a"))
             sb.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
 
-            val allPorts = project.sites.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
-            val allDevices = project.sites.flatMap { it.devices }.associateBy { it.id }
+            val allPorts = selectedProject.sites.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
+            val allDevices = selectedProject.sites.flatMap { it.devices }.associateBy { it.id }
 
-            for (cable in project.cables) {
+            for (cable in selectedProject.cables) {
                 val portA = cable.portAId?.let { allPorts[it] }
                 val devA = portA?.let { allDevices[it.deviceId] }
 
@@ -135,13 +133,13 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        if (project.vlans.isNotEmpty()) {
+        if (selectedProject.vlans.isNotEmpty()) {
             sb.append(i18n.text("text.bc013965b27a"))
             sb.append(i18n.text("text.013a63422a55"))
             sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
 
-            for (vlan in project.vlans) {
-                val subnetsForVlan = project.subnets.filter { it.vlanId == vlan.id }
+            for (vlan in selectedProject.vlans) {
+                val subnetsForVlan = selectedProject.subnets.filter { it.vlanId == vlan.id }
                 val cidrs = subnetsForVlan.joinToString(", ") { "`${it.cidrBlock}`" }
                 val gateways = subnetsForVlan.mapNotNull { it.gatewayIp }.joinToString(", ") { "`$it`" }
 
@@ -150,13 +148,13 @@ object MarkdownExportManager {
             sb.append("\n")
         }
 
-        if (project.powerFeeds.isNotEmpty() || project.documentBadges.isNotEmpty()) {
+        if (selectedProject.powerFeeds.isNotEmpty() || selectedProject.documentBadges.isNotEmpty()) {
             sb.append(i18n.text("text.1577688da00d"))
             sb.append(i18n.text("text.083528e3bd57"))
             sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
 
             for (dev in filteredDevices) {
-                val feeds = project.powerFeeds.filter { it.deviceId == dev.id }
+                val feeds = selectedProject.powerFeeds.filter { it.deviceId == dev.id }
                 val feedA = feeds.find { it.feedName == "A" }?.let { "${it.feedType.toDisplayString(i18n)} (${it.sourceOutletDescription ?: "-"})" } ?: "-"
                 val feedB = feeds.find { it.feedName == "B" }?.let { "${it.feedType.toDisplayString(i18n)} (${it.sourceOutletDescription ?: "-"})" } ?: "-"
 
@@ -164,7 +162,7 @@ object MarkdownExportManager {
                 val w = feeds.mapNotNull { it.loadWatts }.sum()
                 val loadStr = if (va > 0 || w > 0) i18n.text("text.12cb5c0da8a5", va, w) else "-"
 
-                val badges = project.documentBadges.filter { it.targetId == dev.id }.joinToString(", ") { "`${it.label}`" }
+                val badges = selectedProject.documentBadges.filter { it.targetId == dev.id }.joinToString(", ") { "`${it.label}`" }
 
                 sb.append("| **${dev.technicalName}** | $feedA | $feedB | $loadStr | ${badges.ifEmpty { "-" }} |\n")
             }
@@ -172,10 +170,7 @@ object MarkdownExportManager {
         }
 
         sb.append(i18n.text("text.ddf3a938a4e2"))
-        for (att in project.attachments) {
-            if (att.classification == AttachmentClassification.CONFIDENTIAL && !filterConfig.includeConfidential) {
-                continue
-            }
+        for (att in selectedProject.attachments) {
             val classBadge = when (att.classification) {
                 AttachmentClassification.SHAREABLE -> "[${att.classification.toDisplayString(i18n)}]"
                 AttachmentClassification.CONFIDENTIAL -> "[${att.classification.toDisplayString(i18n)}]"

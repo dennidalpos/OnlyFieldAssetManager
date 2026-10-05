@@ -13,6 +13,10 @@ import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import java.io.FileOutputStream
+import kotlinx.coroutines.*
+import android.os.Handler
+import android.os.Looper
+import java.util.concurrent.atomic.AtomicBoolean
 
 /** Android print adapter for preview, printer selection and PDF output. */
 class ProjectPrintDocumentAdapter(
@@ -21,6 +25,7 @@ class ProjectPrintDocumentAdapter(
     private val reportSelection: ReportSelection = ReportSelection(),
     private val i18n: Messages = Messages()
 ) : PrintDocumentAdapter() {
+    private val worker = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onLayout(
         oldAttributes: PrintAttributes?,
@@ -52,24 +57,46 @@ class ProjectPrintDocumentAdapter(
             callback?.onWriteFailed(i18n.text("text.6a0fbef6bf9b"))
             return
         }
-
-        try {
-            FileOutputStream(destination.fileDescriptor).use { outputStream ->
-                PdfExportManager.exportCompositeReportPdfToStream(
-                    project = project,
-                    filterConfig = filterConfig,
-                    selection = reportSelection,
-                    outputStream = outputStream,
-                    i18n = i18n)
-            }
-
-            if (cancellationSignal?.isCanceled == true) {
-                callback?.onWriteCancelled()
-            } else {
-                callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
-            }
-        } catch (e: Exception) {
-            callback?.onWriteFailed(e.message)
+        if (cancellationSignal?.isCanceled == true) {
+            callback?.onWriteCancelled()
+            return
         }
+
+        val delivered = AtomicBoolean()
+        val job = worker.launch {
+            var failure: String? = null
+            var cancelled = false
+            try {
+                ensureActive()
+                FileOutputStream(destination.fileDescriptor).use { outputStream ->
+                    PdfExportManager.exportCompositeReportPdfToStream(project, filterConfig, reportSelection, outputStream, i18n)
+                }
+            } catch (_: CancellationException) {
+                cancelled = true
+            } catch (e: Exception) {
+                failure = e.message ?: i18n.text("text.6a0fbef6bf9b")
+            }
+            cancelled = cancelled || !isActive || cancellationSignal?.isCanceled == true
+            withContext(NonCancellable + Dispatchers.Main) {
+                if (!delivered.compareAndSet(false, true)) return@withContext
+                when {
+                    cancelled -> callback?.onWriteCancelled()
+                    failure != null -> callback?.onWriteFailed(failure)
+                    else -> callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
+                }
+            }
+        }
+        job.invokeOnCompletion { cause ->
+            if (cause is CancellationException) Handler(Looper.getMainLooper()).post {
+                if (delivered.compareAndSet(false, true)) callback?.onWriteCancelled()
+            }
+        }
+        cancellationSignal?.setOnCancelListener { job.cancel() }
+
+    }
+
+    override fun onFinish() {
+        worker.cancel()
+        super.onFinish()
     }
 }

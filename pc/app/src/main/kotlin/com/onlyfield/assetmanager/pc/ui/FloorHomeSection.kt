@@ -56,7 +56,7 @@ fun FloorHomeSection(state: DesktopAppState) {
     LaunchedEffect(attachment?.id, area?.floorplanPageIndex) {
         image = null; imageError = null
         if (attachment != null) {
-            try { image = withContext(Dispatchers.IO) { PlanMedia.image(state.attachmentFile(attachment) ?: error(i18n.text("text.b514c5e8cde0")), attachment.fileType == AttachmentType.PDF, area?.floorplanPageIndex ?: 0, i18n = i18n) } }
+            try { image = withContext(Dispatchers.IO) { PlanMedia.image(state.attachmentBytes(attachment) ?: error(i18n.text("text.b514c5e8cde0")), attachment.fileType == AttachmentType.PDF, area?.floorplanPageIndex ?: 0, i18n = i18n) } }
             catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; imageError = i18n.text("text.04e6695ec9e8", e.message) }
         }
     }
@@ -119,7 +119,7 @@ fun FloorHomeSection(state: DesktopAppState) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
                         Column(Modifier.width(120.dp)) {
-                            MediaThumbnail(state.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                            MediaThumbnail(state.attachmentBytes(a), a.fileType == AttachmentType.PDF, key = a.id)
                             Text(a.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                     }
@@ -140,7 +140,7 @@ fun FloorHomeSection(state: DesktopAppState) {
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft, editorPage) { editor = null } } }
     if (searching) GlobalSearchDialog(project, i18n, state.recentSearch, ::openHit) { searching = false }
     if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
-    if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentFile, {
+    if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentBytes, {
         DesktopStorageHelper.pickOpenFile(i18n.text("text.04458b820c0e"), i18n.text("text.0c7a70a251fc"), "pdf", "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { file ->
             state.importFloorplan(file, area.id)?.let { a ->
                 if (a.fileType == AttachmentType.IMAGE) { state.update(ProjectEdits.setAreaFloorplan(state.project!!, area.id, a.id), i18n.text("text.fcd1cc58f46b")); selectingPlan = false }

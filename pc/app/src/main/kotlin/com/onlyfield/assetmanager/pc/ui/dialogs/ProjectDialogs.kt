@@ -37,10 +37,12 @@ import com.onlyfield.assetmanager.pc.ui.toDisplayString
 
 @Composable
 fun ProjectDialogs(state: DesktopAppState) {
+    if (state.busy) return
     when (val d = state.dialog) {
         null -> Unit
         AppDialog.NewProject -> NewProjectDialog(state)
         is AppDialog.ImportPassword -> ImportPasswordDialog(state, d)
+        is AppDialog.LocalReplacementPassword -> LocalReplacementPasswordDialog(state, d)
         AppDialog.ManagePassword -> ManagePasswordDialog(state)
         is AppDialog.Compare -> CompareDialog(state, d)
         is AppDialog.Merge -> MergeDialog(state, d)
@@ -114,6 +116,24 @@ private fun WizardPassword(value: String, onChange: (String) -> Unit, label: Str
 )
 
 @Composable
+private fun LocalReplacementPasswordDialog(state: DesktopAppState, d: AppDialog.LocalReplacementPassword) {
+    val i18n = LocalMessages.current
+    var password by remember(d.pkg) { mutableStateOf("") }
+    FormDialog(
+        title = i18n.text("import.localPasswordTitle"),
+        onDismiss = { state.dialog = null },
+        onConfirm = { state.acceptIncomingWithLocalPassword(d.pkg, d.incomingPassword, password) },
+        confirmEnabled = password.isNotEmpty(),
+        confirmLabel = i18n.text("text.12abcf9ee7d6"),
+        width = 460.dp,
+    ) {
+        Text(i18n.text("import.localPasswordHint", d.pkg.project.name))
+        WizardPassword(password, { password = it }, i18n.text("text.e7cf3ef4f17c"),
+            if (d.wrongPassword) i18n.text("text.972b256c2416") else null)
+    }
+}
+
+@Composable
 private fun ImportPasswordDialog(state: DesktopAppState, d: AppDialog.ImportPassword) {
     val i18n = LocalMessages.current
 
@@ -183,11 +203,12 @@ private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
         onDismissRequest = { state.dialog = null },
         title = { Text(i18n.text("text.d9894806b1de")) },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(i18n.text("text.620d36696411", d.pkg.project.name), fontWeight = FontWeight.SemiBold)
                 Text(i18n.text("text.9d284912dcdd", if (d.comparison.currentProjectId == null) d.comparison.summary else d.comparison.status.toDisplayString(i18n = i18n)))
                 d.comparison.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Text(
+                d.warnings.forEach { Text(it.message, color = MaterialTheme.colorScheme.error) }
+                if (d.comparison.currentProjectId != null) Text(
                     i18n.text("text.bdd5139031cd") +
                         i18n.text("text.5f9922718875"),
                     style = MaterialTheme.typography.bodySmall
@@ -198,7 +219,7 @@ private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 val sameProject = d.comparison.currentProjectId == d.pkg.project.id
                 if (sameProject) OutlinedButton(onClick = { state.startMerge(d.pkg) }) { Text(i18n.text("text.6f5114885bfc")) }
-                Button(onClick = { state.acceptIncoming(d.pkg, d.password) }) { Text(i18n.text("text.3260dc474cbc")) }
+                Button(onClick = { state.acceptIncoming(d.pkg, d.password) }) { Text(i18n.text(if (d.comparison.currentProjectId == null) "text.4f01aabad5cf" else "text.3260dc474cbc")) }
             }
         },
         dismissButton = { TextButton(onClick = { state.dialog = null }) { Text(i18n.text("text.18c9d912a210")) } }
@@ -261,13 +282,13 @@ private fun DocumentsDialog(state: DesktopAppState) {
         try {
             when (format) {
                 DocFormat.XLSX -> DesktopStorageHelper.pickSaveFile(i18n.text("text.168dd30fb1a2"), "$baseName.xlsx", i18n.text("text.27d3a667b1cb"), "xlsx", i18n = i18n)
-                    ?.also { f -> f.outputStream().use { DesktopDocumentManager.exportXlsx(project, filter, it, i18n = i18n) } }
+                    ?.also { f -> state.runIo { f.outputStream().use { DesktopDocumentManager.exportXlsx(project, filter, it, i18n = i18n) } } }
                 DocFormat.MARKDOWN -> DesktopStorageHelper.pickSaveFile(i18n.text("text.d1e5e5fedfc4"), "$baseName.md", i18n.text("text.091a5fb0185f"), "md", i18n = i18n)
-                    ?.also { f -> f.outputStream().use { DesktopDocumentManager.exportMarkdown(project, filter, it, i18n = i18n) } }
+                    ?.also { f -> state.runIo { f.outputStream().use { DesktopDocumentManager.exportMarkdown(project, filter, it, i18n = i18n) } } }
                 DocFormat.PDF -> DesktopStorageHelper.pickSaveFile(i18n.text("text.25c282ca0290"), "${baseName}_report.pdf", i18n.text("text.7e9c89b812eb"), "pdf", i18n = i18n)
-                    ?.also { f -> f.outputStream().use { DesktopDocumentManager.exportCompositePdf(project, filter, selection, it, i18n = i18n, planImage = state::planImage) } }
+                    ?.also { f -> state.runIo { f.outputStream().use { DesktopDocumentManager.exportCompositePdf(project, filter, selection, it, i18n = i18n, planImage = state::planImage) } } }
                 DocFormat.PRINT -> {
-                    val printed = DesktopDocumentManager.printDocumentNative(project, filter, selection, i18n = i18n, planImage = state::planImage)
+                    val printed = state.runIo { DesktopDocumentManager.printDocumentNative(project, filter, selection, i18n = i18n, planImage = state::planImage) }
                     state.notify(if (printed) i18n.text("text.c984feea82e6") else i18n.text("text.947bcd7a84c3"))
                     null
                 }
@@ -289,7 +310,7 @@ private fun DocumentsDialog(state: DesktopAppState) {
                 state.dialog = null
                 DesktopStorageHelper.pickSaveFile(i18n.text("text.4db3339e27f7"), "${DesktopAppState.safeFileName(project.name)}_etichette.pdf", i18n.text("text.7e9c89b812eb"), "pdf", i18n = i18n)
                     ?.let { f ->
-                        runCatching { f.outputStream().use { LabelSheetPdf.write(LabelSheetPdf.labelsFor(project, i18n = i18n), it) } }
+                        runCatching { state.runIo { f.outputStream().use { LabelSheetPdf.write(LabelSheetPdf.labelsFor(project, i18n = i18n), it) } } }
                             .onSuccess { state.notify(i18n.text("text.dc5741dd59ff", f.absolutePath)) }
                             .onFailure { state.error = i18n.text("text.f887637decf7", it.message) }
                     }

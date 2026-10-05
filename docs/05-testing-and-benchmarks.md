@@ -10,6 +10,8 @@ La verifica JVM e Compose usa:
 
 Le suite coprono dominio, serializzazione/cifratura, fusione, storage Room, interoperabilita, configuratore, documenti e UI Desktop. Il workflow CI esegue lo stesso perimetro prima di creare gli artefatti.
 
+Le regressioni dell'audit sono permanenti: `ImportedProtectionTest` verifica la riapertura su database Room su file e le regole di sostituzione/fusione; `AttachmentConfinementTest` verifica percorsi esterni, traversal e allegati legittimi; `MissingPayloadTest` verifica catalogo, checksum, alias legacy e pacchetti cifrati; `ImportPayloadReviewTest` verifica conferma e avviso visibile nella UI Desktop. `ProtectedMediaTest` copre import protetto, rendering da memoria, riapertura, password errata, cambio/rimozione password, protezione dei file esistenti e salvataggio di nuovi media senza copie temporanee. Le prove JVM non sostituiscono il collaudo SQLCipher su dispositivo né la verifica visiva Android (AUD-03 e RES-19).
+
 ## Progetto demo
 
 [fixtures/demo/onlyfield-demo.ofam](../fixtures/demo/onlyfield-demo.ofam) si importa da Importa .ofam su Android e Windows. Si rigenera con:
@@ -152,3 +154,25 @@ Baseline prima delle modifiche: `gradlew test` verde. Verifica finale con `gradl
 - **Da fare**: scheda rapida su Android nativo e foto porta/cavo (RES-19, FOTO-04 in RES-13).
 
 Ponte radio e «Demo Comune»: `gradlew test --rerun` `BUILD SUCCESSFUL in 1m 16s`, 250 test superati (Core 90, Exchange 41, Desktop 95, Android JVM 24). `DemoSeedTest` verifica sedi, 3/4 delle porte cablate per piano, percorsi radio Municipio → Scuola media → Scuola materna, dorsali, catena WAN e giunzione del Teatro.
+
+## Regressioni filtri documentali (AUD-08)
+
+`DocumentSelectionTest` verifica selezione con piano ereditato, cataloghi rete/alimentazione/allegati, classificazione della planimetria e contesto esterno; genera Markdown e XLSX per sede, piano, categoria e combinazione. `FilteredReportTest` legge il PDF con PDFBox e verifica figure e topologia con gli stessi filtri. Suite completa: `BUILD SUCCESSFUL in 1m 23s`, Core 100, Exchange 56, Desktop 114, Android JVM 32: 302 test senza fallimenti/errori/saltati. PDF Android compilato, completezza e resa non verificate (RES-21).
+
+## Limiti pacchetto (AUD-06)
+
+Sei test `PackageImportLimitsTest`: dimensione ZIP (compresi dati finali), dimensione entry, totale decompresso, numero entry/directory, file altamente comprimibile oltre 32 MiB, limiti esatti validi in chiaro/cifrati, KDF fuori intervallo e salt/IV malformati, stream fermato al primo byte compresso eccedente. Suite Exchange/Desktop/Android JVM: `BUILD SUCCESSFUL in 1m 22s`, 62/114/32 test senza fallimenti/errori/saltati. Memoria e tempi vicini ai limiti da misurare su hardware (RES-22).
+
+Revisione conclusiva: aggiunta la settima regressione per un nome ZIP con UTF-8 malformato, che prima causava `IllegalArgumentException`; ora restituisce `INVALID_ZIP_ARCHIVE` strutturale. `:shared:exchange:test --tests '*PackageImportLimitsTest' --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 3s`, sette test superati.
+
+## Sostituzione con password diverse (AUD-09)
+
+Quattro test `ReplacementPasswordTest`: copia chiusa con richiesta, password errata/annullamento/riapertura (incoming protetto e non protetto), copia già aperta, cestino corrotto, fallimento atomico reale Windows con `NOSHARE_DELETE`. Conservati cestino e payload delle foto eliminate. Regressioni con media/cestino: `BUILD SUCCESSFUL in 15s`; suite Desktop completa `:pc:app:test --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 32s`, 118 test senza fallimenti/errori/saltati.
+
+## Operazioni fuori dal thread UI (AUD-07)
+
+`RepositoryDispatchTest`: tre prove sul worker iniettato (letture, output, persistenza, fallimento di scrittura e cancellazione propagata). `StoredMetadataTest`: due prove di lettura del solo manifest, nome del progetto protetto e archivio corrotto visibile. `DesktopIoTest`: tre prove AWT con worker reale, eventi distribuiti durante l’attesa, modifica concorrente bloccata, salvataggio cifrato di 500 apparati e errore di sostituzione Windows senza perdita dello stato/undo.
+
+Suite finale `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 1m 26s`, Core 100, Exchange 62, Desktop 123, Android JVM 35: **320 test**, zero fallimenti/errori/saltati. Pannello Windows e dialoghi di stampa nativi non verificati a vista (RES-23/RES-19); consumi ai limiti restano RES-22.
+
+Verifica dopo la revisione finale con lo stesso comando: `BUILD SUCCESSFUL in 1m 24s`, Core 100, Exchange 63, Desktop 123, Android JVM 35: **321 test**, zero fallimenti/errori/saltati. `git diff --check` superato; 15 documenti UTF-8 senza BOM e 72 collegamenti locali verificati. Il tracker contiene solo AUD-03 e sette residui aperti o parziali.

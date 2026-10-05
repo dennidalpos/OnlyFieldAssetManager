@@ -4,7 +4,6 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 
 import com.onlyfield.assetmanager.core.i18n.Messages
 
-import com.onlyfield.assetmanager.core.model.AttachmentClassification
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
 import java.io.OutputStream
@@ -19,11 +18,9 @@ object XlsxExportManager {
         filterConfig: ExportFilterConfig,
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
-        val filteredDevices = project.sites
-            .filter { (filterConfig.selectedSiteId == null) || (it.id == filterConfig.selectedSiteId) }
-            .flatMap { site -> site.devices.filter { device -> (filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId) } }
-            .filter { (filterConfig.selectedCategory == null) || (it.category == filterConfig.selectedCategory) }
-            .distinctBy { it.id }
+        val scope = DocumentSelection(project, filterConfig)
+        val selectedProject = scope.project
+        val filteredDevices = scope.devices
 
         val filteredDeviceIds = filteredDevices.map { it.id }.toSet()
 
@@ -49,23 +46,23 @@ object XlsxExportManager {
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet1.xml"))
-            zip.write(buildSheet1Xml(project, filteredDevices, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet1Xml(selectedProject, filteredDevices, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet2.xml"))
-            zip.write(buildSheet2Xml(project, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet2Xml(selectedProject, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet3.xml"))
-            zip.write(buildSheet3Xml(project, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet3Xml(selectedProject, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet4.xml"))
-            zip.write(buildSheet4Xml(project, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet4Xml(selectedProject, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet5.xml"))
-            zip.write(buildSheet5Xml(project, filterConfig, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet5Xml(selectedProject, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet6.xml"))
@@ -383,7 +380,7 @@ $SHEET_HEAD  <sheetData>
         return sb.toString()
     }
 
-    private fun buildSheet5Xml(project: Project, filterConfig: ExportFilterConfig, filteredDeviceIds: Set<String>, i18n: Messages = Messages()): String {
+    private fun buildSheet5Xml(project: Project, filteredDeviceIds: Set<String>, i18n: Messages = Messages()): String {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -401,9 +398,6 @@ $SHEET_HEAD  <sheetData>
         var rowIdx = 2
 
         for (att in project.attachments) {
-            if (att.classification == AttachmentClassification.CONFIDENTIAL && !filterConfig.includeConfidential) {
-                continue
-            }
             val detail = if (!att.attributionText.isNullOrBlank()) i18n.text("text.0e199e27e9e9", att.originalFileName, att.attributionText) else att.originalFileName
             sb.append("<row r=\"$rowIdx\">")
             sb.append(cellStr("A", rowIdx, i18n.text("text.59cc6c3e1526")))

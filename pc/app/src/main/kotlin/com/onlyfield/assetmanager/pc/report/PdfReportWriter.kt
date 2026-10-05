@@ -161,7 +161,7 @@ class PdfReportWriter(
         when (val f = line.figure) {
             is ReportFigure.FloorPlan -> floorPlan(line.text, f.areaId)
             is ReportFigure.RackElevation -> rack(line.text, f.rackId)
-            is ReportFigure.Topology -> topology(line.text)
+            is ReportFigure.Topology -> topology(line.text, f)
         }
     }
 
@@ -270,10 +270,11 @@ class PdfReportWriter(
     }
 
     /** Active devices with end devices folded; scaled down to fit one page when needed. */
-    private fun topology(caption: String) {
+    private fun topology(caption: String, figure: ReportFigure.Topology) {
         val nodeW = 88f; val nodeH = 24f; val gapX = 10f; val gapY = 22f
         val perRow = ((CONTENT_W + gapX) / (nodeW + gapX)).toInt()
-        val topology = PhysicalTopology.build(project, perRow = perRow, foldEndpoints = true)
+        val topology = PhysicalTopology.build(figure.context, perRow = perRow, foldEndpoints = figure.foldEndpoints)
+        val contextIndex = ProjectIndex(figure.context)
         if (topology.nodes.isEmpty()) return
         val natural = topology.rowSizes.size * (nodeH + gapY)
         val maxH = TOP - BOTTOM - 40f
@@ -301,11 +302,11 @@ class PdfReportWriter(
         for (n in topology.nodes) {
             val (cx, cy) = centres.getValue(n.device.id)
             val w = nodeW * scale; val h = nodeH * scale
-            stream.setNonStrokingColor(if (n.outside) Color(0xEE, 0xEE, 0xEE) else Color(0xE3, 0xEA, 0xFB))
+            stream.setNonStrokingColor(if (n.device.id !in figure.selectedDeviceIds) Color(0xEE, 0xEE, 0xEE) else Color(0xE3, 0xEA, 0xFB))
             stream.addRect(cx - w / 2, cy - h / 2, w, h); stream.fill()
             stream.setStrokingColor(Color(0x90, 0x9A, 0xB0)); stream.setLineWidth(.4f); stream.addRect(cx - w / 2, cy - h / 2, w, h); stream.stroke()
             val folded = topology.folded[n.device.id]?.size ?: 0
-            val place = listOfNotNull(folded.takeIf { it > 0 }?.let { "+$it" }, index.siteOf(n.device.id)?.let { it.code ?: it.name }, n.areaId?.let(index::areaName)).joinToString(" · ")
+            val place = listOfNotNull(folded.takeIf { it > 0 }?.let { "+$it" }, contextIndex.siteOf(n.device.id)?.let { it.code ?: it.name }, n.areaId?.let(contextIndex::areaName)).joinToString(" · ")
             text(cx - w / 2 + 3f * scale, cy + 1.5f * scale, fit(n.device.technicalName, bold, 6.5f * scale, w - 5f * scale), 6.5f * scale, bold)
             text(cx - w / 2 + 3f * scale, cy - 7f * scale, fit(place, regular, 5f * scale, w - 5f * scale), 5f * scale, regular, Color.DARK_GRAY)
         }

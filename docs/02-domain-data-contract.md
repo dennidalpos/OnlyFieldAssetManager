@@ -26,7 +26,15 @@ Le connessioni WAN/VPN (`WanVpnConnection`) sono agganciate ai dispositivi, non 
 
 `.ofam` e uno ZIP con `manifest.json`, `project.json` oppure `project.json.enc` e `attachments/`. Il manifest contiene versione, checksum SHA-256 e, quando necessario, parametri di cifratura.
 
-La versione è 1 (ripartenza greenfield del 5 ottobre 2026): l'import rifiuta ogni altra versione, compresi i pacchetti 1.7--1.11 precedenti. Il decoder ignora chiavi JSON sconosciute. Anche il database Room è alla versione 1: uno schema diverso viene ricreato vuoto e i dati di prova si reimportano dal pacchetto demo.
+La versione è 1 (ripartenza greenfield del 5 ottobre 2026): l'import rifiuta ogni altra versione, compresi i pacchetti 1.7--1.11 precedenti. Il decoder ignora chiavi JSON sconosciute. Il database Room è alla versione 1: il fallback ricrea una versione diversa, ma non corregge un'identità di schema diversa a versione invariata (AUD-03 ancora aperto). Prima di aggiornare un dispositivo con uno schema v1 precedente è necessario risolvere AUD-03 e conservare un export dei dati da mantenere.
+
+L'import confronta il catalogo degli allegati con i payload disponibili dopo la decifratura. Ogni allegato assente genera `MISSING_ATTACHMENT_PAYLOAD` con il suo ID; una entry attesa dai checksum e assente dal catalogo genera `MISSING_PACKAGE_ENTRY`. Sono avvisi documentali: il progetto resta importabile e conserva i riferimenti ai file mancanti. I byte presenti sono distinguibili dai riferimenti tramite `AttachmentFiles.bytesIn`; gli alias legacy del pacchetto sono supportati.
+
+## Limiti di import/export
+
+Limiti comuni approvati il 5 ottobre 2026: ZIP **256 MiB**, singolo file in chiaro **32 MiB**, totale delle entry decompresse **512 MiB**, **10.000 entry** (directory comprese), PBKDF2 da **1 a 1.000.000** iterazioni. Il costo predefinito di export resta invariato. Per entry cifrate sono ammessi i soli byte aggiuntivi AES-GCM: 16 per il JSON e 28 per un allegato (IV + tag). Salt di 16 byte e IV di 12 byte devono essere esadecimali validi.
+
+Android e Windows leggono il pacchetto da stream e verificano i limiti durante la lettura, prima di accumulare byte eccedenti; anche directory e dati finali concorrono ai limiti. Il rifiuto è strutturale e non modifica la copia locale. Gli export e i salvataggi applicano gli stessi limiti per non produrre copie non riapribili. I payload restano in memoria: i limiti non attestano il consumo di memoria su ogni dispositivo (RES-22). [OWASP: dimensione dopo decompressione](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html).
 
 ## Protezione e fusione
 

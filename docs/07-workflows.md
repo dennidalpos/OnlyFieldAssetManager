@@ -8,11 +8,17 @@ Android usa editor a pagina intera; Desktop usa elenco e pannello laterale con `
 
 ## Operazioni
 
+**Import Android.** Creazione e sostituzione usano la password del pacchetto ricevuto per le successive riaperture. Se il pacchetto non è protetto, la copia sostituita diventa non protetta. La fusione mantiene la password e lo stato di protezione locali.
+
+**Allegati mancanti.** Entrambe le app mostrano gli avvisi del pacchetto prima della conferma, in un elenco scorrevole. Su Windows anche un nuovo progetto o un pacchetto identico con avvisi passa dalla conferma. Annullare lascia la copia locale invariata; confermare conserva i riferimenti documentali e importa solo i payload disponibili.
+
 Inventario, rack, cablaggio, rete, alimentazione, media e documenti sono strumenti del progetto. Scanner e lettore USB aprono il codice trovato; un codice sconosciuto non modifica dati. Eliminazione e cambio di elemento richiedono conferma. L'eliminazione non sta mai nel menu ⋮: è un pulsante cestino rosso visibile su schede, dettagli e pannello mappa.
 
 Il censimento dei collegamenti parte dal disegno dell'apparato: il tocco su una porta apre la scheda rapida per collegarla a un altro apparato, inserire un passante (presa, patch panel, scatola di giunzione) o scollegarla, con l'etichetta del cavo proposta. La foto è sempre a un tocco per apparati, rack, porte e cavi: fotocamera su Android, scelta di una o più immagini su Windows (`LocalPhotoAction`), con salvataggio immediato come allegato. Su Android gli scatti sono in serie: dopo una foto confermata la fotocamera si riapre sullo stesso oggetto e annullarla chiude la serie (con più scatti compare «N foto salvate»).
 
 Gli stessi flussi condividono form e regole. La mappa è un unico componente condiviso: il tocco su un contenitore lo apre, il tocco su un oggetto o un collegamento mostra i dettagli in un pannello non modale, e l'inserimento procede per tipologia, preset e dati essenziali. Dettagli in [08-floor-map.md](08-floor-map.md); configurazione tecnica e preset in [10-object-configurator.md](10-object-configurator.md).
+
+**Media protetti Windows.** Anteprime e planimetrie restano disponibili dopo lo sblocco. Il pulsante Esporta e apri salva una copia in chiaro nella destinazione scelta e la apre nel programma associato. Chiudere il progetto rilascia i media in memoria; la copia locale rimane cifrata. Le vecchie copie protette con media in chiaro vengono adeguate al primo sblocco corretto.
 
 ## Navigazione e azioni
 
@@ -52,3 +58,7 @@ Le spaziature sono 8 dp fra elementi collegati, 16 dp fra campi e 24 dp fra sezi
 Gli editor e i pannelli si aprono sempre dall'inizio: un nuovo oggetto, una nuova selezione o un altro editor non ereditano lo scorrimento precedente. Solo il ritorno da una porta riporta alla sezione Porte. Gli errori compaiono vicino al campo e nel riepilogo presso il salvataggio. Le sezioni con errori bloccanti si aprono automaticamente. Le righe checkbox sono interamente cliccabili, con un unico controllo semantico e altezza minima di 48 dp. Su Android il footer considera tastiera e barra di navigazione, consumando gli inset già applicati dal contenitore.
 
 Riferimenti: [barra di navigazione Compose](https://developer.android.com/develop/ui/compose/components/navigation-bar), [forme Material 3](https://m3.material.io/styles/shape), [dialoghi Compose](https://developer.android.com/develop/ui/compose/components/dialog), [accessibilità predefinita](https://developer.android.com/develop/ui/compose/accessibility/api-defaults), [layout a flusso](https://developer.android.com/develop/ui/compose/layouts/flow), [gestione degli inset](https://developer.android.com/develop/ui/compose/system/insets-ui). Consultati il 4 ottobre 2026; gli esiti di verifica sono in [05-testing-and-benchmarks.md](05-testing-and-benchmarks.md).
+
+## Sostituire una copia Windows con password diversa
+
+Decifrare il pacchetto con la password ricevuta e confermare la sostituzione. Se la copia locale chiusa usa un’altra password, inserire anche quella locale nel dialogo dedicato per conservare il cestino e i suoi media. Annullare lascia la vecchia copia; un errore non avvia una sostituzione parziale. Dopo il successo usare la password del pacchetto ricevuto.

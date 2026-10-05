@@ -7,12 +7,15 @@ import androidx.compose.ui.graphics.toComposeImageBitmap
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.rendering.PDFRenderer
 import java.io.File
+import java.io.ByteArrayInputStream
 import java.io.IOException
 import javax.imageio.ImageIO
 import kotlin.math.max
 
 object PlanMedia {
-    fun pageCount(file: File, i18n: Messages = Messages()): Int = Loader.loadPDF(file).use { document ->
+    fun pageCount(file: File, i18n: Messages = Messages()): Int = pageCount(file.readBytes(), i18n)
+
+    fun pageCount(bytes: ByteArray, i18n: Messages = Messages()): Int = Loader.loadPDF(bytes).use { document ->
         if (document.isEncrypted) throw IOException(i18n.text("text.7c399be6bf11"))
         document.numberOfPages
     }
@@ -24,17 +27,24 @@ object PlanMedia {
         }
     }
     fun image(file: File, pdf: Boolean, page: Int, maxSide: Int = 2048, i18n: Messages = Messages()): ImageBitmap =
-        bufferedImage(file, pdf, page, maxSide, i18n)?.toComposeImageBitmap() ?: org.jetbrains.skia.Image.makeFromEncoded(file.readBytes()).toComposeImageBitmap()
+        image(file.readBytes(), pdf, page, maxSide, i18n)
+
+    fun image(bytes: ByteArray, pdf: Boolean, page: Int, maxSide: Int = 2048, i18n: Messages = Messages()): ImageBitmap =
+        bufferedImage(bytes, pdf, page, maxSide, i18n)?.toComposeImageBitmap() ?: org.jetbrains.skia.Image.makeFromEncoded(bytes).toComposeImageBitmap()
 
     /** Plan page or image scaled to [maxSide]; null for image formats only Skia can decode. */
     fun bufferedImage(file: File, pdf: Boolean, page: Int, maxSide: Int = 2048, i18n: Messages = Messages()): java.awt.image.BufferedImage? {
-        if (pdf) return Loader.loadPDF(file).use { document ->
+        return bufferedImage(file.readBytes(), pdf, page, maxSide, i18n)
+    }
+
+    fun bufferedImage(bytes: ByteArray, pdf: Boolean, page: Int, maxSide: Int = 2048, i18n: Messages = Messages()): java.awt.image.BufferedImage? {
+        if (pdf) return Loader.loadPDF(bytes).use { document ->
             if (document.isEncrypted) throw IOException(i18n.text("text.7c399be6bf11"))
             require(page in 0 until document.numberOfPages) { i18n.text("text.e24ef060c152") }
             val box = document.getPage(page).cropBox
             PDFRenderer(document).renderImage(page, maxSide.toFloat() / max(box.width, box.height))
         }
-        val image = ImageIO.createImageInputStream(file)?.use { input ->
+        val image = javax.imageio.stream.MemoryCacheImageInputStream(ByteArrayInputStream(bytes)).use { input ->
             val readers = ImageIO.getImageReaders(input)
             if (!readers.hasNext()) null else {
                 val reader = readers.next()

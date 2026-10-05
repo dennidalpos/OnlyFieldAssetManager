@@ -7,6 +7,9 @@ import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.exchange.PackageSerializer
 import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
 import com.onlyfield.assetmanager.exchange.ProjectPackage
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -16,22 +19,22 @@ internal class PackageExchange(
     private val load: suspend (String) -> Project?,
     private val save: suspend (Project) -> Unit,
     private val saveBase: suspend (Project) -> Unit,
+    private val saveImported: suspend (Project, String?) -> Unit,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) {
     private suspend fun getProjectById(projectId: String) = load(projectId)
     private suspend fun saveProject(project: Project) = save(project)
 
-    suspend fun exportProjectPackage(projectId: String, password: String? = null, i18n: Messages = Messages()): ByteArray? {
-        val project = getProjectById(projectId) ?: return null
+    suspend fun exportProjectPackage(projectId: String, password: String? = null, i18n: Messages = Messages()): ByteArray? = withContext(ioDispatcher) {
+        val project = getProjectById(projectId) ?: return@withContext null
         val files = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
-        return PackageSerializer.exportPackage(project, attachments = files, password = password, i18n = i18n).also { saveBase(project) }
+        return@withContext PackageSerializer.exportPackage(project, attachments = files, password = password, i18n = i18n).also { saveBase(project) }
     }
 
-    /** Local file of an attachment, also accepting the older `filesDir`-relative path. */
+    /** Resolve only the project-scoped file; imported paths never address local storage. */
     fun attachmentFile(projectId: String, attachment: com.onlyfield.assetmanager.core.model.Attachment): java.io.File? {
         val root = attachmentsRoot ?: return null
-        val canonical = AttachmentFiles.localFile(root, projectId, attachment)
-        if (canonical.isFile) return canonical
-        return root.parentFile?.let { java.io.File(it, attachment.relativePath) }?.takeIf { attachment.relativePath.isNotBlank() && it.isFile }
+        return AttachmentFiles.localFile(root, projectId, attachment).takeIf { it.isFile }
     }
 
     fun attachmentsRoot(): java.io.File? = attachmentsRoot
@@ -42,26 +45,25 @@ internal class PackageExchange(
         projectId: String,
         outputStream: OutputStream,
         password: String? = null,
-        i18n: Messages = Messages()): Boolean {
-        val zipBytes = exportProjectPackage(projectId, password = password, i18n = i18n) ?: return false
+        i18n: Messages = Messages()): Boolean = withContext(ioDispatcher) {
+        val zipBytes = exportProjectPackage(projectId, password = password, i18n = i18n) ?: return@withContext false
         outputStream.use { stream ->
             stream.write(zipBytes)
             stream.flush()
         }
-        return true
+        return@withContext true
     }
 
     suspend fun evaluateImportPackage(
         inputStream: InputStream,
         password: String? = null,
         currentProjectId: String? = null,
-        i18n: Messages = Messages()): PackageImportEvaluation {
-        val bytes = inputStream.use { it.readBytes() }
-        val importResult = PackageSerializer.importPackage(bytes, password = password, i18n = i18n)
+        i18n: Messages = Messages()): PackageImportEvaluation = withContext(ioDispatcher) {
+        val importResult = inputStream.use { PackageSerializer.importPackage(it, password = password, i18n = i18n) }
 
         val pkg = importResult.pkg
         if ((pkg == null) || (!importResult.validationResult.isValid)) {
-            return PackageImportEvaluation(importResult = importResult, comparison = null)
+            return@withContext PackageImportEvaluation(importResult = importResult, comparison = null)
         }
 
         val localProjectId = currentProjectId ?: pkg.project.id
@@ -73,20 +75,22 @@ internal class PackageExchange(
             incomingPackage = pkg,
             i18n = i18n)
 
-        return PackageImportEvaluation(importResult = importResult, comparison = comparison)
+        return@withContext PackageImportEvaluation(importResult = importResult, comparison = comparison)
     }
 
-    suspend fun importProjectPackage(pkg: ProjectPackage): Boolean {
+    suspend fun importProjectPackage(pkg: ProjectPackage, password: String?): Boolean = withContext(ioDispatcher) {
+        require(!pkg.project.isPasswordProtected || !password.isNullOrBlank()) { "A protected import requires its package password" }
         attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
-        saveProject(pkg.project)
+        saveImported(pkg.project, password)
         saveBase(pkg.project)
-        return true
+        return@withContext true
     }
 
     /** Saves the result of a merge; the base becomes the package, i.e. what the other device has. */
-    suspend fun importMerged(pkg: ProjectPackage, merged: Project) {
+    suspend fun importMerged(pkg: ProjectPackage, merged: Project) = withContext(ioDispatcher) {
+        val local = requireNotNull(getProjectById(merged.id)) { "A merge requires a local project" }
         attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
-        saveProject(merged)
+        saveProject(merged.copy(isPasswordProtected = local.isPasswordProtected))
         saveBase(pkg.project)
     }
 }
