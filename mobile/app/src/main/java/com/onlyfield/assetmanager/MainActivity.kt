@@ -20,11 +20,7 @@ object AppGraph {
 
     fun repository(context: Context): ProjectRepository = repository ?: synchronized(this) {
         repository ?: ProjectRepository(
-            EncryptedDatabase.open(context, com.onlyfield.assetmanager.core.i18n.Messages(
-                (com.onlyfield.assetmanager.core.i18n.AppLanguage.entries.firstOrNull {
-                    it.tag == context.getSharedPreferences("ui", Context.MODE_PRIVATE).getString("language", "")
-                } ?: com.onlyfield.assetmanager.core.i18n.AppLanguage.SYSTEM).resolve()
-            )),
+            EncryptedDatabase.open(context),
             attachmentsRoot = java.io.File(context.applicationContext.filesDir, "attachments")
         ).also { repository = it }
     }

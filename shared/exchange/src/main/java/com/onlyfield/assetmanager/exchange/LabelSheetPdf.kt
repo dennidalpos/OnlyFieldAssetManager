@@ -7,6 +7,7 @@ import com.google.zxing.EncodeHintType
 import com.google.zxing.qrcode.QRCodeWriter
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.forms.CableLabels
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.scan.LabelCode
 import java.io.ByteArrayOutputStream
@@ -39,8 +40,10 @@ object LabelSheetPdf {
         val racks = project.racks.map { r ->
             QrLabel(LabelCode(project.id, LabelCode.Type.RACK, r.id), r.name, i18n.text("labels.rack", index.areaName(r.areaId, i18n.text("text.1abc7243c3dd"))))
         }
-        val cables = project.cables.filter { !it.codeOrLabel.isNullOrBlank() }.map { c ->
-            QrLabel(LabelCode(project.id, LabelCode.Type.CABLE, c.id), c.codeOrLabel!!, i18n.text("labels.cable", index.portLabel(c.portAId), index.portLabel(c.portBId)))
+        // Unnamed cables still get a label: the suggested ends are what the operator writes on them.
+        val cables = project.cables.filter { it.portAId != null || it.portBId != null || !it.codeOrLabel.isNullOrBlank() }.map { c ->
+            QrLabel(LabelCode(project.id, LabelCode.Type.CABLE, c.id), c.codeOrLabel?.ifBlank { null } ?: CableLabels.suggest(project, c, index),
+                i18n.text("labels.cable", index.portLabel(c.portAId), index.portLabel(c.portBId)))
         }
         return devices + racks + cables
     }

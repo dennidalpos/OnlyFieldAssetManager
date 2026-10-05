@@ -16,7 +16,7 @@ class DemoSeedTest {
         assertTrue(ModelValidator.validateProject(project).issues.filter { it.severity == ValidationSeverity.STRUCTURAL_ERROR }.toString(),
             ModelValidator.validateProject(project).isValid)
         assertEquals(4, project.racks.size)
-        assertEquals(mapOf("switch" to 8, "patch-panel" to 4, "outlet" to 24, "access-point" to 8), devices.groupingBy { it.objectTypeId!! }.eachCount())
+        assertEquals(mapOf("switch" to 8, "patch-panel" to 4, "outlet" to 24, "access-point" to 8, "junction-box" to 2), devices.groupingBy { it.objectTypeId!! }.eachCount())
         assertTrue(devices.filter { it.objectTypeId == "switch" }.all { it.rackId != null && it.positionU != null })
     }
 
@@ -37,6 +37,12 @@ class DemoSeedTest {
     @Test fun accessPointsReachASwitchThroughOutletAndPanel() {
         devices.filter { it.objectTypeId == "access-point" }.forEach { ap ->
             assertEquals(ap.technicalName, ConnectionState.COMPLETE, graph.state(ap.ports.single().id))
+        }
+    }
+
+    @Test fun junctionRunsStayComplete() {
+        devices.filter { it.objectTypeId == "junction-box" }.flatMap { it.ports }.forEach { port ->
+            assertEquals(ConnectionState.COMPLETE, graph.state(port.id))
         }
     }
 

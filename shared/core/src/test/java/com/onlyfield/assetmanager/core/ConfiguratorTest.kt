@@ -210,16 +210,6 @@ class ConfiguratorTest {
         assertEquals(ConnectionState.AVAILABLE, ConnectionGraph(permuted).state(first.portAId))
     }
 
-    @Test fun conflictingLegacyReferenceIsVisibleAndEquivalentReferenceIsNotDuplicated() {
-        val a = device("A"); val b = device("B"); val c = device("C")
-        val cable = Cable(portAId = a.ports.single().id, portBId = b.ports.single().id)
-        val equivalent = a.copy(ports = listOf(a.ports.single().copy(connectedPortId = b.ports.single().id)))
-        val consistent = project(equivalent, b, c).copy(cables = listOf(cable))
-        assertEquals(ConnectionState.COMPLETE, ConnectionGraph(consistent).state(a.ports.single().id))
-        val conflicting = a.copy(ports = listOf(a.ports.single().copy(connectedPortId = c.ports.single().id)))
-        assertEquals(ConnectionState.CONFLICT, ConnectionGraph(project(conflicting, b, c).copy(cables = listOf(cable))).state(a.ports.single().id))
-    }
-
     @Test fun traceShowsTranslatedMediumInsteadOfEnumName() {
         val a = device("A"); val b = device("B")
         val p = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.FIBER_OVERALL)
@@ -227,18 +217,65 @@ class ConfiguratorTest {
         assertFalse(step, step.contains("FIBER_OVERALL"))
     }
 
-    @Test fun physicalEndOnVpnDeviceAddsClosingLogicalStep() {
+    @Test fun traceIsPhysicalOnlyEvenWithVpnOnLastDevice() {
         val a = device("SW"); val fw = device("FW"); val remote = device("FW-B")
-        val vpn = WanVpnConnection(name = "VPN-1", type = WanVpnType.VPN, localEndpointDeviceId = fw.id, remoteEndpointDeviceId = remote.id, remoteEndpointSiteDescription = "Sede B")
+        val vpn = WanVpnConnection(name = "VPN-1", type = WanVpnType.VPN, localEndpointDeviceId = fw.id, remoteEndpointDeviceId = remote.id)
         val physical = HardwareConfigurator.connect(project(a, fw, remote), a.ports.single().id, fw.ports.single().id, CableMedium.ETHERNET_COPPER)
-        val trace = ConnectionGraph(physical.copy(wanVpnConnections = listOf(vpn))).trace(a.ports.single().id)
-        assertEquals(2, trace.size)
-        assertNull(trace.first().logical)
-        val step = trace.last()
-        assertEquals(vpn.id, step.logical?.id); assertEquals(remote.id, step.currentDevice?.id); assertNull(step.currentPort)
-        assertTrue(step.description, step.description.contains("VPN-1") && step.description.contains("Sede B"))
-        // Without links, or from an unconnected port, nothing logical is added.
-        assertEquals(1, ConnectionGraph(physical).trace(a.ports.single().id).size)
-        assertTrue(ConnectionGraph(physical.copy(wanVpnConnections = listOf(vpn))).trace(remote.ports.single().id).isEmpty())
+        assertEquals(1, ConnectionGraph(physical.copy(wanVpnConnections = listOf(vpn))).trace(a.ports.single().id).size)
+    }
+
+    private fun junctionBox(p: Project): Pair<Project, Device> {
+        val groups = DevicePresets.forType("junction-box")!!.result(mapOf("ports" to "1", "kind" to "RJ45")).groups
+        val box = device("GB-1", passive = true, groups = groups).copy(objectTypeId = "junction-box")
+        val added = p.copy(businessUnits = p.businessUnits.map { it.copy(devices = it.devices + box) })
+        return HardwareConfigurator.configure(added, box) to box
+    }
+
+    @Test fun insertPassageSplitsCableThroughJunctionAndTraceStaysComplete() {
+        val a = device("SW"); val b = device("PC")
+        val cabled = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
+        val cable = cabled.cables.single().let { it.copy(codeOrLabel = "C1", color = "Blu") }
+        val (p, box) = junctionBox(cabled.copy(cables = listOf(cable)))
+        val ports = p.businessUnits.single().devices.first { it.id == box.id }.ports
+        val rear = ports.single { it.hardware.side == PortSide.REAR }; val front = ports.single { it.hardware.side == PortSide.FRONT }
+        assertEquals(mapOf(rear.id to front.id, front.id to rear.id), HardwareConfigurator.freePassages(p))
+        val split = HardwareConfigurator.insertPassage(p, cable.id, rear.id)
+        assertEquals(2, split.cables.size)
+        val kept = split.cables.single { it.id == cable.id }
+        assertEquals("C1", kept.codeOrLabel); assertEquals(rear.id, kept.portBId)
+        val added = split.cables.single { it.id != cable.id }
+        assertEquals(front.id, added.portAId); assertEquals(b.ports.single().id, added.portBId); assertEquals("Blu", added.color)
+        val graph = ConnectionGraph(split)
+        assertEquals(ConnectionState.COMPLETE, graph.state(a.ports.single().id))
+        assertEquals(b.id, graph.trace(a.ports.single().id).last().let { step -> split.cables.single { it.id == step.cable?.id }.portBId }?.let { id -> split.businessUnits.single().devices.first { d -> d.ports.any { it.id == id } }.id })
+        assertTrue(HardwareConfigurator.freePassages(split).isEmpty())
+        assertTrue(HardwareConfigurator.disconnect(split, b.ports.single().id).cables.none { it.id == added.id })
+    }
+
+    @Test fun trashingPassiveDeviceLeavesNoOrphansAndRestoreRebuildsPassages() {
+        val (p, box) = junctionBox(project(device("SW")))
+        assertEquals(1, p.panelMappings.size)
+        val (trashed, item) = ProjectEdits.deleteDeviceToTrash(p, box.id)
+        assertTrue(trashed.panelMappings.isEmpty())
+        val restored = ProjectEdits.restoreFromTrash(trashed, requireNotNull(item))
+        assertEquals(1, restored.panelMappings.size)
+        assertEquals(ConnectionState.AVAILABLE, ConnectionGraph(restored).state(restored.panelMappings.single().portAId))
+    }
+
+    @Test fun portSummaryListsCableHopsAndTerminal() {
+        val a = device("SW"); val b = device("PC")
+        val cabled = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
+        val (p, box) = junctionBox(cabled)
+        val split = HardwareConfigurator.insertPassage(p, cabled.cables.single().id, p.businessUnits.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.REAR }.id)
+        val summary = requireNotNull(PortSummaries.of(split, a.ports.single().id))
+        assertEquals(listOf("GB-1", "PC"), summary.hops.map { it.device.technicalName })
+        assertEquals(listOf("PC"), summary.terminals.map { it.device.technicalName })
+        // From the junction front port, both directions are listed: back to SW, forward to PC.
+        val front = split.businessUnits.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.FRONT }
+        val both = requireNotNull(PortSummaries.of(split, front.id))
+        assertEquals(listOf("PC"), both.hops.map { it.device.technicalName })
+        assertEquals(listOf("SW"), both.backHops.map { it.device.technicalName })
+        assertEquals(setOf("SW", "PC"), both.terminals.map { it.device.technicalName }.toSet())
+        assertEquals("SW/P1 – GB-1/P1", CableLabels.suggest(split, split.cables.single { it.id == cabled.cables.single().id }))
     }
 }

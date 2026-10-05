@@ -122,7 +122,9 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
         return
     }
     var editing by remember { mutableStateOf(false) }
-    var editingPorts by remember { mutableStateOf(false) }
+    var quickPort by remember { mutableStateOf<String?>(null) }
+    var focusPort by remember { mutableStateOf<String?>(null) }
+    var moreDetails by remember { mutableStateOf(false) }
     var replacing by remember { mutableStateOf(false) }
     var merging by remember { mutableStateOf(false) }
     val takePhoto = rememberPhotoCapture(vm)
@@ -150,13 +152,41 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
         },
     ) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Primary: the panel drawing (tap a port to connect it), where the object is, its label and photos.
+            if (device.ports.isNotEmpty()) {
+                item { SectionTitle(i18n.text("text.625d94dac5fc", device.ports.size)) }
+                item {
+                    val cells = remember(project, device.id) { PortLogic.panel(project, device, index = index) }
+                    PortPanel(cells, i18n, onClick = { quickPort = it.port.id })
+                }
+            }
             item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        InfoRow(i18n.text("text.e4de7d26b141"), index.businessUnitOf(device.id)?.name)
+                        InfoRow(i18n.text("text.9fe5b72aa900"), device.physicalLabel)
                         InfoRow(i18n.text("text.024dc204d7ba"), device.areaId?.let { index.areaName(it) })
                         InfoRow(i18n.text("text.4cd265c2b8c6"), device.rackId?.let { "${index.rackName(it)}" + (device.positionU?.let { u -> i18n.text("text.60c93506e0bf", u) } ?: "") + i18n.text("text.a5a90940b98f", device.heightU) })
-                        InfoRow(i18n.text("text.9fe5b72aa900"), device.physicalLabel)
+                    }
+                }
+            }
+            val photos = index.attachmentsOf(device.id)
+            item {
+                SectionTitle(i18n.text("ux.attachments"), photos.size.takeIf { it > 0 }) {
+                    TextButton(onClick = { takePhoto(AttachmentTargetType.DEVICE, device.id) }) { Text(i18n.text("map.addPhoto")) }
+                }
+            }
+            if (photos.isEmpty()) item { Text(i18n.text("map.noPhotos"), style = MaterialTheme.typography.bodySmall) }
+            items(photos, key = { it.id }) { a ->
+                ItemCard(title = a.name, details = listOf("${a.fileType.toDisplayString(i18n = i18n)} · ${a.originalFileName}"))
+            }
+            // Secondary: identifiers and technical notes, collapsed.
+            item {
+                TextButton(onClick = { moreDetails = !moreDetails }) { Text(i18n.text("map.moreDetails") + if (moreDetails) " ▴" else " ▾") }
+            }
+            if (moreDetails) item {
+                Card(Modifier.fillMaxWidth()) {
+                    Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        InfoRow(i18n.text("text.e4de7d26b141"), index.businessUnitOf(device.id)?.name)
                         InfoRow(i18n.text("text.b19e02e9502b"), device.alias)
                         InfoRow("IP", device.ipAddress)
                         InfoRow("MAC", device.macAddress)
@@ -164,42 +194,30 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                         InfoRow(i18n.text("text.90c2d339a9d5"), project.deviceModels.find { it.id == device.deviceModelId }?.name)
                         InfoRow(i18n.text("text.9ac631f3dde4"), device.observation?.status?.toDisplayString(i18n = i18n))
                         device.observation?.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
-                    }
-                }
-            }
-            val feeds = project.powerFeeds.filter { it.deviceId == device.id }
-            val interfaces = project.logicalInterfaces.filter { it.deviceId == device.id }
-            if (feeds.isNotEmpty() || interfaces.isNotEmpty()) {
-                item {
-                    Text(
+                        val feeds = project.powerFeeds.filter { it.deviceId == device.id }
+                        val interfaces = project.logicalInterfaces.filter { it.deviceId == device.id }
                         listOfNotNull(
                             feeds.takeIf { it.isNotEmpty() }?.let { i18n.text("text.c75735e0ae06") + it.joinToString { f -> f.feedName } },
                             interfaces.takeIf { it.isNotEmpty() }?.let { i18n.text("text.209a42c686ba") + it.joinToString { i -> i.name } }
-                        ).joinToString("\n"),
-                        style = MaterialTheme.typography.bodySmall
-                    )
-                }
-            }
-            val photos = index.attachmentsOf(device.id)
-            if (photos.isNotEmpty()) {
-                item { SectionTitle(i18n.text("text.0db131a944fa", photos.size)) }
-                items(photos, key = { it.id }) { a ->
-                    ItemCard(title = a.name, details = listOf("${a.fileType.toDisplayString(i18n = i18n)} · ${a.originalFileName}"))
-                }
-            }
-            // Ports as the panel drawing; tapping one opens the editor on Ports.
-            if (device.ports.isNotEmpty()) {
-                item { SectionTitle(i18n.text("text.625d94dac5fc", device.ports.size)) }
-                item {
-                    val cells = remember(project, device.id) { PortLogic.panel(project, device, index = index) }
-                    PortPanel(cells, i18n, onClick = { editingPorts = true })
+                        ).takeIf { it.isNotEmpty() }?.let { Text(it.joinToString("\n"), style = MaterialTheme.typography.bodySmall) }
+                    }
                 }
             }
         }
     }
 
+    quickPort?.let { id ->
+        PortQuickDialog(project, id, i18n, PortQuickActions(
+            update = { updated, message -> vm.edit(message) { updated } },
+            photo = { type, target -> takePhoto(type, target) },
+            details = { port -> quickPort = null; focusPort = port.id },
+            openDevice = { far -> quickPort = null; if (far.id != device.id) vm.navigate(com.onlyfield.assetmanager.ui.Screen.DeviceDetail(far.id)) },
+        ), onClose = { quickPort = null })
+    }
+    focusPort?.let { id ->
+        DeviceDialog(vm, project, device, initial = inventoryDeviceDraft(project, device).copy(focusPortId = id), initialSection = ConfiguratorPage.PORTS) { focusPort = null }
+    }
     if (editing) DeviceDialog(vm, project, device) { editing = false }
-    if (editingPorts) DeviceDialog(vm, project, device, initialSection = ConfiguratorPage.PORTS) { editingPorts = false }
     if (replacing) {
         var name by remember { mutableStateOf("") }
         var category by remember { mutableStateOf(device.category) }

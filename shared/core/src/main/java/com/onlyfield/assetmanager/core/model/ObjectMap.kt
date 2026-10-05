@@ -54,7 +54,7 @@ object ObjectCatalog {
         device("ups", "UPS", DeviceCategory.UPS_PDU), device("pdu", "PDU", DeviceCategory.UPS_PDU),
         device("power-supply", "Alimentatore", DeviceCategory.UPS_PDU),
         ObjectType("rack", "Rack", kind = ObjectKind.RACK),
-        device("patch-panel", "Patch panel", DeviceCategory.PATCH_PANEL), device("outlet", "Presa dati"),
+        device("patch-panel", "Patch panel", DeviceCategory.PATCH_PANEL), device("outlet", "Presa dati"), device("junction-box", "Scatola di giunzione"),
         device("blank-panel", "Pannello cieco", DeviceCategory.BLANK_PANEL),
         // Built-in containers: their children open as a nested map.
         ObjectType("shelf", "Mensola", DeviceCategory.SHELF, canContainObjects = true),
@@ -91,6 +91,7 @@ object ObjectCatalog {
             "rack" -> i18n.text("text.4cd265c2b8c6")
             "patch-panel" -> i18n.text("text.e97fc26f3676")
             "outlet" -> i18n.text("text.4803b51f3912")
+            "junction-box" -> i18n.text("type.junctionBox")
             "shelf" -> i18n.text("text.ae286ff299bb")
             "cabinet" -> i18n.text("type.cabinet")
             "enclosure" -> i18n.text("type.enclosure")

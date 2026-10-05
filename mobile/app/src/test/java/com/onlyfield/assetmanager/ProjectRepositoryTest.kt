@@ -475,7 +475,7 @@ class ProjectRepositoryTest {
     }
 
     @Test
-    fun testCableSharedPathPanelMappingAndChainTracingPersistence() = runBlocking {
+    fun testCablePanelMappingAndChainTracingPersistence() = runBlocking {
         val projId = UUID.randomUUID().toString()
         val areaId = UUID.randomUUID().toString()
 
@@ -499,34 +499,19 @@ class ProjectRepositoryTest {
 
         val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU Net", devices = listOf(dev1, dev2, dev3))
 
-        val pathSegId = UUID.randomUUID().toString()
-        val sharedPath = com.onlyfield.assetmanager.core.model.SharedPathSegment(
-            id = pathSegId,
-            name = "Cavedio Principale CED",
-            sourceAreaId = areaId,
-            targetAreaId = areaId,
-            capacityMaxCables = 10
-        )
-
         val cable1 = com.onlyfield.assetmanager.core.model.Cable(
             id = UUID.randomUUID().toString(),
             codeOrLabel = "PATCH-01",
             portAId = port1Id,
             portBId = port2FrontId,
             medium = com.onlyfield.assetmanager.core.model.CableMedium.ETHERNET_COPPER,
-            connectorA = "RJ45",
-            connectorB = "RJ45",
-            nominalCharacteristics = "Cat6A",
-            observedSpeed = "1 Gbps",
-            orientation = com.onlyfield.assetmanager.core.model.CableOrientation.A_TO_B,
-            sharedPathSegmentIds = listOf(pathSegId)
+            color = "Blu",
         )
 
         val panelMapping = com.onlyfield.assetmanager.core.model.PanelMapping(
             id = UUID.randomUUID().toString(),
             portAId = port2FrontId,
             portBId = port2RearId,
-            mappingType = "INTERNAL_PASS_THROUGH",
             isUnknownPassage = false
         )
 
@@ -536,12 +521,7 @@ class ProjectRepositoryTest {
             portAId = port2RearId,
             portBId = port3Id,
             medium = com.onlyfield.assetmanager.core.model.CableMedium.FIBER_OVERALL,
-            connectorA = "LC",
-            connectorB = "LC",
-            nominalCharacteristics = "OS2",
-            observedSpeed = "10 Gbps",
-            orientation = com.onlyfield.assetmanager.core.model.CableOrientation.BOTH,
-            sharedPathSegmentIds = listOf(pathSegId)
+            lengthValue = 25.0,
         )
 
         val project = Project(
@@ -550,7 +530,6 @@ class ProjectRepositoryTest {
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
             businessUnits = listOf(bu),
-            sharedPathSegments = listOf(sharedPath),
             cables = listOf(cable1, cable2),
             panelMappings = listOf(panelMapping)
         )
@@ -559,25 +538,14 @@ class ProjectRepositoryTest {
 
         val reloaded = repository.getProjectById(projId)
         assertNotNull(reloaded)
-        assertEquals(1, reloaded!!.sharedPathSegments.size)
-        assertEquals("Cavedio Principale CED", reloaded.sharedPathSegments[0].name)
-
-        assertEquals(2, reloaded.cables.size)
+        assertEquals(2, reloaded!!.cables.size)
         assertEquals("PATCH-01", reloaded.cables[0].codeOrLabel)
-        assertEquals(com.onlyfield.assetmanager.core.model.CableOrientation.A_TO_B, reloaded.cables[0].orientation)
+        assertEquals("Blu", reloaded.cables[0].color)
 
         assertEquals(1, reloaded.panelMappings.size)
-        assertEquals("INTERNAL_PASS_THROUGH", reloaded.panelMappings[0].mappingType)
+        assertEquals(project.panelMappings, reloaded.panelMappings)
 
-        val updatedSegment = sharedPath.copy(name = "Cavedio Principale Modificato")
-        repository.saveSharedPathSegment(projId, updatedSegment)
-
-        val reloadedAfterSegmentUpdate = repository.getProjectById(projId)
-        assertNotNull(reloadedAfterSegmentUpdate)
-        val segName = reloadedAfterSegmentUpdate!!.sharedPathSegments.find { it.id == pathSegId }?.name
-        assertEquals("Cavedio Principale Modificato", segName)
-
-        val chain = repository.traceCableChain(reloadedAfterSegmentUpdate, port1Id)
+        val chain = repository.traceCableChain(reloaded, port1Id)
         assertTrue(chain.isNotEmpty())
         assertEquals(3, chain.size)
         assertEquals("srv-app-01", chain[0].currentDevice?.technicalName)

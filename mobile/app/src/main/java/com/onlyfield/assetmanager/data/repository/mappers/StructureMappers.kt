@@ -199,7 +199,6 @@ internal fun toPortEntity(port: Port): PortEntity {
         deviceId = port.deviceId,
         name = port.name,
         label = port.label,
-        connectedPortId = port.connectedPortId,
         endpointStatus = port.endpointStatus.name,
         obsSource = port.observation?.source,
         obsTimestampEpochMs = port.observation?.timestampEpochMs,
@@ -222,7 +221,6 @@ internal fun toProject(
     attachmentEntities: List<com.onlyfield.assetmanager.data.local.AttachmentEntity> = emptyList(),
     annotationEntities: List<com.onlyfield.assetmanager.data.local.AnnotationEntity> = emptyList(),
     placementEntities: List<com.onlyfield.assetmanager.data.local.FloorplanPlacementEntity> = emptyList(),
-    sharedPathSegmentEntities: List<com.onlyfield.assetmanager.data.local.SharedPathSegmentEntity> = emptyList(),
     cableEntities: List<com.onlyfield.assetmanager.data.local.CableEntity> = emptyList(),
     panelMappingEntities: List<com.onlyfield.assetmanager.data.local.PanelMappingEntity> = emptyList(),
     vlanEntities: List<com.onlyfield.assetmanager.data.local.VlanEntity> = emptyList(),
@@ -294,7 +292,6 @@ internal fun toProject(
                     deviceId = portEnt.deviceId,
                     name = portEnt.name,
                     label = portEnt.label,
-                    connectedPortId = portEnt.connectedPortId,
                     hardware = mapperJson.decodeFromString<com.onlyfield.assetmanager.core.model.PortHardware>(portEnt.hardwareJson),
                     endpointStatus = try { EndpointStatus.valueOf(portEnt.endpointStatus) } catch (_: Exception) { EndpointStatus.DISCONNECTED },
                     observation = obs
@@ -350,7 +347,6 @@ internal fun toProject(
     val attachments = attachmentEntities.map { toAttachment(it) }
     val annotations = annotationEntities.map { toAnnotation(it) }
     val placements = placementEntities.map { toFloorplanPlacement(it) }
-    val sharedPathSegments = sharedPathSegmentEntities.map { toSharedPathSegment(it) }
     val cables = cableEntities.map { toCable(it) }
     val panelMappings = panelMappingEntities.map { toPanelMapping(it) }
     val vlans = vlanEntities.map { toVlan(it) }
@@ -380,7 +376,6 @@ internal fun toProject(
         annotations = annotations,
         floorplanPlacements = placements,
         cables = cables,
-        sharedPathSegments = sharedPathSegments,
         panelMappings = panelMappings,
         vlans = vlans,
         subnets = subnets,

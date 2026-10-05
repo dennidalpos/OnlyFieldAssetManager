@@ -84,6 +84,7 @@ fun FloorHomeSection(state: DesktopAppState) {
                     item?.let(state::addToTrash)
                     state.update(updated, i18n.text("text.4e2629d50c9b", name))
                 },
+                photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
             ), Modifier.weight(1f), tools = listOf(
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { selectingPlan = true },

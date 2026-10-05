@@ -1,6 +1,5 @@
 package com.onlyfield.assetmanager.core.model
 
-import com.onlyfield.assetmanager.core.display.mappingTypeLabel
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.i18n.Messages
 
@@ -14,9 +13,13 @@ data class ChainStep(
     val panelMapping: PanelMapping? = null,
     val isUnknownPassage: Boolean = false,
     val description: String,
-    /** Set on the closing logical step (WAN/VPN); [currentDevice] is then the far device, if known. */
-    val logical: WanVpnConnection? = null,
 )
+
+/** Types whose ports come in front/rear pairs joined by an internal passage. */
+val PASS_THROUGH_TYPES = setOf("outlet", "junction-box")
+
+/** Passive objects let a path continue (panels, outlets, junction boxes); active ones terminate it. */
+fun Device.isPassive() = hardware.passive || category == DeviceCategory.PATCH_PANEL || objectTypeId in PASS_THROUGH_TYPES
 
 /** Physical continuity only: active devices terminate a path. */
 class ConnectionGraph(val project: Project) {
@@ -32,12 +35,6 @@ class ConnectionGraph(val project: Project) {
             else if (b != null) add(Edge("c:${c.id}", b, null, cable = c))
         }
         project.panelMappings.forEach { m -> add(Edge("m:${m.id}", m.portAId, m.portBId, mapping = m)) }
-        val cablePairs = project.cables.map { setOf(it.portAId, it.portBId) }.toSet()
-        val legacy = mutableSetOf<Set<String>>()
-        ports.values.forEach { p -> p.connectedPortId?.let { other ->
-            val pair = setOf(p.id, other)
-            if (pair !in cablePairs && legacy.add(pair)) add(Edge("legacy:${pair.sorted().joinToString()}", p.id, other))
-        } }
     }
     private val adjacency = buildMap<String, MutableList<Edge>> {
         edges.forEach { e -> getOrPut(e.a) { mutableListOf() }.add(e); e.b?.let { getOrPut(it) { mutableListOf() }.add(e) } }
@@ -45,7 +42,7 @@ class ConnectionGraph(val project: Project) {
     private val states = mutableMapOf<String, ConnectionState>()
     private fun device(node: String): Device? = if (node.startsWith("device:")) devices[node.removePrefix("device:")] else ports[node]?.deviceId?.let(devices::get)
     private fun exists(node: String) = if (node.startsWith("device:")) device(node) != null else node in ports
-    private fun passive(d: Device?) = d?.let { it.hardware.passive || it.category == DeviceCategory.PATCH_PANEL || it.objectTypeId == "outlet" } == true
+    private fun passive(d: Device?) = d?.isPassive() == true
     private fun terminal(node: String) = exists(node) && !passive(device(node))
     private fun external(node: String) = adjacency[node].orEmpty().filter { it.mapping == null }
 
@@ -106,10 +103,9 @@ class ConnectionGraph(val project: Project) {
         val visited = mutableSetOf<String>()
         var node = startPortId
         var incoming: String? = null
-        var ended = false
         while (visited.add(node)) {
             val candidates = adjacency[node].orEmpty().filter { it.id != incoming }
-            if (candidates.isEmpty()) { ended = true; break }
+            if (candidates.isEmpty()) break
             if (candidates.count { it.mapping == null } > 1 || candidates.count { it.mapping != null } > 1 || (incoming != null && candidates.size > 1)) {
                 steps.add(ChainStep(steps.size + 1, ports[node], device(node), isUnknownPassage = true, description = i18n.text("config.conflict")))
                 break
@@ -119,7 +115,7 @@ class ConnectionGraph(val project: Project) {
             val unknown = next == null || !exists(next) || edge.mapping?.isUnknownPassage == true
             val destination = next?.let { n -> listOfNotNull(device(n)?.technicalName, ports[n]?.name).joinToString(" › ") }.orEmpty()
             steps.add(ChainStep(steps.size + 1, ports[node], device(node), edge.cable, edge.mapping, unknown,
-                listOfNotNull(edge.cable?.codeOrLabel ?: edge.cable?.medium?.toDisplayString(i18n), edge.mapping?.mappingType?.let { mappingTypeLabel(it, i18n) }, destination.ifBlank { i18n.text("config.undefined") }).joinToString(" → ")))
+                listOfNotNull(edge.cable?.codeOrLabel ?: edge.cable?.medium?.toDisplayString(i18n), edge.mapping?.let { i18n.text("mapping.internal") }, destination.ifBlank { i18n.text("config.undefined") }).joinToString(" → ")))
             if (unknown) break
             if (next in visited) {
                 steps.add(ChainStep(steps.size + 1, ports[next], device(next), isUnknownPassage = true, description = i18n.text("config.cycle")))
@@ -127,15 +123,6 @@ class ConnectionGraph(val project: Project) {
             }
             node = requireNotNull(next)
             incoming = edge.id
-        }
-        // A clean physical end may continue logically: one step per WAN/VPN link of the last device.
-        val last = device(node).takeIf { ended && steps.isNotEmpty() }
-        last?.let { end ->
-            LogicalLinks.of(project, end.id).forEach { link ->
-                val towards = LogicalLinks.farLabel(project, link, end.id) ?: i18n.text("config.undefined")
-                steps.add(ChainStep(steps.size + 1, null, LogicalLinks.far(link, end.id).first?.let(devices::get), logical = link,
-                    description = i18n.text("config.viaLogical", link.type.toDisplayString(i18n), link.name, towards)))
-            }
         }
         return steps
     }

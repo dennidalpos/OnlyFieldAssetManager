@@ -240,7 +240,7 @@ object PackageSerializer {
             return PackageImportResult(null, ValidationResult(issues))
         }
 
-        if (manifest.formatVersion !in setOf("1.7", "1.8", "1.9", "1.10", "1.11")) {
+        if (manifest.formatVersion != PackageManifest.CURRENT_FORMAT_VERSION) {
             issues += ValidationIssue(
                 code = "UNSUPPORTED_FORMAT_VERSION",
                 message = i18n.text("text.4b03253f0751", manifest.formatVersion),

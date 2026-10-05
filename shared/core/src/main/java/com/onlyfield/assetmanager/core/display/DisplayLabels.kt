@@ -75,6 +75,7 @@ fun AttachmentTargetType.toDisplayString(i18n: Messages = Messages()): String = 
     AttachmentTargetType.DEVICE -> i18n.text("text.cf301d95d32c")
     AttachmentTargetType.AREA -> i18n.text("text.7b417b994cc4")
     AttachmentTargetType.CABLE -> i18n.text("text.89dbe18e8407")
+    AttachmentTargetType.PORT -> i18n.text("config.port")
 }
 
 fun AnnotationType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
@@ -105,23 +106,6 @@ fun CableMedium.toDisplayString(i18n: Messages = Messages()): String = when (thi
     CableMedium.CONSOLE -> i18n.text("text.29a40861bafe")
     CableMedium.OTHER -> i18n.text("text.78f5742268e4")
     CableMedium.UNKNOWN -> i18n.text("text.43d7b5eae9c8")
-}
-
-/** Panel mapping types are free strings; unknown values are shown as entered. */
-fun mappingTypeLabel(type: String, i18n: Messages = Messages()): String = when (type) {
-    "CROSS_CONNECT" -> i18n.text("text.3b9962b19010")
-    "PATCH_PANEL" -> i18n.text("text.e97fc26f3676")
-    "INTERCONNECT" -> i18n.text("text.14f06d35aa12")
-    "INTERNAL" -> i18n.text("mapping.internal")
-    "OTHER" -> i18n.text("text.78f5742268e4")
-    else -> type
-}
-
-fun CableOrientation.toDisplayString(i18n: Messages = Messages()): String = when (this) {
-    CableOrientation.NONE -> i18n.text("text.f56b9cfaeb27")
-    CableOrientation.A_TO_B -> i18n.text("text.3b8ad0c22e0d")
-    CableOrientation.B_TO_A -> i18n.text("text.04a50afa0f61")
-    CableOrientation.BOTH -> i18n.text("text.33fba9b01dc3")
 }
 
 fun VlanScopeType.toDisplayString(i18n: Messages = Messages()): String = when (this) {

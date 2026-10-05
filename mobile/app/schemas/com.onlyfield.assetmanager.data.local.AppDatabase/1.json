@@ -1,8 +1,8 @@
 {
   "formatVersion": 1,
   "database": {
-    "version": 13,
-    "identityHash": "2b08bb6ae6b5c56cae5853ad4d0e178a",
+    "version": 1,
+    "identityHash": "34189681468bd3735887a9246e4174ec",
     "entities": [
       {
         "tableName": "projects",
@@ -283,8 +283,15 @@
       },
       {
         "tableName": "devices",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `businessUnitId` TEXT NOT NULL, `siteId` TEXT, `areaId` TEXT, `technicalName` TEXT NOT NULL, `physicalLabel` TEXT, `alias` TEXT, `ipAddress` TEXT, `macAddress` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `rackId` TEXT, `positionU` INTEGER, `heightU` INTEGER NOT NULL, `rackSide` TEXT NOT NULL, `mountingType` TEXT NOT NULL, `deviceModelId` TEXT, `category` TEXT NOT NULL, `objectTypeId` TEXT, `serialNumber` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`businessUnitId`) REFERENCES `business_units`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hardwareJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `businessUnitId` TEXT NOT NULL, `siteId` TEXT, `areaId` TEXT, `technicalName` TEXT NOT NULL, `physicalLabel` TEXT, `alias` TEXT, `ipAddress` TEXT, `macAddress` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `rackId` TEXT, `positionU` INTEGER, `heightU` INTEGER NOT NULL, `rackSide` TEXT NOT NULL, `mountingType` TEXT NOT NULL, `deviceModelId` TEXT, `category` TEXT NOT NULL, `objectTypeId` TEXT, `serialNumber` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`businessUnitId`) REFERENCES `business_units`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
+          {
+            "fieldPath": "hardwareJson",
+            "columnName": "hardwareJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'{}'"
+          },
           {
             "fieldPath": "id",
             "columnName": "id",
@@ -490,8 +497,15 @@
       },
       {
         "tableName": "ports",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `deviceId` TEXT NOT NULL, `name` TEXT NOT NULL, `label` TEXT, `connectedPortId` TEXT, `endpointStatus` TEXT NOT NULL, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`deviceId`) REFERENCES `devices`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hardwareJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `deviceId` TEXT NOT NULL, `name` TEXT NOT NULL, `label` TEXT, `endpointStatus` TEXT NOT NULL, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`deviceId`) REFERENCES `devices`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
+          {
+            "fieldPath": "hardwareJson",
+            "columnName": "hardwareJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'{}'"
+          },
           {
             "fieldPath": "id",
             "columnName": "id",
@@ -513,11 +527,6 @@
           {
             "fieldPath": "label",
             "columnName": "label",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "connectedPortId",
-            "columnName": "connectedPortId",
             "affinity": "TEXT"
           },
           {
@@ -562,15 +571,6 @@
             ],
             "orders": [],
             "createSql": "CREATE INDEX IF NOT EXISTS `index_ports_deviceId` ON `${TABLE_NAME}` (`deviceId`)"
-          },
-          {
-            "name": "index_ports_connectedPortId",
-            "unique": false,
-            "columnNames": [
-              "connectedPortId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_ports_connectedPortId` ON `${TABLE_NAME}` (`connectedPortId`)"
           }
         ],
         "foreignKeys": [
@@ -679,8 +679,23 @@
       },
       {
         "tableName": "racks",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `areaId` TEXT, `heightU` INTEGER NOT NULL, `numberingDirection` TEXT NOT NULL, `depthMm` INTEGER, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`mountingDepthMm` INTEGER, `deviceModelId` TEXT, `mountingType` TEXT, `id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `areaId` TEXT, `heightU` INTEGER NOT NULL, `numberingDirection` TEXT NOT NULL, `depthMm` INTEGER, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
+          {
+            "fieldPath": "mountingDepthMm",
+            "columnName": "mountingDepthMm",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "deviceModelId",
+            "columnName": "deviceModelId",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "mountingType",
+            "columnName": "mountingType",
+            "affinity": "TEXT"
+          },
           {
             "fieldPath": "id",
             "columnName": "id",
@@ -769,8 +784,15 @@
       },
       {
         "tableName": "device_models",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `brand` TEXT, `modelNumber` TEXT, `category` TEXT NOT NULL, `defaultHeightU` INTEGER NOT NULL, `portTemplatesJson` TEXT NOT NULL, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`configurationJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `brand` TEXT, `modelNumber` TEXT, `category` TEXT NOT NULL, `defaultHeightU` INTEGER NOT NULL, `portTemplatesJson` TEXT NOT NULL, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
+          {
+            "fieldPath": "configurationJson",
+            "columnName": "configurationJson",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'{}'"
+          },
           {
             "fieldPath": "id",
             "columnName": "id",
@@ -1183,106 +1205,14 @@
         ]
       },
       {
-        "tableName": "shared_path_segments",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `sourceAreaId` TEXT, `targetAreaId` TEXT, `description` TEXT, `capacityMaxCables` INTEGER, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "projectId",
-            "columnName": "projectId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "sourceAreaId",
-            "columnName": "sourceAreaId",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "targetAreaId",
-            "columnName": "targetAreaId",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "description",
-            "columnName": "description",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "capacityMaxCables",
-            "columnName": "capacityMaxCables",
-            "affinity": "INTEGER"
-          },
-          {
-            "fieldPath": "notes",
-            "columnName": "notes",
-            "affinity": "TEXT"
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_shared_path_segments_projectId",
-            "unique": false,
-            "columnNames": [
-              "projectId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_shared_path_segments_projectId` ON `${TABLE_NAME}` (`projectId`)"
-          },
-          {
-            "name": "index_shared_path_segments_sourceAreaId",
-            "unique": false,
-            "columnNames": [
-              "sourceAreaId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_shared_path_segments_sourceAreaId` ON `${TABLE_NAME}` (`sourceAreaId`)"
-          },
-          {
-            "name": "index_shared_path_segments_targetAreaId",
-            "unique": false,
-            "columnNames": [
-              "targetAreaId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_shared_path_segments_targetAreaId` ON `${TABLE_NAME}` (`targetAreaId`)"
-          }
-        ],
-        "foreignKeys": [
-          {
-            "table": "projects",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "projectId"
-            ],
-            "referencedColumns": [
-              "id"
-            ]
-          }
-        ]
-      },
-      {
         "tableName": "cables",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`objectTypeId` TEXT, `deviceAId` TEXT, `deviceBId` TEXT, `id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `codeOrLabel` TEXT, `portAId` TEXT, `portBId` TEXT, `medium` TEXT NOT NULL, `connectorA` TEXT, `connectorB` TEXT, `nominalCharacteristics` TEXT, `observedSpeed` TEXT, `color` TEXT, `lengthValue` REAL, `lengthUnit` TEXT, `orientation` TEXT NOT NULL, `sharedPathSegmentIdsJson` TEXT NOT NULL, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`deviceModelId` TEXT, `objectTypeId` TEXT, `deviceAId` TEXT, `deviceBId` TEXT, `id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `codeOrLabel` TEXT, `portAId` TEXT, `portBId` TEXT, `medium` TEXT NOT NULL, `color` TEXT, `lengthValue` REAL, `lengthUnit` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
+          {
+            "fieldPath": "deviceModelId",
+            "columnName": "deviceModelId",
+            "affinity": "TEXT"
+          },
           {
             "fieldPath": "objectTypeId",
             "columnName": "objectTypeId",
@@ -1332,26 +1262,6 @@
             "notNull": true
           },
           {
-            "fieldPath": "connectorA",
-            "columnName": "connectorA",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "connectorB",
-            "columnName": "connectorB",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "nominalCharacteristics",
-            "columnName": "nominalCharacteristics",
-            "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "observedSpeed",
-            "columnName": "observedSpeed",
-            "affinity": "TEXT"
-          },
-          {
             "fieldPath": "color",
             "columnName": "color",
             "affinity": "TEXT"
@@ -1365,18 +1275,6 @@
             "fieldPath": "lengthUnit",
             "columnName": "lengthUnit",
             "affinity": "TEXT"
-          },
-          {
-            "fieldPath": "orientation",
-            "columnName": "orientation",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "sharedPathSegmentIdsJson",
-            "columnName": "sharedPathSegmentIdsJson",
-            "affinity": "TEXT",
-            "notNull": true
           },
           {
             "fieldPath": "obsSource",
@@ -1455,7 +1353,7 @@
       },
       {
         "tableName": "panel_mappings",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `portAId` TEXT NOT NULL, `portBId` TEXT, `mappingType` TEXT NOT NULL, `isUnknownPassage` INTEGER NOT NULL, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `portAId` TEXT NOT NULL, `portBId` TEXT, `isUnknownPassage` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -1481,21 +1379,10 @@
             "affinity": "TEXT"
           },
           {
-            "fieldPath": "mappingType",
-            "columnName": "mappingType",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "isUnknownPassage",
             "columnName": "isUnknownPassage",
             "affinity": "INTEGER",
             "notNull": true
-          },
-          {
-            "fieldPath": "notes",
-            "columnName": "notes",
-            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -2810,7 +2697,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '2b08bb6ae6b5c56cae5853ad4d0e178a')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '34189681468bd3735887a9246e4174ec')"
     ]
   }
 }

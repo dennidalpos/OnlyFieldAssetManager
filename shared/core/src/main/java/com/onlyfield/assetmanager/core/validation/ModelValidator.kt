@@ -212,22 +212,6 @@ object ModelValidator {
             }
         }
 
-        for (port in allPorts.values) {
-            port.connectedPortId?.let { targetPortId ->
-                val targetPort = allPorts[targetPortId]
-                if (targetPort == null) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "BROKEN_PORT_CONNECTION",
-                            message = i18n.text("text.13021c1a46ea", port.name),
-                            severity = ValidationSeverity.STRUCTURAL_ERROR,
-                            targetEntityId = port.id
-                        )
-                    )
-                }
-            }
-        }
-
         val devicesByBu = allDevices.groupBy { it.first }
         for ((buId, buDevices) in devicesByBu) {
             val namesInBu = mutableMapOf<String, String>() // name -> deviceId
@@ -432,40 +416,6 @@ object ModelValidator {
             }
         }
 
-        val sharedPathSegmentsById = project.sharedPathSegments.associateBy { it.id }
-        val cableCountBySegmentId = mutableMapOf<String, Int>()
-
-        for (segment in project.sharedPathSegments) {
-            checkUuid("INVALID_PATH_SEGMENT_UUID", segment.id, i18n.text("text.637c9e4df064"), issues)
-            trackId(segment.id, "DUPLICATE_PATH_SEGMENT_ID", i18n.text("text.b4ee34346c23", segment.id), seenIds, issues)
-
-            segment.sourceAreaId?.let { sAreaId ->
-                if (!allAreaIds.contains(sAreaId)) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "INVALID_PATH_AREA_REFERENCE",
-                            message = i18n.text("text.dd9fe044c39d", segment.name, sAreaId),
-                            severity = ValidationSeverity.STRUCTURAL_ERROR,
-                            targetEntityId = segment.id
-                        )
-                    )
-                }
-            }
-
-            segment.targetAreaId?.let { tAreaId ->
-                if (!allAreaIds.contains(tAreaId)) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "INVALID_PATH_AREA_REFERENCE",
-                            message = i18n.text("text.a2effaa9e8a8", segment.name, tAreaId),
-                            severity = ValidationSeverity.STRUCTURAL_ERROR,
-                            targetEntityId = segment.id
-                        )
-                    )
-                }
-            }
-        }
-
         for (cable in project.cables) {
             checkUuid("INVALID_CABLE_UUID", cable.id, i18n.text("text.c879515e30e7"), issues)
             trackId(cable.id, "DUPLICATE_CABLE_ID", i18n.text("text.eebfcf38b5b5", cable.id), seenIds, issues)
@@ -507,21 +457,6 @@ object ModelValidator {
                 }
             }
 
-            for (segId in cable.sharedPathSegmentIds) {
-                if (!sharedPathSegmentsById.containsKey(segId)) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "INVALID_SHARED_PATH_REFERENCE",
-                            message = i18n.text("text.bdc2b3e63a66", cable.codeOrLabel ?: cable.id, segId),
-                            severity = ValidationSeverity.STRUCTURAL_ERROR,
-                            targetEntityId = cable.id
-                        )
-                    )
-                } else {
-                    cableCountBySegmentId[segId] = (cableCountBySegmentId[segId] ?: 0) + 1
-                }
-            }
-
             if (cable.observation?.status == ObservationStatus.TO_VERIFY ||
                 cable.observation?.status == ObservationStatus.CONFLICT
             ) {
@@ -533,23 +468,6 @@ object ModelValidator {
                         targetEntityId = cable.id
                     )
                 )
-            }
-        }
-
-        for (segment in project.sharedPathSegments) {
-            val maxCap = segment.capacityMaxCables
-            if (maxCap != null) {
-                val count = cableCountBySegmentId[segment.id] ?: 0
-                if (count > maxCap) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "SHARED_PATH_CAPACITY_EXCEEDED",
-                            message = i18n.text("text.728fbb1efcaf", segment.name, count, maxCap),
-                            severity = ValidationSeverity.DOCUMENTARY_WARNING,
-                            targetEntityId = segment.id
-                        )
-                    )
-                }
             }
         }
 

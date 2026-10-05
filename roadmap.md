@@ -1,11 +1,11 @@
 # Evidenze e residui
 
-Aggiornato al 4 ottobre 2026 dopo confronto con il codice e il tracker.
+Aggiornato al 5 ottobre 2026 dopo confronto con il codice e il tracker.
 
 ## Evidenze disponibili
 
 - I moduli Gradle sono `:shared:core`, `:shared:exchange`, `:mobile:app` e `:pc:app`.
-- Il codice implementa `.ofam` 1.11, Room 14, storage desktop atomico, database Android cifrato, import/export, documenti, mappe e configuratore condiviso.
+- Il codice implementa `.ofam` 1 e Room 1 (ripartenza greenfield del 5 ottobre 2026), storage desktop atomico, database Android cifrato, import/export, documenti, mappe e configuratore condiviso.
 - La suite locale registrata prima di questa revisione copre core, exchange, Android JVM e Desktop; le prove strumentali e manuali hanno limiti espliciti sotto.
 - Il workflow GitHub esegue le suite JVM/Compose, genera APK debug e ZIP portable, calcola SHA-256 e pubblica soltanto su tag `v*`.
 
@@ -18,6 +18,23 @@ Aggiornato al 4 ottobre 2026 dopo confronto con il codice e il tracker.
 | RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti e moto g86. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
+
+## Tracciamento fisico, scheda rapida porte e foto — 5 ottobre 2026
+
+- **Greenfield v1**: `.ofam` riparte dalla versione "1" (rifiutati 1.7–1.11) e Room dalla versione 1, senza migrazioni né backup pre-aggiornamento; uno schema diverso viene ricreato vuoto (`fallbackToDestructiveMigration`, anche in downgrade). Rimossi schemi 13/14, migrazioni, conversione da database in chiaro e relativi test. I telefoni di prova vanno reimportati dal demo.
+- **Modello snello**: rimossi dorsali (`SharedPathSegment` e sezione Percorsi in Cablaggio su Android e Windows), `Port.connectedPortId`, tipo e note dei passaggi, connettori A/B, orientamento, caratteristiche nominali e velocità osservata del cavo (anche dai modelli di cavo); il percorso porta non aggiunge più passi logici WAN/VPN. Export Markdown/XLSX: colonna Orientamento sostituita da Colore.
+- **Correzione**: eliminare un apparato lasciava passaggi, VLAN, PoE e LAG orfani delle sue porte (errori strutturali e conflitti); ora vengono rimossi e il ripristino dal cestino ricrea i passaggi interni.
+- **Passaggi intermedi**: nuovo tipo e preset Scatola di giunzione (1/2/4 passanti RJ45, LC o SC); `HardwareConfigurator.insertPassage`, `freePassages`, `disconnect`; `Device.isPassive()` unico per grafo e configuratore. Il demo instrada il primo cavo AP dei piani Nord attraverso GB-N0-01/GB-N1-01.
+- **Informazioni primarie**: `PortSummaries` (stato, cavo, tratte nei due versi su un passante, estremi attivi, foto) e `CableLabels.suggest` (`SW-01/P5 – PP-02/P12`, sicura per Windows-1252), usata anche per le etichette PDF dei cavi senza codice. `portLabel` mostra l'etichetta fisica quando diversa dal nome.
+- **Scheda rapida della porta** (`PortQuickDialog`): tocco su una porta nel pannello mappa, nell'editor e nella scheda dispositivo Android; Collega a… (apparato → porta libera dal disegno → mezzo ed etichetta), Inserisci passaggio (passante libero o nuova scatola), Scollega con conferma, Foto porta/cavo, Dettagli porta (`MapObjectDraft.focusPortId`).
+- **Foto primaria**: destinazione allegati `PORT`; `MapActions.photo` e `LocalPhotoAction` (fotocamera su Android, scelta immagine con salvataggio immediato su Windows, `DesktopAppState.attachPhoto`). Pannello mappa: Foto accanto all'azione primaria, sezione Foto sempre visibile, identificativi, dati tecnici e collegamenti logici in Altri dettagli; scheda cavo con Foto e Inserisci passaggio. Scheda dispositivo Android: porte per prime, poi collocazione, foto e altri dettagli richiusi.
+- **Verifica**: baseline verde prima delle modifiche; finale `gradlew test --rerun` `BUILD SUCCESSFUL in 34s`, 249 test superati (Core 90, Exchange 40, Desktop 95, Android JVM 24), test strumentali Android compilati. Nuovi test: inserimento passaggio e percorso completo, scollegamento, cestino senza orfani e ripristino, riepilogo porta nei due versi, rifiuto dei pacchetti 1.11, demo con giunzioni complete. Rendering Desktop del demo ispezionato (pannello, scheda porta collegata e libera, inserimento passaggio). Android nativo non eseguito: resta in RES-19.
+
+## Consegna per cambio sessione — 5 ottobre 2026
+
+- Ramo `main`, commit e push su `origin/main` di tracciamento fisico, scheda rapida delle porte, foto primaria e ripartenza greenfield v1, con documentazione e tracker aggiornati.
+- Verifica: 249 test superati, APK debug e portable Windows generati; demo rigenerato in `fixtures/demo/onlyfield-demo.ofam`.
+- Ripartenza: sui telefoni di prova il database v1 si ricrea vuoto, quindi reimportare il demo; poi RES-19 (scheda rapida della porta su Android nativo, TalkBack, moto g86) e FOTO-04 in RES-13. Restano RES-17 e RES-01.
 
 ## UI/UX — 4 ottobre 2026
 

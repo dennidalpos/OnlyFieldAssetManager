@@ -219,7 +219,7 @@ object XlsxExportManager {
   <sheetData>
 """)
 
-        val headers = listOf(i18n.text("text.9f626fe59e04"), i18n.text("text.f066e83907df"), i18n.text("text.20e26ce71ba4"), i18n.text("text.2de5f6131596"), i18n.text("text.abc0f3511ebf"), i18n.text("text.0943fa7eb86f"), i18n.text("text.13ee8eeebbb8"), i18n.text("text.dcc43f317d0c"), i18n.text("text.55a2c4d86dad"), i18n.text("text.9d3380130243"))
+        val headers = listOf(i18n.text("text.9f626fe59e04"), i18n.text("text.f066e83907df"), i18n.text("text.20e26ce71ba4"), i18n.text("text.2de5f6131596"), i18n.text("text.abc0f3511ebf"), i18n.text("text.245eccd84730"), i18n.text("text.13ee8eeebbb8"), i18n.text("text.dcc43f317d0c"), i18n.text("text.55a2c4d86dad"), i18n.text("text.9d3380130243"))
         sb.append("<row r=\"1\">")
         headers.forEachIndexed { idx, h ->
             val colLetter = ('A' + idx).toString()
@@ -255,7 +255,7 @@ object XlsxExportManager {
             sb.append(cellStr("C", rowIdx, portA?.name ?: "-"))
             sb.append(cellStr("D", rowIdx, cable.medium.toDisplayString(i18n)))
             sb.append(cellStr("E", rowIdx, lenStr))
-            sb.append(cellStr("F", rowIdx, cable.orientation.toDisplayString(i18n)))
+            sb.append(cellStr("F", rowIdx, cable.color ?: "-"))
             sb.append(cellStr("G", rowIdx, devBName))
             sb.append(cellStr("H", rowIdx, portBName))
             sb.append(cellStr("I", rowIdx, (portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)))

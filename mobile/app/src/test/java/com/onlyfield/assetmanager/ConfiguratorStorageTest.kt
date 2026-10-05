@@ -36,36 +36,4 @@ class ConfiguratorStorageTest {
             assertEquals(p, repository.getProjectById(p.id))
         } finally { db.close() }
     }
-
-    @Test fun migration13To14PreservesOriginalPortAndAddsUnknownMetadata() = runBlocking {
-        val context = ApplicationProvider.getApplicationContext<Context>()
-        val name = "cfg-${UUID.randomUUID().toString().take(8)}.db"
-        try {
-            val schema = Json.parseToJsonElement(File("schemas/com.onlyfield.assetmanager.data.local.AppDatabase/13.json").readText()).jsonObject.getValue("database").jsonObject
-            val path = context.getDatabasePath(name).apply { parentFile!!.mkdirs() }
-            val projectId = UUID.randomUUID().toString(); val buId = UUID.randomUUID().toString(); val deviceId = UUID.randomUUID().toString(); val portId = UUID.randomUUID().toString()
-            android.database.sqlite.SQLiteDatabase.openOrCreateDatabase(path, null).use { old ->
-                schema.getValue("entities").jsonArray.forEach { item ->
-                    val entity = item.jsonObject
-                    val table = entity.getValue("tableName").jsonPrimitive.content
-                    old.execSQL(entity.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", table))
-                    entity["indices"]?.jsonArray.orEmpty().forEach { index -> old.execSQL(index.jsonObject.getValue("createSql").jsonPrimitive.content.replace("\${TABLE_NAME}", table)) }
-                }
-                old.execSQL("INSERT INTO projects(id,name,createdEpochMs,updatedEpochMs,isPasswordProtected,objectTypesJson,cableRoutesJson,objectContainmentsJson) VALUES(?,?,1,1,0,'[]','[]','[]')", arrayOf(projectId, "Legacy"))
-                old.execSQL("INSERT INTO business_units(id,projectId,name) VALUES(?,?,?)", arrayOf(buId, projectId, "BU"))
-                old.execSQL("INSERT INTO devices(id,businessUnitId,technicalName,heightU,rackSide,mountingType,category) VALUES(?,?,?,1,'BOTH','OUT_OF_RACK','PATCH_PANEL')", arrayOf(deviceId, buId, "Panel"))
-                old.execSQL("INSERT INTO ports(id,deviceId,name,endpointStatus) VALUES(?,?,?,'DISCONNECTED')", arrayOf(portId, deviceId, "P1"))
-                old.version = 13
-            }
-            val db = Room.databaseBuilder(context, AppDatabase::class.java, name).allowMainThreadQueries().addMigrations(AppDatabase.MIGRATION_13_14).build()
-            try {
-                val p = ProjectRepository(db).getProjectById(projectId)!!
-                val port = p.businessUnits.single().devices.single().ports.single()
-                assertEquals(portId, port.id)
-                assertNull(port.hardware.side)
-                assertTrue(p.panelMappings.isEmpty())
-                assertEquals(14, db.openHelper.writableDatabase.version)
-            } finally { db.close() }
-        } finally { context.deleteDatabase(name) }
-    }
 }

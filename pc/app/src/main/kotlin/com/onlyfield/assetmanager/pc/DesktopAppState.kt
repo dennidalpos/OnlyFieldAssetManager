@@ -178,6 +178,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     fun saveMapObject(draft: com.onlyfield.assetmanager.core.forms.MapObjectDraft, photos: List<File>, removed: Set<String>): Boolean =
         saveMapEdit(photos, draft.targetType, draft.id) { p -> draft.apply(p, i18n = i18n).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } } != null
 
+    /** Saves [file] at once as a photo of the target (map pane, port card, editor). */
+    fun attachPhoto(file: File, type: AttachmentTargetType, targetId: String): Boolean = saveMapEdit(listOf(file), type, targetId) { it } != null
+
     fun importFloorplan(file: File, areaId: String): Attachment? =
         saveMapEdit(listOf(file), AttachmentTargetType.AREA, areaId, { it })?.singleOrNull()
 
@@ -493,7 +496,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             index.rack(id) != null -> AppSection.RACKS
             p.deviceModels.any { it.id == id } -> AppSection.MODELS
             index.area(id) != null || p.attachments.any { it.id == id } || p.floorplanPlacements.any { it.id == id } -> AppSection.FLOORPLANS
-            p.cables.any { it.id == id } || p.sharedPathSegments.any { it.id == id } || p.panelMappings.any { it.id == id } -> AppSection.CABLING
+            p.cables.any { it.id == id } || p.panelMappings.any { it.id == id } -> AppSection.CABLING
             p.vlans.any { it.id == id } || p.subnets.any { it.id == id } || p.logicalInterfaces.any { it.id == id } ||
                 p.wanVpnConnections.any { it.id == id } || p.deviceConfigurations.any { it.id == id } -> AppSection.NETWORK
             p.powerFeeds.any { it.id == id } || p.poeMappings.any { it.id == id } || p.documentBadges.any { it.id == id } -> AppSection.POWER

@@ -42,7 +42,7 @@ enum class ObjectIcon {
             "blank-panel" -> BLANK_PANEL
             "shelf" -> SHELF
             "cabinet" -> CABINET
-            "enclosure" -> ENCLOSURE
+            "enclosure", "junction-box" -> ENCLOSURE
             else -> if (id.endsWith("-cable")) CABLE else null
         }
     }

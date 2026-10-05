@@ -291,7 +291,7 @@ data class DeviceEntity(
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("deviceId"), Index("connectedPortId")]
+    indices = [Index("deviceId")]
 )
 data class PortEntity(
     @ColumnInfo(defaultValue = "'{}'")
@@ -300,35 +300,11 @@ data class PortEntity(
     val deviceId: String,
     val name: String,
     val label: String?,
-    val connectedPortId: String?,
     val endpointStatus: String,
     val obsSource: String?,
     val obsTimestampEpochMs: Long?,
     val obsStatus: String?,
     val obsNotes: String?
-)
-
-@Entity(
-    tableName = "shared_path_segments",
-    foreignKeys = [
-        ForeignKey(
-            entity = ProjectEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["projectId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index("projectId"), Index("sourceAreaId"), Index("targetAreaId")]
-)
-data class SharedPathSegmentEntity(
-    @PrimaryKey val id: String,
-    val projectId: String,
-    val name: String,
-    val sourceAreaId: String?,
-    val targetAreaId: String?,
-    val description: String?,
-    val capacityMaxCables: Int?,
-    val notes: String?
 )
 
 @Entity(
@@ -354,15 +330,9 @@ data class CableEntity(
     val portAId: String?,
     val portBId: String?,
     val medium: String,
-    val connectorA: String?,
-    val connectorB: String?,
-    val nominalCharacteristics: String?,
-    val observedSpeed: String?,
     val color: String?,
     val lengthValue: Double?,
     val lengthUnit: String?,
-    val orientation: String,
-    val sharedPathSegmentIdsJson: String,
     val obsSource: String?,
     val obsTimestampEpochMs: Long?,
     val obsStatus: String?,
@@ -387,9 +357,7 @@ data class PanelMappingEntity(
     val projectId: String,
     val portAId: String,
     val portBId: String?,
-    val mappingType: String,
     val isUnknownPassage: Boolean,
-    val notes: String?
 )
 
 @Entity(

@@ -35,9 +35,9 @@ class ProjectIndex(val project: Project) {
     fun rackName(id: String?, fallback: String = "—"): String = rack(id)?.name ?: fallback
     fun siteName(id: String?, fallback: String = "—"): String = id?.let(siteById::get)?.name ?: fallback
 
-    /** Port label or [fallback]. */
+    /** `DEVICE › PORT`, plus the physical label when it differs from the name; [fallback] if unknown. */
     fun portLabel(id: String?, fallback: String = "—"): String =
-        port(id)?.let { "${it.device.technicalName} › ${it.port.name}" } ?: fallback
+        port(id)?.let { ref -> "${ref.device.technicalName} › ${ref.port.name}" + (ref.port.label?.takeIf { it.isNotBlank() && it != ref.port.name }?.let { " ($it)" } ?: "") } ?: fallback
 
     /** Name for a string target type and ID. */
     fun targetLabel(targetType: String, targetId: String?, i18n: Messages = Messages()): String {
@@ -45,7 +45,7 @@ class ProjectIndex(val project: Project) {
             "PROJECT" -> project.name
             "DEVICE" -> device(targetId)?.technicalName
             "RACK" -> rack(targetId)?.name
-            "PORT" -> port(targetId)?.let { "${it.device.technicalName} › ${it.port.name}" }
+            "PORT" -> port(targetId)?.let { portLabel(targetId) }
             "CABLE" -> project.cables.find { it.id == targetId }?.codeOrLabel
             "AREA" -> area(targetId)?.name
             "SITE" -> targetId?.let(siteById::get)?.name
@@ -67,7 +67,7 @@ class ProjectIndex(val project: Project) {
     fun entityName(id: String?, i18n: Messages = Messages()): String? {
         if (id == null) return null
         return device(id)?.technicalName
-            ?: port(id)?.let { "${it.device.technicalName} › ${it.port.name}" }
+            ?: port(id)?.let { portLabel(id) }
             ?: rack(id)?.name
             ?: area(id)?.name
             ?: siteById[id]?.name

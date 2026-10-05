@@ -182,10 +182,6 @@ class ProjectRepository(
         saveProject(updatedProject)
     }
 
-    suspend fun saveSharedPathSegment(projectId: String, segment: com.onlyfield.assetmanager.core.model.SharedPathSegment) {
-        inventoryDao.insertSharedPathSegments(listOf(toSharedPathSegmentEntity(projectId, segment)))
-    }
-
     // --- Search and cabling ---
 
     suspend fun searchInventory(projectId: String, query: String, i18n: Messages = Messages()) = search.searchInventory(projectId, query, i18n = i18n)

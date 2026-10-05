@@ -36,7 +36,6 @@ class ModelValidatorTest {
             id = port1Id,
             deviceId = dev1Id,
             name = "ge-0/0/1",
-            connectedPortId = port2Id,
             endpointStatus = EndpointStatus.CONNECTED
         )
 
@@ -44,7 +43,6 @@ class ModelValidatorTest {
             id = port2Id,
             deviceId = dev2Id,
             name = "ge-0/0/1",
-            connectedPortId = port1Id,
             endpointStatus = EndpointStatus.CONNECTED
         )
 
@@ -174,37 +172,6 @@ class ModelValidatorTest {
     }
 
     @Test
-    fun testBrokenPortConnectionGeneratesStructuralError() {
-        val devId = UUID.randomUUID().toString()
-        val port = Port(
-            id = UUID.randomUUID().toString(),
-            deviceId = devId,
-            name = "eth0",
-            connectedPortId = UUID.randomUUID().toString() // Non-existent target port
-        )
-
-        val dev = Device(
-            id = devId,
-            technicalName = "dev-01",
-            siteId = UUID.randomUUID().toString(),
-            ports = listOf(port)
-        )
-
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", devices = listOf(dev))
-        val project = Project(
-            id = UUID.randomUUID().toString(),
-            name = "Broken Port Connection",
-            createdEpochMs = 1000L,
-            updatedEpochMs = 1000L,
-            businessUnits = listOf(bu)
-        )
-
-        val result = ModelValidator.validateProject(project)
-        assertFalse(result.isValid)
-        assertTrue(result.issues.any { it.code == "BROKEN_PORT_CONNECTION" })
-    }
-
-    @Test
     fun testAttachmentAndFloorplanValidation() {
         val attId = UUID.randomUUID().toString()
         val areaId = UUID.randomUUID().toString()
@@ -258,18 +225,9 @@ class ModelValidatorTest {
     }
 
     @Test
-    fun testCableSharedPathAndPanelMappingValidation() {
+    fun testCableAndPanelMappingValidation() {
         val areaId = UUID.randomUUID().toString()
         val area = Area(id = areaId, name = "Sala CED")
-
-        val pathSegId = UUID.randomUUID().toString()
-        val pathSegment = com.onlyfield.assetmanager.core.model.SharedPathSegment(
-            id = pathSegId,
-            name = "Cavedio A-B",
-            sourceAreaId = areaId,
-            targetAreaId = areaId,
-            capacityMaxCables = 1
-        )
 
         val dev1Id = UUID.randomUUID().toString()
         val dev2Id = UUID.randomUUID().toString()
@@ -283,25 +241,22 @@ class ModelValidatorTest {
         val dev2 = Device(id = dev2Id, technicalName = "dev2", areaId = areaId, ports = listOf(port2))
         val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", areas = listOf(area), devices = listOf(dev1, dev2))
 
-        // Cable 1: Port1 -> Port2 using SharedPathSegment
+        // Cable 1: Port1 -> Port2
         val cable1 = com.onlyfield.assetmanager.core.model.Cable(
             id = UUID.randomUUID().toString(),
             codeOrLabel = "Cavo 01",
             portAId = port1Id,
             portBId = port2Id,
             medium = com.onlyfield.assetmanager.core.model.CableMedium.ETHERNET_COPPER,
-            orientation = com.onlyfield.assetmanager.core.model.CableOrientation.A_TO_B,
-            sharedPathSegmentIds = listOf(pathSegId)
         )
 
-        // Cable 2: Port1 -> Detached (portBId null) using same SharedPathSegment (exceeds max capacity 1)
+        // Cable 2: Port1 -> Detached (portBId null)
         val cable2 = com.onlyfield.assetmanager.core.model.Cable(
             id = UUID.randomUUID().toString(),
             codeOrLabel = "Cavo 02",
             portAId = port1Id,
             portBId = null,
             medium = com.onlyfield.assetmanager.core.model.CableMedium.FIBER_OVERALL,
-            sharedPathSegmentIds = listOf(pathSegId)
         )
 
         val mapping = com.onlyfield.assetmanager.core.model.PanelMapping(
@@ -317,7 +272,6 @@ class ModelValidatorTest {
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
             businessUnits = listOf(bu),
-            sharedPathSegments = listOf(pathSegment),
             cables = listOf(cable1, cable2),
             panelMappings = listOf(mapping)
         )
@@ -325,7 +279,6 @@ class ModelValidatorTest {
         val result = ModelValidator.validateProject(project)
         assertTrue(result.isValid)
         assertTrue(result.hasWarnings)
-        assertTrue(result.issues.any { it.code == "SHARED_PATH_CAPACITY_EXCEEDED" })
         assertTrue(result.issues.any { it.code == "DETACHED_CABLE_ENDPOINT" })
         assertTrue(result.issues.any { it.code == "UNKNOWN_PASSAGE_IN_CHAIN" })
     }

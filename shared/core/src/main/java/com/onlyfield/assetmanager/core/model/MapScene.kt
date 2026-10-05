@@ -23,7 +23,7 @@ object ObjectGlyph {
         "workstation" to Glyph("PC", ObjectFamily.ENDPOINT), "ip-phone" to Glyph("TEL", ObjectFamily.ENDPOINT),
         "pbx" to Glyph("PBX", ObjectFamily.ENDPOINT), "sensor" to Glyph("SEN", ObjectFamily.ENDPOINT),
         "ups" to Glyph("UPS", ObjectFamily.POWER), "pdu" to Glyph("PDU", ObjectFamily.POWER), "power-supply" to Glyph("PSU", ObjectFamily.POWER),
-        "patch-panel" to Glyph("PP", ObjectFamily.PASSIVE), "outlet" to Glyph("PR", ObjectFamily.PASSIVE), "blank-panel" to Glyph("BP", ObjectFamily.PASSIVE),
+        "patch-panel" to Glyph("PP", ObjectFamily.PASSIVE), "outlet" to Glyph("PR", ObjectFamily.PASSIVE), "junction-box" to Glyph("GB", ObjectFamily.PASSIVE), "blank-panel" to Glyph("BP", ObjectFamily.PASSIVE),
         "rack" to RACK, "shelf" to Glyph("SH", ObjectFamily.STRUCTURE),
         "cabinet" to Glyph("ARM", ObjectFamily.STRUCTURE), "enclosure" to Glyph("BOX", ObjectFamily.STRUCTURE),
     )
@@ -269,6 +269,3 @@ class RemoteEnds(private val project: Project, private val hierarchy: HierarchyI
         return RemoteEnd(device, device.ports.find { it.id == portId }, ref, areaId, areaId?.let(areas::get)?.name, bu?.id, bu?.name)
     }
 }
-
-/** Backbone segments a cable runs through, in the cable's order. */
-fun Project.backbones(cable: Cable): List<SharedPathSegment> = cable.sharedPathSegmentIds.mapNotNull { id -> sharedPathSegments.find { it.id == id } }

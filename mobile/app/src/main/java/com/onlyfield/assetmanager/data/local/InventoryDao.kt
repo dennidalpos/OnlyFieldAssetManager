@@ -52,8 +52,6 @@ interface InventoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertFloorplanPlacements(placements: List<FloorplanPlacementEntity>)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertSharedPathSegments(segments: List<SharedPathSegmentEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertCables(cables: List<CableEntity>)
@@ -118,8 +116,6 @@ interface InventoryDao {
     @Query("SELECT * FROM floorplan_placements WHERE projectId = :projectId")
     suspend fun getFloorplanPlacementsByProjectId(projectId: String): List<FloorplanPlacementEntity>
 
-    @Query("SELECT * FROM shared_path_segments WHERE projectId = :projectId")
-    suspend fun getSharedPathSegmentsByProjectId(projectId: String): List<SharedPathSegmentEntity>
 
     @Query("SELECT * FROM cables WHERE projectId = :projectId")
     suspend fun getCablesByProjectId(projectId: String): List<CableEntity>
@@ -184,8 +180,6 @@ interface InventoryDao {
     @Query("DELETE FROM floorplan_placements WHERE projectId = :projectId")
     suspend fun deleteFloorplanPlacementsByProjectId(projectId: String)
 
-    @Query("DELETE FROM shared_path_segments WHERE projectId = :projectId")
-    suspend fun deleteSharedPathSegmentsByProjectId(projectId: String)
 
     @Query("DELETE FROM cables WHERE projectId = :projectId")
     suspend fun deleteCablesByProjectId(projectId: String)
@@ -238,8 +232,6 @@ interface InventoryDao {
     @Query("DELETE FROM floorplan_placements WHERE id = :placementId")
     suspend fun deleteFloorplanPlacementById(placementId: String)
 
-    @Query("DELETE FROM shared_path_segments WHERE id = :segmentId")
-    suspend fun deleteSharedPathSegmentById(segmentId: String)
 
     @Query("DELETE FROM cables WHERE id = :cableId")
     suspend fun deleteCableById(cableId: String)

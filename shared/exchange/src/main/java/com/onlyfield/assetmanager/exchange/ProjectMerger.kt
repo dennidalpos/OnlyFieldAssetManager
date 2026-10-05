@@ -197,7 +197,6 @@ object ProjectMerger {
         "objectTypes" -> i18n.text("text.f0ccc7d5d697")
         "cableRoutes" -> i18n.text("text.bab757fdc2a2")
         "objectContainments" -> i18n.text("text.e675c751e388")
-        "sharedPathSegments" -> i18n.text("text.9ea2e0562fb5")
         "panelMappings" -> i18n.text("text.6adce9b9a19d")
         "vlans" -> "VLAN"
         "subnets" -> i18n.text("text.bfea90e5ae18")

@@ -62,7 +62,9 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                 val p = project
                 val overlays = remember { mutableIntStateOf(0) }
                 val tabbed = p != null && mainTabs.any { it.screen == screen }
-                CompositionLocalProvider(LocalOverlayCount provides overlays) {
+                val takePhoto = com.onlyfield.assetmanager.ui.components.rememberPhotoCapture(vm)
+                CompositionLocalProvider(LocalOverlayCount provides overlays,
+                    com.onlyfield.assetmanager.configurator.LocalPhotoAction provides { type, id -> takePhoto(type, id) }) {
                 Column(Modifier.fillMaxSize()) {
                 // The bar owns the bottom inset; screens above it must not pad for it again.
                 Box(Modifier.weight(1f).then(if (tabbed && overlays.intValue == 0) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {

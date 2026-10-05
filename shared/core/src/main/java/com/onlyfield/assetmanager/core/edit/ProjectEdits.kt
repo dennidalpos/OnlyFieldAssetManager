@@ -154,7 +154,7 @@ object ProjectEdits {
             },
             floorplanPlacements = project.floorplanPlacements.filterNot { (it.targetType == PlacementTargetType.DEVICE) && (it.targetId == deviceId) },
             updatedEpochMs = System.currentTimeMillis()
-        )
+        ).let { dropPortReferences(it, affectedPortIds) }
 
         val ref = ObjectRef(PlacementTargetType.DEVICE, deviceId)
         return Pair(ObjectHierarchy.afterDeletion(project, updatedProject, ref), ObjectHierarchy.snapshot(project, ref, trashItem))
@@ -304,11 +304,7 @@ object ProjectEdits {
     fun deletePortFromDevice(project: Project, deviceId: String, portId: String): Project {
         val updatedBus = project.businessUnits.map { bu ->
             val updatedDevs = bu.devices.map { dev ->
-                if (dev.id == deviceId) {
-                    dev.copy(ports = dev.ports.filterNot { it.id == portId }.map { if (it.connectedPortId == portId) it.copy(connectedPortId = null, endpointStatus = EndpointStatus.DETACHED_TO_VERIFY) else it })
-                } else {
-                    dev.copy(ports = dev.ports.map { if (it.connectedPortId == portId) it.copy(connectedPortId = null, endpointStatus = EndpointStatus.DETACHED_TO_VERIFY) else it })
-                }
+                if (dev.id == deviceId) dev.copy(ports = dev.ports.filterNot { it.id == portId }) else dev
             }
             bu.copy(devices = updatedDevs)
         }
@@ -327,21 +323,34 @@ object ProjectEdits {
             }
         }
 
-        return project.copy(
-            businessUnits = updatedBus,
-            cables = updatedCables,
-            panelMappings = project.panelMappings.mapNotNull { m ->
-                when {
-                    m.portAId == portId -> m.portBId?.takeUnless { it == portId }?.let { m.copy(portAId = it, portBId = null, isUnknownPassage = true) }
-                    m.portBId == portId -> m.copy(portBId = null, isUnknownPassage = true)
-                    else -> m
-                }
-            },
-            portVlanMemberships = project.portVlanMemberships.filterNot { it.portId == portId },
-            poeMappings = project.poeMappings.filterNot { it.portId == portId },
-            lagGroups = project.lagGroups.map { it.copy(memberPortIds = it.memberPortIds - portId) },
-            updatedEpochMs = System.currentTimeMillis()
-        )
+        return dropPortReferences(project.copy(businessUnits = updatedBus, cables = updatedCables), setOf(portId))
+    }
+
+    /** Removes passages, VLAN, PoE and LAG rows of deleted ports; a passage that loses one end becomes unknown. */
+    private fun dropPortReferences(project: Project, portIds: Set<String>): Project = project.copy(
+        panelMappings = project.panelMappings.mapNotNull { m ->
+            val b = m.portBId?.takeUnless { it in portIds }
+            when {
+                m.portAId in portIds -> b?.let { m.copy(portAId = it, portBId = null, isUnknownPassage = true) }
+                m.portBId != null && b == null -> m.copy(portBId = null, isUnknownPassage = true)
+                else -> m
+            }
+        },
+        portVlanMemberships = project.portVlanMemberships.filterNot { it.portId in portIds },
+        poeMappings = project.poeMappings.filterNot { it.portId in portIds },
+        lagGroups = project.lagGroups.map { it.copy(memberPortIds = it.memberPortIds - portIds) },
+        updatedEpochMs = System.currentTimeMillis()
+    )
+
+    /** Adds the front↔rear passage of each paired port (same passageKey) that has none yet. */
+    fun withInternalPassages(project: Project, ports: List<Port>): Project {
+        val mappings = project.panelMappings.toMutableList()
+        ports.filter { it.hardware.passageKey != null }.groupBy { it.hardware.passageKey }.values.forEach { pair ->
+            val a = pair.singleOrNull { it.hardware.side == PortSide.FRONT } ?: return@forEach
+            val b = pair.singleOrNull { it.hardware.side == PortSide.REAR } ?: return@forEach
+            if (mappings.none { it.portAId in setOf(a.id, b.id) || it.portBId in setOf(a.id, b.id) }) mappings.add(PanelMapping(portAId = a.id, portBId = b.id))
+        }
+        return project.copy(panelMappings = mappings)
     }
 
 
@@ -531,7 +540,7 @@ object ProjectEdits {
             "DEVICE" -> {
                 val device = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
                 val targetBU = project.businessUnits.find { it.id == trashItem.originalBusinessUnitId } ?: project.businessUnits.firstOrNull() ?: return project
-                addDevice(project, targetBU.id, device)
+                withInternalPassages(addDevice(project, targetBU.id, device), device.ports)
             }
             "RACK" -> {
                 val rack = jsonSerializer.decodeFromString(Rack.serializer(), trashItem.serializedJson)
@@ -563,36 +572,6 @@ object ProjectEdits {
             cables = project.cables.filterNot { it.id == cableId },
             cableRoutes = project.cableRoutes.filterNot { it.cableId == cableId },
             attachments = project.attachments.filterNot { it.targetType == AttachmentTargetType.CABLE && it.targetId == cableId },
-            updatedEpochMs = System.currentTimeMillis()
-        )
-    }
-
-    fun addSharedPathSegment(project: Project, segment: SharedPathSegment): Project {
-        return project.copy(
-            sharedPathSegments = project.sharedPathSegments + segment,
-            updatedEpochMs = System.currentTimeMillis()
-        )
-    }
-
-    fun updateSharedPathSegment(project: Project, updatedSegment: SharedPathSegment): Project {
-        val updated = project.sharedPathSegments.map { if (it.id == updatedSegment.id) updatedSegment else it }
-        return project.copy(
-            sharedPathSegments = updated,
-            updatedEpochMs = System.currentTimeMillis()
-        )
-    }
-
-    fun deleteSharedPathSegment(project: Project, segmentId: String): Project {
-        val updatedCables = project.cables.map { cable ->
-            if (cable.sharedPathSegmentIds.contains(segmentId)) {
-                cable.copy(sharedPathSegmentIds = cable.sharedPathSegmentIds.filterNot { it == segmentId })
-            } else {
-                cable
-            }
-        }
-        return project.copy(
-            sharedPathSegments = project.sharedPathSegments.filterNot { it.id == segmentId },
-            cables = updatedCables,
             updatedEpochMs = System.currentTimeMillis()
         )
     }

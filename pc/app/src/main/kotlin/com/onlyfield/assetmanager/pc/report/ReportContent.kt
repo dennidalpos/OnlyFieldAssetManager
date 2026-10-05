@@ -87,7 +87,7 @@ object ReportContent {
         if (selection.includeCablingAndPorts && (project.cables.isNotEmpty() || project.panelMappings.isNotEmpty())) {
             heading(i18n.text("text.3b40d8bd6081"))
             project.cables.forEach { c ->
-                val details = listOfNotNull(c.medium.toDisplayString(i18n = i18n), c.lengthValue?.let { "$it ${c.lengthUnit ?: "m"}" }, c.color, c.nominalCharacteristics)
+                val details = listOfNotNull(c.medium.toDisplayString(i18n = i18n), c.lengthValue?.let { "$it ${c.lengthUnit ?: "m"}" }, c.color)
                 item("${c.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${index.portLabel(c.portAId, "libero")} <-> ${index.portLabel(c.portBId, "libero")} (${details.joinToString(", ")})")
             }
             if (project.panelMappings.isNotEmpty()) {

@@ -26,7 +26,10 @@ import com.onlyfield.assetmanager.pc.ui.dialogs.ProjectDialogs
 
 @Composable
 fun DesktopApp(state: DesktopAppState) {
-    CompositionLocalProvider(LocalMessages provides state.i18n) {
+    CompositionLocalProvider(LocalMessages provides state.i18n, com.onlyfield.assetmanager.configurator.LocalPhotoAction provides { type, id ->
+        DesktopStorageHelper.pickOpenFile(state.i18n.text("text.a111cc717443"), state.i18n.text("text.a9f46a362f48"), "png", "jpg", "jpeg", "webp", "bmp", i18n = state.i18n)
+            ?.let { state.attachPhoto(it, type, id) }
+    }) {
     OnlyFieldTheme(state.darkTheme) {
         com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {

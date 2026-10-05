@@ -107,6 +107,13 @@ object DevicePresets {
         DevicePreset("outlet", setOf("outlet"), listOf(PresetParam("ports", listOf("1", "2", "4"), "2"))) { v ->
             PresetResult(groups(Triple(PortKind.RJ45, v.getValue("ports").toInt(), null), paired = true), passive = true)
         },
+        // Wall box or splice joining two cable runs: one front/rear pass-through per run.
+        DevicePreset("junction-box", setOf("junction-box"), listOf(
+            PresetParam("ports", listOf("1", "2", "4"), "1"),
+            PresetParam("kind", listOf("RJ45", "LC", "SC"), labelled = true),
+        )) { v ->
+            PresetResult(groups(Triple(PortKind.valueOf(v.getValue("kind")), v.getValue("ports").toInt(), null), paired = true), passive = true)
+        },
         DevicePreset("router", setOf("router", "firewall"), listOf(
             PresetParam("lan", listOf("4", "8"), "8"),
             PresetParam("wan", listOf("1", "2")),

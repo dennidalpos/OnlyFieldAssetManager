@@ -16,7 +16,7 @@ Ogni nodo ha un simbolo univoco (SW, AP, CAM, NVR, UPS…) non tradotto, un colo
 
 - Una sola linea per coppia di nodi visibili, con il numero di cavi se più di uno. I cavi interni a un contenitore non sono disegnati: compaiono aprendolo.
 - Le estremità fuori vista (altro piano, fuori dal contenitore, sconosciute) diventano un tratto verso il bordo con un cerchio vuoto, uno per oggetto visibile. Un'etichetta accanto al cerchio indica dove prosegue: `→ SW-05 · Nord 1 · BU Nord` se c'è un solo dispositivo remoto (piano e BU solo se diversi da quelli in vista), altrimenti `→ 3 dispositivi remoti`. `core.model.RemoteEnds` risolve dispositivo, porta, piano e BU dell'estremità; `SceneLink.remotes` li conserva per cavo.
-- La scheda cavo mostra anche Estremità remota (porta, piano e BU sempre) e Dorsale (`SharedPathSegment` del cavo). Sul cavo scelto, Vai a apre il piano dell'altra estremità, anche di un'altra BU, con l'oggetto selezionato e i suoi contenitori aperti (`MapActions.goTo` e parametro `focus` di `MapWorkspace`). Scegliere un piano dall'elenco annulla la selezione in arrivo.
+- La scheda cavo ha come titolo l'etichetta del cavo o quella proposta (`CableLabels.suggest`) e mostra anche Estremità remota (porta, piano e BU sempre). Il cavo scelto ha Foto, Modifica cavo, Inserisci passaggio e Vai a, che apre il piano dell'altra estremità, anche di un'altra BU, con l'oggetto selezionato e i suoi contenitori aperti (`MapActions.goTo` e parametro `focus` di `MapWorkspace`). Scegliere un piano dall'elenco annulla la selezione in arrivo.
 - Il mezzo è distinto anche senza colore: rame continuo, fibra tratteggiata, alimentazione a puntini, altro tratto-punto.
 - I collegamenti senza percorso salvato sono archi: le linee da uno stesso nodo si annidano invece di passare sopra altri oggetti.
 - Il tocco su un collegamento apre l'elenco completo dei cavi (porta A → porta B, piano se diverso, mezzo). Il cavo scelto si apre nel configuratore.
@@ -42,16 +42,18 @@ Le miniature degli allegati vanno a capo.
 Per un oggetto l'ordine è sempre lo stesso:
 
 1. **Intestazione**: simbolo, nome, tipo e chiusura (annunciata come Chiudi).
-2. **Azioni**: una sola primaria (Apri per i contenitori, altrimenti Modifica), Porte e Rimuovi dal contenitore come secondarie (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
-3. **Stato**: posizione nel rack, contenuto, porte occupate, cavi interni e carico PoE come righe etichetta/valore, con il pannello porte compatto.
-4. **Identificativi**: etichetta, alias, IP, MAC e numero di serie, solo se compilati (`core.display.ObjectSummary`).
-5. **Collegamenti** e **Foto e allegati**, con il numero di elementi.
+2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore come secondarie (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
+3. **Dati primari**: unità del rack, contenuto, posizione nel rack ed etichetta fisica.
+4. **Porte**: il disegno dell'apparato con le porte occupate su totali; il tocco su una porta apre la scheda rapida (`PortQuickDialog`, vedi [10-object-configurator.md](10-object-configurator.md)).
+5. **Collegamenti**, con il numero di elementi.
+6. **Foto e allegati**: sempre visibile, con Aggiungi foto e, se vuota, l'invito a documentare oggetto e collegamenti.
+7. **Altri dettagli**, chiuso: profondità, cavi interni, carico PoE, alias, IP, MAC, numero di serie e collegamenti logici.
 
-Per un rack lo stato riporta unità occupate su totali e profondità, se registrata. Le sezioni senza dati non compaiono.
+Le sezioni senza dati non compaiono, tranne Foto e allegati.
 
 Il contenitore aperto mostra la propria intestazione (Contenitore aperto) e la sezione Contenuto con Assegna esistente: una finestra con ricerca che indica tipo e posizione attuale di ogni oggetto. Senza selezione il pannello elenca gli oggetti della vista raggruppati per famiglia, con filtro oltre dieci elementi, e la legenda chiusa; sotto 840 dp si apre con Elenco. Per un collegamento ogni cavo è una scheda con estremità A e B e mezzo; il cavo scelto mostra Modifica cavo.
 
-Per un dispositivo la sezione **Collegamenti logici** segue Collegamenti ed elenca le connessioni WAN, VPN, Internet e Altro (`WanVpnConnection`) di cui è estremità locale o remota: tipo, nome, operatore, banda e «verso» l'altra estremità (dispositivo e piano, oppure descrizione della sede). Il collegamento è agganciato al dispositivo, non alla porta. + Nuovo apre una finestra basata su `core.forms.WanForm` con tipo VPN e il dispositivo come estremità locale; il tocco su una riga modifica la connessione mantenendo il lato del dispositivo, note e accesso sottostante. Se l'altra estremità è un dispositivo del progetto, Vai a lo apre sul suo piano. L'eliminazione resta nella sezione Rete. `core.model.LogicalLinks` fornisce elenco ed etichette.
+Per un dispositivo la sezione **Collegamenti logici**, in Altri dettagli, elenca le connessioni WAN, VPN, Internet e Altro (`WanVpnConnection`) di cui è estremità locale o remota: tipo, nome, operatore, banda e «verso» l'altra estremità (dispositivo e piano, oppure descrizione della sede). Il collegamento è agganciato al dispositivo, non alla porta. + Nuovo apre una finestra basata su `core.forms.WanForm` con tipo VPN e il dispositivo come estremità locale; il tocco su una riga modifica la connessione mantenendo il lato del dispositivo, note e accesso sottostante. Se l'altra estremità è un dispositivo del progetto, Vai a lo apre sul suo piano. L'eliminazione resta nella sezione Rete. `core.model.LogicalLinks` fornisce elenco ed etichette.
 
 L'inserimento è rapido e usa un'unica finestra (`ObjectPickerDialog`, descritto in [10-object-configurator.md](10-object-configurator.md)). Il sottotitolo dice dove andrà l'oggetto (Sul piano Terra, In RACK-A). Aggiungi salva subito; Aggiungi e modifica apre l'editor completo. La pressione prolungata su un punto vuoto del piano posiziona lì il nuovo oggetto; senza punto scelto va nella posizione libera più vicina al centro, mai sul bordo. Nel passo porte i menu del preset occupano tutta la riga disponibile e l'elenco aperto ha la larghezza del campo.
 

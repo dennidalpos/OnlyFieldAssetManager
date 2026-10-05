@@ -33,7 +33,7 @@ class ObjectMapExchangeTest {
         ZipInputStream(ByteArrayInputStream(PackageSerializer.exportPackage(project))).use { z ->
             generateSequence { z.nextEntry }.forEach { entries[it.name] = z.readBytes() }
         }
-        entries["manifest.json"] = entries.getValue("manifest.json").toString(Charsets.UTF_8).replace(PackageManifest.CURRENT_FORMAT_VERSION, "2.0").toByteArray(Charsets.UTF_8)
+        entries["manifest.json"] = entries.getValue("manifest.json").toString(Charsets.UTF_8).replace("\"formatVersion\": \"1\"", "\"formatVersion\": \"2\"").toByteArray(Charsets.UTF_8)
         val output = ByteArrayOutputStream()
         ZipOutputStream(output).use { z -> entries.forEach { (name, data) -> z.putNextEntry(ZipEntry(name)); z.write(data); z.closeEntry() } }
         val result = PackageSerializer.importPackage(output.toByteArray())

@@ -23,7 +23,7 @@ class ConfiguratorExchangeTest {
             val bytes = PackageSerializer.exportPackage(p, password = password)
             val result = PackageSerializer.importPackage(bytes, password = password)
             assertTrue(result.validationResult.isValid)
-            assertEquals("1.11", result.pkg?.manifest?.formatVersion)
+            assertEquals("1", result.pkg?.manifest?.formatVersion)
             assertEquals(p, result.pkg?.project)
         }
     }

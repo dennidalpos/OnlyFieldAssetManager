@@ -2,7 +2,17 @@
 
 ## Modello
 
-Un progetto contiene organizzazione e siti, aree/piani, apparati e porte, rack, cavi e percorsi, rete logica, alimentazione, media, campi extra, badge, modelli e cestino locale. Il contenimento associa un solo genitore a un apparato o rack; cavi e cicli non sono ammessi.
+Un progetto contiene organizzazione e siti, aree/piani, apparati e porte, rack, cavi e percorsi disegnati, passaggi interni, rete logica, alimentazione, media, campi extra, badge, modelli e cestino locale. Il contenimento associa un solo genitore a un apparato o rack; cavi e cicli non sono ammessi.
+
+## Tracciamento fisico
+
+Il collegamento fisico è registrato solo dai cavi (`Cable`): estremità A e B sono porte, oppure un apparato quando la porta non è nota. Un cavo conserva etichetta, mezzo, colore, lunghezza, rilievo e note.
+
+I passanti sono porte accoppiate fronte/retro (stesso `passageKey`) di un oggetto passivo: patch panel, presa dati, scatola di giunzione. Il passaggio interno è un `PanelMapping` con le due porte, oppure senza la seconda e `isUnknownPassage` quando è ignoto. Un cavallotto è un cavo tra due porte frontali; una giunta è una scatola di giunzione inserita nel cavo.
+
+`ConnectionGraph` percorre cavi e passaggi: un percorso è completo con due apparati attivi agli estremi, incompleto se termina su un passante o un passaggio ignoto, in conflitto con cicli o più cavi sulla stessa porta. `HardwareConfigurator.insertPassage` divide un cavo attraverso un passante libero: il primo tratto conserva id, etichetta e foto. Eliminare un apparato rimuove passaggi, VLAN, PoE e LAG delle sue porte; il ripristino ricrea i passaggi interni.
+
+Gli allegati si collegano a progetto, rack, apparato, piano, cavo o porta (`AttachmentTargetType.PORT`).
 
 `ModelValidator` distingue `STRUCTURAL_ERROR`, che blocca l'import, da `DOCUMENTARY_WARNING`, che segnala dati incompleti senza bloccare il salvataggio.
 
@@ -12,7 +22,7 @@ Le connessioni WAN/VPN (`WanVpnConnection`) sono agganciate ai dispositivi, non 
 
 `.ofam` e uno ZIP con `manifest.json`, `project.json` oppure `project.json.enc` e `attachments/`. Il manifest contiene versione, checksum SHA-256 e, quando necessario, parametri di cifratura.
 
-La versione corrente e 1.11. L'import accetta 1.7--1.10 e rifiuta ogni altra versione. Il decoder ignora chiavi JSON sconosciute; non inventa dati mancanti delle versioni precedenti.
+La versione è 1 (ripartenza greenfield del 5 ottobre 2026): l'import rifiuta ogni altra versione, compresi i pacchetti 1.7--1.11 precedenti. Il decoder ignora chiavi JSON sconosciute. Anche il database Room è alla versione 1: uno schema diverso viene ricreato vuoto e i dati di prova si reimportano dal pacchetto demo.
 
 ## Protezione e fusione
 

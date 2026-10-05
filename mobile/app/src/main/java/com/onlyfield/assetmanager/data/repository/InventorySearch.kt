@@ -38,7 +38,6 @@ internal class InventorySearch(db: AppDatabase) {
                     deviceId = p.deviceId,
                     name = p.name,
                     label = p.label,
-                    connectedPortId = p.connectedPortId
                 )
             }
 

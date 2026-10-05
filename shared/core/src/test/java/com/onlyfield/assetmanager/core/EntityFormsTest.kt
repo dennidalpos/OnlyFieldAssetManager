@@ -47,12 +47,11 @@ class EntityFormsTest {
     @Test
     fun cableEditPreservesHiddenFields() {
         val obs = Observation("Android", 1L)
-        val original = Cable(codeOrLabel = "C1", lengthUnit = "ft", observation = obs, sharedPathSegmentIds = listOf("p1"), nominalCharacteristics = "Cat6A")
+        val original = Cable(codeOrLabel = "C1", lengthUnit = "ft", observation = obs, objectTypeId = "patch-cord")
         val edited = CableForm.from(original).copy(color = "Blu").toCable(original)
         assertEquals("ft", edited.lengthUnit)
         assertEquals(obs, edited.observation)
-        assertEquals(listOf("p1"), edited.sharedPathSegmentIds)
-        assertEquals("Cat6A", edited.nominalCharacteristics)
+        assertEquals("patch-cord", edited.objectTypeId)
         assertEquals("Blu", edited.color)
     }
 

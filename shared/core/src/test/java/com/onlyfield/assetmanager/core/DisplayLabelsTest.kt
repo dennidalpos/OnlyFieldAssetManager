@@ -24,7 +24,6 @@ class DisplayLabelsTest {
     fun everyEnumHasDistinctHumanLabels() {
         assertReadable(DeviceCategory.values()) { it.toDisplayString() }
         assertReadable(CableMedium.values()) { it.toDisplayString() }
-        assertReadable(CableOrientation.values()) { it.toDisplayString() }
         assertReadable(PowerFeedType.values()) { it.toDisplayString() }
         assertReadable(BadgeCategory.values()) { it.toDisplayString() }
         assertReadable(PoeStandard.values()) { it.toDisplayString() }

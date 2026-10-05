@@ -50,9 +50,8 @@ object HardwareConfigurator {
         }
         val referenced = project.cables.flatMap { listOfNotNull(it.portAId, it.portBId) }.toSet() +
             project.panelMappings.flatMap { listOfNotNull(it.portAId, it.portBId) } +
-            project.portVlanMemberships.map { it.portId } + project.poeMappings.map { it.portId } + project.lagGroups.flatMap { it.memberPortIds } +
-            project.businessUnits.flatMap { it.devices }.flatMap { it.ports }.mapNotNull { it.connectedPortId }
-        return PortChanges(ports, added, remaining, remaining.filter { it.id in referenced || it.connectedPortId != null })
+            project.portVlanMemberships.map { it.portId } + project.poeMappings.map { it.portId } + project.lagGroups.flatMap { it.memberPortIds }
+        return PortChanges(ports, added, remaining, remaining.filter { it.id in referenced })
     }
 
     fun configure(project: Project, device: Device, allowConnectedRemoval: Boolean = false, replacePorts: Boolean = device.hardware.portGroups.isNotEmpty()): Project {
@@ -62,20 +61,8 @@ object HardwareConfigurator {
         require(allowConnectedRemoval || changes.connectedRemoved.isEmpty()) { "Connected ports require explicit removal" }
         var result = project
         changes.removed.forEach { result = ProjectEdits.deletePortFromDevice(result, device.id, it.id) }
-        val removedIds = changes.removed.map { it.id }.toSet()
-        result = ProjectEdits.updateDevice(result, device.copy(ports = changes.ports.map {
-            if (it.connectedPortId in removedIds) it.copy(connectedPortId = null, endpointStatus = EndpointStatus.DETACHED_TO_VERIFY) else it
-        }))
-        val passageKeys = changes.ports.mapNotNull { it.hardware.passageKey }.toSet()
-        val mappings = result.panelMappings.toMutableList()
-        passageKeys.forEach { key ->
-            val pair = changes.ports.filter { it.hardware.passageKey == key }
-            val a = pair.single { it.hardware.side == PortSide.FRONT }
-            val b = pair.single { it.hardware.side == PortSide.REAR }
-            if (mappings.none { it.portAId in setOf(a.id, b.id) || it.portBId in setOf(a.id, b.id) })
-                mappings.add(PanelMapping(portAId = a.id, portBId = b.id, mappingType = "INTERNAL"))
-        }
-        return result.copy(panelMappings = mappings)
+        result = ProjectEdits.updateDevice(result, device.copy(ports = changes.ports))
+        return ProjectEdits.withInternalPassages(result, changes.ports)
     }
 
     fun connect(project: Project, from: String, to: String?, medium: CableMedium, existingCableId: String? = null): Project {
@@ -102,6 +89,34 @@ object HardwareConfigurator {
         return project.copy(panelMappings = project.panelMappings.filterNot { it.id == mapping.id } + mapping)
     }
 
+    /** Removes the cable plugged into [portId], with its routes and photos. */
+    fun disconnect(project: Project, portId: String): Project =
+        project.cables.find { it.portAId == portId || it.portBId == portId }?.let { ProjectEdits.deleteCable(project, it.id) } ?: project
+
+    /** Free pass-throughs: port → its internal partner, both without cables, on passive devices. */
+    fun freePassages(project: Project, graph: ConnectionGraph = ConnectionGraph(project)): Map<String, String> {
+        val passive = project.businessUnits.flatMap { it.devices }.filter { it.isPassive() }.flatMap { it.ports }.map { it.id }.toSet()
+        return project.panelMappings.filter { !it.isUnknownPassage && it.portAId in passive && it.portBId in passive }
+            .filter { !graph.occupied(it.portAId) && !graph.occupied(it.portBId!!) }
+            .flatMap { listOf(it.portAId to it.portBId!!, it.portBId to it.portAId) }.toMap()
+    }
+
+    /**
+     * Splits cable A–B through a pass-through: A–[entryPortId] keeps the cable (id, label, photos),
+     * its internal partner–B becomes a new cable with the same medium and colour.
+     */
+    fun insertPassage(project: Project, cableId: String, entryPortId: String): Project {
+        val cable = requireNotNull(project.cables.find { it.id == cableId }) { "Unknown cable" }
+        val exit = requireNotNull(freePassages(project)[entryPortId]) { "Pass-through not free" }
+        val first = cable.copy(portBId = entryPortId, deviceBId = null)
+        val second = Cable(portAId = exit, portBId = cable.portBId, deviceBId = cable.deviceBId, medium = cable.medium, color = cable.color, objectTypeId = cable.objectTypeId)
+        return project.copy(
+            cables = project.cables.map { if (it.id == cableId) first else it } + second,
+            cableRoutes = project.cableRoutes.filterNot { it.cableId == cableId },
+            updatedEpochMs = System.currentTimeMillis(),
+        )
+    }
+
     fun model(project: Project, draft: MapObjectDraft, name: String): DeviceModel {
         val d = draft.device
         val extras = (draft.extraFields ?: project.customExtraFields.filter { it.targetId == draft.id })
@@ -111,7 +126,7 @@ object HardwareConfigurator {
             objectTypeId = draft.type.id, defaultHeightU = d.heightU.toIntOrNull() ?: 1,
             hardware = d.hardware, portTemplates = d.hardware.portGroups, extraFields = extras,
             rackDefaults = draft.rack.let { r -> if (draft.type.kind == ObjectKind.RACK) RackDefaults(r.heightU.toIntOrNull() ?: 42, r.depthMm.toIntOrNull(), r.mountingDepthMm.toIntOrNull(), r.numberingDirection, r.mountingType) else null },
-            cableDefaults = draft.cable.let { c -> if (draft.type.kind == ObjectKind.CABLE) CableDefaults(c.medium, c.connectorA, c.connectorB, c.nominalCharacteristics, c.color) else null })
+            cableDefaults = draft.cable.let { c -> if (draft.type.kind == ObjectKind.CABLE) CableDefaults(c.medium, c.color.ifBlank { null }) else null })
     }
 
     fun applyModel(draft: MapObjectDraft, model: DeviceModel): MapObjectDraft {
@@ -121,7 +136,7 @@ object HardwareConfigurator {
             portsConfigured = draft.type.kind == ObjectKind.DEVICE,
             device = draft.device.copy(deviceModelId = model.id, heightU = model.defaultHeightU.toString(), hardware = model.hardware.copy(portGroups = model.portTemplates)),
             rack = model.rackDefaults?.let { r -> draft.rack.copy(deviceModelId = model.id, heightU = r.heightU.toString(), depthMm = r.depthMm?.toString().orEmpty(), mountingDepthMm = r.mountingDepthMm?.toString().orEmpty(), numberingDirection = r.numberingDirection, mountingType = r.mountingType) } ?: draft.rack,
-            cable = model.cableDefaults?.let { c -> draft.cable.copy(deviceModelId = model.id, medium = c.medium, connectorA = c.connectorA.orEmpty(), connectorB = c.connectorB.orEmpty(), nominalCharacteristics = c.nominalCharacteristics.orEmpty(), color = c.color.orEmpty()) } ?: draft.cable,
+            cable = model.cableDefaults?.let { c -> draft.cable.copy(deviceModelId = model.id, medium = c.medium, color = c.color.orEmpty()) } ?: draft.cable,
             extraFields = draft.extraFields?.let { old -> old + extras.filter { e -> old.none { it.fieldKey == e.fieldKey } } } ?: extras,
         )
     }

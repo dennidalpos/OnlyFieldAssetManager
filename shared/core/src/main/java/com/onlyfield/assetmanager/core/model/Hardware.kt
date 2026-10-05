@@ -41,9 +41,6 @@ data class RackDefaults(
 @Serializable
 data class CableDefaults(
     val medium: CableMedium = CableMedium.ETHERNET_COPPER,
-    val connectorA: String? = null,
-    val connectorB: String? = null,
-    val nominalCharacteristics: String? = null,
     val color: String? = null,
 )
 

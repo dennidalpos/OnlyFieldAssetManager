@@ -19,7 +19,7 @@ data class PackageManifest(
     val attachmentsEncrypted: Boolean = false,
 ) {
     companion object {
-        const val CURRENT_FORMAT_VERSION = "1.11"
+        const val CURRENT_FORMAT_VERSION = "1"
         const val MANIFEST_FILE_NAME = "manifest.json"
         const val PROJECT_FILE_NAME = "project.json"
         const val PROJECT_ENC_FILE_NAME = "project.json.enc"

@@ -63,9 +63,13 @@ class ConfiguratorUiTest {
         rule.onNodeWithContentDescription("P1: Libera").assertIsDisplayed()
         rule.onNodeWithContentDescription("P1: Libera").performClick()
         rule.runOnIdle { org.junit.Assert.assertNotNull(draft.value.session) }
-        rule.onNode(hasContentDescription("Porta di destinazione:", substring = true)).performScrollTo().performClick()
-        rule.onNode(hasText("B › P1", substring = true)).performClick()
-        rule.onNodeWithText("Torna all'oggetto").performScrollTo().performClick()
+        // Quick dialog: Connect to… → device → free port → Connect.
+        rule.onNodeWithText("Collega a…").performClick()
+        rule.onNodeWithText("B").performClick()
+        rule.onAllNodesWithContentDescription("P1: Libera").onLast().performClick()
+        rule.onNode(hasText("Etichetta cavo") and hasSetTextAction()).assertExists()
+        rule.onNodeWithText("Collega").performClick()
+        rule.onNodeWithText("Chiudi").performClick()
         rule.onNodeWithContentDescription("P1: Occupata, B › P1").assertHasClickAction()
         rule.runOnIdle {
             val saved = draft.value.apply(project)

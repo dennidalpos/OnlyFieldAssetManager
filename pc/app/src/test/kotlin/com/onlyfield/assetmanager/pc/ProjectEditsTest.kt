@@ -214,7 +214,7 @@ class ProjectEditsTest {
     }
 
     @Test
-    fun testCablingAndSharedPaths() {
+    fun testCablingAndPanelMappings() {
         var proj = createSampleProject()
 
         val cable = Cable(id = "cable-2", codeOrLabel = "CBL-002", portAId = "port-1", portBId = "port-2")
@@ -225,19 +225,12 @@ class ProjectEditsTest {
         proj = ProjectEdits.updateCable(proj, updatedCable)
         assertEquals("Rosso", proj.cables.find { it.id == "cable-2" }?.color)
 
-        val segment = SharedPathSegment(id = "seg-1", name = "Canalina Principale Piano 1", capacityMaxCables = 50)
-        proj = ProjectEdits.addSharedPathSegment(proj, segment)
-        assertEquals(1, proj.sharedPathSegments.size)
-
-        val panelMap = PanelMapping(id = "map-1", portAId = "port-1", portBId = "port-2", mappingType = "PATCH_PANEL")
+        val panelMap = PanelMapping(id = "map-1", portAId = "port-1", portBId = "port-2")
         proj = ProjectEdits.addPanelMapping(proj, panelMap)
         assertEquals(1, proj.panelMappings.size)
 
         proj = ProjectEdits.deleteCable(proj, "cable-2")
         assertEquals(1, proj.cables.size)
-
-        proj = ProjectEdits.deleteSharedPathSegment(proj, "seg-1")
-        assertEquals(0, proj.sharedPathSegments.size)
 
         proj = ProjectEdits.deletePanelMapping(proj, "map-1")
         assertEquals(0, proj.panelMappings.size)

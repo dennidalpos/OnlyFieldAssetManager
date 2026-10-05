@@ -134,7 +134,7 @@ object MarkdownExportManager {
                     else -> i18n.text("text.ba7cc7a170dd")
                 }
 
-                sb.append("| ${cable.codeOrLabel ?: cable.id.take(8)} | $endpointAStr | ${cable.medium.toDisplayString(i18n)} | ${cable.orientation.toDisplayString(i18n)} | $endpointBStr | `${(portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)}` |\n")
+                sb.append("| ${cable.codeOrLabel ?: cable.id.take(8)} | $endpointAStr | ${cable.medium.toDisplayString(i18n)} | ${cable.color ?: "-"} | $endpointBStr | `${(portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)}` |\n")
             }
             sb.append("\n")
         }

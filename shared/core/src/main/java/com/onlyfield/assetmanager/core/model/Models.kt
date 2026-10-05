@@ -121,7 +121,6 @@ data class Port(
     val deviceId: String,
     val name: String,
     val label: String? = null,
-    val connectedPortId: String? = null,
     val endpointStatus: EndpointStatus = EndpointStatus.DISCONNECTED,
     val observation: Observation? = null,
     val hardware: PortHardware = PortHardware(),
@@ -173,7 +172,8 @@ enum class AttachmentTargetType {
     RACK,
     DEVICE,
     AREA,
-    CABLE
+    CABLE,
+    PORT
 }
 
 @Serializable
@@ -292,40 +292,15 @@ enum class CableMedium {
 }
 
 @Serializable
-enum class CableOrientation {
-    NONE,
-    A_TO_B,
-    B_TO_A,
-    BOTH
-}
-
-@Serializable
-data class SharedPathSegment(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
-    val sourceAreaId: String? = null,
-    val targetAreaId: String? = null,
-    val description: String? = null,
-    val capacityMaxCables: Int? = null,
-    val notes: String? = null
-)
-
-@Serializable
 data class Cable(
     val id: String = UUID.randomUUID().toString(),
     val codeOrLabel: String? = null,
     val portAId: String? = null,
     val portBId: String? = null,
     val medium: CableMedium = CableMedium.ETHERNET_COPPER,
-    val connectorA: String? = null,
-    val connectorB: String? = null,
-    val nominalCharacteristics: String? = null,
-    val observedSpeed: String? = null,
     val color: String? = null,
     val lengthValue: Double? = null,
     val lengthUnit: String? = "m",
-    val orientation: CableOrientation = CableOrientation.NONE,
-    val sharedPathSegmentIds: List<String> = emptyList(),
     val observation: Observation? = null,
     val notes: String? = null,
     val deviceAId: String? = null,
@@ -339,9 +314,7 @@ data class PanelMapping(
     val id: String = UUID.randomUUID().toString(),
     val portAId: String,
     val portBId: String? = null,
-    val mappingType: String = "CROSS_CONNECT",
     val isUnknownPassage: Boolean = false,
-    val notes: String? = null
 )
 
 @Serializable
@@ -665,7 +638,6 @@ data class Project(
     val cableRoutes: List<CableRoute> = emptyList(),
     val objectContainments: List<ObjectContainment> = emptyList(),
     val cables: List<Cable> = emptyList(),
-    val sharedPathSegments: List<SharedPathSegment> = emptyList(),
     val panelMappings: List<PanelMapping> = emptyList(),
     val vlans: List<Vlan> = emptyList(),
     val subnets: List<Subnet> = emptyList(),

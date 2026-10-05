@@ -23,6 +23,8 @@ data class MapObjectDraft(
     val portsConfigured: Boolean = false,
     /** Where a new object was requested on the floor; null places it in the first free slot. */
     val mapPoint: MapPoint? = null,
+    /** Port page to open first in the editor (UI only, never saved). */
+    val focusPortId: String? = null,
 ) {
     /** Same draft as another object type of the same kind (category follows the type). */
     fun withType(type: ObjectType) = copy(type = type, device = device.copy(objectTypeId = type.id, category = type.category))

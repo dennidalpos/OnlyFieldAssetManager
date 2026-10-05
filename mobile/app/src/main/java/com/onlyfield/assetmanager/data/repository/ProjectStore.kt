@@ -58,7 +58,6 @@ internal class ProjectStore(private val db: AppDatabase) {
         val attachmentEntities = inventoryDao.getAttachmentsByProjectId(projectId)
         val annotationEntities = inventoryDao.getAnnotationsByProjectId(projectId)
         val placementEntities = inventoryDao.getFloorplanPlacementsByProjectId(projectId)
-        val sharedPathSegmentEntities = inventoryDao.getSharedPathSegmentsByProjectId(projectId)
         val cableEntities = inventoryDao.getCablesByProjectId(projectId)
         val panelMappingEntities = inventoryDao.getPanelMappingsByProjectId(projectId)
         val vlanEntities = inventoryDao.getVlansByProjectId(projectId)
@@ -87,7 +86,6 @@ internal class ProjectStore(private val db: AppDatabase) {
             attachmentEntities = attachmentEntities,
             annotationEntities = annotationEntities,
             placementEntities = placementEntities,
-            sharedPathSegmentEntities = sharedPathSegmentEntities,
             cableEntities = cableEntities,
             panelMappingEntities = panelMappingEntities,
             vlanEntities = vlanEntities,
@@ -124,7 +122,6 @@ internal class ProjectStore(private val db: AppDatabase) {
             inventoryDao.deleteAttachmentsByProjectId(project.id)
             inventoryDao.deleteAnnotationsByProjectId(project.id)
             inventoryDao.deleteFloorplanPlacementsByProjectId(project.id)
-            inventoryDao.deleteSharedPathSegmentsByProjectId(project.id)
             inventoryDao.deleteCablesByProjectId(project.id)
             inventoryDao.deletePanelMappingsByProjectId(project.id)
             inventoryDao.deleteVlansByProjectId(project.id)
@@ -151,7 +148,6 @@ internal class ProjectStore(private val db: AppDatabase) {
             val attachmentEntities = mutableListOf<com.onlyfield.assetmanager.data.local.AttachmentEntity>()
             val annotationEntities = mutableListOf<com.onlyfield.assetmanager.data.local.AnnotationEntity>()
             val placementEntities = mutableListOf<com.onlyfield.assetmanager.data.local.FloorplanPlacementEntity>()
-            val sharedPathSegmentEntities = mutableListOf<com.onlyfield.assetmanager.data.local.SharedPathSegmentEntity>()
             val cableEntities = mutableListOf<com.onlyfield.assetmanager.data.local.CableEntity>()
             val panelMappingEntities = mutableListOf<com.onlyfield.assetmanager.data.local.PanelMappingEntity>()
             val vlanEntities = mutableListOf<com.onlyfield.assetmanager.data.local.VlanEntity>()
@@ -213,9 +209,6 @@ internal class ProjectStore(private val db: AppDatabase) {
                 placementEntities.add(toFloorplanPlacementEntity(project.id, placement))
             }
 
-            for (segment in project.sharedPathSegments) {
-                sharedPathSegmentEntities.add(toSharedPathSegmentEntity(project.id, segment))
-            }
 
             for (cable in project.cables) {
                 cableEntities.add(toCableEntity(project.id, cable))
@@ -284,7 +277,6 @@ internal class ProjectStore(private val db: AppDatabase) {
             if (attachmentEntities.isNotEmpty()) inventoryDao.insertAttachments(attachmentEntities)
             if (annotationEntities.isNotEmpty()) inventoryDao.insertAnnotations(annotationEntities)
             if (placementEntities.isNotEmpty()) inventoryDao.insertFloorplanPlacements(placementEntities)
-            if (sharedPathSegmentEntities.isNotEmpty()) inventoryDao.insertSharedPathSegments(sharedPathSegmentEntities)
             if (cableEntities.isNotEmpty()) inventoryDao.insertCables(cableEntities)
             if (panelMappingEntities.isNotEmpty()) inventoryDao.insertPanelMappings(panelMappingEntities)
             if (vlanEntities.isNotEmpty()) inventoryDao.insertVlans(vlanEntities)

@@ -6,9 +6,9 @@ Rack, apparati e cavi possono usare modelli di progetto. Un modello conserva la 
 
 `ConnectionGraph` segue cavi e passaggi interni. Una porta puo essere disponibile, avere un percorso completo, incompleto o un conflitto. Il colore accompagna sempre un testo; il verde indica solo continuita censita, non traffico reale.
 
-Quando il percorso fisico termina senza conflitti, cicli o passaggi sconosciuti su un dispositivo che è estremità di connessioni WAN, VPN, Internet o Altro, `ConnectionGraph.trace` aggiunge un passo logico per ciascuna: «prosegue via VPN VPN-1 verso FW-B · Sede B». Il passo ha `ChainStep.logical` valorizzato, nessuna porta e come dispositivo l'estremità remota, se censita. Nella scheda porta è in corsivo e attenuato, e il pulsante apre il dispositivo remoto. Il percorso fisico, gli stati e i conteggi delle porte non cambiano.
+Il percorso è solo fisico: cavi e passaggi interni, senza passi logici WAN/VPN (restano nel pannello del dispositivo). `core.forms.PortSummaries` riassume per una porta ciò che serve per etichettare e collegare: stato, cavo, tratte raggiunte via cavo (`PathHop`) e, su un passante, anche quelle dal lato opposto; gli apparati attivi agli estremi di un percorso completo; il numero di foto. `CableLabels.suggest` propone l'etichetta del cavo (`SW-01/P5 – PP-02/P12`), compatibile con la stampa delle etichette PDF.
 
-Il contratto 1.11 conserva hardware, modelli e porte; Room 14 li persiste. Le versioni precedenti non ricevono lato o passaggi inventati.
+Il contratto `.ofam` 1 conserva hardware, modelli e porte; Room 1 li persiste.
 
 ## Inserimento rapido
 
@@ -59,6 +59,7 @@ Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e mode
 | Switch | 5/8/16/24/48 RJ45; uplink 0/2/4 SFP o SFP+; PoE nessuno, tutte, metà |
 | Patch panel | 12/24/48 RJ45, LC o SC, fronte/retro accoppiati |
 | Prese | 1/2/4 porte accoppiate |
+| Scatola di giunzione | 1/2/4 passanti RJ45, LC o SC, fronte/retro accoppiati |
 | Router, firewall | 4/8 LAN, 1/2 WAN, 0/1/2 SFP o SFP+ |
 | AP, telecamere, telefoni, sensori | 1/2 RJ45 con PoE 802.3af/at/bt |
 | Server, workstation | 1/2/4 NIC RJ45 o SFP+, porta di gestione |
@@ -68,13 +69,22 @@ Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e mode
 
 Il preset si sceglie all'inserimento rapido oppure nella sezione Porte; se esistono già gruppi di porte la sezione li riassume e i menu si aprono con Cambia preset. Applicarlo sostituisce i gruppi di porte; le porte collegate richiedono ancora il consenso esplicito. Il budget PoE proposto vale 15,4 W per ogni porta PoE (uscita PSE IEEE 802.3af) e resta modificabile.
 
-I gruppi di porte seguono tre passi: **tipologia** (`PortKind`: RJ45, SFP, SFP+, SFP28, QSFP28, LC, SC, console, C13, Schuko), **quantità**, **etichetta**. Le etichette possono essere brevi (`P1`, `X1`), di interfaccia (`Gi1/0/1`, `Te1/1/1`) o un prefisso libero, con anteprima dell'intervallo. Il prefisso libero si scrive e poi si conferma con Applica prefisso: solo allora la numerazione viene ricalcolata. La tipologia imposta connettore, mezzo, velocità e ruolo. Un nuovo gruppo continua la numerazione dei gruppi con lo stesso prefisso. I prefissi restano non vuoti perché i lettori del contratto 1.11 li richiedono. Lato, velocità, ruolo, accoppiamento e combo sono nei dettagli avanzati.
+I gruppi di porte seguono tre passi: **tipologia** (`PortKind`: RJ45, SFP, SFP+, SFP28, QSFP28, LC, SC, console, C13, Schuko), **quantità**, **etichetta**. Le etichette possono essere brevi (`P1`, `X1`), di interfaccia (`Gi1/0/1`, `Te1/1/1`) o un prefisso libero, con anteprima dell'intervallo. Il prefisso libero si scrive e poi si conferma con Applica prefisso: solo allora la numerazione viene ricalcolata. La tipologia imposta connettore, mezzo, velocità e ruolo. Un nuovo gruppo continua la numerazione dei gruppi con lo stesso prefisso. I prefissi restano non vuoti. Lato, velocità, ruolo, accoppiamento e combo sono nei dettagli avanzati.
 
-Il pannello porte (`PortPanel`) imita il frontale: porte dispari sopra e pari sotto, un blocco per connettore e lato. Le celle si adattano alla larghezza (`SchematicGeometry.portGrid`, da 24 a 40 dp). Se non bastano, il blocco va a capo in fasce bilanciate senza scorrimento orizzontale: 48 porte su un telefono stretto diventano due fasce da 2 × 12. Sotto 32 dp le celle nascondono la VLAN. Pieno indica occupata, bordo libera; ⚡ indica PoE (pieno se erogato, tenue se solo supportato), il numero in basso la VLAN, ! una porta da verificare. Il tocco apre la porta. La pressione prolungata avvia la selezione multipla, con le azioni Seleziona tutte e Solo libere, e permette di applicare VLAN (access o trunk) e PoE a tutte le porte selezionate. All'inizio della selezione l'anteprima viene fissata nella sessione, così le porte non ancora salvate mantengono il proprio identificativo; `PortLogic` ignora comunque porte inesistenti e non crea righe orfane. La logica è in `core.forms.PortLogic` e usa le entità esistenti `PortVlanMembership`, `PoeMapping` e `Vlan`. Le VLAN mancanti vengono create a livello di progetto; la subnet si ricava da `Subnet.vlanId`.
+Il pannello porte (`PortPanel`) imita il frontale: porte dispari sopra e pari sotto, un blocco per connettore e lato. Le celle si adattano alla larghezza (`SchematicGeometry.portGrid`, da 24 a 40 dp). Se non bastano, il blocco va a capo in fasce bilanciate senza scorrimento orizzontale: 48 porte su un telefono stretto diventano due fasce da 2 × 12. Sotto 32 dp le celle nascondono la VLAN. Pieno indica occupata, bordo libera; ⚡ indica PoE (pieno se erogato, tenue se solo supportato), il numero in basso la VLAN, ! una porta da verificare. Il tocco apre la scheda rapida della porta (sotto). La pressione prolungata avvia la selezione multipla, con le azioni Seleziona tutte e Solo libere, e permette di applicare VLAN (access o trunk) e PoE a tutte le porte selezionate. All'inizio della selezione l'anteprima viene fissata nella sessione, così le porte non ancora salvate mantengono il proprio identificativo; `PortLogic` ignora comunque porte inesistenti e non crea righe orfane. La logica è in `core.forms.PortLogic` e usa le entità esistenti `PortVlanMembership`, `PoeMapping` e `Vlan`. Le VLAN mancanti vengono create a livello di progetto; la subnet si ricava da `Subnet.vlanId`.
 
-La porta si apre con Torna all'oggetto, il titolo `SW-01 › P5` e lo stato del collegamento; ha tre schede:
+### Scheda rapida della porta
 
-- **Collegamento**: sezioni Destinazione (un solo elenco con ricerca e il filtro Solo questo piano, mezzo, Collega), Percorso e, per pannelli e prese, Passaggio nel pannello; Crea oggetto intermedio è un pulsante con l'elenco dei tipi;
+`PortQuickDialog` si apre toccando una porta nel disegno dell'apparato: nel pannello della mappa, nell'editor e nella scheda dispositivo Android. Mostra in alto `SW-01 › P5` con l'etichetta fisica, il lato (per i passivi), lo stato e il connettore. Ogni modifica è una sola operazione annullabile; nell'editor entra nella sessione.
+
+- **Porta libera**: Foto e **Collega a…** → apparato di destinazione (ricerca, Solo questo piano, prima quelli con porte dello stesso connettore; solo apparati con porte libere) → tocco su una porta libera del suo disegno → mezzo dedotto dalla porta ed etichetta cavo proposta → **Collega**.
+- **Porta collegata**: etichetta, mezzo, colore e lunghezza del cavo; **Percorso** con le porte raggiunte (← lato opposto del passante, → lato del cavo), gli estremi attivi in grassetto e Apri; **Foto porta**, **Foto cavo**, **Inserisci passaggio**, **Scollega** (rosso, con conferma: elimina il cavo con le sue foto).
+- **Inserisci passaggio**: elenca i passanti liberi (stesso piano per primi, con il lato) oppure crea una **Nuova scatola di giunzione** accanto all'apparato; il cavo viene diviso in due tratte (`HardwareConfigurator.insertPassage`).
+- **Dettagli porta** apre la pagina completa della porta.
+
+La pagina completa si apre con Torna all'oggetto, il titolo `SW-01 › P5` e lo stato del collegamento; ha tre schede:
+
+- **Collegamento**: sezioni Destinazione (un solo elenco con ricerca e il filtro Solo questo piano, mezzo, Collega), Percorso e, per pannelli, prese e scatole, Passaggio nel pannello (porta passante o sconosciuto); Crea oggetto intermedio è un pulsante con l'elenco dei tipi;
 - **VLAN e PoE**;
 - **Hardware**: etichetta, connettore, velocità, modulo e PoE supportato.
 

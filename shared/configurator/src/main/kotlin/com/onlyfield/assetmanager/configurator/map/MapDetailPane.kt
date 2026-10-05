@@ -26,6 +26,7 @@ import com.onlyfield.assetmanager.core.display.ObjectSummary
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.core.forms.CableLabels
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.PortLogic
 import com.onlyfield.assetmanager.core.forms.RackLayout
@@ -33,8 +34,8 @@ import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
 
 /**
- * Non-modal detail pane. Fixed order for an object: identity, actions, status,
- * identifiers, links, attachments. Without a selection it lists the view's objects.
+ * Non-modal detail pane. Fixed order for an object: identity, actions (photo always there),
+ * ports, cables, photos, then the other details collapsed. Without a selection it lists the view's objects.
  */
 @Composable
 fun MapDetailPane(project: Project, scene: MapScene, selection: MapSelection?, i18n: Messages, actions: MapActions,
@@ -142,34 +143,34 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
     val trash = actions.trash
     val delete = if (current || trash == null) null else DeleteRequest(i18n.text("text.dd41b3275173"), i18n.text("text.87fc0efddabf", node.name),
         i18n.text(if (node.ref.type == PlacementTargetType.RACK) "text.309921cb8d51" else "text.2548407c6a6b")) { onSelect(null); trash(node.ref) }
+    val target = if (node.ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
+    val photoAction = actions.photo?.let { photo -> PaneAction(i18n.text("quick.photo")) { photo(target, node.ref.id) } }
     ActionRow(i18n,
         primary = if (opens) PaneAction(i18n.text("map.open")) { onOpen(node.ref) } else if (current) null else editAction,
+        photo = photoAction,
         secondary = listOfNotNull(editAction.takeIf { opens || current }, portsAction, removeAction),
         delete = delete)
 
     val rack = index.rack(node.ref.id).takeIf { node.ref.type == PlacementTargetType.RACK }
-    // Only recorded data is shown; empty fields stay in the editor.
-    val status = listOfNotNull(
+    // Primary: what is needed to find, label and connect the object.
+    val primary = listOfNotNull(
         rack?.let { ObjectSummary.Fact(i18n.text("map.fact.rackUnits"), i18n.text("map.rackUnitsValue", RackLayout.usedUnits(it, index.devices), it.heightU)) },
-        rack?.depthMm?.let { ObjectSummary.Fact(i18n.text("map.fact.depth"), "$it mm") },
-        summary.mount?.let { ObjectSummary.Fact(i18n.text("map.fact.mount"), it) },
         node.childCount.takeIf { node.isContainer && !current }?.let { ObjectSummary.Fact(i18n.text("map.contents"), i18n.plural("map.objectCount", it)) },
-        node.portsTotal.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.ports"), "${node.portsUsed}/$it") },
-        node.internalCables.size.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.internal"), it.toString()) },
-        device?.hardware?.poeBudgetWatts?.let { ObjectSummary.Fact(i18n.text("map.fact.poe"), "${PortLogic.poeLoad(project, device).toInt()}/${it.toInt()} W") },
+        summary.mount?.let { ObjectSummary.Fact(i18n.text("map.fact.mount"), it) },
+        device?.physicalLabel?.takeIf { it.isNotBlank() }?.let { ObjectSummary.Fact(i18n.text("map.fact.label"), it) },
     )
-    val ports = device?.takeIf { it.ports.isNotEmpty() }
-    if (status.isNotEmpty() || ports != null) {
-        SectionTitle(i18n.text("map.status"))
-        FactRows(status)
-        ports?.let { d ->
-            val cells = remember(project, d.id) { PortLogic.panel(project, d, index = index) }
-            PortPanel(cells, i18n, compact = true, onPanelClick = { edit(ConfiguratorPage.PORTS) })
-        }
+    FactRows(primary)
+    var quickPort by remember(node.ref) { mutableStateOf<String?>(null) }
+    device?.takeIf { it.ports.isNotEmpty() }?.let { d ->
+        SectionTitle(i18n.text("ux.ports")) { Text("${node.portsUsed}/${node.portsTotal}", style = MaterialTheme.typography.labelMedium) }
+        val cells = remember(project, d.id) { PortLogic.panel(project, d, index = index) }
+        PortPanel(cells, i18n, onClick = { quickPort = it.port.id })
     }
-    if (device != null && !current && summary.identity.isNotEmpty()) {
-        SectionTitle(i18n.text("map.identifiers"))
-        FactRows(summary.identity)
+    quickPort?.let { id ->
+        PortQuickDialog(project, id, i18n, PortQuickActions(update = actions.update, photo = actions.photo,
+            details = { port -> actions.edit(editDraft(project, node.ref, scene.areaId, i18n).copy(focusPortId = port.id), ConfiguratorPage.PORTS) },
+            openDevice = { far -> quickPort = null; ObjectMap.areaId(project, far)?.let { area -> actions.goTo?.invoke(area, ObjectRef(PlacementTargetType.DEVICE, far.id)) } }),
+            onClose = { quickPort = null })
     }
 
     val links = scene.links.filter { it.a == node.ref || it.b == node.ref }
@@ -187,12 +188,29 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
             }
         }
     }
-    if (device != null && !current) LogicalLinksSection(project, hierarchy, device, i18n, actions)
-    val target = if (node.ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
-    val attachments = project.attachments.count { it.targetId == node.ref.id && it.targetType == target }
-    if (attachments > 0 && !current) {
-        SectionTitle(i18n.text("ux.attachments"), attachments)
-        media(node.ref)
+    // Photos are a primary section: always shown, even before the first shot.
+    if (!current) {
+        val attachments = project.attachments.count { it.targetId == node.ref.id && it.targetType == target }
+        SectionTitle(i18n.text("ux.attachments"), attachments.takeIf { it > 0 }) {
+            photoAction?.let { a -> TextButton(onClick = a.onClick) { Text(i18n.text("map.addPhoto")) } }
+        }
+        if (attachments > 0) media(node.ref)
+        else Text(i18n.text("map.noPhotos"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+
+    // Secondary: technical details, collapsed.
+    val secondary = listOfNotNull(
+        rack?.depthMm?.let { ObjectSummary.Fact(i18n.text("map.fact.depth"), "$it mm") },
+        node.internalCables.size.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.internal"), it.toString()) },
+        device?.hardware?.poeBudgetWatts?.let { ObjectSummary.Fact(i18n.text("map.fact.poe"), "${PortLogic.poeLoad(project, device).toInt()}/${it.toInt()} W") },
+    ) + (if (device != null && !current) summary.identity.filterNot { it.value == device.physicalLabel } else emptyList())
+    if (secondary.isNotEmpty() || (device != null && !current)) {
+        var open by remember(node.ref) { mutableStateOf(false) }
+        TextButton(onClick = { open = !open }) { Text(i18n.text("map.moreDetails") + if (open) " ▴" else " ▾") }
+        if (open) {
+            FactRows(secondary)
+            if (device != null && !current) LogicalLinksSection(project, hierarchy, device, i18n, actions)
+        }
     }
 }
 
@@ -227,6 +245,7 @@ private fun LogicalLinksSection(project: Project, hierarchy: HierarchyIndex, dev
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, link: SceneLink, cableId: String?, i18n: Messages, actions: MapActions, onSelect: (MapSelection?) -> Unit) {
     val ends = remember(project) { CableEnds(project) }
@@ -242,6 +261,10 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
         (listOf(i18n.plural("map.cableCount", link.cableIds.size)) + link.media.map { i18n.text("map.medium.${it.name}") }).joinToString(" · "),
         i18n, onClose = { onSelect(null) })
     SectionTitle(i18n.text("map.cablesTitle"), link.cableIds.size)
+    var passageFrom by remember(link) { mutableStateOf<String?>(null) }
+    passageFrom?.let { end ->
+        PortQuickDialog(project, end, i18n, PortQuickActions(update = actions.update, photo = actions.photo), onClose = { passageFrom = null }, insertPassage = true)
+    }
     link.cableIds.mapNotNull { id -> project.cables.find { it.id == id } }.forEach { cable ->
         val selected = cable.id == cableId
         Surface(color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium,
@@ -249,7 +272,7 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
                 .clickable(role = Role.Button) { onSelect(MapSelection.Link(link.cableIds, cable.id)) }) {
             Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(cable.codeOrLabel ?: i18n.text("text.89dbe18e8407"), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+                    Text(cable.codeOrLabel ?: CableLabels.suggest(project, cable, index), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
                     Text(cable.medium.toDisplayString(i18n), style = MaterialTheme.typography.labelSmall)
                 }
                 Text("A: ${endLabel(cable, true)}", style = MaterialTheme.typography.bodySmall)
@@ -258,12 +281,14 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
                 remote?.let { r ->
                     Text(i18n.text("map.remoteEnd", r.label(name = r.port?.let { index.portLabel(it.id) } ?: r.device.technicalName)), style = MaterialTheme.typography.bodySmall)
                 }
-                val backbones = project.backbones(cable)
-                if (backbones.isNotEmpty()) Text(i18n.text("map.backbone", backbones.joinToString(", ") { it.name }), style = MaterialTheme.typography.bodySmall)
-                if (selected) Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (selected) FlowRow(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    actions.photo?.let { photo -> FilledTonalButton(onClick = { photo(AttachmentTargetType.CABLE, cable.id) }) {
+                        Text(i18n.text("quick.photo") + (project.attachments.count { it.targetType == AttachmentTargetType.CABLE && it.targetId == cable.id }.takeIf { it > 0 }?.let { " ($it)" } ?: ""))
+                    } }
                     Button(onClick = { actions.edit(MapObjectDraft.cable(project, floorBusinessUnit(project, scene.areaId), scene.areaId, cable.id, i18n), ConfiguratorPage.ESSENTIALS) }) {
                         Text(i18n.text("map.editCable"))
                     }
+                    (cable.portAId ?: cable.portBId)?.let { end -> OutlinedButton(onClick = { passageFrom = end }) { Text(i18n.text("quick.insertPassage")) } }
                     val goTo = actions.goTo
                     val target = remote?.areaId
                     if (goTo != null && remote != null && target != null) OutlinedButton(onClick = { goTo(target, remote.ref) }) {

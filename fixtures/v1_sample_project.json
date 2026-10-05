@@ -41,7 +41,6 @@
               "deviceId": "55555555-5555-5555-5555-555555555551",
               "name": "gi0/1",
               "label": "Uplink a Core",
-              "connectedPortId": "66666666-6666-6666-6666-666666666662",
               "endpointStatus": "CONNECTED",
               "observation": {
                 "source": "Rilievo Tecnico Campo",
@@ -70,7 +69,6 @@
               "deviceId": "55555555-5555-5555-5555-555555555552",
               "name": "te0/0/1",
               "label": "Downlink a Access-01",
-              "connectedPortId": "66666666-6666-6666-6666-666666666661",
               "endpointStatus": "CONNECTED"
             },
             {
@@ -78,7 +76,6 @@
               "deviceId": "55555555-5555-5555-5555-555555555552",
               "name": "te0/0/2",
               "label": "Porta staccata in attesa di verifica",
-              "connectedPortId": null,
               "endpointStatus": "DETACHED_TO_VERIFY"
             }
           ]
@@ -109,6 +106,16 @@
           }
         }
       ]
+    }
+  ],
+  "cables": [
+    {
+      "id": "99999999-9999-9999-9999-999999999991",
+      "codeOrLabel": "UPL-01",
+      "portAId": "66666666-6666-6666-6666-666666666661",
+      "portBId": "66666666-6666-6666-6666-666666666662",
+      "medium": "ETHERNET_COPPER",
+      "color": "Blu"
     }
   ]
 }

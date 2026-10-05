@@ -86,12 +86,14 @@ class PaneAction(val label: String, val onClick: () -> Unit)
 /** Confirmed removal: [label] on the button and the confirm action. */
 class DeleteRequest(val label: String, val title: String, val message: String, val onConfirm: () -> Unit)
 
-/** One filled primary action, outlined secondaries, an overflow menu and a visible delete button last. */
+/** Filled primary action and photo, outlined secondaries, an overflow menu and a visible delete button last. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> = emptyList(), overflow: List<PaneAction> = emptyList(), delete: DeleteRequest? = null) {
+fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> = emptyList(), overflow: List<PaneAction> = emptyList(), delete: DeleteRequest? = null,
+              photo: PaneAction? = null) {
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         primary?.let { Button(onClick = it.onClick) { Text(it.label) } }
+        photo?.let { FilledTonalButton(onClick = it.onClick) { Text(it.label) } }
         secondary.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
         OverflowActions(i18n, overflow)
         delete?.let { DeleteAction(it, i18n) }

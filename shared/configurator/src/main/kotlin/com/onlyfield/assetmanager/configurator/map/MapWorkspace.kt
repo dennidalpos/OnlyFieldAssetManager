@@ -44,6 +44,8 @@ class MapActions(
     val goTo: ((areaId: String, focus: ObjectRef) -> Unit)? = null,
     /** Moves a device or rack to the trash (host storage); null hides "Move to trash". */
     val trash: ((ObjectRef) -> Unit)? = null,
+    /** Takes or picks a photo for a device, rack, port or cable; null hides the photo buttons. */
+    val photo: ((AttachmentTargetType, String) -> Unit)? = null,
 )
 
 /** Business unit that owns the floor, used for new or legacy objects without one. */

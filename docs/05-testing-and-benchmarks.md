@@ -8,7 +8,7 @@ La verifica JVM e Compose usa:
 .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest
 ```
 
-Le suite coprono dominio, serializzazione/cifratura, fusione, migrazioni Room, storage, interoperabilita, configuratore, documenti e UI Desktop. Il workflow CI esegue lo stesso perimetro prima di creare gli artefatti.
+Le suite coprono dominio, serializzazione/cifratura, fusione, storage Room, interoperabilita, configuratore, documenti e UI Desktop. Il workflow CI esegue lo stesso perimetro prima di creare gli artefatti.
 
 ## Progetto demo
 
@@ -23,7 +23,7 @@ Contenuto («Demo OnlyField»):
 - Sede Nord e Sede Sud, ognuna con Piano terra e Primo piano.
 - Per piano: rack RK da 42 U con patch panel PP (24 RJ45, U42) e due switch A/B (24 porte, metà PoE, 4 SFP+, U40 e U39). Sulla mappa: sei prese a muro PR da due porte e due access point.
 - Ogni porta di presa arriva a una porta del patch panel (cavi H); il patch panel va agli switch (cavi PC). Gli AP sono collegati alla presa, quindi il percorso fino allo switch è completo.
-- 6 switch su 8 sono cablati. Restano vuoti SW-S0-B e SW-S1-B. Ogni switch cablato ha un uplink in fibra verso un altro piano (FO-01…05, montanti e dorsale Nord–Sud), utile anche per provare monconi e Vai a.
+- 6 switch su 8 sono cablati. Restano vuoti SW-S0-B e SW-S1-B. Ogni switch cablato ha un uplink in fibra verso un altro piano (FO-01…05), utile anche per provare monconi e Vai a. Sui piani Nord il primo cavo orizzontale dell'AP passa per una scatola di giunzione (GB-N0-01, GB-N1-01): il percorso resta completo e mostra le due direzioni.
 
 Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di `:shared:exchange`); `DemoSeedTest` ne verifica struttura, cablaggio e import.
 
@@ -130,3 +130,12 @@ Controllo visivo:
 - **Desktop**: render Compose a larghezza telefono di icone, mappa chiara e scura, pannello porte da 48, elevazione rack e finestra di inserimento.
 - **Android**: emulatore Pixel 9 con APK debug. Verificati barra in basso, Altro, mappa con bordo e griglia, inserimento rapido di rack e switch in U42, elevazione e porte a tutta larghezza. Corretti durante la prova i pulsanti segmentati ancora tondi e uno switch da 24 porte diviso in due fasce.
 - **Da fare**: la prova sul telefono reale rientra in RES-19.
+
+## Tracciamento fisico e scheda rapida delle porte — 5 ottobre 2026
+
+Baseline prima delle modifiche: `gradlew test` verde. Verifica finale con `gradlew test --rerun`: `BUILD SUCCESSFUL in 34s`, 249 test superati (Core 90, Exchange 40, Desktop 95, Android JVM 24), nessun fallimento; test strumentali Android compilati, APK debug e portable generati.
+
+- **Core**: inserimento di una scatola di giunzione in un cavo con percorso completo, scollegamento, cestino senza orfani e ripristino dei passaggi, riepilogo porta nei due versi ed etichetta proposta.
+- **Exchange**: versione "1" in export, rifiuto dei pacchetti 1.11, demo con giunzioni a percorso completo.
+- **Desktop**: collegamento dalla scheda rapida nell'editor; collegamenti logici in Altri dettagli. Render del demo ispezionato (pannello mappa, porta collegata e libera, inserimento passaggio).
+- **Da fare**: scheda rapida su Android nativo e foto porta/cavo (RES-19, FOTO-04 in RES-13).

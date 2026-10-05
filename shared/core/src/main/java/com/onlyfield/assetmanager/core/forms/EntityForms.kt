@@ -146,14 +146,8 @@ data class CableForm(
     val portAId: String? = null,
     val portBId: String? = null,
     val medium: CableMedium = CableMedium.ETHERNET_COPPER,
-    val connectorA: String = "",
-    val connectorB: String = "",
-    val nominalCharacteristics: String = "",
-    val observedSpeed: String = "",
     val color: String = "",
     val lengthValue: String = "",
-    val orientation: CableOrientation = CableOrientation.NONE,
-    val sharedPathSegmentIds: List<String> = emptyList(),
     val notes: String = "",
 ) {
     fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
@@ -167,63 +161,22 @@ data class CableForm(
         portAId = portAId,
         portBId = portBId,
         medium = medium,
-        connectorA = connectorA.orNull(),
-        connectorB = connectorB.orNull(),
-        nominalCharacteristics = nominalCharacteristics.orNull(),
-        observedSpeed = observedSpeed.orNull(),
         color = color.orNull(),
         lengthValue = parseDecimal(lengthValue),
-        orientation = orientation,
-        sharedPathSegmentIds = sharedPathSegmentIds,
         notes = notes.orNull(),
     )
 
     companion object {
         fun from(c: Cable?) = c?.let {
-            CableForm(
-                it.deviceModelId, it.codeOrLabel.orEmpty(), it.portAId, it.portBId, it.medium, it.connectorA.orEmpty(), it.connectorB.orEmpty(),
-                it.nominalCharacteristics.orEmpty(), it.observedSpeed.orEmpty(), it.color.orEmpty(),
-                it.lengthValue?.toString().orEmpty(), it.orientation, it.sharedPathSegmentIds, it.notes.orEmpty()
-            )
+            CableForm(it.deviceModelId, it.codeOrLabel.orEmpty(), it.portAId, it.portBId, it.medium, it.color.orEmpty(), it.lengthValue?.toString().orEmpty(), it.notes.orEmpty())
         } ?: CableForm()
-    }
-}
-
-data class SharedPathForm(
-    val name: String = "",
-    val sourceAreaId: String? = null,
-    val targetAreaId: String? = null,
-    val description: String = "",
-    val capacityMaxCables: String = "",
-    val notes: String = "",
-) {
-    fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
-        FieldValidators.required(name, i18n.text("text.5086900635fe"), i18n = i18n)?.let { put("name", it) }
-        FieldValidators.int(capacityMaxCables, min = 1, i18n = i18n)?.let { put("capacityMaxCables", it) }
-    }
-
-    fun toSegment(existing: SharedPathSegment?): SharedPathSegment = (existing ?: SharedPathSegment(name = name.trim())).copy(
-        name = name.trim(),
-        sourceAreaId = sourceAreaId,
-        targetAreaId = targetAreaId,
-        description = description.orNull(),
-        capacityMaxCables = parseInt(capacityMaxCables),
-        notes = notes.orNull(),
-    )
-
-    companion object {
-        fun from(s: SharedPathSegment?) = s?.let {
-            SharedPathForm(it.name, it.sourceAreaId, it.targetAreaId, it.description.orEmpty(), it.capacityMaxCables?.toString().orEmpty(), it.notes.orEmpty())
-        } ?: SharedPathForm()
     }
 }
 
 data class PanelMappingForm(
     val portAId: String? = null,
     val portBId: String? = null,
-    val mappingType: String = "CROSS_CONNECT",
     val isUnknownPassage: Boolean = false,
-    val notes: String = "",
 ) {
     fun errors(i18n: Messages = Messages()): Map<String, String> = buildMap {
         if (portAId == null) put("portAId", i18n.text("text.c3f00a679699"))
@@ -232,14 +185,11 @@ data class PanelMappingForm(
 
     fun toMapping(existing: PanelMapping?): PanelMapping {
         val a = requireNotNull(portAId)
-        return (existing ?: PanelMapping(portAId = a)).copy(
-            portAId = a, portBId = portBId, mappingType = mappingType, isUnknownPassage = isUnknownPassage, notes = notes.orNull()
-        )
+        return (existing ?: PanelMapping(portAId = a)).copy(portAId = a, portBId = portBId, isUnknownPassage = isUnknownPassage)
     }
 
     companion object {
-        fun from(m: PanelMapping?) = m?.let { PanelMappingForm(it.portAId, it.portBId, it.mappingType, it.isUnknownPassage, it.notes.orEmpty()) }
-            ?: PanelMappingForm()
+        fun from(m: PanelMapping?) = m?.let { PanelMappingForm(it.portAId, it.portBId, it.isUnknownPassage) } ?: PanelMappingForm()
     }
 }
 

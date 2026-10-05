@@ -7,6 +7,7 @@ Usare un progetto di prova senza credenziali reali. Ogni esito deve indicare dis
 | FOTO-01 | Scatto e riapertura offline | Allegato e destinazione corretti. |
 | FOTO-02 | Annullamento o permesso negato | Nessun allegato vuoto; nuovo tentativo possibile. |
 | FOTO-03 | Foto, rotazione e scambio cifrato | Byte e destinazione conservati. |
+| FOTO-04 | Foto porta e foto cavo dalla scheda rapida della porta | Allegato con destinazione PORT o CABLE, visibile dopo export/import. |
 | QR-01 | QR OFAM con fotocamera | Si apre l'entita corretta. |
 | QR-02 | Barcode, sconosciuto e multiplo | Risposta esplicita, nessuna modifica automatica. |
 | QR-03 | Luce bassa, permesso negato, uscita | Recupero e navigazione senza blocco. |
@@ -54,5 +55,5 @@ Restano da eseguire:
 
 - TalkBack: annunci non verificabili sull'emulatore senza audio; controllato solo l'albero semantico.
 - Le combinazioni 360 dp chiaro e 411 dp scuro.
-- Zoom a due dita, moncone e Vai a, Collegamenti logici, passo logico nel percorso della porta.
+- Zoom a due dita, moncone e Vai a, Collegamenti logici (in Altri dettagli), scheda rapida della porta (Collega a…, Inserisci passaggio con nuova scatola di giunzione, Scollega, Foto porta e cavo).
 - La prova sul moto g86.
