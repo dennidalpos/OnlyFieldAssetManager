@@ -10,7 +10,9 @@ Gli export descrivono inventario (con sede, gruppo e stato operativo), porte e c
 
 `DocumentSelection` applica sede, piano effettivo (anche ereditato da rack/contenitori), categoria e classificazione a inventario, rack, rete, alimentazione, allegati e disegni. Rete e allegati con ambito progetto restano comuni; quelli associati a sedi o oggetti esclusi non compaiono. Le planimetrie riservate non sono disegnate senza inclusione esplicita. Nei percorsi XLSX/PDF e nella topologia sono presenti anche estremi e passanti esterni necessari a spiegare un percorso che tocca un apparato selezionato; non altre reti. I nodi esterni della topologia PDF sono grigi.
 
-Il PDF Android usa la stessa selezione, ma la paginazione e le sezioni offerte sono incomplete (RES-21); la completezza dei formati Desktop non attesta quella Android.
+Il PDF Android usa la stessa selezione e pagina tutte le sei sezioni offerte: inventario, schede rack, porte e cablaggio, rete logica, alimentazione/badge, note e catalogo allegati. Le note e gli allegati sono indipendenti dall'inventario; nessun limite al numero di apparati o allegati. Nomi lunghi e note passano su più righe e pagine. Gli allegati sono elencati con nome, tipo, file e attribuzione; i loro file restano nel pacchetto `.ofam`.
+
+Le schede rack Android includono fronte/retro scalati alla pagina, verso di numerazione e lista completa, anche per apparati senza U. L'export del singolo rack include inoltre gli apparati fuori rack dello stesso piano. Planimetrie, percorsi e topologia nel PDF sono opzioni Desktop, non offerte dal dialogo Android. PDF e stampa Android usano lo stesso generatore; i dialoghi e l'annullamento di stampa restano in RES-19.
 
 ## Excel
 

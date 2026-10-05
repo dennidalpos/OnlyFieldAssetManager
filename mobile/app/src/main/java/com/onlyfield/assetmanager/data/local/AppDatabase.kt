@@ -33,7 +33,7 @@ import androidx.room.RoomDatabase
         TrashItemEntity::class,
         SyncSnapshotEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {

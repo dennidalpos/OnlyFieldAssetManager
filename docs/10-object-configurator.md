@@ -8,7 +8,7 @@ Rack, apparati e cavi possono usare modelli di progetto. Un modello conserva la 
 
 Il percorso è solo fisico: cavi e passaggi interni, senza passi logici WAN/VPN (restano nel pannello del dispositivo). `core.forms.PortSummaries` riassume per una porta ciò che serve per etichettare e collegare: stato, cavo e numero di foto della porta e del cavo. `core.forms.PathSchematics` costruisce lo schema del percorso (`PathSchematic`): oggetti attraversati (`PathStation`, con porta di ingresso e di uscita per i passanti) uniti dai cavi (`PathSegment`, con etichetta), su entrambi i lati di un passante; se un solo estremo è attivo il disegno parte da quello; un estremo passivo o senza porta è una fine aperta. `PathSchematicView` (condiviso) lo disegna in verticale: apparati attivi pieni, passivi vuoti, estremo sconosciuto rosso, cavo con etichetta, mezzo, colore e lunghezza; l'oggetto della porta è evidenziato, gli altri hanno Apri. Il modello non dipende da Compose ed è pensato per il PDF (EVO-08). `CableLabels.suggest` propone l'etichetta del cavo (`SW-01/P5 – PP-02/P12`), compatibile con la stampa delle etichette PDF.
 
-Il contratto `.ofam` 1 conserva hardware, modelli e porte; Room 1 li persiste.
+Il contratto `.ofam` 1 conserva hardware, modelli e porte; Room 2 li persiste.
 
 ## Inserimento rapido
 

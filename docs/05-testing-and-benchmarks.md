@@ -10,7 +10,7 @@ La verifica JVM e Compose usa:
 
 Le suite coprono dominio, serializzazione/cifratura, fusione, storage Room, interoperabilita, configuratore, documenti e UI Desktop. Il workflow CI esegue lo stesso perimetro prima di creare gli artefatti.
 
-Le regressioni dell'audit sono permanenti: `ImportedProtectionTest` verifica la riapertura su database Room su file e le regole di sostituzione/fusione; `AttachmentConfinementTest` verifica percorsi esterni, traversal e allegati legittimi; `MissingPayloadTest` verifica catalogo, checksum, alias legacy e pacchetti cifrati; `ImportPayloadReviewTest` verifica conferma e avviso visibile nella UI Desktop. `ProtectedMediaTest` copre import protetto, rendering da memoria, riapertura, password errata, cambio/rimozione password, protezione dei file esistenti e salvataggio di nuovi media senza copie temporanee. Le prove JVM non sostituiscono il collaudo SQLCipher su dispositivo né la verifica visiva Android (AUD-03 e RES-19).
+Le regressioni dell'audit sono permanenti: `ImportedProtectionTest` verifica la riapertura su database Room su file e le regole di sostituzione/fusione; `AttachmentConfinementTest` verifica percorsi esterni, traversal e allegati legittimi; `MissingPayloadTest` verifica catalogo, checksum, alias legacy e pacchetti cifrati; `ImportPayloadReviewTest` verifica conferma e avviso visibile nella UI Desktop. `ProtectedMediaTest` copre import protetto, rendering da memoria, riapertura, password errata, cambio/rimozione password, protezione dei file esistenti e salvataggio di nuovi media senza copie temporanee. Le prove JVM non sostituiscono le prove native SQLCipher, ora eseguite, né la verifica visiva Android ancora aperta in RES-19.
 
 ## Progetto demo
 
@@ -43,10 +43,22 @@ Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di 
 ## Limiti noti
 
 - Il collaudo su telefono, multitouch, fotocamera, scanner e lettore USB richiede hardware reale: [checklist](testing/hardware-checklist.md).
-- Su API 37 due test UI si arrestano in Espresso prima delle asserzioni; il dettaglio e RES-17 nel [tracker](../PROJECT_STATUS.json).
+- RES-17 chiuso: suite nativa API 37 verde con Espresso 3.7.0; la checklist hardware e visiva rimane distinta.
 - La pubblicazione su tag è verificata dalla release v1.0.1 (run 37238450362).
 
 Le prove non eseguite non sono considerate superate.
+
+## Aggiornamento SQLCipher (AUD-03) — 5 ottobre 2026
+
+AUD-03 è ora chiuso: `EncryptedSchemaUpgradeTest` usa lo schema storico del commit `f17d8a7`, ricostruito nel database SQLCipher isolato, e il percorso reale `EncryptedDatabase.open`. Upgrade v1 → v2, eliminazione delle tabelle precedenti, downgrade 14 → 2, riapertura a versione invariata e import completo verificati sul moto g86 API 36: 4 test superati. L'import esplicito nel database applicativo vuoto e la riapertura di «Demo Comune» hanno superato una quinta esecuzione dedicata. Emulatore API 37: tre scenari di versione superati (`BUILD SUCCESSFUL in 18s`). La prova JVM resta distinta da SQLCipher nativo; dettagli, backup e comandi in [roadmap](../roadmap.md).
+
+## Completezza PDF Android (RES-21) — 5 ottobre 2026
+
+Quattro regressioni native `CompositePdfTest` su Pixel 9, Android 17/API 37: 100 apparati, rack da 60 U e lista completa, 75 allegati con attribuzioni, nota più lunga di una pagina, sei sezioni, filtri, selezioni indipendenti e lingue it/en/es. Credenziali e allegati riservati esclusi. La prova iniziale ha riprodotto quattro fallimenti nel vecchio generatore; finale `:mobile:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.onlyfield.assetmanager.CompositePdfTest --no-parallel --max-workers=1`, con `ANDROID_SERIAL=emulator-5554`: `BUILD SUCCESSFUL in 13s`, 4 test senza fallimenti/errori/saltati. `LocalizedPdfTest` eseguito anche separatamente: superato con Room e PDF nativi nelle tre lingue.
+
+Sette PDF generati nell'emulatore, 46 pagine renderizzate e ispezionate in `mobile/app/build/reports/pdf-native/`: report completo 21 pagine, sole note/allegati 6, rack completo 3, oltre a filtri e lingue. Il lettore nativo può frammentare il testo in singoli glifi e inserire spazi negli identificativi: le asserzioni ricompongono i frammenti senza perdere i controlli su ogni codice. RES-21 chiuso; la stampa fisica e i suoi dialoghi restano in RES-19.
+
+Fonti ufficiali consultate: [PdfDocument](https://developer.android.com/reference/android/graphics/pdf/PdfDocument), [StaticLayout](https://developer.android.com/reference/android/text/StaticLayout), [PdfRenderer](https://developer.android.com/reference/android/graphics/pdf/PdfRenderer).
 
 ## Revisione UI/UX — 4 ottobre 2026
 
@@ -193,3 +205,11 @@ Controllo conclusivo: `ObjectPickerUiTest` verifica anche la scelta esplicita de
 I render Desktop a larghezza telefono non verificano il runtime Android: nuovi flussi, TalkBack, multitouch, trascinamento porte e foto su hardware restano RES-13/RES-19. Il problema Room AUD-03 non è modificato da questo intervento.
 
 Controllo conclusivo delle immagini: `:pc:app:test --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 35s`, 133 test superati. Topologia aggiornata e retro con cavo attestato ispezionati nei PNG `visual-configurator/topology-current.png` e `visual-configurator/rear-560-false.png`. La cattura del dialogo dopo un’interazione non era affidabile nel renderer dei test; per la verifica grafica del retro cablato è stato usato il render isolato delle griglie. Le verifiche funzionali del dialogo restano superate.
+
+## Suite nativa API 37 (RES-17) — 5 ottobre 2026
+
+Espresso 3.6.1 chiamava per reflection `InputManager.getInstance`, assente su API 37; fallimento riprodotto prima delle asserzioni in `LocalizedUiTest` e `FloorGestureNativeTest`. Aggiornata soltanto la dipendenza esistente Espresso a 3.7.0, che usa `getSystemService`; nessun test disabilitato o controllo bypassato. Fonte: [note ufficiali AndroidX Test/Espresso 3.7.0](https://developer.android.com/jetpack/androidx/releases/test#espresso_3.7.0).
+
+`ANDROID_SERIAL=emulator-5554` con `:mobile:app:connectedDebugAndroidTest --no-parallel --max-workers=1`: verifica conclusiva `BUILD SUCCESSFUL in 23s`, **13 test**, zero fallimenti/errori/saltati. Stessa suite tramite `adb -s ZY32LNCB8C shell am instrument -w -r com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner`: **13 test superati** in 8,947 s sul moto g86 API 36, senza attivare il parametro di reimport del database applicativo. Include PDF, SQLCipher, localizzazione e tocco/trascinamento nativo della mappa. La fixture storica ricrea anche gli indici; la lettura gestisce le tabelle che non ne dichiarano, correggendo un errore emerso nell'ultimo controllo.
+
+Regressioni JVM complete dopo i problemi risolti: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 26s`, **340 test** (108/64/133/35), nessun fallimento/errore/saltato. RES-17 rimosso dal tracker. Hardware, matrice UX completa, TalkBack e stampa nativa rimangono in RES-13/RES-19/RES-23.

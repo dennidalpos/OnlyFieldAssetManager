@@ -22,7 +22,7 @@ object EncryptedDatabase {
     private const val KEY_FILE = "db_key.bin"
     private const val GCM_IV_BYTES = 12
 
-    /** Greenfield schema (v1): any other on-disk version is dropped and recreated. */
+    /** Greenfield v2: recreate test data on version changes; never reuse a version after schema edits. */
     fun open(context: Context): AppDatabase {
         System.loadLibrary("sqlcipher")
         val app = context.applicationContext
@@ -30,7 +30,6 @@ object EncryptedDatabase {
         return Room.databaseBuilder(app, AppDatabase::class.java, DB_NAME)
             .openHelperFactory(SupportOpenHelperFactory(key))
             .fallbackToDestructiveMigration(dropAllTables = true)
-            .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
             .build()
     }
 

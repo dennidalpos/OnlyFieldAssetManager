@@ -2,16 +2,16 @@
 
 ## Workflow & Guidelines
 
-- Entry: `README.md`; domain docs: `docs/`; decisions: `plan.md`; progress/evidence: `roadmap.md`.
+- Entry `README.md`; domain `docs/`; decisions `plan.md`; evidence `roadmap.md`.
 - Code, identifiers and comments are in English. Documentation is in Italian.
-- `PROJECT_STATUS.json` holds only open work; completion evidence belongs in `roadmap.md`. Update domain docs after each task.
+- `PROJECT_STATUS.json`: open work only; completions in `roadmap.md`. Update domain docs per task.
 - Core and exchange must never depend on Android UI or Context APIs.
-- Room v1 greenfield: no migrations; destructive fallback handles version changes, not a changed identity at v1 (AUD-03).
+- Room v2, no migrations; only `fallbackToDestructiveMigration(true)` for both directions. Downgrade-only overrides upgrade fallback. Bump version on schema edits.
 - Hardware port layouts/PoE overrides use existing hardware JSON; no Room columns change.
 - Both apps compile `shared/configurator` Compose sources; hardware/ports/continuity stay in `core.forms` and `core.model.ConnectionGraph`.
 - Maps/containment: `core.model.MapScene/ObjectMap/ObjectHierarchy`; shared `configurator.map.MapWorkspace`; presets/ports: `core.forms.DevicePresets/PortLogic`. Rendering: Android PdfRenderer, Desktop PDFBox 3.0.8.
 - Shared edits/forms/labels/wizard: `core.edit`, `core.forms`, `core.display`, `core.onboarding`. Forms must `copy()` existing entities to preserve hidden fields.
-- Windows portable build: `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP under `dist/OnlyFieldAssetManager`; data stays next to the EXE.
+- `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data next to EXE.
 - `core.i18n.Messages`: UTF-8 it/en/es, Italian default; capture at generation start, preserve user text.
 - CI: manual artifacts; tags publish APK debug, ZIP without data, SHA-256. `prepare-release.ps1` needs empty output.
 - Verification: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`.

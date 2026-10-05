@@ -1,381 +1,258 @@
 package com.onlyfield.assetmanager.export
 
-import com.onlyfield.assetmanager.core.display.toDisplayString
-
-import com.onlyfield.assetmanager.core.i18n.Messages
-
+import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.pdf.PdfDocument
-import com.onlyfield.assetmanager.core.model.Device
-import com.onlyfield.assetmanager.core.model.ExportFilterConfig
-import com.onlyfield.assetmanager.core.model.ObservationStatus
-import com.onlyfield.assetmanager.core.model.Project
-import com.onlyfield.assetmanager.core.model.Rack
-import com.onlyfield.assetmanager.core.model.RackSide
-import com.onlyfield.assetmanager.core.model.ReportSelection
+import android.text.Layout
+import android.text.StaticLayout
+import android.text.TextPaint
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.toDisplayString
+import com.onlyfield.assetmanager.core.i18n.Messages
+import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.exchange.DocumentSelection
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 object PdfExportManager {
-
-    /** Writes a rack PDF without credentials. */
+    /** Writes the elevation and complete device list without credentials. */
     fun exportRackPdfToStream(
         project: Project,
         rack: Rack,
         devicesInRack: List<Device>,
         unmountedDevices: List<Device>,
         outputStream: OutputStream,
-        i18n: Messages = Messages()) {
-        val pdfDoc = PdfDocument()
-
-        try {
-            val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create() // A4 at 72 DPI
-            val page = pdfDoc.startPage(pageInfo)
-
-            val canvas = page.canvas
-
-            val paint = Paint().apply { isAntiAlias = true }
-            val textPaint = Paint().apply {
-                isAntiAlias = true
-                textSize = 10f
-                color = Color.BLACK
+        i18n: Messages = Messages(),
+    ) {
+        PagedReport(i18n).use { report ->
+            report.heading(i18n.text("text.f24b33e201a1", rack.name), 18f)
+            report.text(i18n.text("text.c9cbbfd9ed3d", project.name))
+            report.rack(rack, devicesInRack)
+            if (unmountedDevices.isNotEmpty()) {
+                report.heading(i18n.text("text.3f03be4817b0"))
+                unmountedDevices.forEach { report.device(it) }
             }
-
-            var y = 40f
-
-            paint.color = Color.rgb(24, 76, 120)
-            canvas.drawRect(30f, y, 565f, y + 45f, paint)
-
-            textPaint.color = Color.WHITE
-            textPaint.textSize = 16f
-            textPaint.isFakeBoldText = true
-            canvas.drawText(i18n.text("text.f24b33e201a1", rack.name), 40f, y + 28f, textPaint)
-
-            y += 60f
-
-            textPaint.color = Color.BLACK
-            textPaint.textSize = 10f
-            textPaint.isFakeBoldText = false
-
-            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY)
-            val dateStr = sdf.format(Date())
-
-            canvas.drawText(i18n.text("text.c9cbbfd9ed3d", project.name), 30f, y, textPaint)
-            canvas.drawText(i18n.text("text.01c4d3f4fffb", rack.heightU), 300f, y, textPaint)
-            y += 15f
-            canvas.drawText(i18n.text("text.4339a839c0fc", dateStr), 30f, y, textPaint)
-            canvas.drawText(i18n.text("text.c8b4873bee3b", rack.depthMm ?: "-"), 300f, y, textPaint)
-
-            y += 30f
-
-            val rackXFront = 40f
-            val rackXRear = 180f
-            val rackWidth = 110f
-            val rackUHeight = 12f
-            val rackTotalHeight = rack.heightU * rackUHeight
-
-            val diagramStartY = y
-
-            paint.color = Color.LTGRAY
-            paint.style = Paint.Style.STROKE
-            paint.strokeWidth = 2f
-            canvas.drawRect(rackXFront, diagramStartY, rackXFront + rackWidth, diagramStartY + rackTotalHeight, paint)
-
-            canvas.drawRect(rackXRear, diagramStartY, rackXRear + rackWidth, diagramStartY + rackTotalHeight, paint)
-
-            paint.style = Paint.Style.FILL
-            textPaint.textSize = 9f
-            textPaint.isFakeBoldText = true
-            canvas.drawText("FRONTE", rackXFront + 30f, diagramStartY - 8f, textPaint)
-            canvas.drawText("RETRO", rackXRear + 35f, diagramStartY - 8f, textPaint)
-
-            textPaint.isFakeBoldText = false
-            textPaint.textSize = 7f
-
-            for (u in 1..rack.heightU) {
-                val slotY = diagramStartY + ((rack.heightU - u) * rackUHeight)
-                paint.color = Color.rgb(230, 230, 230)
-                paint.strokeWidth = 0.5f
-                canvas.drawLine(rackXFront, slotY, rackXFront + rackWidth, slotY, paint)
-                canvas.drawLine(rackXRear, slotY, rackXRear + rackWidth, slotY, paint)
-
-                canvas.drawText("U$u", 22f, slotY + 9f, textPaint)
-            }
-
-            val drawnDevicesFront = mutableSetOf<String>()
-            for (dev in devicesInRack) {
-                if (dev.rackSide == RackSide.REAR) continue
-                val startU = dev.positionU ?: continue
-                if (drawnDevicesFront.contains(dev.id)) continue
-                drawnDevicesFront.add(dev.id)
-
-                val devTopY = diagramStartY + ((rack.heightU - (startU + dev.heightU - 1)) * rackUHeight)
-                val devHeightPx = dev.heightU * rackUHeight
-
-                paint.color = Color.rgb(220, 235, 252)
-                paint.style = Paint.Style.FILL
-                val rect = RectF(rackXFront + 1f, devTopY + 1f, rackXFront + rackWidth - 1f, devTopY + devHeightPx - 1f)
-                canvas.drawRoundRect(rect, 2f, 2f, paint)
-
-                paint.color = Color.rgb(30, 90, 150)
-                paint.style = Paint.Style.STROKE
-                paint.strokeWidth = 1f
-                canvas.drawRoundRect(rect, 2f, 2f, paint)
-
-                textPaint.color = Color.rgb(10, 40, 90)
-                textPaint.textSize = 8f
-                canvas.drawText(dev.technicalName.take(18), rackXFront + 4f, devTopY + devHeightPx / 2f + 3f, textPaint)
-            }
-
-            val drawnDevicesRear = mutableSetOf<String>()
-            for (dev in devicesInRack) {
-                if (dev.rackSide == RackSide.FRONT) continue
-                val startU = dev.positionU ?: continue
-                if (drawnDevicesRear.contains(dev.id)) continue
-                drawnDevicesRear.add(dev.id)
-
-                val devTopY = diagramStartY + (rack.heightU - (startU + dev.heightU - 1)) * rackUHeight
-                val devHeightPx = dev.heightU * rackUHeight
-
-                paint.color = Color.rgb(252, 235, 220)
-                paint.style = Paint.Style.FILL
-                val rect = RectF(rackXRear + 1f, devTopY + 1f, rackXRear + rackWidth - 1f, devTopY + devHeightPx - 1f)
-                canvas.drawRoundRect(rect, 2f, 2f, paint)
-
-                paint.color = Color.rgb(180, 90, 30)
-                paint.style = Paint.Style.STROKE
-                paint.strokeWidth = 1f
-                canvas.drawRoundRect(rect, 2f, 2f, paint)
-
-                textPaint.color = Color.rgb(90, 40, 10)
-                textPaint.textSize = 8f
-                canvas.drawText(dev.technicalName.take(18), rackXRear + 4f, devTopY + devHeightPx / 2f + 3f, textPaint)
-            }
-
-            val tableX = 310f
-            var tableY = diagramStartY
-
-            textPaint.color = Color.BLACK
-            textPaint.textSize = 10f
-            textPaint.isFakeBoldText = true
-            canvas.drawText(i18n.text("text.ac7f2dbf5993", devicesInRack.size), tableX, tableY - 8f, textPaint)
-
-            paint.color = Color.rgb(240, 240, 240)
-            paint.style = Paint.Style.FILL
-            canvas.drawRect(tableX, tableY, 565f, tableY + 18f, paint)
-
-            textPaint.textSize = 8f
-            textPaint.isFakeBoldText = true
-            canvas.drawText(i18n.text("text.c048ae78b322"), tableX + 4f, tableY + 12f, textPaint)
-            canvas.drawText(i18n.text("text.29caae5fe1e7"), tableX + 45f, tableY + 12f, textPaint)
-            canvas.drawText(i18n.text("text.22ab4cafea0c"), tableX + 160f, tableY + 12f, textPaint)
-            canvas.drawText(i18n.text("text.2edfc95a3c46"), tableX + 210f, tableY + 12f, textPaint)
-
-            tableY += 20f
-            textPaint.isFakeBoldText = false
-
-            for (dev in devicesInRack.sortedByDescending { it.positionU ?: 0 }) {
-                canvas.drawText("U${dev.positionU ?: "-"}", tableX + 4f, tableY + 12f, textPaint)
-                canvas.drawText(dev.technicalName.take(20), tableX + 45f, tableY + 12f, textPaint)
-                canvas.drawText(dev.rackSide.toDisplayString(i18n), tableX + 160f, tableY + 12f, textPaint)
-                canvas.drawText(dev.ports.size.toString(), tableX + 210f, tableY + 12f, textPaint)
-
-                paint.color = Color.LTGRAY
-                paint.strokeWidth = 0.5f
-                canvas.drawLine(tableX, tableY + 16f, 565f, tableY + 16f, paint)
-
-                tableY += 18f
-                if (tableY > 780f) break
-            }
-
-            pdfDoc.finishPage(page)
-
-            outputStream.use { stream ->
-                pdfDoc.writeTo(stream)
-            }
-        } finally {
-            pdfDoc.close()
+            report.write(outputStream)
         }
     }
 
-    /** Writes a filtered multi-page PDF without credentials. */
+    /** All six sections offered by Android share the same paginated writer. */
     fun exportCompositeReportPdfToStream(
         project: Project,
         filterConfig: ExportFilterConfig,
         selection: ReportSelection,
         outputStream: OutputStream,
-        i18n: Messages = Messages()) {
-        val selectedProject = com.onlyfield.assetmanager.exchange.DocumentSelection(project, filterConfig).project
-        val pdfDoc = PdfDocument()
+        i18n: Messages = Messages(),
+    ) {
+        val selected = DocumentSelection(project, filterConfig).project
+        val index = ProjectIndex(selected)
+        PagedReport(i18n).use { report ->
+            report.heading(filterConfig.titleOverride?.ifBlank { null } ?: i18n.text("text.40ceb13eaea5"), 18f)
+            report.text(i18n.text("text.c9cbbfd9ed3d", selected.name))
+            report.text(i18n.text("text.b1b3e27e33a1", filterConfig.authorName, SimpleDateFormat("dd/MM/yyyy HH:mm", i18n.locale).format(Date())))
+            report.text(i18n.text("text.9046ee10595c", index.devices.size, selected.racks.size, selected.cables.size) +
+                i18n.text("text.fde3438fc2a1", selected.vlans.size, selected.powerFeeds.size))
 
-        try {
-            val filteredDevices = selectedProject.sites.flatMap { it.devices }
-
-            var pageNumber = 1
-
-            val pageInfo1 = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
-            val page1 = pdfDoc.startPage(pageInfo1)
-            if (page1 != null) {
-                val canvas = page1.canvas
-                val paint = Paint().apply { isAntiAlias = true }
-                val textPaint = Paint().apply {
-                    isAntiAlias = true
-                    textSize = 10f
-                    color = Color.BLACK
-                }
-
-                var y = 40f
-
-                paint.color = Color.rgb(24, 76, 120)
-                canvas.drawRect(30f, y, 565f, y + 60f, paint)
-
-                textPaint.color = Color.WHITE
-                textPaint.textSize = 18f
-                textPaint.isFakeBoldText = true
-                canvas.drawText(filterConfig.titleOverride ?: i18n.text("text.40ceb13eaea5"), 45f, y + 28f, textPaint)
-
-                textPaint.textSize = 11f
-                textPaint.isFakeBoldText = false
-                canvas.drawText(i18n.text("text.c9cbbfd9ed3d", project.name), 45f, y + 48f, textPaint)
-
-                y += 80f
-
-                val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.ITALY)
-                val dateStr = sdf.format(Date())
-
-                textPaint.color = Color.BLACK
-                textPaint.textSize = 10f
-                canvas.drawText(i18n.text("text.0ea77b6420df", filterConfig.authorName), 35f, y, textPaint)
-                canvas.drawText(i18n.text("text.ddaa8218e575", dateStr), 300f, y, textPaint)
-                y += 18f
-                canvas.drawText(i18n.text("text.54c2933191f6", filterConfig.selectedSiteId ?: i18n.text("text.8497975606d6")), 35f, y, textPaint)
-                canvas.drawText(i18n.text("text.44f131081b2d", if (filterConfig.includeConfidential) i18n.text("text.b3186dc0586e") else i18n.text("text.0c2690153ac8")), 300f, y, textPaint)
-
-                y += 35f
-
-                paint.color = Color.rgb(245, 247, 250)
-                paint.style = Paint.Style.FILL
-                canvas.drawRoundRect(RectF(35f, y, 560f, y + 100f), 6f, 6f, paint)
-
-                paint.color = Color.rgb(200, 210, 225)
-                paint.style = Paint.Style.STROKE
-                paint.strokeWidth = 1f
-                canvas.drawRoundRect(RectF(35f, y, 560f, y + 100f), 6f, 6f, paint)
-
-                textPaint.color = Color.rgb(24, 76, 120)
-                textPaint.textSize = 12f
-                textPaint.isFakeBoldText = true
-                canvas.drawText(i18n.text("text.8679e4cb849b"), 45f, y + 20f, textPaint)
-
-                textPaint.color = Color.BLACK
-                textPaint.textSize = 10f
-                textPaint.isFakeBoldText = false
-
-                val openIssues = filteredDevices.count { it.observation?.status == ObservationStatus.TO_VERIFY || it.observation?.status == ObservationStatus.CONFLICT }
-
-                canvas.drawText(i18n.text("text.46f30e92b9c4", filteredDevices.size), 45f, y + 45f, textPaint)
-                canvas.drawText(i18n.text("text.f70e0fdb83c5", selectedProject.racks.size), 280f, y + 45f, textPaint)
-                canvas.drawText(i18n.text("text.2a47e0afd9c5", selectedProject.cables.size), 45f, y + 65f, textPaint)
-                canvas.drawText(i18n.text("text.a197c01d82e1", selectedProject.vlans.size), 280f, y + 65f, textPaint)
-                canvas.drawText(i18n.text("text.62bbfb1e07f1", openIssues), 45f, y + 85f, textPaint)
-
-                y += 130f
-
-                textPaint.textSize = 12f
-                textPaint.isFakeBoldText = true
-                canvas.drawText(i18n.text("text.d764b2e1bfed"), 35f, y, textPaint)
-                y += 20f
-
-                textPaint.textSize = 10f
-                textPaint.isFakeBoldText = false
-                if (selection.includeInventoryTable) { canvas.drawText(i18n.text("text.de5ddf03b157"), 45f, y, textPaint); y += 18f }
-                if (selection.includeRackCards) { canvas.drawText(i18n.text("text.b10589659b2f"), 45f, y, textPaint); y += 18f }
-                if (selection.includeCablingAndPorts) { canvas.drawText(i18n.text("text.d6ca39b21683"), 45f, y, textPaint); y += 18f }
-                if (selection.includeLogicalNetwork) { canvas.drawText(i18n.text("text.454ad4a7351a"), 45f, y, textPaint); y += 18f }
-                if (selection.includePowerAndBadges) { canvas.drawText(i18n.text("text.d96349382a35"), 45f, y, textPaint); y += 18f }
-                if (selection.includeNotesAndAttachments) canvas.drawText(i18n.text("text.ab6767f4e650"), 45f, y, textPaint)
-
-                pdfDoc.finishPage(page1)
-            }
-
-            if (selection.includeInventoryTable && filteredDevices.isNotEmpty()) {
-                pageNumber++
-                val pageInfo2 = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
-                val page2 = pdfDoc.startPage(pageInfo2)
-                if (page2 != null) {
-                    val canvas = page2.canvas
-                    val paint = Paint().apply { isAntiAlias = true }
-                    val textPaint = Paint().apply { isAntiAlias = true; textSize = 9f; color = Color.BLACK }
-
-                    var y = 40f
-                    textPaint.textSize = 14f
-                    textPaint.isFakeBoldText = true
-                    canvas.drawText(i18n.text("text.334e5b0cffff"), 35f, y, textPaint)
-                    y += 25f
-
-                    paint.color = Color.rgb(230, 235, 245)
-                    paint.style = Paint.Style.FILL
-                    canvas.drawRect(35f, y, 560f, y + 20f, paint)
-
-                    textPaint.textSize = 8f
-                    textPaint.isFakeBoldText = true
-                    canvas.drawText(i18n.text("text.29caae5fe1e7"), 40f, y + 13f, textPaint)
-                    canvas.drawText(i18n.text("text.3c3de0c91c5f"), 160f, y + 13f, textPaint)
-                    canvas.drawText(i18n.text("text.54276aa0307f"), 260f, y + 13f, textPaint)
-                    canvas.drawText(i18n.text("text.6f4d3bf19ead"), 370f, y + 13f, textPaint)
-                    canvas.drawText(i18n.text("text.5d788017bfe4"), 480f, y + 13f, textPaint)
-
-                    y += 22f
-                    textPaint.isFakeBoldText = false
-
-                    for (dev in filteredDevices) {
-                        val rackName = selectedProject.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
-                        val rackPos = if (dev.rackId != null) i18n.text("text.5e7c17bc3374", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
-
-                        canvas.drawText(dev.technicalName.take(20), 40f, y + 12f, textPaint)
-                        canvas.drawText(dev.ipAddress ?: "-", 160f, y + 12f, textPaint)
-                        canvas.drawText(dev.category.toDisplayString(i18n), 260f, y + 12f, textPaint)
-                        canvas.drawText(rackPos, 370f, y + 12f, textPaint)
-                        canvas.drawText((dev.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n), 480f, y + 12f, textPaint)
-
-                        paint.color = Color.LTGRAY
-                        paint.strokeWidth = 0.5f
-                        canvas.drawLine(35f, y + 16f, 560f, y + 16f, paint)
-
-                        y += 18f
-                        if (y > 750f) break
+            if (selection.includeInventoryTable) {
+                report.heading(i18n.text("text.334e5b0cffff"), newPage = true)
+                selected.sites.forEach { site ->
+                    report.heading(site.name, 11f)
+                    site.devices.forEach { device ->
+                        report.device(device, listOfNotNull(device.ipAddress, device.macAddress, device.physicalLabel,
+                            index.area(device.areaId)?.name, index.rack(device.rackId)?.name,
+                            device.positionU?.let { "U$it" }).joinToString(" · "))
                     }
-
-                    if (selection.includeNotesAndAttachments && selectedProject.attachments.isNotEmpty()) {
-                        y += 15f
-                        textPaint.textSize = 11f
-                        textPaint.isFakeBoldText = true
-                        canvas.drawText(i18n.text("text.b0b59b565f62"), 35f, y, textPaint)
-                        y += 18f
-
-                        textPaint.textSize = 8f
-                        textPaint.isFakeBoldText = false
-                        for (att in selectedProject.attachments.take(5)) {
-                            val attrStr = if (!att.attributionText.isNullOrBlank()) " (${att.attributionText})" else ""
-                            canvas.drawText("• ${att.name}$attrStr", 40f, y, textPaint)
-                            y += 14f
-                            if (y > 800f) break
-                        }
-                    }
-
-                    pdfDoc.finishPage(page2)
                 }
             }
-
-            outputStream.use { stream ->
-                pdfDoc.writeTo(stream)
+            if (selection.includeRackCards) {
+                selected.racks.forEach { rack ->
+                    report.heading(i18n.text("text.f24b33e201a1", rack.name), newPage = true)
+                    report.rack(rack, index.devices.filter { it.rackId == rack.id })
+                }
             }
-        } finally {
-            pdfDoc.close()
+            if (selection.includeCablingAndPorts) {
+                report.heading(i18n.text("text.3b40d8bd6081"), newPage = true)
+                index.devices.forEach { device ->
+                    if (device.ports.isNotEmpty()) report.heading(device.technicalName, 11f)
+                    device.ports.forEach { port ->
+                        report.text(listOfNotNull(port.name, port.label, port.hardware.side?.toDisplayString(i18n),
+                            port.hardware.connector, port.hardware.speed, port.hardware.opticalModule,
+                            port.endpointStatus.toDisplayString(i18n)).joinToString(" · "), indent = 12)
+                    }
+                }
+                selected.cables.forEach { cable ->
+                    report.text("${cable.codeOrLabel ?: cable.id}: ${index.portLabel(cable.portAId)} ↔ ${index.portLabel(cable.portBId)} · " +
+                        listOfNotNull(cable.medium.toDisplayString(i18n), cable.color, cable.lengthValue?.let { "$it ${cable.lengthUnit ?: "m"}" }).joinToString(" · "))
+                }
+                selected.panelMappings.forEach { report.text("${index.portLabel(it.portAId)} ↔ ${index.portLabel(it.portBId)}") }
+            }
+            if (selection.includeLogicalNetwork) {
+                report.heading(i18n.text("text.7070d68f65b5"), newPage = true)
+                selected.vlans.sortedBy { it.vlanId }.forEach { report.text(i18n.text("text.91b4234e3dfd", it.vlanId, it.name) + (it.description?.let { value -> ": $value" } ?: "")) }
+                selected.subnets.forEach { subnet -> report.text(listOfNotNull(subnet.cidrBlock, subnet.name, subnet.gatewayIp).joinToString(" · ")) }
+                selected.logicalInterfaces.forEach { port -> report.text("${index.deviceName(port.deviceId)} › ${port.name}: " + listOfNotNull(port.ipAddress, port.subnetCidr, port.vlanId?.toString()).joinToString(" · ")) }
+                selected.portVlanMemberships.forEach { vlan -> report.text("${index.portLabel(vlan.portId)}: ${vlan.mode.toDisplayString(i18n)} · " +
+                    listOfNotNull(vlan.untaggedVlanId?.let { i18n.text("text.5d4192a73511", it) },
+                        vlan.taggedVlanIds.takeIf { it.isNotEmpty() }?.let { i18n.text("text.29697e42d0d3", it.joinToString(", ")) }, vlan.nativeVlanId?.let { "${i18n.text("port.vlanNative")}: $it" }).joinToString(" · ")) }
+                selected.lagGroups.forEach { lag -> report.text("${index.deviceName(lag.deviceId)} › ${lag.name}: ${lag.mode.toDisplayString(i18n)} · ${lag.memberPortIds.joinToString(", ") { index.portLabel(it) }}") }
+                selected.wanVpnConnections.forEach { wan -> report.text("${wan.type.toDisplayString(i18n)} ${wan.name}: " +
+                    listOfNotNull(wan.providerOrCarrier, wan.bandwidth, wan.localEndpointDeviceId?.let { index.deviceName(it) }, wan.remoteEndpointDeviceId?.let { index.deviceName(it) }).joinToString(" · ")) }
+            }
+            if (selection.includePowerAndBadges) {
+                report.heading(i18n.text("text.acedc1948e5f"), newPage = true)
+                selected.powerFeeds.forEach { feed ->
+                    report.text("${index.deviceName(feed.deviceId)} · ${feed.feedName} (${feed.feedType.toDisplayString(i18n)})" +
+                        listOfNotNull(feed.sourceDeviceId?.let { index.deviceName(it) } ?: feed.sourceOutletDescription,
+                            feed.loadWatts?.let { i18n.text("text.cd49315c743a", it) }, feed.loadVa?.let { "$it VA" },
+                            feed.observedRuntimeMinutes?.let { i18n.text("text.2dc280aa0f83", it) }).joinToString(" · ", prefix = " · "))
+                }
+                selected.poeMappings.forEach { poe -> report.text(i18n.text("text.cb79585925c3", index.portLabel(poe.portId), poe.role.toDisplayString(i18n), poe.standard.toDisplayString(i18n))) }
+                selected.documentBadges.forEach { badge -> report.text(i18n.text("text.3b424f3a179d", badge.label, index.targetLabel(badge.targetType, badge.targetId, i18n))) }
+            }
+            if (selection.includeNotesAndAttachments) {
+                report.heading(i18n.text("text.1d02ed0f43ac"), newPage = true)
+                fun note(label: String, value: String?) { if (!value.isNullOrBlank()) report.text("$label: $value") }
+                selected.description?.let(report::text)
+                index.devices.forEach { device -> note(device.technicalName, device.observation?.notes); device.ports.forEach { note(index.portLabel(it.id), it.observation?.notes) } }
+                selected.racks.forEach { note(it.name, it.notes) }
+                selected.cables.forEach { note(it.codeOrLabel ?: it.id, it.notes); note(it.codeOrLabel ?: it.id, it.observation?.notes) }
+                selected.logicalInterfaces.forEach { note(it.name, it.notes) }
+                selected.portVlanMemberships.forEach { note(index.portLabel(it.portId), it.notes) }
+                selected.lagGroups.forEach { note(it.name, it.notes) }
+                selected.wanVpnConnections.forEach { note(it.name, it.notes) }
+                selected.powerFeeds.forEach { note(it.feedName, it.notes) }
+                selected.poeMappings.forEach { note(index.portLabel(it.portId), it.notes) }
+                selected.documentBadges.forEach { note(it.label, it.notes) }
+                selected.customExtraFields.forEach { field -> report.text("${index.targetLabel(field.targetType, field.targetId, i18n)} · ${field.fieldKey}: ${field.fieldValue}") }
+                selected.attachments.forEach { attachment ->
+                    report.text(i18n.text("text.17e998f7cad2", attachment.name, attachment.fileType.toDisplayString(i18n), attachment.originalFileName))
+                    attachment.attributionText?.let { report.text(it, indent = 12) }
+                }
+            }
+            report.write(outputStream)
+        }
+    }
+
+    private class PagedReport(private val i18n: Messages) : AutoCloseable {
+        private val document = PdfDocument()
+        private var page: PdfDocument.Page? = null
+        private var pageNumber = 0
+        private var y = MARGIN
+        private val paint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK }
+        private val canvas: Canvas get() = checkNotNull(page).canvas
+
+        private fun finishPage() {
+            page?.let { current ->
+                val footer = Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 8f; color = Color.DKGRAY }
+                current.canvas.drawText(pageNumber.toString(), 550f, 815f, footer)
+                document.finishPage(current)
+                page = null
+            }
+        }
+
+        private fun newPage() {
+            finishPage()
+            pageNumber++
+            page = document.startPage(PdfDocument.PageInfo.Builder(595, 842, pageNumber).create())
+            y = MARGIN
+        }
+
+        private fun ensure(height: Float) { if (page == null || y + height > BOTTOM) newPage() }
+
+        fun heading(value: String, size: Float = 14f, newPage: Boolean = false) {
+            if (newPage && page != null && y > MARGIN) newPage()
+            ensure(size * 4)
+            text(value, size = size, bold = true)
+            y += 8f
+        }
+
+        fun text(value: String, indent: Int = 0, size: Float = 10f, bold: Boolean = false) {
+            if (value.isBlank()) return
+            paint.textSize = size
+            paint.isFakeBoldText = bold
+            val layout = StaticLayout.Builder.obtain(value, 0, value.length, paint, WIDTH - indent)
+                .setAlignment(Layout.Alignment.ALIGN_NORMAL).setIncludePad(false).setLineSpacing(2f, 1f).build()
+            if (layout.height <= BOTTOM - MARGIN) ensure(layout.height.toFloat())
+            var line = 0
+            // Split only between lines, including paragraphs longer than one page.
+            while (line < layout.lineCount) {
+                val top = layout.getLineTop(line)
+                ensure((layout.getLineBottom(line) - top).toFloat())
+                var end = line + 1
+                while (end < layout.lineCount && y + layout.getLineBottom(end) - top <= BOTTOM) end++
+                val height = layout.getLineBottom(end - 1) - top
+                val saved = canvas.save()
+                try {
+                    canvas.clipRect(MARGIN + indent, y, MARGIN + WIDTH, y + height)
+                    canvas.translate(MARGIN + indent, y - top)
+                    layout.draw(canvas)
+                } finally { canvas.restoreToCount(saved) }
+                y += height
+                line = end
+            }
+            y += 4f
+        }
+
+        fun device(device: Device, location: String = "") {
+            text("${device.technicalName} · ${device.category.toDisplayString(i18n)} · ${device.operationalStatus.toDisplayString(i18n)} · " +
+                (device.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n) +
+                location.takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty())
+        }
+
+        fun rack(rack: Rack, devices: List<Device>) {
+            text(i18n.text("text.01c4d3f4fffb", rack.heightU))
+            val units = rack.heightU.coerceAtLeast(1)
+            val unitHeight = minOf(12f, 480f / units)
+            val height = units * unitHeight
+            ensure(height + 26f)
+            val frame = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.LTGRAY; style = Paint.Style.STROKE; strokeWidth = .5f }
+            val label = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.BLACK; textSize = minOf(8f, unitHeight * .8f) }
+            val top = y + 20f
+            val sides = listOf(RackSide.FRONT to 65f, RackSide.REAR to 320f)
+            sides.forEach { (side, x) ->
+                textPaintLabel(canvas, side.toDisplayString(i18n), x, y + 10f)
+                canvas.drawRect(x, top, x + 215f, top + height, frame)
+                for (row in 0 until units) {
+                    val u = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) units - row else row + 1
+                    val rowY = top + row * unitHeight
+                    canvas.drawLine(x, rowY, x + 215f, rowY, frame)
+                    canvas.drawText("U$u", x - 25f, rowY + unitHeight * .8f, label)
+                }
+                devices.filter { it.rackSide == side || it.rackSide == RackSide.BOTH }.forEach { device ->
+                    val u = device.positionU ?: return@forEach
+                    if (u !in 1..units || u + device.heightU - 1 > units) return@forEach
+                    val row = if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) units - u - device.heightU + 1 else u - 1
+                    val deviceTop = top + row * unitHeight
+                    val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.rgb(220, 235, 252) }
+                    canvas.drawRect(x + 1, deviceTop + 1, x + 214, deviceTop + device.heightU * unitHeight - 1, fill)
+                    val count = label.breakText(device.technicalName, true, 205f, null)
+                    canvas.drawText(device.technicalName, 0, count, x + 4, deviceTop + unitHeight * .8f, label)
+                }
+            }
+            y = top + height + 12f
+            devices.sortedByDescending { it.positionU ?: 0 }.forEach { device ->
+                text("${device.positionU?.let { "U$it" } ?: i18n.text("text.3fc3745f990b")} · ${device.rackSide.toDisplayString(i18n)} · ${device.technicalName} · " +
+                    i18n.plural("text.53a2e3b94696", device.ports.size))
+            }
+        }
+
+        private fun textPaintLabel(canvas: Canvas, value: String, x: Float, y: Float) {
+            canvas.drawText(value, x, y, Paint(Paint.ANTI_ALIAS_FLAG).apply { textSize = 10f; isFakeBoldText = true })
+        }
+
+        fun write(output: OutputStream) {
+            finishPage()
+            output.use(document::writeTo)
+        }
+
+        override fun close() { finishPage(); document.close() }
+
+        companion object {
+            private const val MARGIN = 35f
+            private const val WIDTH = 525
+            private const val BOTTOM = 795f
         }
     }
 }

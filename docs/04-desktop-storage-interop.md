@@ -2,7 +2,9 @@
 
 Desktop conserva dati e impostazioni in `data/` accanto all'eseguibile portable. `DesktopStorageManager` usa una working copy, sostituzione atomica e `.lock` per evitare aperture concorrenti.
 
-Android memorizza il progetto in Room cifrato; `EncryptedDatabase` protegge la chiave con Android Keystore. Lo schema è alla versione 1 senza migrazioni: una versione diversa viene ricreata vuota, mentre un'identità diversa a versione invariata blocca l'apertura (AUD-03 ancora aperto). Il backup locale non sostituisce l'export `.ofam` per trasferire un progetto.
+Android memorizza il progetto in Room cifrato; `EncryptedDatabase` protegge la chiave con Android Keystore. Lo schema è alla versione 2 senza migrazioni: una versione diversa viene ricreata vuota, secondo la decisione sui dati di prova. Si usa soltanto `fallbackToDestructiveMigration(dropAllTables = true)`, che copre anche il downgrade; aggiungere il fallback per solo downgrade riattiva l'obbligo di migrazione in upgrade. Non cambiare l'identità senza incrementare la versione. Il backup grezzo locale dipende dal Keystore del dispositivo e non sostituisce l'export `.ofam` per trasferire un progetto.
+
+AUD-03 chiuso con prove SQLCipher native su emulatore API 37 e moto g86 API 36: vecchio schema v1 realmente ricostruito dal commit `f17d8a7`, upgrade a v2, rimozione delle vecchie tabelle, downgrade 14 → 2, riapertura stabile e import/riapertura del demo. Sul telefono aggiornato è stato reimportato «Demo Comune» (356 apparati, nessun allegato mancante). Backup pre-aggiornamento verificato in `build/phone-backup/ofam-phone-before-room-v2-2026-10-05.tar`; foto orfane precedenti conservate.
 
 Entrambe le app usano lo stesso serializer `.ofam`, inclusi allegati, cifratura e base di fusione. Le fixture e i test di interoperabilita verificano i round-trip tra le piattaforme.
 

@@ -25,7 +25,7 @@ Stato al 4 ottobre 2026: **PARZIALE**.
 - Eseguito su emulatore Pixel 9, Android API 37, APK debug dopo il restyling UX-R1…R8, app in italiano.
 - Configurazione A: 411 dp (densità 420), tema chiaro, testo 1,0.
 - Configurazione B: 360 dp (densità 480), tema scuro, testo 1,3.
-- Il telefono reale (moto g86) non è stato usato. Il problema strumentale API 37 resta separato in RES-17.
+- La matrice visiva resta parziale. Il 5 ottobre la suite strumentale di 13 test è passata su Pixel 9 API 37 e moto g86 API 36 (RES-17 chiuso), incluso tocco/trascinamento della mappa. Le prove automatiche non sostituiscono gli scenari hardware e visivi elencati sotto.
 
 Eseguire ogni scenario a 360 e 412 dp, in tema chiaro e scuro, con testo standard e ingrandito. Registrare dispositivo/emulatore, API, dimensioni, scala testo e screenshot.
 

@@ -9,7 +9,7 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 ## Decisioni applicate
 
 - Android 14+ e Windows 11 x64 portable condividono modello, regole, form, configuratore e formato di scambio.
-- Progetto greenfield (5 ottobre 2026): contratto `.ofam` e database Room ripartono da 1, senza migrazioni né lettura dei formati 1.x precedenti.
+- Progetto greenfield (5 ottobre 2026): contratto `.ofam` 1 e database Room 2, senza migrazioni né lettura dei formati 1.x precedenti. Decisione AUD-03 confermata: ricreazione dei dati di prova al cambio versione e reimport del demo, senza conservazione automatica. Lo schema cambia sempre insieme alla versione Room.
 - Il formato `.ofam` è un archivio ZIP versione 1; ogni altra versione è rifiutata.
 - La password del pacchetto cifra progetto e allegati con AES-GCM; la password di progetto usa PBKDF2-HMAC-SHA256. Su Windows la protezione comprende tutti i media locali: persistenza nel `.ofam` cifrato, lettura in memoria dopo sblocco, nessuna copia temporanea in chiaro. Le copie per programmi esterni vengono esportate soltanto su scelta esplicita dell'utente.
 - Gli errori strutturali bloccano l'import; gli avvisi documentali non bloccano il salvataggio.
@@ -70,6 +70,8 @@ Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](ro
 ## Stato
 
 Le funzionalita Android, Desktop e configuratore presenti nel codice sono completate. I residui operativi sono mantenuti esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile e in [roadmap.md](roadmap.md).
+
+PDF Android: le sei sezioni offerte sono complete e paginate, inclusi inventario, rack e tutti gli allegati selezionati; RES-21 chiuso con prove native API 37. La stampa fisica resta un collaudo distinto.
 
 ## Decisione limiti pacchetti — 5 ottobre 2026
 

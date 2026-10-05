@@ -38,6 +38,7 @@ android {
     }
 
     sourceSets.getByName("main").kotlin.directories.add("../../shared/configurator/src/main/kotlin")
+    sourceSets.getByName("androidTest").assets.srcDir("../../fixtures/demo")
 
     buildFeatures {
         compose = true

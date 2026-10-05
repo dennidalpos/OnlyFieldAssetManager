@@ -5,7 +5,7 @@ Aggiornato al 5 ottobre 2026 dopo confronto con il codice e il tracker.
 ## Evidenze disponibili
 
 - I moduli Gradle sono `:shared:core`, `:shared:exchange`, `:mobile:app` e `:pc:app`.
-- Il codice implementa `.ofam` 1 e Room 1 (ripartenza greenfield del 5 ottobre 2026), storage desktop atomico, database Android cifrato, import/export, documenti, mappe e configuratore condiviso.
+- Il codice implementa `.ofam` 1 e Room 2 (ripartenza greenfield del 5 ottobre 2026), storage desktop atomico, database Android cifrato, import/export, documenti, mappe e configuratore condiviso.
 - La suite locale registrata prima di questa revisione copre core, exchange, Android JVM e Desktop; le prove strumentali e manuali hanno limiti espliciti sotto.
 - Il workflow GitHub esegue le suite JVM/Compose, genera APK debug e ZIP portable, calcola SHA-256 e pubblica soltanto su tag `v*`.
 
@@ -14,24 +14,29 @@ Aggiornato al 5 ottobre 2026 dopo confronto con il codice e il tracker.
 | ID | Stato | Evidenza richiesta |
 | --- | --- | --- |
 | RES-13 | Aperto | Checklist foto, scansione, multitouch e lettore USB su hardware reale. |
-| RES-17 | Aperto | Suite UI Android verde su API 37 senza disabilitare controlli. |
 | RES-20 | Aperto | Prova manuale Esporta e apri Windows con programmi esterni. |
-| RES-21 | Aperto | Completezza e paginazione PDF Android. |
 | RES-22 | Aperto | Memoria e tempi degli import grandi su hardware. |
 | RES-23 | Aperto | Pannello occupato Windows, focus/input e stampa nativa. |
 | RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti, conferma import con molti avvisi e moto g86. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
 
+## RES-21: PDF Android completo e paginato — 5 ottobre 2026
+
+- Sostituito il generatore troncato con un solo writer paginato per report e scheda rack. Inventario e nomi completi, liste rack senza interruzione, fronte/retro adattati alla pagina, porte/cavi, rete, alimentazione/badge, note e tutti gli allegati selezionati. Note/allegati generati anche senza inventario. Filtri comuni e credenziali escluse; disegni planimetrici/topologia/percorsi restano le opzioni Desktop già documentate.
+- Baseline mirata JVM `RepositoryDispatchTest`: `BUILD SUCCESSFUL in 3s`, 3 test. Quattro nuove prove native hanno riprodotto i troncamenti e le sezioni mancanti. Dopo la correzione, `ANDROID_SERIAL=emulator-5554` e `:mobile:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.onlyfield.assetmanager.CompositePdfTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 13s`, 4 test superati. `LocalizedPdfTest` separato superato nelle tre lingue.
+- Sette PDF nativi e 46 pagine ispezionate: report completo 21 pagine, note/allegati 6, rack 3. Nessun apparato/allegato perso; righe e margini verificati. Evidenze rigenerabili nei test e output ignorati `mobile/app/build/reports/pdf-native/`.
+- RES-21 rimosso dal tracker, documentazione export e verifica aggiornata. Stampa fisica/annullamento rimangono in RES-19. Nessun cambiamento al database in questa correzione.
+
 ## Correzioni dell'audit — 5 ottobre 2026
 
-Il [rapporto critico](docs/audit-2026-10-05.md) registra nove rilievi: tre P1 e sei P2. AUD-01, AUD-02, AUD-04, AUD-05, AUD-06, AUD-07, AUD-08 e AUD-09 sono stati corretti e verificati; l’unica correzione ancora aperta, con priorità, descrizione e criteri di chiusura, è in [PROJECT_STATUS.json](PROJECT_STATUS.json). Prima del collaudo di aggiornamento sul telefono risolvere AUD-03.
+Il [rapporto critico](docs/audit-2026-10-05.md) registra nove rilievi: tre P1 e sei P2, tutti corretti e verificati. I collaudi operativi ancora aperti sono in [PROJECT_STATUS.json](PROJECT_STATUS.json).
 
 | ID | Priorità | Stato | Rilievo | Verifica disponibile |
 | --- | --- | --- | --- | --- |
 | AUD-01 | P1 | Chiuso | Verificatore inizializzato nell'import; fusione conserva protezione locale. | 6 regressioni Android JVM superate. |
 | AUD-02 | P1 | Chiuso | Eliminato il fallback a file locali esterni. | 2 regressioni Android JVM superate. |
-| AUD-03 | P1 | Aperto | Identità Room diversa mantenendo v1: apertura bloccata. | Riprodotto con Room/Robolectric; SQLCipher su telefono da verificare. |
+| AUD-03 | P1 | Chiuso | Room v2 e fallback generale unico. | SQLCipher nativo API 37 e moto g86 API 36; demo reimportato. |
 | AUD-04 | P2 | Chiuso | Avvisi per payload assenti prima della conferma. | 5 regressioni Exchange e 2 Desktop superate. |
 | AUD-05 | P2 | Chiuso | Tutti i media locali nel pacchetto cifrato, visualizzazione in memoria. | 5 regressioni e suite Desktop superate. |
 | AUD-06 | P2 | Chiuso | Lettura limitata e metadati KDF validati. | 6 regressioni e suite dei tre moduli superate. |
@@ -377,3 +382,29 @@ Controllo conclusivo delle immagini: `:pc:app:test --no-parallel --max-workers=1
 - `PROJECT_STATUS.json` aggiornato per la ripresa: configuratore implementato, ultima verifica 340 test senza fallimenti/errori/saltati e compilazione delle due app riuscita. Nessuna ulteriore modifica al codice dopo le verifiche; JSON, codifica UTF-8, collegamenti e diff ricontrollati prima del commit.
 - Ripartire dalla decisione AUD-03 prima di aggiornare il telefono; collaudare poi i nuovi flussi Android in RES-13/RES-19. Restano AUD-03 e sette residui, senza chiusure hardware/manuali implicite. Nessuna modifica dello schema Room né installazione APK eseguita.
 - I render restano negli output ignorati `pc/app/build/reports/visual-configurator/` e `pc/app/build/reports/ux/`; si rigenerano con la suite Desktop indicata sopra. I sorgenti dei test sono inclusi nel checkpoint.
+
+## AUD-03: Room v2 e aggiornamento SQLCipher — 5 ottobre 2026
+
+- Decisione esplicita: ricreare i dati di prova e reimportare il demo, senza migrazione automatica. Versione Room incrementata a 2; `.ofam` resta 1. Schema v2 generato da KSP, schema storico e fixture v1 conservati per la regressione.
+- La baseline nativa ha riprodotto `Room cannot verify the data integrity` con lo schema v1 del commit `f17d8a7`. Il solo incremento ha poi esposto `A migration from 1 to 2 was required but not found`: il fallback per solo downgrade riattivava l'obbligo di migrazione in upgrade. Eliminata la chiamata ridondante; il fallback generale copre entrambi i versi.
+- Emulatore Pixel 9 API 37: `:mobile:app:connectedDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.class=com.onlyfield.assetmanager.EncryptedSchemaUpgradeTest --no-parallel --max-workers=1`, `ANDROID_SERIAL=emulator-5554`, `BUILD SUCCESSFUL in 18s`, 3 test superati (upgrade con schema storico/reimport/riapertura, versione invariata, downgrade 14 → 2). Aggiunta poi la prova di import su disco con tutti i payload.
+- Moto g86 API 36: APK e APK test installati con `adb -s ZY32LNCB8C install -r`. `adb ... shell am instrument -w -r -e class com.onlyfield.assetmanager.EncryptedSchemaUpgradeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner`: **4 test superati** con SQLCipher/Keystore reali e database temporanei isolati.
+- Prima dell'installazione: backup grezzo completo `build/phone-backup/ofam-phone-before-room-v2-2026-10-05.tar`, 8 file verificati leggendo integralmente l'archivio, 10.895.872 byte; SHA-256 `c62fc20ebda6e438f175857c769c5600b7fc9da06b6f82ce6fa39d2794c6c418`. Include database/WAL/SHM, chiave avvolta, media e preferenze; dipende dal Keystore del telefono, non è un export portabile. Nessuna foto orfana eliminata.
+- Fixture copiata in Download e reimportata tramite il repository con l'argomento esplicito `-e seedApplicationDemo true` sul solo metodo `EncryptedSchemaUpgradeTest#demoPackageIsImportedOnDisk`: **1 test superato**. Il metodo richiede database reale vuoto, non sostituisce progetti esistenti; importato «Demo Comune», 356 apparati, tutti i media presenti e riapertura riuscita. Questo verifica storage/import, non il dialogo SAF.
+- AUD-03 rimosso dal tracker; contratto, storage, piano, audit, regole e verifica aggiornati. Nessuna migrazione né bypass del controllo di identità.
+
+## RES-17: Espresso e suite Android nativa — 5 ottobre 2026
+
+- Riprodotto sui due test UI il blocco `NoSuchMethodException: android.hardware.input.InputManager.getInstance []`. Espresso 3.7.0 contiene la correzione ufficiale che usa `getSystemService`; aggiornata la sola dipendenza esistente, senza cambiare gli altri componenti o indebolire i test.
+- `ANDROID_SERIAL=emulator-5554` e `.\gradlew.bat :mobile:app:connectedDebugAndroidTest --no-parallel --max-workers=1`: verifica conclusiva `BUILD SUCCESSFUL in 23s`, **13 test** (PDF, SQLCipher, renderer planimetrie, localizzazione UI e gesti), zero fallimenti/errori/saltati. Report in `mobile/app/build/reports/androidTests/connected/debug/` e copia in `mobile/app/build/reports/api37-verification/`. La fixture storica ricrea anche gli indici; corretta la lettura delle tabelle senza indici dopo un fallimento nell'ultimo controllo.
+- Sul moto g86 API 36 aggiornato l'APK test, eseguita l'intera suite via `adb ... shell am instrument -w -r`: verifica conclusiva **13 test superati** in 8,947 s, senza il parametro di reimport. Database applicativo «Demo Comune» conservato; avviata MainActivity dopo il collaudo. Nessun collaudo TalkBack, foto, scanner, USB o stampa fisica dichiarato completo.
+- Regressioni JVM finali `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 26s`, **340 test** (108/64/133/35), zero fallimenti/errori/saltati.
+- RES-17 rimosso dal tracker, documentazione e checklist aggiornate. Restano cinque residui: RES-13, RES-19, RES-20, RES-22, RES-23. Fonte ufficiale: [AndroidX Test/Espresso 3.7.0](https://developer.android.com/jetpack/androidx/releases/test#espresso_3.7.0).
+
+Controllo conclusivo: 16 documenti UTF-8 senza BOM e 78 collegamenti locali validi; tracker e schema v2 validati. Corretto il riferimento obsoleto a RES-01 nel documento di rilascio dopo verifica della run e degli asset su GitHub. La pulizia delle risorse sul telefono, la chiusura dell'emulatore e la rimozione della directory temporanea locale sono state bloccate dal controllo automatico (`blocked by policy`, senza ulteriore motivazione); RES-24 registra `build/task-verification`, APK test, PDF, screenshot ed emulatore ancora presenti. Dopo due comandi bloccati la pulizia è sospesa; il blocco sembra riguardare le operazioni di rimozione, ma il motivo preciso non è esposto. App principale, Demo Comune e backup conservati. Nessun commit o push.
+
+## Checkpoint Room v2 e PDF Android per cambio sessione — 5 ottobre 2026
+
+- Salvataggio, commit e push sul branch principale richiesti dall'utente; verificati `main` e default remoto `origin/main`. Il checkpoint comprende Room v2, PDF Android completo, Espresso 3.7.0, regressioni native, documentazione e tracker.
+- Nessuna modifica ai sorgenti dopo le verifiche finali: 340 test JVM verdi, 13 test nativi su emulatore API 37 e 13 sul moto g86 API 36. Per il checkpoint ricontrollati report, JSON, codifica, collegamenti locali e diff; nessuna suite ripetuta per sole modifiche documentali.
+- Ripresa: prima RES-24 (pulizia bloccata dal controllo automatico), poi i cinque collaudi RES-13/19/20/22/23. Nessuna chiusura hardware o UX implicita. Backup ed evidenze nei percorsi locali ignorati indicati sopra: non vengono inclusi nel commit e non saranno disponibili in un nuovo checkout.
