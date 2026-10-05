@@ -10,6 +10,9 @@ import com.onlyfield.assetmanager.exchange.ProjectPackage
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.runInterruptible
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import java.io.InputStream
 import java.io.OutputStream
 
@@ -46,11 +49,12 @@ internal class PackageExchange(
         outputStream: OutputStream,
         password: String? = null,
         i18n: Messages = Messages()): Boolean = withContext(ioDispatcher) {
-        val zipBytes = exportProjectPackage(projectId, password = password, i18n = i18n) ?: return@withContext false
+        val project = getProjectById(projectId) ?: return@withContext false
+        val files = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
         outputStream.use { stream ->
-            stream.write(zipBytes)
-            stream.flush()
+            PackageSerializer.exportPackageToStream(stream, project, files, password, i18n = i18n)
         }
+        saveBase(project)
         return@withContext true
     }
 
@@ -58,24 +62,30 @@ internal class PackageExchange(
         inputStream: InputStream,
         password: String? = null,
         currentProjectId: String? = null,
-        i18n: Messages = Messages()): PackageImportEvaluation = withContext(ioDispatcher) {
-        val importResult = inputStream.use { PackageSerializer.importPackage(it, password = password, i18n = i18n) }
-
-        val pkg = importResult.pkg
-        if ((pkg == null) || (!importResult.validationResult.isValid)) {
-            return@withContext PackageImportEvaluation(importResult = importResult, comparison = null)
+        i18n: Messages = Messages()): PackageImportEvaluation {
+        var imported: com.onlyfield.assetmanager.exchange.PackageImportResult? = null
+        try {
+            return withContext(ioDispatcher) {
+                val importResult = runInterruptible {
+                    inputStream.use { PackageSerializer.importPackage(it, password = password, i18n = i18n) }.also { imported = it }
+                }
+                currentCoroutineContext().ensureActive()
+                val pkg = importResult.pkg
+                if (pkg == null || !importResult.validationResult.isValid) {
+                    return@withContext PackageImportEvaluation(importResult = importResult, comparison = null)
+                }
+                val comparison = ProjectComparisonEvaluator.evaluate(
+                    currentProject = getProjectById(currentProjectId ?: pkg.project.id),
+                    currentManifest = null,
+                    incomingPackage = pkg,
+                    i18n = i18n,
+                )
+                PackageImportEvaluation(importResult = importResult, comparison = comparison)
+            }
+        } catch (e: Exception) {
+            imported?.pkg?.close()
+            throw e
         }
-
-        val localProjectId = currentProjectId ?: pkg.project.id
-        val localProject = getProjectById(localProjectId)
-
-        val comparison = ProjectComparisonEvaluator.evaluate(
-            currentProject = localProject,
-            currentManifest = null,
-            incomingPackage = pkg,
-            i18n = i18n)
-
-        return@withContext PackageImportEvaluation(importResult = importResult, comparison = comparison)
     }
 
     suspend fun importProjectPackage(pkg: ProjectPackage, password: String?): Boolean = withContext(ioDispatcher) {

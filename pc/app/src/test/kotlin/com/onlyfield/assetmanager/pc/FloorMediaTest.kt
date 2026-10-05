@@ -107,6 +107,7 @@ class FloorMediaTest {
             val badDraft = draft.copy(id = java.util.UUID.randomUUID().toString(), device = draft.device.copy(technicalName = "Failed"))
             assertFalse(state.saveMapObject(badDraft, listOf(photo, File(dir, "missing.png")), emptySet()))
             assertEquals(beforeFailure, state.project)
+            assertEquals(1, state.storage.mediaSnapshot(beforeFailure.id)!!.size)
             assertEquals(1, state.storage.getMediaFolder().walkTopDown().count { it.isFile })
             val stored = state.storedProjects.first().file
             state.closeProject(); state.openStored(stored)

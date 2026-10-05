@@ -58,13 +58,13 @@ object DesktopStorageHelper {
         val chooser = JFileChooser().apply {
             dialogTitle = title
             selectedFile = File(defaultFileName)
-            fileFilter = FileNameExtensionFilter(extensionDescription, *extensions)
+            if (extensions.isNotEmpty()) fileFilter = FileNameExtensionFilter(extensionDescription, *extensions)
         }
         val result = chooser.showSaveDialog(null)
         return if (result == JFileChooser.APPROVE_OPTION) {
             var file = chooser.selectedFile
             val ext = extensions.firstOrNull() ?: ""
-            if (ext.isNotEmpty() && !file.name.lowercase().endsWith(".$ext")) {
+            if (ext.isNotEmpty() && !file.name.endsWith(".$ext", ignoreCase = true)) {
                 file = File(file.parentFile, "${file.name}.$ext")
             }
             file

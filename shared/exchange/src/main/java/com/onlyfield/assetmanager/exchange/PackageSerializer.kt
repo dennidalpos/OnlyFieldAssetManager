@@ -96,10 +96,21 @@ object PackageSerializer {
         attachments: Map<String, ByteArray> = emptyMap(),
         password: String? = null,
         exportedEpochMs: Long = System.currentTimeMillis(),
-        i18n: Messages = Messages()): ByteArray {
+        i18n: Messages = Messages()): ByteArray = ByteArrayOutputStream().also {
+        exportPackageToStream(it, project, attachments, password, exportedEpochMs, i18n)
+    }.toByteArray()
+
+    fun exportPackageToStream(
+        outputStream: java.io.OutputStream,
+        project: Project,
+        attachments: Map<String, ByteArray> = emptyMap(),
+        password: String? = null,
+        exportedEpochMs: Long = System.currentTimeMillis(),
+        i18n: Messages = Messages(),
+    ) {
         val projectJsonBytes = jsonConfig.encodeToString(Project.serializer(), project).toByteArray(Charsets.UTF_8)
         val limits = PackageImportLimits()
-        require(projectJsonBytes.size <= limits.fileBytes && attachments.values.all { it.size <= limits.fileBytes }) { i18n.text("package.importLimit") }
+        require(projectJsonBytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }
         require(attachments.size + 2 <= limits.entries) { i18n.text("package.importLimit") }
 
         val isEncrypted = !password.isNullOrBlank() || project.isPasswordProtected
@@ -140,57 +151,64 @@ object PackageSerializer {
         }
 
         // Attachments of a protected project are encrypted with the same key (one random IV per file).
-        val processedAttachments = mutableMapOf<String, ByteArray>()
-        for ((path, bytes) in attachments) {
-            val normalizedPath = if (path.startsWith(PackageManifest.ATTACHMENTS_DIR)) path else "${PackageManifest.ATTACHMENTS_DIR}$path"
-            val stored = key?.let { k ->
-                val iv = ByteArray(12).also { random.nextBytes(it) }
-                iv + encryptAesGcm(bytes, k, iv)
-            } ?: bytes
-            checksumsMap[normalizedPath] = calculateSha256(stored)
-            processedAttachments[normalizedPath] = stored
-        }
+        PackagePayloads().use { processedAttachments ->
+            for ((path, bytes) in attachments) {
+                require(bytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }
+                val normalizedPath = if (path.startsWith(PackageManifest.ATTACHMENTS_DIR)) path else "${PackageManifest.ATTACHMENTS_DIR}$path"
+                val stored = key?.let { k ->
+                    val iv = ByteArray(12).also { random.nextBytes(it) }
+                    iv + encryptAesGcm(bytes, k, iv)
+                } ?: bytes
+                checksumsMap[normalizedPath] = calculateSha256(stored)
+                processedAttachments.write(normalizedPath) { it.write(stored) }
+            }
 
-        val manifest = PackageManifest(
-            formatVersion = PackageManifest.CURRENT_FORMAT_VERSION,
-            exportId = UUID.randomUUID().toString(),
-            exportedEpochMs = exportedEpochMs,
-            projectId = project.id,
-            projectName = project.name,
-            isEncrypted = isEncrypted,
-            kdfSaltHex = kdfSaltHex,
-            kdfIterations = kdfIterations,
-            cipherIvHex = cipherIvHex,
-            checksums = checksumsMap,
-            attachmentsEncrypted = key != null && processedAttachments.isNotEmpty(),
-        )
+            val manifest = PackageManifest(
+                formatVersion = PackageManifest.CURRENT_FORMAT_VERSION,
+                exportId = UUID.randomUUID().toString(),
+                exportedEpochMs = exportedEpochMs,
+                projectId = project.id,
+                projectName = project.name,
+                isEncrypted = isEncrypted,
+                kdfSaltHex = kdfSaltHex,
+                kdfIterations = kdfIterations,
+                cipherIvHex = cipherIvHex,
+                checksums = checksumsMap,
+                attachmentsEncrypted = key != null && processedAttachments.isNotEmpty(),
+            )
 
-        val manifestJsonBytes = jsonConfig.encodeToString(PackageManifest.serializer(), manifest).toByteArray(Charsets.UTF_8)
-        require(manifestJsonBytes.size <= limits.fileBytes &&
-            manifestJsonBytes.size.toLong() + payloadBytes.size + processedAttachments.values.sumOf { it.size.toLong() } <= limits.expandedBytes) { i18n.text("package.importLimit") }
+            val manifestJsonBytes = jsonConfig.encodeToString(PackageManifest.serializer(), manifest).toByteArray(Charsets.UTF_8)
+            require(manifestJsonBytes.size <= limits.fileBytes &&
+                manifestJsonBytes.size.toLong() + payloadBytes.size + processedAttachments.keys.sumOf(processedAttachments::byteSize) <= limits.expandedBytes) { i18n.text("package.importLimit") }
 
-        val baos = ByteArrayOutputStream()
-        ZipOutputStream(baos).use { zos ->
-            // Write manifest
-            zos.putNextEntry(ZipEntry(PackageManifest.MANIFEST_FILE_NAME))
-            zos.write(manifestJsonBytes)
-            zos.closeEntry()
-
-            // Write project JSON (or project.json.enc)
-            zos.putNextEntry(ZipEntry(payloadEntryName))
-            zos.write(payloadBytes)
-            zos.closeEntry()
-
-            // Write attachments
-            for ((path, bytes) in processedAttachments) {
-                zos.putNextEntry(ZipEntry(path))
-                zos.write(bytes)
+            val boundedOutput = object : java.io.FilterOutputStream(outputStream) {
+                var count = 0L
+                override fun write(value: Int) { require(++count <= limits.archiveBytes) { i18n.text("package.importLimit") }; out.write(value) }
+                override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                    count += length
+                    require(count <= limits.archiveBytes) { i18n.text("package.importLimit") }
+                    out.write(bytes, offset, length)
+                }
+            }
+            ZipOutputStream(boundedOutput).use { zos ->
+                // Write manifest
+                zos.putNextEntry(ZipEntry(PackageManifest.MANIFEST_FILE_NAME))
+                zos.write(manifestJsonBytes)
                 zos.closeEntry()
+
+                // Write project JSON (or project.json.enc)
+                zos.putNextEntry(ZipEntry(payloadEntryName))
+                zos.write(payloadBytes)
+                zos.closeEntry()
+
+                // Write attachments
+                for (path in processedAttachments.keys) {
+                    zos.putNextEntry(ZipEntry(path))
+                    processedAttachments.writeTo(path, zos)
+                    zos.closeEntry()
+                }
             }
         }
-
-        require(baos.size() <= limits.archiveBytes) { i18n.text("package.importLimit") }
-        return baos.toByteArray()
     }
 
     fun importPackage(zipBytes: ByteArray, password: String? = null, i18n: Messages = Messages()): PackageImportResult {
@@ -210,10 +228,22 @@ object PackageSerializer {
         return importPackage(ByteArrayInputStream(zipBytes), password, i18n)
     }
 
-    fun importPackage(inputStream: InputStream, password: String? = null, i18n: Messages = Messages()): PackageImportResult =
-        importPackage(inputStream, password, i18n, PackageImportLimits())
+    fun importPackage(inputStream: InputStream, password: String? = null, i18n: Messages = Messages(), stagingDirectory: File? = null): PackageImportResult =
+        importPackage(inputStream, password, i18n, PackageImportLimits(), stagingDirectory)
 
-    internal fun importPackage(inputStream: InputStream, password: String?, i18n: Messages, limits: PackageImportLimits): PackageImportResult {
+    internal fun importPackage(inputStream: InputStream, password: String?, i18n: Messages, limits: PackageImportLimits, stagingDirectory: File? = null): PackageImportResult {
+        val attachments = PackagePayloads(stagingDirectory)
+        var transferred = false
+        try {
+            val result = readPackage(inputStream, password, i18n, limits, attachments)
+            transferred = result.pkg != null
+            return result
+        } finally {
+            if (!transferred) attachments.close()
+        }
+    }
+
+    private fun readPackage(inputStream: InputStream, password: String?, i18n: Messages, limits: PackageImportLimits, attachments: PackagePayloads): PackageImportResult {
         val issues = mutableListOf<ValidationIssue>()
         fun rejection(code: String) = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
             code = code, message = i18n.text("package.importLimit"), severity = ValidationSeverity.STRUCTURAL_ERROR,
@@ -224,7 +254,6 @@ object PackageSerializer {
         var manifestBytes: ByteArray? = null
         var projectPlainBytes: ByteArray? = null
         var projectEncBytes: ByteArray? = null
-        val attachments = mutableMapOf<String, ByteArray>()
 
         val counted = PackageInput(inputStream, limits.archiveBytes)
         try {
@@ -235,26 +264,32 @@ object PackageSerializer {
                 var entry = zis.nextEntry
                 while (entry != null) {
                     if (++entryCount > limits.entries) throw PackageLimitExceeded("PACKAGE_ENTRY_LIMIT_EXCEEDED")
-                    val output = ByteArrayOutputStream()
-                    var entryBytes = 0L
-                    var read = zis.read(buffer)
-                    while (read != -1) {
-                        entryBytes += read
-                        expandedBytes += read
-                        if (entryBytes > limits.fileBytes + PackageImportLimits.GCM_OVERHEAD) throw PackageLimitExceeded("ENTRY_SIZE_LIMIT_EXCEEDED")
-                        if (expandedBytes > limits.expandedBytes) throw PackageLimitExceeded("PACKAGE_CONTENT_LIMIT_EXCEEDED")
-                        if (!entry.isDirectory) output.write(buffer, 0, read)
-                        read = zis.read(buffer)
-                    }
-                    if (!entry.isDirectory) {
-                        val name = entry.name
-                        val content = output.toByteArray()
-                        when (name) {
-                            PackageManifest.MANIFEST_FILE_NAME -> manifestBytes = content
-                            PackageManifest.PROJECT_FILE_NAME -> projectPlainBytes = content
-                            PackageManifest.PROJECT_ENC_FILE_NAME -> projectEncBytes = content
-                            else -> attachments[name] = content
+                    val current = entry
+                    fun readEntry(output: java.io.OutputStream) {
+                        var entryBytes = 0L
+                        var read = zis.read(buffer)
+                        while (read != -1) {
+                            if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException("Import cancelled")
+                            entryBytes += read
+                            expandedBytes += read
+                            if (entryBytes > limits.fileBytes + PackageImportLimits.GCM_OVERHEAD) throw PackageLimitExceeded("ENTRY_SIZE_LIMIT_EXCEEDED")
+                            if (expandedBytes > limits.expandedBytes) throw PackageLimitExceeded("PACKAGE_CONTENT_LIMIT_EXCEEDED")
+                            if (!current.isDirectory) output.write(buffer, 0, read)
+                            read = zis.read(buffer)
                         }
+                    }
+                    when (current.name) {
+                        PackageManifest.MANIFEST_FILE_NAME, PackageManifest.PROJECT_FILE_NAME, PackageManifest.PROJECT_ENC_FILE_NAME -> {
+                            val output = ByteArrayOutputStream()
+                            readEntry(output)
+                            if (!current.isDirectory) when (current.name) {
+                                PackageManifest.MANIFEST_FILE_NAME -> manifestBytes = output.toByteArray()
+                                PackageManifest.PROJECT_FILE_NAME -> projectPlainBytes = output.toByteArray()
+                                else -> projectEncBytes = output.toByteArray()
+                            }
+                        }
+                        else -> if (current.isDirectory) readEntry(java.io.OutputStream.nullOutputStream())
+                            else attachments.write(current.name, ::readEntry)
                     }
                     entry = zis.nextEntry
                 }
@@ -263,6 +298,8 @@ object PackageSerializer {
             }
         } catch (e: PackageLimitExceeded) {
             return rejection(e.code)
+        } catch (e: java.io.InterruptedIOException) {
+            throw e
         } catch (_: IOException) {
             return invalidZip()
         } catch (_: IllegalArgumentException) {
@@ -309,7 +346,7 @@ object PackageSerializer {
         if (manifestBytes.size.toLong() > rawLimit ||
             (projectPlainBytes?.size?.toLong() ?: 0) > rawLimit ||
             (projectEncBytes?.size?.toLong() ?: 0) > rawLimit + 16 ||
-            attachments.values.any { it.size.toLong() > rawLimit + if (manifest.attachmentsEncrypted) PackageImportLimits.GCM_OVERHEAD else 0 }) {
+            attachments.keys.any { attachments.byteSize(it) > rawLimit + if (manifest.attachmentsEncrypted) PackageImportLimits.GCM_OVERHEAD else 0 }) {
             return rejection("ENTRY_SIZE_LIMIT_EXCEEDED")
         }
         if (manifest.isEncrypted) {
@@ -417,10 +454,10 @@ object PackageSerializer {
             projectBytes = projectPlainBytes
         }
 
-        for ((attPath, attBytes) in attachments) {
+        for (attPath in attachments.keys) {
             val expectedChecksum = manifest.checksums[attPath]
             if (expectedChecksum != null) {
-                val actualChecksum = calculateSha256(attBytes)
+                val actualChecksum = attachments.checksum(attPath)
                 if (actualChecksum != expectedChecksum) {
                     issues.add(
                         ValidationIssue(
@@ -435,10 +472,10 @@ object PackageSerializer {
         }
 
         if (manifest.attachmentsEncrypted && key != null) {
-            for ((attPath, stored) in attachments.toMap()) {
+            for (attPath in attachments.keys.toList()) {
                 try {
-                    attachments[attPath] = decryptAesGcm(stored.copyOfRange(12, stored.size), key, stored.copyOfRange(0, 12))
-                } catch (_: Exception) {
+                    attachments.decryptPackageEntry(attPath, key)
+                } catch (_: java.security.GeneralSecurityException) {
                     attachments.remove(attPath)
                     issues.add(
                         ValidationIssue(
@@ -448,6 +485,12 @@ object PackageSerializer {
                             targetEntityId = attPath
                         )
                     )
+                    continue
+                } catch (_: IllegalArgumentException) {
+                    attachments.remove(attPath)
+                    issues += ValidationIssue(code = "ATTACHMENT_DECRYPTION_FAILED",
+                        message = i18n.text("text.b4f4848b3f66", attPath),
+                        severity = ValidationSeverity.DOCUMENTARY_WARNING, targetEntityId = attPath)
                 }
             }
         }
@@ -468,7 +511,7 @@ object PackageSerializer {
         val imported = ProjectPackage(manifest, project, attachments)
         val missingPaths = mutableSetOf<String>()
         for (attachment in project.attachments) {
-            if (AttachmentFiles.bytesIn(imported, attachment) != null) continue
+            if (AttachmentFiles.pathIn(imported, attachment) != null) continue
             missingPaths += AttachmentFiles.entryName(attachment)
             missingPaths += attachment.relativePath
             missingPaths += "${PackageManifest.ATTACHMENTS_DIR}${attachment.relativePath.removePrefix("/")}"

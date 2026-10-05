@@ -369,9 +369,10 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                     fail(i18n.text("text.ec4889ca63e4"))
                     return@launch
                 }
-                val bytes = repository.exportProjectPackage(p.id, password, i18n = i18n) ?: error(i18n.text("text.8ad65d90f29b"))
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    resolver.openOutputStream(uri)?.use { it.write(bytes) } ?: error(i18n.text("text.f9b9a0075030"))
+                    resolver.openOutputStream(uri)?.use { output ->
+                        check(repository.exportProjectPackageToStream(p.id, output, password, i18n = i18n)) { i18n.text("text.8ad65d90f29b") }
+                    } ?: error(i18n.text("text.f9b9a0075030"))
                 }
                 val missing = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.missingAttachments(p) }
                 if (missing.isEmpty()) notify(if (password != null) i18n.text("text.b73d46f629a2") else i18n.text("text.5814b1d61f28"))
@@ -386,7 +387,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     fun startImport(resolver: ContentResolver, uri: Uri, password: String? = null) {
-        importPassword = null
+        cancelImport()
         viewModelScope.launch {
             busy = i18n.text("text.e73a6312c02c")
             try {
@@ -422,7 +423,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
         val password = importPassword
-        cancelImport()
+        _importState.value = null
+        importPassword = null
         viewModelScope.launch {
             try {
                 repository.importProjectPackage(pkg, password)
@@ -432,12 +434,22 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.7b94ff9ddb10"), e)
             }
-        }
+        }.invokeOnCompletion { pkg.close() }
     }
 
     fun cancelImport() {
+        when (val state = _importState.value) {
+            is ImportState.Review -> state.evaluation.importResult.pkg?.close()
+            is ImportState.Merging -> state.pkg.close()
+            else -> Unit
+        }
         _importState.value = null
         importPassword = null
+    }
+
+    override fun onCleared() {
+        cancelImport()
+        super.onCleared()
     }
 
     /** Merges a package with the local copy. */
@@ -454,8 +466,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 if (result.conflicts.isEmpty()) applyMerge(ImportState.Merging(pkg, result))
                 else _importState.value = ImportState.Merging(pkg, result)
             } catch (e: Exception) {
+                cancelImport()
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                _importState.value = null
                 fail(i18n.text("text.932f8500aa16"), e)
             }
         }
@@ -480,7 +492,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.932f8500aa16"), e)
             }
-        }
+        }.invokeOnCompletion { merging.pkg.close() }
     }
 
 

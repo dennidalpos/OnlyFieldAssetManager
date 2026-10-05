@@ -7,7 +7,7 @@
 - `PROJECT_STATUS.json`: open work only; completions in `roadmap.md`. Update domain docs per task.
 - Core and exchange must never depend on Android UI or Context APIs.
 - Room v2, no migrations; only `fallbackToDestructiveMigration(true)` for both directions. Downgrade-only overrides upgrade fallback. Bump version on schema edits.
-- Hardware port layouts/PoE overrides use existing hardware JSON; no Room columns change.
+- Hardware layouts/PoE overrides use hardware JSON, not Room columns.
 - Both apps compile `shared/configurator` Compose sources; hardware/ports/continuity stay in `core.forms` and `core.model.ConnectionGraph`.
 - Maps/containment: `core.model.MapScene/ObjectMap/ObjectHierarchy`; shared `configurator.map.MapWorkspace`; presets/ports: `core.forms.DevicePresets/PortLogic`. Rendering: Android PdfRenderer, Desktop PDFBox 3.0.8.
 - Shared edits/forms/labels/wizard: `core.edit`, `core.forms`, `core.display`, `core.onboarding`. Forms must `copy()` existing entities to preserve hidden fields.
@@ -19,9 +19,9 @@
 ## Application Boundaries & Constraints
 
 - Offline-first Android 14+ APK and Windows 11 x64 portable editor.
-- Exchange contract: ZIP packages `.ofam` version 1 (any other version rejected) with optional AES-256-GCM / PBKDF2 encryption.
+- Exchange: ZIP packages `.ofam` version 1 with optional AES-256-GCM / PBKDF2 encryption.
 - Manual exchange; no server, automatic sync or automatic merge.
-- Credentials stay in project, never documents. Password also protects local Windows media: encrypted package + memory, no plaintext temporary files.
+- Credentials stay in project, never documents. Password also protects local Windows media: encrypted package, bounded RAM and encrypted staging; no plaintext temporary files. Close imported `ProjectPackage` after use/cancellation.
 - `STRUCTURAL_ERROR` blocks import; `DOCUMENTARY_WARNING` does not block saving.
-- Package limits: ZIP 256 MiB, plaintext file 32 MiB, expanded 512 MiB, 10,000 entries; KDF max 1,000,000. All document filters use `exchange.DocumentSelection`.
+- Package limits: ZIP 256 MiB, plaintext file 32 MiB, expanded 512 MiB, 10,000 entries; KDF max 1,000,000. Document filters use `exchange.DocumentSelection`.
 - Android services dispatch I/O; Desktop state uses `DesktopIo` with an AWT secondary loop and busy editing gate to retain synchronous results.

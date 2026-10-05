@@ -1,0 +1,12 @@
+gradle.projectsEvaluated {
+    def exchange = gradle.rootProject.project(':shared:exchange')
+    exchange.tasks.register('importBenchmark', JavaExec) {
+        dependsOn(exchange.tasks.named('testClasses'))
+        classpath = exchange.sourceSets.test.runtimeClasspath
+        mainClass = 'com.onlyfield.assetmanager.exchange.LargeImportBenchmark'
+        maxHeapSize = '2g'
+        args(gradle.rootProject.findProperty('benchmarkMode') ?: 'measure',
+             gradle.rootProject.findProperty('benchmarkPath') ?: 'fixtures/demo/onlyfield-demo.ofam')
+        workingDir = gradle.rootProject.projectDir
+    }
+}

@@ -32,4 +32,18 @@ data class ProjectPackage(
     val manifest: PackageManifest,
     val project: Project,
     val attachments: Map<String, ByteArray> = emptyMap(), // relativePath -> bytes
-)
+) : AutoCloseable {
+    fun payloadSize(path: String): Long = (attachments as? PackagePayloads)?.byteSize(path)
+        ?: attachments.getValue(path).size.toLong()
+
+    fun payloadChecksum(path: String): String = (attachments as? PackagePayloads)?.checksum(path)
+        ?: PackageSerializer.calculateSha256(attachments.getValue(path))
+
+    fun writePayload(path: String, output: java.io.OutputStream) {
+        val staged = attachments as? PackagePayloads
+        if (staged != null) staged.writeTo(path, output) else output.write(attachments.getValue(path))
+    }
+
+    /** Release encrypted import staging after consumption or cancellation. */
+    override fun close() { (attachments as? AutoCloseable)?.close() }
+}

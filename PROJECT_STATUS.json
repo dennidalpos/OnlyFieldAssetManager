@@ -1,9 +1,9 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Audit concluso; restano cinque collaudi operativi e un residuo di pulizia.",
-  "activeTask": null,
-  "nextSession": "AUD-03, RES-21 e RES-17 chiusi. Room v2 e fallback generale unico; aggiornamento SQLCipher e Demo Comune reimportato sul moto g86 API 36 (356 apparati, tutti i media presenti). Backup pre-aggiornamento verificato in build/phone-backup/ofam-phone-before-room-v2-2026-10-05.tar; foto orfane conservate. PDF Android completo nelle sei sezioni offerte: sette PDF nativi/46 pagine ispezionate. Espresso 3.7.0: 13 test nativi verdi su Pixel 9 API 37 e moto g86 API 36, inclusi PDF, SQLCipher, localizzazione e tocco/trascinamento della mappa. Suite JVM completa verde: 340 test. Evidenze e comandi in roadmap.md e docs/05-testing-and-benchmarks.md. Riprendere RES-13/19 per foto/scanner/USB/multitouch/TalkBack e matrice UX dei nuovi flussi; RES-20 viewer esterni Windows; RES-22 memoria/tempi su pacchetti validi vicini ai limiti; RES-23 overlay/focus e stampa nativa Windows. Nessun collaudo manuale completo e nessuna misura ai limiti dichiarati eseguiti. Checkpoint per cambio sessione richiesto su main/origin/main. Riprendere prima RES-24: pulizia delle risorse locali e del telefono bloccata dal controllo automatico. Backup ed evidenze sono locali e ignorati da Git: conservarli nel checkout attuale; non sono inclusi nel commit.",
+  "currentPhase": "Checkpoint per cambio sessione su main; AUD-10/AUD-11 e RES-20/RES-22 completati, quattro residui tracciati.",
+  "activeTask": "RES-24",
+  "nextSession": "Riprendere dal checkpoint su main/origin/main nel checkout D:\\GITHUB\\OnlyFieldAssetManager: build/reports e phone-backup sono locali e ignorati, non inclusi nel commit. Prima RES-24: pulizia telefono/emulatore conclusa; pulizia locale respinta due volte con blocked by policy. Rimuovere soltanto build/import-benchmark, build/native-window-app, build/native-window-exports e i sei helper Python elencati in roadmap.md; conservare report e backup. Chiudere emulator-5554 manualmente o dalla sessione originaria per liberare i due log in build/task-verification. Poi RES-19 (matrice Android) e RES-23 (comandi/focus ed errore stampa). Solo prove autonome autorizzate: foto/scanner/USB/TalkBack fisici RES-13 restano non eseguiti. AUD-10/AUD-11 e RES-20/RES-22 chiusi: 345 test JVM, 14 test nativi per dispositivo, sette fixture telefono/Windows e hash della persistenza superati. APK sul moto g86 e portable aggiornati. Commit e push su main richiesti per questo checkpoint.",
   "remainingTasks": [],
   "residuals": [
     {
@@ -17,36 +17,22 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, schema del percorso (EVO-06), topologia (EVO-07), Altri moduli (EVO-10), 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 chiuso: suite nativa di 13 test verde su Pixel 9 API 37 e moto g86 API 36, inclusi localizzazione e tocco/trascinamento della mappa. Room v2 installato e Demo Comune reimportato; la matrice UX completa resta da eseguire. Verificare anche la conferma import con molti avvisi di allegati mancanti; elenco scorrevole compilato, resa Android non verificata. Stampa Android spostata in background e compilata: collaudare annullamento e callback su dispositivo. Configuratore visivo del 5 ottobre: disegni specifici, Fronte/Retro, griglie 24/48 porte e comandi fissi verificati con Compose Desktop a 360/560/1024 dp, temi chiaro/scuro; mappa da 53 oggetti verificata durante zoom e trascinamento. Da ripetere su Android nativo: nuovi flussi, selezione PoE, riordino tramite trascinamento, Salva/Annulla, tratte posteriori e ridimensionamento; la compilazione e i test JVM non sostituiscono questa prova.",
+      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, schema del percorso (EVO-06), topologia (EVO-07), Altri moduli (EVO-10), 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 chiuso: suite nativa di 13 test verde su Pixel 9 API 37 e moto g86 API 36, inclusi localizzazione e tocco/trascinamento della mappa. Room v2 installato e Demo Comune reimportato; la matrice UX completa resta da eseguire. Verificare anche la conferma import con molti avvisi di allegati mancanti; elenco scorrevole compilato, resa Android non verificata. Stampa Android spostata in background e compilata: collaudare annullamento e callback su dispositivo. Configuratore visivo del 5 ottobre: disegni specifici, Fronte/Retro, griglie 24/48 porte e comandi fissi verificati con Compose Desktop a 360/560/1024 dp, temi chiaro/scuro; mappa da 53 oggetti verificata durante zoom e trascinamento. Da ripetere su Android nativo: nuovi flussi, selezione PoE, riordino tramite trascinamento, Salva/Annulla, tratte posteriori e ridimensionamento; la compilazione e i test JVM non sostituiscono questa prova. Aggiornamento corrente: 14 test nativi superati su ciascun dispositivo; APK finale installato sul moto g86, schermata iniziale con Demo Comune presente. Import ai limiti misurati e persistiti in database isolato, senza modificare la demo.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
-    },
-    {
-      "id": "RES-20",
-      "title": "Apertura esterna dei media protetti Windows",
-      "status": "OPEN",
-      "description": "Import, visualizzazione interna, riapertura, cambio/rimozione password e assenza di copie temporanee in chiaro verificati. Da provare manualmente Esporta e apri: scelta della destinazione, annullamento, apertura con viewer PDF/immagini e gestione di errore del viewer.",
-      "closureCriteria": "Prove manuali Windows registrate; nessuna copia temporanea implicita e nessuna scrittura se la scelta della destinazione è annullata."
-    },
-    {
-      "id": "RES-22",
-      "title": "Memoria e tempi degli import grandi",
-      "status": "OPEN",
-      "description": "Limiti comuni approvati e verificati: ZIP 256 MiB, file 32 MiB, decompresso 512 MiB, 10.000 entry, PBKDF2 massimo 1.000.000. Input compresso letto in streaming; payload conservati in memoria. Rifiuto di ZIP molto comprimibili verificato senza esaurire risorse. Non misurati memoria di picco e tempi su hardware per pacchetti validi vicini ai limiti.",
-      "closureCriteria": "Import validi rappresentativi e ai limiti misurati su telefono e Windows; nessun esaurimento memoria o blocco UI, eventuali adeguamenti documentati."
     },
     {
       "id": "RES-23",
       "title": "Collaudo visivo Windows delle operazioni in background",
-      "status": "OPEN",
-      "description": "Worker, event loop AWT responsivo, blocco delle modifiche concorrenti, salvataggio protetto di 500 apparati e errore atomico reale verificati automaticamente. Da collaudare a vista: pannello occupato, mouse/tastiera/focus, dialoghi e stampa nativa con annullamento/errore.",
+      "status": "PARTIAL",
+      "description": "Worker, event loop AWT, blocco modifiche, salvataggio protetto di 500 apparati ed errore atomico verificati automaticamente. EXE reale del 5 ottobre: pannello occupato leggibile durante import da 511 MiB; picker media, apertura PNG/PDF e ritorno dai viewer verificati. Dialogo nativo di stampa aperto e annullato dal suo pulsante: pannello rilasciato, stato Stampa annullata, hash locali invariati e nessun lavoro nella coda. Restano matrice completa mouse/tastiera/focus durante salvataggio e prova di errore nativo della stampa; nessuna stampa fisica eseguita.",
       "closureCriteria": "Verifiche manuali Windows registrate; pannello leggibile, nessuna modifica durante il salvataggio, dialoghi e stampa annullabili senza perdita dei dati."
     },
     {
       "id": "RES-24",
       "title": "Pulizia finale delle risorse di collaudo",
-      "status": "OPEN",
-      "description": "Il controllo automatico ha bloccato sia la pulizia sul dispositivo sia la rimozione della directory locale temporanea con blocked by policy, senza dettaglio ulteriore. Restano build/task-verification, l'APK com.onlyfield.assetmanager.test, sette PDF di prova in /sdcard/Android/data/com.onlyfield.assetmanager/files, /sdcard/ofam-task-final.png e l'emulatore emulator-5554 avviato da questa sessione. L'app principale e Demo Comune devono essere conservati, insieme al backup pre-aggiornamento.",
-      "closureCriteria": "Conservare i log utili di build/task-verification nei report e rimuovere solo quella directory temporanea, l'APK test e gli otto file generati dalla prova; chiudere solo l'emulatore di questa sessione. Conservare app, demo, media, backup ed evidenze locali."
+      "status": "PARTIAL",
+      "description": "Evidenze iniziali e nuove conservate in build/reports; hash delle sette fixture sul telefono e dei PDF copiati verificati. Rimossi dal moto g86 e dall’emulatore sette PDF ciascuno e APK test; sette fixture del telefono eliminate. App principale, Demo Comune e backup pre-Room-v2 conservati; SHA-256 del backup invariato. App Windows e viewer avviati per il collaudo chiusi; staging vuoto. Pulizia locale respinta due volte dal controllo automatico (blocked by policy): restano build/import-benchmark, build/native-window-app, build/native-window-exports e sei script Python nel solo build/. Restano anche build/task-verification/emulator.log ed emulator-error.log, aperti dall’emulatore avviato nella sessione precedente; non terminato.",
+      "closureCriteria": "Rimuovere le tre cartelle locali delle prove e i sei helper in build/ quando il controllo automatico lo consente o manualmente. Chiudere emulator-5554 dalla sessione originaria o manualmente, poi rimuovere i due log e build/task-verification. Conservare app, demo, media, backup ed evidenze in build/reports."
     }
   ]
 }

@@ -112,6 +112,17 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     fun newProject() = requestChange { dialog = AppDialog.NewProject }
     var dialog by mutableStateOf<AppDialog?>(null)
 
+    fun dismissDialog() {
+        val pending = when (val current = dialog) {
+            is AppDialog.Compare -> current.pkg
+            is AppDialog.Merge -> current.pkg
+            is AppDialog.LocalReplacementPassword -> current.pkg
+            else -> null
+        }
+        dialog = null
+        pending?.let { runIo { it.close() } }
+    }
+
     var status by mutableStateOf("Pronto")
         private set
     var error by mutableStateOf<String?>(null)
@@ -201,7 +212,16 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     private fun saveMapEdit(files: List<File>, type: AttachmentTargetType, targetId: String, transform: (Project) -> Project): List<Attachment>? {
         val before = project ?: return null
         val created = mutableListOf<File>()
-        val previousMedia = storage.mediaSnapshot(before.id)
+        val previousMedia = try { runIo {
+            storage.mediaSnapshot(before.id)?.let { source ->
+                com.onlyfield.assetmanager.exchange.PackagePayloads(storage.getTempFolder()).also { snapshot ->
+                    try { snapshot.copyFrom(source) } catch (e: Exception) { snapshot.close(); throw e }
+                }
+            }
+        } } catch (e: Exception) {
+            error = i18n.text("text.48b913a738e1", e.message)
+            return null
+        }
         val previousProtection = storage.mediaProtected(before.id)
         var committed = false
         return try {
@@ -234,6 +254,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             }
             error = i18n.text("text.48b913a738e1", e.message)
             null
+        } finally {
+            if (committed) previousMedia?.let { runIo { it.close() } }
         }
     }
 
@@ -278,7 +300,11 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         try {
             val existing = attachmentFile(attachment)
             val target = existing ?: DesktopStorageHelper.pickSaveFile(
-                title = i18n.text("media.exportAndOpen"), defaultFileName = attachment.originalFileName, i18n = i18n
+                title = i18n.text("media.exportAndOpen"),
+                defaultFileName = attachment.originalFileName,
+                extensionDescription = attachment.originalFileName,
+                extensions = File(attachment.originalFileName).extension.takeIf { it.isNotBlank() }?.let { arrayOf(it) } ?: emptyArray(),
+                i18n = i18n,
             ) ?: return
             runIo {
                 if (existing == null) target.writeBytes(requireNotNull(attachmentBytes(attachment)) { i18n.text("text.dad522b5d9b7") })
@@ -365,9 +391,11 @@ class DesktopAppState(val storage: DesktopStorageManager) {
                 storage.acquireProjectLock(newProject.id)
                 val localState = if (previousId == newProject.id) LocalProjectState(trashState, storage.mediaSnapshot(newProject.id).orEmpty())
                     else storage.loadLocalState(newProject.id, localPassword)
-                storage.prepareMedia(newProject, incoming, newPassword != null, local = localPackage || incoming == null, retainedMedia = localState.media)
-                storage.saveProjectLocally(newProject, newPassword, trashItems = localState.trash)
-                localState.trash
+                try {
+                    storage.prepareMedia(newProject, incoming, newPassword != null, local = localPackage || incoming == null, retainedMedia = localState.media)
+                    storage.saveProjectLocally(newProject, newPassword, trashItems = localState.trash)
+                    localState.trash
+                } finally { if (previousId != newProject.id) localState.close() }
             }
             if (previousId != newProject.id) previousId?.let(storage::releaseProjectLock)
             project = newProject
@@ -382,6 +410,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             status = message
             error = null
             refreshStoredList()
+            if (previousMedia !== storage.mediaSnapshot(newProject.id)) (previousMedia as? AutoCloseable)?.close()
             return true
         } catch (e: Exception) {
             if (releaseLockOnFailure) storage.releaseProjectLock(newProject.id)
@@ -391,6 +420,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
                 error = null
             } else error = i18n.text("text.803d70d07f6f", e.message)
             return false
+        } finally {
+            if ((dialog as? AppDialog.LocalReplacementPassword)?.pkg !== incoming) incoming?.let { runIo { it.close() } }
         }
     }
 
@@ -494,9 +525,11 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     private fun applyMerge(merge: AppDialog.Merge) {
         dialog = null
-        runIo { storage.extractAttachments(merge.pkg) }
-        update(runIo { merge.result.resolve(merge.choices, i18n = i18n) }, i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size))
-        rememberSyncBase(merge.pkg.project, password)
+        try {
+            runIo { storage.extractAttachments(merge.pkg) }
+            update(runIo { merge.result.resolve(merge.choices, i18n = i18n) }, i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size))
+            rememberSyncBase(merge.pkg.project, password)
+        } finally { runIo { merge.pkg.close() } }
     }
 
     fun exportPackage() {
@@ -545,6 +578,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     }
 
     fun shutdown() {
+        dismissDialog()
         runIo { storage.releaseAllLocks() }
         io.close()
     }

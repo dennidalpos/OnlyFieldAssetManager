@@ -48,6 +48,16 @@ Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di 
 
 Le prove non eseguite non sono considerate superate.
 
+## Ripresa della pulizia RES-24 — 5 ottobre 2026
+
+Conservate e verificate con SHA-256 le 19 evidenze di `build/task-verification` in `build/reports/session-2026-10-05-cleanup/previous-verification`; rimossi 17 file e la sottocartella `pdf`. Sul moto g86 copiate nei report e poi rimosse le sette prove PDF e `/sdcard/ofam-task-final.png`; `adb -s ZY32LNCB8C uninstall com.onlyfield.assetmanager.test` ha restituito `Success`. Verifica finale: solo il pacchetto principale installato e cartella esterna dei PDF vuota. SHA-256 del backup pre-aggiornamento invariato (`c62fc20ebda6e438f175857c769c5600b7fc9da06b6f82ce6fa39d2794c6c418`).
+
+RES-24 resta parziale: due log sono mantenuti aperti da `emulator-5554`, avviato nella sessione precedente. L'emulatore non è stato terminato dalla nuova sessione; la cartella si potrà rimuovere dopo la sua chiusura. Nessuna suite ripetuta per questa pulizia. Comandi ADB verificati sulla [documentazione ufficiale](https://developer.android.com/tools/adb).
+
+## Import grandi RES-22 / AUD-10 — 5 ottobre 2026
+
+Misure iniziali su Windows e moto g86 hanno riprodotto `OutOfMemoryError` con un pacchetto valido da 511 MiB decompressi sul telefono. La correzione autorizzata mantiene limiti e `.ofam` 1; lettura, estrazione ed export elaborano un allegato per volta, con deposito temporaneo cifrato e chiusura esplicita del pacchetto. Metodo, baseline e comandi in [report import grandi](testing/import-benchmark-2026-10-05.md). `StagedPayloadTest`: cinque regressioni superate su cifratura e rilascio, manifest invalido, tag alterato, interruzione e preservazione del file preesistente in caso di staging corrotto.
+
 ## Aggiornamento SQLCipher (AUD-03) — 5 ottobre 2026
 
 AUD-03 è ora chiuso: `EncryptedSchemaUpgradeTest` usa lo schema storico del commit `f17d8a7`, ricostruito nel database SQLCipher isolato, e il percorso reale `EncryptedDatabase.open`. Upgrade v1 → v2, eliminazione delle tabelle precedenti, downgrade 14 → 2, riapertura a versione invariata e import completo verificati sul moto g86 API 36: 4 test superati. L'import esplicito nel database applicativo vuoto e la riapertura di «Demo Comune» hanno superato una quinta esecuzione dedicata. Emulatore API 37: tre scenari di versione superati (`BUILD SUCCESSFUL in 18s`). La prova JVM resta distinta da SQLCipher nativo; dettagli, backup e comandi in [roadmap](../roadmap.md).
@@ -213,3 +223,30 @@ Espresso 3.6.1 chiamava per reflection `InputManager.getInstance`, assente su AP
 `ANDROID_SERIAL=emulator-5554` con `:mobile:app:connectedDebugAndroidTest --no-parallel --max-workers=1`: verifica conclusiva `BUILD SUCCESSFUL in 23s`, **13 test**, zero fallimenti/errori/saltati. Stessa suite tramite `adb -s ZY32LNCB8C shell am instrument -w -r com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner`: **13 test superati** in 8,947 s sul moto g86 API 36, senza attivare il parametro di reimport del database applicativo. Include PDF, SQLCipher, localizzazione e tocco/trascinamento nativo della mappa. La fixture storica ricrea anche gli indici; la lettura gestisce le tabelle che non ne dichiarano, correggendo un errore emerso nell'ultimo controllo.
 
 Regressioni JVM complete dopo i problemi risolti: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 26s`, **340 test** (108/64/133/35), nessun fallimento/errore/saltato. RES-17 rimosso dal tracker. Hardware, matrice UX completa, TalkBack e stampa nativa rimangono in RES-13/RES-19/RES-23.
+
+## Import grandi (AUD-10 / RES-22) — 5 ottobre 2026
+
+L’OOM reale da 511 MiB sul moto g86 è corretto con lettura, estrazione ed export progressivi, cache limitata e staging temporaneo cifrato; limiti e `.ofam` v1 invariati. Sette fixture valide misurate su Windows e telefono, incluse ZIP/cifrato da 255 MiB, 10.000 entry e KDF massimo: persistenza SQLCipher e hash degli allegati superati. Collaudo EXE reale da 511 MiB completato e staging rimosso alla chiusura. Metodologia, risultati e fonti nel [report](testing/import-benchmark-2026-10-05.md).
+
+Suite completa 345 test verdi, APK/portable generati; 14 test nativi verdi su API 36/37. Revisione risorse e rollback foto: `:shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 1m 38s`. AUD-10 e RES-22 rimossi dal tracker; hardware, matrice UX e stampa restano aperti.
+
+## Chiusura AUD-11 e RES-20 — 5 ottobre 2026
+
+Corretto «Esporta e apri»: filtro/suffisso del file originale, estensioni confrontate senza distinzione fra maiuscole e minuscole, nessun suffisso forzato per nomi senza estensione. Nessun cambiamento ai picker `.ofam` o dei documenti.
+
+Collaudo autonomo nell’EXE Windows reale con progetto protetto sintetico: PNG esportato come `.PNG` e aperto in Foto; PDF aperto in Acrobat, tre pagine e SHA-256 identico all’originale. Annullamento del picker senza nuove scritture o variazioni degli hash; estensione non associata apre la scelta di app Windows, annullata senza blocco. Nessun PNG/PDF in `data/`; i pacchetti locali restano invariati. Gli errori interni di un viewer già avviato non vengono intercettati dall’app.
+
+`:pc:app:test :pc:app:packagePortable :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1` → `BUILD SUCCESSFUL in 1m 16s`; 133 test Desktop e 35 Android JVM verdi. Evidenze locali in `build/reports/native-windows`; AUD-11 e RES-20 rimossi dal tracker. APK aggiornato sul moto g86 (`install -r`: `Success`), «Demo Comune» conservata.
+
+## Prova autonoma Windows RES-23 — 5 ottobre 2026
+
+Pannello occupato visibile e leggibile durante import/persistenza da 511 MiB. Dopo la correzione AUD-11, picker media e ritorno dai viewer verificati. Dialogo nativo di stampa aperto dal flusso Documenti → Stampa; annullato con il suo pulsante Annulla: stato «Stampa annullata», overlay rilasciato e hash dei pacchetti invariati. `Get-PrintJob` non mostra lavori nella coda; nessuna stampa fisica inviata. Catture in `build/reports/native-windows/print-dialog.png` e `print-cancelled.png`.
+
+RES-23 rimane parziale: matrice completa dei comandi e del focus durante salvataggio ed errore nativo di stampa non verificati. Nessuna chiusura implicita dei collaudi hardware o della matrice Android.
+
+## Pulizia conclusiva e residui — 5 ottobre 2026
+
+- Verificati gli SHA-256 delle sette fixture sul moto g86; rimosse le sole fixture della cartella esterna `import-benchmark` e la cartella vuota. Copiati e verificati i sette PDF nativi di ciascun dispositivo in `build/reports/import-benchmark/ZY32LNCB8C` e `emulator-5554`, poi rimossi dai dispositivi. Disinstallati entrambi gli APK test (`Success`); resta installata l’app principale. APK finale sul moto g86 installato con `-r`: demo conservata. Backup pre-Room-v2 con SHA-256 ancora `c62fc20ebda6e438f175857c769c5600b7fc9da06b6f82ce6fa39d2794c6c418`.
+- Chiusi app Windows e viewer avviati per le prove; staging vuoto. Verificati gli SHA-256 di tutti i 16 payload della working copy Windows rispetto alla fixture originale. Conservate quattro piccole evidenze riproducibili in `build/reports/native-windows/fixtures`: pacchetto viewer protetto con password fittizia, pacchetto da 511 MiB salvato (ZIP 526.567 byte), PNG e PDF esportati; report hash in `windows-persisted-payloads.txt`.
+- La pulizia locale è stata respinta due volte dal controllo automatico con `blocked by policy`, senza motivazione più precisa: prima comando composto con controllo dei percorsi, poi `Remove-Item -LiteralPath` sui tre percorsi assoluti verificati. Tentativi interrotti. RES-24 registra `build/import-benchmark`, `build/native-window-app`, `build/native-window-exports` e i sei helper `complete-import-docs.py`, `complete-print-docs.py`, `complete-viewer-docs.py`, `finalize-import.py`, `trim-viewer-fixture.py`, `check-windows-persistence.py`. Sono tutti output ignorati. I due log di `build/task-verification` restano bloccati dall’emulatore della sessione precedente, non terminato.
+- Tracker: completati e rimossi AUD-10, AUD-11, RES-20, RES-22. Restano RES-13, RES-19, RES-23 e RES-24; gli esiti non eseguiti sono espliciti. Nessun commit o push richiesto/eseguito.

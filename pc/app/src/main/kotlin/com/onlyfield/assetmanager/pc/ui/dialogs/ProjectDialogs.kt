@@ -63,7 +63,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
     }
 
     AlertDialog(
-        onDismissRequest = { state.dialog = null },
+        onDismissRequest = { state.dismissDialog() },
         modifier = Modifier.width(560.dp),
         title = { Text(i18n.text("text.e5fb2fba05af", w.stepNumber, w.stepCount)) },
         text = {
@@ -101,7 +101,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
             }
         },
         dismissButton = {
-            TextButton(onClick = { if (w.isFirst) state.dialog = null else w = w.back() }) {
+            TextButton(onClick = { if (w.isFirst) state.dismissDialog() else w = w.back() }) {
                 Text(if (w.isFirst) i18n.text("text.18c9d912a210") else i18n.text("text.80426885bb74"))
             }
         }
@@ -121,7 +121,7 @@ private fun LocalReplacementPasswordDialog(state: DesktopAppState, d: AppDialog.
     var password by remember(d.pkg) { mutableStateOf("") }
     FormDialog(
         title = i18n.text("import.localPasswordTitle"),
-        onDismiss = { state.dialog = null },
+        onDismiss = { state.dismissDialog() },
         onConfirm = { state.acceptIncomingWithLocalPassword(d.pkg, d.incomingPassword, password) },
         confirmEnabled = password.isNotEmpty(),
         confirmLabel = i18n.text("text.12abcf9ee7d6"),
@@ -140,7 +140,7 @@ private fun ImportPasswordDialog(state: DesktopAppState, d: AppDialog.ImportPass
     var password by remember(d.file) { mutableStateOf("") }
     FormDialog(
         title = i18n.text("text.9c4199f65693"),
-        onDismiss = { state.dialog = null },
+        onDismiss = { state.dismissDialog() },
         onConfirm = { state.importFile(d.file, password) },
         confirmEnabled = password.isNotEmpty(),
         confirmLabel = i18n.text("text.12abcf9ee7d6"),
@@ -178,7 +178,7 @@ private fun ManagePasswordDialog(state: DesktopAppState) {
 
     FormDialog(
         title = if (protected) i18n.text("text.f6a32b19c4b1") else i18n.text("text.e31ad11302ab"),
-        onDismiss = { state.dialog = null },
+        onDismiss = { state.dismissDialog() },
         onConfirm = { error = state.changePassword(current, newPassword, confirm) },
         confirmEnabled = (!protected || current.isNotEmpty()) && (protected || newPassword.isNotEmpty()),
         confirmLabel = if (protected && newPassword.isEmpty()) i18n.text("text.01f6d7886781") else i18n.text("text.08ea8f8fecc8"),
@@ -200,7 +200,7 @@ private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
     val i18n = LocalMessages.current
 
     AlertDialog(
-        onDismissRequest = { state.dialog = null },
+        onDismissRequest = { state.dismissDialog() },
         title = { Text(i18n.text("text.d9894806b1de")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -222,7 +222,7 @@ private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
                 Button(onClick = { state.acceptIncoming(d.pkg, d.password) }) { Text(i18n.text(if (d.comparison.currentProjectId == null) "text.4f01aabad5cf" else "text.3260dc474cbc")) }
             }
         },
-        dismissButton = { TextButton(onClick = { state.dialog = null }) { Text(i18n.text("text.18c9d912a210")) } }
+        dismissButton = { TextButton(onClick = { state.dismissDialog() }) { Text(i18n.text("text.18c9d912a210")) } }
     )
 }
 
@@ -251,7 +251,7 @@ private fun MergeDialog(state: DesktopAppState, d: AppDialog.Merge) {
                 Button(onClick = { state.chooseMergeSide(MergeSide.INCOMING) }) { Text(i18n.text("text.b4c64eaa84c7")) }
             }
         },
-        dismissButton = { TextButton(onClick = { state.dialog = null }) { Text(i18n.text("text.5b99d7ce433a")) } }
+        dismissButton = { TextButton(onClick = { state.dismissDialog() }) { Text(i18n.text("text.5b99d7ce433a")) } }
     )
 }
 
@@ -271,7 +271,7 @@ private fun DocumentsDialog(state: DesktopAppState) {
     var selection by remember { mutableStateOf(ReportSelection()) }
 
     fun generate() {
-        state.dialog = null
+        state.dismissDialog()
         val filter = ExportFilterConfig(
             includeConfidential = includeConfidential,
             reviewRequiredConfirmed = true,
@@ -300,14 +300,14 @@ private fun DocumentsDialog(state: DesktopAppState) {
 
     FormDialog(
         title = i18n.text("text.b59593297419"),
-        onDismiss = { state.dialog = null },
+        onDismiss = { state.dismissDialog() },
         onConfirm = ::generate,
         confirmLabel = if (format == DocFormat.PRINT) i18n.text("text.f3af4cb18a36") else i18n.text("text.38f38c0c651b")
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(i18n.text("text.88e997fd79f3"), style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
             OutlinedButton(onClick = {
-                state.dialog = null
+                state.dismissDialog()
                 DesktopStorageHelper.pickSaveFile(i18n.text("text.4db3339e27f7"), "${DesktopAppState.safeFileName(project.name)}_etichette.pdf", i18n.text("text.7e9c89b812eb"), "pdf", i18n = i18n)
                     ?.let { f ->
                         runCatching { state.runIo { f.outputStream().use { LabelSheetPdf.write(LabelSheetPdf.labelsFor(project, i18n = i18n), it) } } }
@@ -350,7 +350,7 @@ private fun ValidationDialog(state: DesktopAppState) {
     val index = remember(project) { ProjectIndex(project) }
     val grouped = state.issues.groupBy { it.severity }
     AlertDialog(
-        onDismissRequest = { state.dialog = null },
+        onDismissRequest = { state.dismissDialog() },
         modifier = Modifier.width(720.dp),
         title = { Text(i18n.text("text.a590fcd25b56")) },
         text = {
@@ -379,7 +379,7 @@ private fun ValidationDialog(state: DesktopAppState) {
                                 details = listOf(issue.message)
                             ) {
                                 if (target != null) {
-                                    TextButton(onClick = { state.section = target; state.dialog = null }) { Text(i18n.text("text.5b1d21b49b10", target.localizedTitle(i18n))) }
+                                    TextButton(onClick = { state.section = target; state.dismissDialog() }) { Text(i18n.text("text.5b1d21b49b10", target.localizedTitle(i18n))) }
                                 }
                             }
                         }
@@ -387,6 +387,6 @@ private fun ValidationDialog(state: DesktopAppState) {
                 }
             }
         },
-        confirmButton = { TextButton(onClick = { state.dialog = null }) { Text(i18n.text("text.32d4079b315b")) } }
+        confirmButton = { TextButton(onClick = { state.dismissDialog() }) { Text(i18n.text("text.32d4079b315b")) } }
     )
 }

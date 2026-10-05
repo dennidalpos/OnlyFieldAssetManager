@@ -10,6 +10,9 @@ import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.exchange.PackageImportResult
 import com.onlyfield.assetmanager.exchange.PackageSerializer
 import com.onlyfield.assetmanager.exchange.ProjectPackage
+import com.onlyfield.assetmanager.exchange.PackagePayloads
+import com.onlyfield.assetmanager.exchange.PayloadViews
+import com.onlyfield.assetmanager.exchange.FilePayloadMap
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.RandomAccessFile
@@ -19,7 +22,9 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 internal class LocalPasswordRequired : IllegalStateException()
-internal data class LocalProjectState(val trash: List<TrashItem>, val media: Map<String, ByteArray>)
+internal data class LocalProjectState(val trash: List<TrashItem>, val media: Map<String, ByteArray>) : AutoCloseable {
+    override fun close() { (media as? AutoCloseable)?.close() }
+}
 
 data class DataDirStatus(
     val path: File,
@@ -45,7 +50,10 @@ class DesktopStorageManager(
         private set
 
     private val activeLocks = mutableMapOf<String, Pair<RandomAccessFile, FileLock>>()
-    private val mediaInMemory = java.util.concurrent.ConcurrentHashMap<String, MutableMap<String, ByteArray>>()
+    private val mediaPayloads = java.util.concurrent.ConcurrentHashMap<String, PackagePayloads>()
+    private fun stagedMedia(source: Map<String, ByteArray>, include: (String) -> Boolean = { true }): PackagePayloads = PackagePayloads(getTempFolder()).also { store ->
+        try { store.copyFrom(source, include) } catch (e: Exception) { store.close(); throw e }
+    }
     private val protectedMediaIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     init {
@@ -104,7 +112,7 @@ class DesktopStorageManager(
     fun loadSyncBase(projectId: String, password: String?): Project? {
         val file = syncBaseFile(projectId)
         if (!file.isFile) return null
-        return file.inputStream().use { PackageSerializer.importPackage(it, password, i18n = i18n) }.pkg?.project
+        return file.inputStream().use { PackageSerializer.importPackage(it, password, i18n = i18n, stagingDirectory = getTempFolder()) }.pkg?.use { it.project }
             ?: throw IllegalStateException(i18n.text("text.61c13d777659"))
     }
 
@@ -127,6 +135,20 @@ class DesktopStorageManager(
         try { replaceFile(temp, target) } finally { Files.deleteIfExists(temp.toPath()) }
     }
 
+    private fun preparePackage(target: File, project: Project, media: Map<String, ByteArray>, password: String?): File {
+        Files.createDirectories(target.parentFile.toPath())
+        val temp = Files.createTempFile(target.parentFile.toPath(), target.name, ".tmp").toFile()
+        try {
+            temp.outputStream().buffered().use { PackageSerializer.exportPackageToStream(it, project, media, password, i18n = i18n) }
+            return temp
+        } catch (e: Exception) { Files.deleteIfExists(temp.toPath()); throw e }
+    }
+
+    private fun writePackage(target: File, project: Project, media: Map<String, ByteArray>, password: String?) {
+        val temp = preparePackage(target, project, media, password)
+        try { replaceFile(temp, target) } finally { Files.deleteIfExists(temp.toPath()) }
+    }
+
     /** Prepares project and merge snapshot for password changes. */
     fun changeProjectPassword(project: Project, oldPassword: String?, newPassword: String?, trashItems: List<TrashItem>) = withProjectLock(project.id) {
         val target = File(getProjectsFolder(), "${project.id}.ofam")
@@ -135,29 +157,32 @@ class DesktopStorageManager(
         val base = loadSyncBase(project.id, oldPassword)
         val local = target.inputStream().use { PackageSerializer.importPackage(it, oldPassword, i18n = i18n) }.pkg
             ?: throw IllegalStateException(i18n.text("text.42e4ee10f12f"))
-        val media = local.attachments + localMedia(project.id)
-        val mainTemp = prepareWrite(target, PackageSerializer.exportPackage(project, media + (LOCAL_TRASH_ENTRY to trashBytes(trashItems)), newPassword, i18n = i18n))
-        var syncTemp: File? = null
-        var syncReplaced = false
-        try {
-            if (base != null) {
-                syncTemp = prepareWrite(syncFile, PackageSerializer.exportPackage(base.copy(isPasswordProtected = newPassword != null), password = newPassword, i18n = i18n))
-                replaceFile(syncTemp, syncFile)
-                syncReplaced = true
+        local.use {
+            val media = PayloadViews.merge(local.attachments, localMedia(project.id))
+            val mainTemp = preparePackage(target, project, PayloadViews.merge(media, mapOf(LOCAL_TRASH_ENTRY to trashBytes(trashItems))), newPassword)
+            var syncTemp: File? = null
+            var syncReplaced = false
+            try {
+                if (base != null) {
+                    syncTemp = prepareWrite(syncFile, PackageSerializer.exportPackage(base.copy(isPasswordProtected = newPassword != null), password = newPassword, i18n = i18n))
+                    replaceFile(syncTemp, syncFile)
+                    syncReplaced = true
+                }
+                replaceFile(mainTemp, target)
+                val staged = stagedMedia(media) { it != LOCAL_TRASH_ENTRY }
+                mediaPayloads.put(project.id, staged)?.close()
+                if (newPassword != null) protectedMediaIds += project.id else protectedMediaIds -= project.id
+                if (newPassword != null) removePlainMedia(project.id)
+                Files.deleteIfExists(trashFile(project.id).toPath())
+            } catch (e: Exception) {
+                if (syncReplaced && oldSyncBytes != null) {
+                    try { atomicWrite(syncFile, oldSyncBytes) } catch (rollback: Exception) { e.addSuppressed(rollback) }
+                }
+                throw e
+            } finally {
+                Files.deleteIfExists(mainTemp.toPath())
+                syncTemp?.let { Files.deleteIfExists(it.toPath()) }
             }
-            replaceFile(mainTemp, target)
-            mediaInMemory[project.id] = java.util.concurrent.ConcurrentHashMap(media.filterKeys { it != LOCAL_TRASH_ENTRY })
-            if (newPassword != null) protectedMediaIds += project.id else protectedMediaIds -= project.id
-            if (newPassword != null) removePlainMedia(project.id)
-            Files.deleteIfExists(trashFile(project.id).toPath())
-        } catch (e: Exception) {
-            if (syncReplaced && oldSyncBytes != null) {
-                try { atomicWrite(syncFile, oldSyncBytes) } catch (rollback: Exception) { e.addSuppressed(rollback) }
-            }
-            throw e
-        } finally {
-            Files.deleteIfExists(mainTemp.toPath())
-            syncTemp?.let { Files.deleteIfExists(it.toPath()) }
         }
     }
 
@@ -168,32 +193,39 @@ class DesktopStorageManager(
         AttachmentFiles.localFile(getMediaFolder(), projectId, attachment)
 
     fun attachmentBytes(projectId: String, attachment: Attachment): ByteArray? =
-        mediaInMemory[projectId]?.get(AttachmentFiles.entryName(attachment))
+        mediaPayloads[projectId]?.get(AttachmentFiles.entryName(attachment))
             ?: attachmentFile(projectId, attachment).takeIf { it.isFile }?.readBytes()
 
-    fun mediaSnapshot(projectId: String): Map<String, ByteArray>? = mediaInMemory[projectId]?.toMap()
+    fun mediaSnapshot(projectId: String): Map<String, ByteArray>? = mediaPayloads[projectId]
     internal fun mediaProtected(projectId: String) = projectId in protectedMediaIds
 
     fun restoreMedia(projectId: String, snapshot: Map<String, ByteArray>?, protected: Boolean = false) {
         if (protected) protectedMediaIds += projectId else protectedMediaIds -= projectId
-        if (snapshot == null) mediaInMemory.remove(projectId)
-        else mediaInMemory[projectId] = java.util.concurrent.ConcurrentHashMap(snapshot)
+        val restored = snapshot?.let { it as? PackagePayloads ?: stagedMedia(it) }
+        val replaced = if (restored == null) mediaPayloads.remove(projectId) else mediaPayloads.put(projectId, restored)
+        if (replaced !== restored) replaced?.close()
     }
 
-    /** Protected media stay in memory; the encrypted local package is their durable copy. */
+    /** Protected media use bounded RAM and encrypted staging; the package is durable. */
     fun prepareMedia(project: Project, pkg: ProjectPackage?, protected: Boolean, local: Boolean, retainedMedia: Map<String, ByteArray> = emptyMap()) {
         if (protected) protectedMediaIds += project.id else protectedMediaIds -= project.id
         if (!protected) {
-            mediaInMemory.remove(project.id)
             pkg?.let { AttachmentFiles.extract(it, getMediaFolder()) }
         }
-        val media = if (local || pkg == null) localMedia(project.id).toMutableMap() else mutableMapOf()
-        media.putAll(retainedMedia)
-        pkg?.project?.attachments?.forEach { att ->
-            AttachmentFiles.bytesIn(pkg, att)?.let { media[AttachmentFiles.entryName(att)] = it }
-        }
-        pkg?.attachments?.filterKeys { it != LOCAL_TRASH_ENTRY }?.let { media.putAll(it) }
-        mediaInMemory[project.id] = java.util.concurrent.ConcurrentHashMap(media)
+        val media = PackagePayloads(getTempFolder())
+        try {
+            if (local || pkg == null) media.copyFrom(localMedia(project.id))
+            media.copyFrom(retainedMedia)
+            pkg?.let {
+                media.copyFrom(it.attachments) { path -> path != LOCAL_TRASH_ENTRY }
+                for (att in it.project.attachments) {
+                    val path = AttachmentFiles.pathIn(it, att) ?: continue
+                    val canonical = AttachmentFiles.entryName(att)
+                    if (path != canonical) media.write(canonical) { output -> it.writePayload(path, output) }
+                }
+            }
+            mediaPayloads[project.id] = media
+        } catch (e: Exception) { media.close(); throw e }
     }
 
     private fun plainMediaFiles(projectId: String): List<File> {
@@ -206,17 +238,17 @@ class DesktopStorageManager(
     }
 
     private fun localMedia(projectId: String): Map<String, ByteArray> =
-        mediaInMemory[projectId]?.toMap() ?: plainMediaFiles(projectId).associate { file ->
-            "attachments/${file.relativeTo(File(getMediaFolder(), projectId)).invariantSeparatorsPath}" to file.readBytes()
-        }
+        mediaPayloads[projectId] ?: FilePayloadMap(plainMediaFiles(projectId).associate { file ->
+            "attachments/${file.relativeTo(File(getMediaFolder(), projectId)).invariantSeparatorsPath}" to file
+        })
 
     private fun removePlainMedia(projectId: String) {
         plainMediaFiles(projectId).forEach { Files.delete(it.toPath()) }
     }
 
     fun storeAttachmentBytes(projectId: String, attachment: Attachment, bytes: ByteArray) {
-        val memory = mediaInMemory[projectId]
-        if (memory != null) memory[AttachmentFiles.entryName(attachment)] = bytes
+        val memory = mediaPayloads[projectId]
+        if (memory != null) memory.putBytes(AttachmentFiles.entryName(attachment), bytes)
         if (projectId !in protectedMediaIds) {
             val target = attachmentFile(projectId, attachment)
             Files.createDirectories(target.parentFile.toPath())
@@ -226,7 +258,7 @@ class DesktopStorageManager(
 
     /** Copies [source] as [attachment]. */
     fun storeAttachmentFile(projectId: String, attachment: Attachment, source: File): File {
-        if (mediaInMemory.containsKey(projectId)) {
+        if (mediaPayloads.containsKey(projectId)) {
             storeAttachmentBytes(projectId, attachment, source.readBytes())
             return attachmentFile(projectId, attachment)
         }
@@ -238,7 +270,7 @@ class DesktopStorageManager(
 
     /** Saves imported attachment files. */
     fun extractAttachments(pkg: ProjectPackage): Int {
-        if (!mediaInMemory.containsKey(pkg.project.id)) return AttachmentFiles.extract(pkg, getMediaFolder())
+        if (!mediaPayloads.containsKey(pkg.project.id)) return AttachmentFiles.extract(pkg, getMediaFolder())
         var count = 0
         pkg.project.attachments.forEach { attachment ->
             AttachmentFiles.bytesIn(pkg, attachment)?.let { storeAttachmentBytes(pkg.project.id, attachment, it); count++ }
@@ -255,23 +287,28 @@ class DesktopStorageManager(
     companion object { const val LOCAL_TRASH_ENTRY = "attachments/local/trash.json" }
 
     /** Reads local state without replacing corrupt data. */
-    fun loadTrash(projectId: String, password: String? = null): List<TrashItem> = loadLocalState(projectId, password).trash
+    fun loadTrash(projectId: String, password: String? = null): List<TrashItem> = loadLocalState(projectId, password).use { it.trash }
 
     internal fun loadLocalState(projectId: String, password: String?): LocalProjectState {
         val local = File(getProjectsFolder(), "$projectId.ofam")
         var media = emptyMap<String, ByteArray>()
         val bytes = if (local.isFile) {
-            val result = local.inputStream().use { PackageSerializer.importPackage(it, password, i18n = i18n) }
+            val result = local.inputStream().use { PackageSerializer.importPackage(it, password, i18n = i18n, stagingDirectory = getTempFolder()) }
             if (result.validationResult.issues.any { it.code == "PASSWORD_REQUIRED" || it.code == "INVALID_PACKAGE_PASSWORD" }) throw LocalPasswordRequired()
-            check(result.validationResult.issues.none { it.targetEntityId == LOCAL_TRASH_ENTRY }) { i18n.text("text.72ea3e1800e5") }
             val pkg = result.pkg ?: throw IllegalStateException(i18n.text("text.0f81b75705c7"))
-            media = pkg.attachments.filterKeys { it != LOCAL_TRASH_ENTRY }
-            pkg.attachments[LOCAL_TRASH_ENTRY]
+            pkg.use {
+                check(result.validationResult.issues.none { issue -> issue.targetEntityId == LOCAL_TRASH_ENTRY }) { i18n.text("text.72ea3e1800e5") }
+                val trash = it.attachments[LOCAL_TRASH_ENTRY]
+                media = stagedMedia(it.attachments) { path -> path != LOCAL_TRASH_ENTRY }
+                trash
+            }
         } else null
-        val text = bytes?.toString(Charsets.UTF_8) ?: trashFile(projectId).takeIf { it.isFile }?.readText(Charsets.UTF_8) ?: return LocalProjectState(emptyList(), media)
-        val items = trashJson.decodeFromString(ListSerializer(TrashItem.serializer()), text)
-        require(items.all { it.projectId == projectId }) { i18n.text("text.7e60756fd2ba") }
-        return LocalProjectState(items, media)
+        try {
+            val text = bytes?.toString(Charsets.UTF_8) ?: trashFile(projectId).takeIf { it.isFile }?.readText(Charsets.UTF_8) ?: return LocalProjectState(emptyList(), media)
+            val items = trashJson.decodeFromString(ListSerializer(TrashItem.serializer()), text)
+            require(items.all { it.projectId == projectId }) { i18n.text("text.7e60756fd2ba") }
+            return LocalProjectState(items, media)
+        } catch (e: Exception) { (media as? AutoCloseable)?.close(); throw e }
     }
 
     private fun trashBytes(items: List<TrashItem>) = trashJson.encodeToString(ListSerializer(TrashItem.serializer()), items).toByteArray(Charsets.UTF_8)
@@ -299,7 +336,7 @@ class DesktopStorageManager(
     }
 
     fun releaseProjectLock(projectId: String) {
-        mediaInMemory.remove(projectId)
+        mediaPayloads.remove(projectId)?.close()
         protectedMediaIds.remove(projectId)
         val pair = activeLocks.remove(projectId) ?: return
         try {
@@ -367,11 +404,14 @@ class DesktopStorageManager(
         val items = trashItems ?: loadTrash(project.id, password)
         require(items.all { it.projectId == project.id }) { i18n.text("text.7e60756fd2ba") }
         val targetFile = File(getProjectsFolder(), "${project.id}.ofam")
-        val media = localMedia(project.id) + attachments
-        atomicWrite(targetFile, PackageSerializer.exportPackage(project, media + (LOCAL_TRASH_ENTRY to trashBytes(items)), password, i18n = i18n))
+        val media = PayloadViews.merge(localMedia(project.id), attachments)
+        writePackage(targetFile, project, PayloadViews.merge(media, mapOf(LOCAL_TRASH_ENTRY to trashBytes(items))), password)
         if (password != null) protectedMediaIds += project.id else protectedMediaIds -= project.id
         if (password != null) {
-            mediaInMemory[project.id] = java.util.concurrent.ConcurrentHashMap(media.filterKeys { it != LOCAL_TRASH_ENTRY })
+            if (attachments.isNotEmpty() || mediaPayloads[project.id] == null) {
+                val next = stagedMedia(media) { it != LOCAL_TRASH_ENTRY }
+                mediaPayloads.put(project.id, next)?.close()
+            }
             removePlainMedia(project.id)
         }
         Files.deleteIfExists(trashFile(project.id).toPath())
@@ -386,8 +426,11 @@ class DesktopStorageManager(
         val alreadyOwned = ownsProjectLock(projectId)
         acquireProjectLock(projectId)
         try {
-            val result = file.inputStream().use { PackageSerializer.importPackage(it, password = password, i18n = i18n) }
-            require(result.pkg?.project?.id == null || result.pkg?.project?.id == projectId) { i18n.text("text.6c9d85161290") }
+            val result = file.inputStream().use { PackageSerializer.importPackage(it, password = password, i18n = i18n, stagingDirectory = getTempFolder()) }
+            if (result.pkg?.project?.id != null && result.pkg?.project?.id != projectId) {
+                result.pkg?.close()
+                throw IllegalArgumentException(i18n.text("text.6c9d85161290"))
+            }
             if (result.pkg == null && !alreadyOwned) releaseProjectLock(projectId)
             return result
         } catch (e: Exception) {
@@ -400,27 +443,21 @@ class DesktopStorageManager(
         if (!file.exists() || !file.canRead()) {
             throw IllegalArgumentException(i18n.text("text.d60173daedb8", file.absolutePath))
         }
-        return file.inputStream().use { PackageSerializer.importPackage(it, password = password, i18n = i18n) }
+        return file.inputStream().use { PackageSerializer.importPackage(it, password = password, i18n = i18n, stagingDirectory = getTempFolder()) }
     }
 
     fun exportPackageToFile(
         project: Project,
         targetFile: File,
         password: String? = null,
-        attachments: Map<String, ByteArray> = project.attachments.mapNotNull { att -> attachmentBytes(project.id, att)?.let { AttachmentFiles.entryName(att) to it } }.toMap()
+        attachments: Map<String, ByteArray> = localMedia(project.id)
     ) {
         val parent = targetFile.parentFile ?: File(".")
         if (parent.exists() && !parent.canWrite()) {
             throw IllegalStateException(i18n.text("text.d4de3136debe", parent.absolutePath))
         }
 
-        val bytes = PackageSerializer.exportPackage(
-            project = project,
-            attachments = attachments,
-            password = password,
-            i18n = i18n)
-
-        atomicWrite(targetFile, bytes)
+        writePackage(targetFile, project, attachments, password)
     }
 
     fun loadAndroidFixtureFile(): Project {
