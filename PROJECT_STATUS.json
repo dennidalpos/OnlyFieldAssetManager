@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Evoluzione censimento rete: EVO-01…EVO-06 completati (gerarchia Sede → Piano, stato operativo, cablaggio in blocco, ricerca nel progetto, foto più rapide, schema del percorso); prossimo EVO-07.",
+  "currentPhase": "Evoluzione censimento rete: EVO-01…EVO-07 completati (gerarchia Sede → Piano, stato operativo, cablaggio in blocco, ricerca nel progetto, foto più rapide, schema del percorso, topologia fisica); prossimo EVO-08.",
   "activeTask": null,
-  "nextSession": "EVO-07 topologia fisica. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 e scatto in serie in RES-13. Resta RES-17.",
+  "nextSession": "EVO-08 PDF Desktop completo. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 e scatto in serie in RES-13. Resta RES-17.",
   "remainingTasks": [
-    {
-      "id": "EVO-07",
-      "title": "Topologia fisica",
-      "status": "TODO",
-      "description": "Grafo degli apparati attivi: archi = percorsi completi con passanti collassati, percorsi incompleti come monconi; filtri sede/piano; layout automatico a livelli; tocco apre l'apparato. Logica in `core.model` da `ConnectionGraph`, vista in `configurator`.",
-      "closureCriteria": "Vista su Android e Windows leggibile sul demo (44 apparati) senza scorrimento orizzontale dei comandi."
-    },
     {
       "id": "EVO-08",
       "title": "PDF Desktop completo",
@@ -53,7 +46,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, schema del percorso (EVO-06), 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 rimane aperto.",
+      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, schema del percorso (EVO-06), topologia (EVO-07), 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 rimane aperto.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]

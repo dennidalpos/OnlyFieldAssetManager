@@ -49,6 +49,7 @@ fun FloorHomeSection(state: DesktopAppState) {
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
+    var topology by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
     val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
@@ -66,6 +67,12 @@ fun FloorHomeSection(state: DesktopAppState) {
         if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = searchEditDraft(project, hit) }
         else { state.selectedSiteId = ObjectMap.floorSite(project, target); state.selectedAreaId = target; focus = hit.focus }
     }
+    fun openDevice(d: Device) {
+        topology = false
+        val target = ObjectMap.areaId(project, d)
+        if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
+        else { state.selectedSiteId = ObjectMap.floorSite(project, target); state.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
+    }
     Column(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
         // Ctrl+F opens the project search from the map.
         if (e.type == KeyEventType.KeyDown && e.isCtrlPressed && e.key == Key.F) { searching = true; true } else false
@@ -75,6 +82,7 @@ fun FloorHomeSection(state: DesktopAppState) {
             site?.let { TextButton(onClick = { state.selectedAreaId = null }) { Text("› ${it.name}") } }
             area?.let { Text("› ${it.name}") }
             Spacer(Modifier.weight(1f))
+            OutlinedButton(onClick = { topology = true }) { Text(i18n.text("topology.title")) }
             OutlinedButton(onClick = { searching = true }) { Text(i18n.text("search.action")) }
         }
         if (area == null) {
@@ -131,6 +139,7 @@ fun FloorHomeSection(state: DesktopAppState) {
         onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft, editorPage) { editor = null } } }
     if (searching) GlobalSearchDialog(project, i18n, state.recentSearch, ::openHit) { searching = false }
+    if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentFile, {
         DesktopStorageHelper.pickOpenFile(i18n.text("text.04458b820c0e"), i18n.text("text.0c7a70a251fc"), "pdf", "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { file ->
             state.importFloorplan(file, area.id)?.let { a ->

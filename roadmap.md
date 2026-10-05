@@ -245,3 +245,10 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - `core.forms.PathSchematics`: percorso fisico completo da una porta, attraverso i passaggi interni dei passanti in entrambe le direzioni, con lettura dall'estremo attivo, fuoco sull'oggetto interrogato e fini aperte; sostituisce le tratte di `PortSummary` (`PathHop`, rimosso).
 - `configurator.PathSchematicView`: disegno verticale condiviso nella scheda rapida della porta e nella scheda Collegamento della pagina porta, al posto degli elenchi testuali.
 - Verifica: core 100, exchange 44, Desktop 102, Android JVM 24 test superati, test strumentali Android compilati; nuovi `PathSchematicTest`, `DemoPathSchematicTest` (demo: AP del teatro attraverso presa, scatola di giunzione e patch panel; ponte radio Municipio → Scuola media) e `PathSchematicUiTest`. Resa controllata su immagine Desktop del demo; Android non verificato a vista (RES-19).
+
+## EVO-07: topologia fisica — 5 ottobre 2026
+
+- `core.forms.PhysicalTopology`: grafo degli apparati attivi da `PathSchematics` (passanti collassati, percorsi contati, mezzi, percorsi aperti per apparato), filtri sede/piano con estremi esterni, livelli in ampiezza per rete collegata, righe a capo secondo la larghezza, terminali raccolti sull'apparato di infrastruttura.
+- `configurator.map.TopologyDialog`, condiviso: filtri che vanno a capo, interruttore Mostra i terminali, nodi toccabili con descrizione per lo screen reader; aperto da FloorHome su Windows e Android, il tocco porta all'apparato sulla mappa.
+- Demo: 118 apparati attivi, 16 collegamenti tra apparati di infrastruttura con i terminali raccolti (115 con tutti i terminali); due reti (Comune con le scuole via ponte radio, Teatro con la propria FTTH).
+- Verifica: core 100, exchange 47, Desktop 103, Android JVM 24 test superati, test strumentali Android compilati; nuovi `DemoTopologyTest` e `TopologyUiTest`. Resa controllata su immagini Desktop a 1360 e 412 dp; su Android non verificata a vista (RES-19).

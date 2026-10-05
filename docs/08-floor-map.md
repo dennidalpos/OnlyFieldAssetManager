@@ -63,6 +63,16 @@ L'inserimento è rapido e usa un'unica finestra (`ObjectPickerDialog`, descritto
 
 Il risultato scelto apre la mappa sul suo piano, anche di un'altra sede, con i contenitori aperti e l'oggetto selezionato (lo stesso arrivo di Vai a). Porte e cavi selezionano l'apparato a cui appartengono. Un oggetto senza piano si apre nell'editor. Con il campo vuoto la finestra elenca gli ultimi otto elementi aperti nella sessione.
 
+## Topologia fisica
+
+**Topologia** (pulsante nell'intestazione su Windows; sopra l'elenco di sedi e piani e tra gli strumenti della mappa su Android) apre a schermo intero `configurator.map.TopologyDialog`, filtrato su sede e piano correnti.
+
+- `core.forms.PhysicalTopology` usa solo gli apparati attivi: un collegamento unisce due apparati raggiunti da un percorso completo (`PathSchematics`), con i passanti nascosti; il numero di percorsi rende la linea più spessa, il ponte radio è tratteggiato. I percorsi che non arrivano a un altro apparato attivo sono contati sull'apparato come percorsi aperti (`⋯N`).
+- Ogni rete collegata è una fascia di righe, a livelli in ampiezza dall'apparato più a monte (ONT o modem, router o firewall, poi lo switch con più collegamenti); gli apparati senza collegamenti chiudono il disegno. Le righe si adattano alla larghezza della finestra, quindi si scorre solo in verticale.
+- I terminali con un solo collegamento verso un apparato di infrastruttura sono raccolti su di esso (`+N`); **Mostra i terminali** li disegna tutti.
+- Filtri Sede e Piano: gli apparati fuori filtro all'altro capo di un collegamento restano visibili e attenuati. Apparati spenti o dismessi sono attenuati.
+- Il tocco su un apparato chiude la topologia e lo seleziona sulla mappa del suo piano; senza piano apre l'editor.
+
 ## Planimetrie
 
 Un piano può usare un'immagine o una pagina PDF scelta da un allegato. Android usa `PdfRenderer`, Desktop PDFBox; il rendering avviene fuori dal thread UI. Un file illeggibile lascia disponibile la mappa senza sfondo. La vista interna dei contenitori non usa lo sfondo.

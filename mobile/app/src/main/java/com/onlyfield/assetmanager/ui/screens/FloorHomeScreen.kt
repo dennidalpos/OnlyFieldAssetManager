@@ -51,6 +51,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
+    var topology by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
     val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
@@ -60,6 +61,12 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         val target = hit.areaId
         if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = searchEditDraft(project, hit) }
         else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = hit.focus }
+    }
+    fun openDevice(d: Device) {
+        topology = false
+        val target = ObjectMap.areaId(project, d)
+        if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
+        else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
     }
     fun back() { when { area != null -> vm.selectedAreaId = null; site != null -> vm.selectedSiteId = null; else -> vm.back() } }
     BackHandler(enabled = site != null) { back() }
@@ -83,7 +90,10 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         Column(Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (area == null) {
                 Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)
-                Button(onClick = { addingStructure = true }) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { addingStructure = true }) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
+                    OutlinedButton(onClick = { topology = true }) { Text(i18n.text("topology.title")) }
+                }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (site == null) items(project.sites.sitesForDisplay(i18n), key = { it.id }) { b ->
                         ItemCard(b.displayName(), listOf(i18n.text("text.e326a5ebe3a5", b.areas.size)), onClick = { vm.selectedSiteId = b.id; vm.selectedAreaId = null })
@@ -102,6 +112,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
                 ), Modifier.weight(1f), tools = listOf(
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("topology.title")) { topology = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { if (vm.busy == null) selectingPlan = true },
                 ), focus = focus, media = { ref ->
                     val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
@@ -119,6 +130,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     }
     if (searching) GlobalSearchDialog(project, i18n, vm.recentSearch, ::openHit) { searching = false }
+    if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
     if (addingStructure) {
         var name by remember { mutableStateOf("") }
         EditScreen(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { addingStructure = false }, {
