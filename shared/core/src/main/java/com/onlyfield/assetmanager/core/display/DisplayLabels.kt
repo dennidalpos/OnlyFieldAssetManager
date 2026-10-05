@@ -103,6 +103,7 @@ fun CableMedium.toDisplayString(i18n: Messages = Messages()): String = when (thi
     CableMedium.DAC -> "DAC"
     CableMedium.AOC -> "AOC"
     CableMedium.FIBER_OVERALL -> i18n.text("text.3a17868d205c")
+    CableMedium.RADIO -> i18n.text("medium.radio")
     CableMedium.CONSOLE -> i18n.text("text.29a40861bafe")
     CableMedium.OTHER -> i18n.text("text.78f5742268e4")
     CableMedium.UNKNOWN -> i18n.text("text.43d7b5eae9c8")

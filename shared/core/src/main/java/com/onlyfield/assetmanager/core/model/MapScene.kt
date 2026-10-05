@@ -5,7 +5,7 @@ import kotlin.math.sqrt
 
 enum class ObjectFamily { NETWORK, SECURITY, SERVER, POWER, PASSIVE, STRUCTURE, ENDPOINT, OTHER }
 
-enum class LinkMedium { COPPER, FIBER, POWER, OTHER }
+enum class LinkMedium { COPPER, FIBER, RADIO, POWER, OTHER }
 
 /** [typeId] is set only for built-in types, so UIs can pick a drawn icon without matching codes. */
 data class Glyph(val code: String, val family: ObjectFamily, val typeId: String? = null)
@@ -16,7 +16,7 @@ object ObjectGlyph {
     private val builtins = mapOf(
         "switch" to Glyph("SW", ObjectFamily.NETWORK), "router" to Glyph("RT", ObjectFamily.NETWORK),
         "modem" to Glyph("MD", ObjectFamily.NETWORK), "ont" to Glyph("ONT", ObjectFamily.NETWORK),
-        "access-point" to Glyph("AP", ObjectFamily.NETWORK), "wifi-controller" to Glyph("WLC", ObjectFamily.NETWORK),
+        "access-point" to Glyph("AP", ObjectFamily.NETWORK), "radio-bridge" to Glyph("RAD", ObjectFamily.NETWORK), "wifi-controller" to Glyph("WLC", ObjectFamily.NETWORK),
         "firewall" to Glyph("FW", ObjectFamily.SECURITY), "camera" to Glyph("CAM", ObjectFamily.SECURITY),
         "nvr" to Glyph("NVR", ObjectFamily.SECURITY), "access-control" to Glyph("ACC", ObjectFamily.SECURITY),
         "server" to Glyph("SRV", ObjectFamily.SERVER), "nas" to Glyph("NAS", ObjectFamily.SERVER), "san" to Glyph("SAN", ObjectFamily.SERVER),
@@ -73,6 +73,7 @@ class CableEnds(project: Project) {
         fun medium(cable: Cable): LinkMedium = when {
             cable.objectTypeId == "power-cable" -> LinkMedium.POWER
             cable.medium == CableMedium.FIBER_OVERALL || cable.medium == CableMedium.AOC -> LinkMedium.FIBER
+            cable.medium == CableMedium.RADIO -> LinkMedium.RADIO
             cable.medium == CableMedium.ETHERNET_COPPER || cable.medium == CableMedium.DAC -> LinkMedium.COPPER
             else -> LinkMedium.OTHER
         }

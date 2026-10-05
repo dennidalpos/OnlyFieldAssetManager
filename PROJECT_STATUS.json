@@ -1,9 +1,9 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Tracciamento fisico essenziale (greenfield v1), scheda rapida delle porte con passaggi e foto primaria completati e verificati sui test JVM/Desktop.",
+  "currentPhase": "Tracciamento fisico (greenfield v1), scheda rapida porte, foto primaria, ponte radio e demo comunale completati e verificati sui test JVM/Desktop.",
   "activeTask": null,
-  "nextSession": "Nessuna attività aperta. RES-19: provare su Android nativo scheda rapida porta (Collega a…, Inserisci passaggio, Scollega, Foto), TalkBack, combinazioni 360 chiaro e 411 scuro, zoom a due dita e moto g86, dopo aver reimportato il demo (il database v1 si ricrea vuoto). RES-13 include FOTO-04. Restano RES-17 e RES-01.",
+  "nextSession": "Emulatore Pixel 9: APK aggiornato e «Demo Comune» importato. Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam («Demo Comune») da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Restano RES-17 e RES-01.",
   "remainingTasks": [],
   "residuals": [
     {
@@ -24,7 +24,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, prova sul moto g86. RES-17 rimane aperto.",
+      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 rimane aperto.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
     }
   ]

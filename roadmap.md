@@ -30,10 +30,27 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - **Foto primaria**: destinazione allegati `PORT`; `MapActions.photo` e `LocalPhotoAction` (fotocamera su Android, scelta immagine con salvataggio immediato su Windows, `DesktopAppState.attachPhoto`). Pannello mappa: Foto accanto all'azione primaria, sezione Foto sempre visibile, identificativi, dati tecnici e collegamenti logici in Altri dettagli; scheda cavo con Foto e Inserisci passaggio. Scheda dispositivo Android: porte per prime, poi collocazione, foto e altri dettagli richiusi.
 - **Verifica**: baseline verde prima delle modifiche; finale `gradlew test --rerun` `BUILD SUCCESSFUL in 34s`, 249 test superati (Core 90, Exchange 40, Desktop 95, Android JVM 24), test strumentali Android compilati. Nuovi test: inserimento passaggio e percorso completo, scollegamento, cestino senza orfani e ripristino, riepilogo porta nei due versi, rifiuto dei pacchetti 1.11, demo con giunzioni complete. Rendering Desktop del demo ispezionato (pannello, scheda porta collegata e libera, inserimento passaggio). Android nativo non eseguito: resta in RES-19.
 
+## Ponte radio e demo comunale — 5 ottobre 2026
+
+- **Ponte radio**: nuovo tipo e preset passante (LAN1 PoE fronte, RF1 retro), mezzo cavo `RADIO` e `LinkMedium.RADIO` (viola, tratti lunghi), icona dedicata. `PortTemplate` ha `rearPrefix`/`rearConnector`/`rearMedia` per un retro con nome e connettore propri. La tratta radio è un cavo tra le porte RF: il percorso resta completo tra le sedi.
+- **Demo «Demo Comune»** (356 apparati, 7 rack, 1001 cavi):
+  - Municipio con rack CED centro stella (fibra, core, firewall, router, ONT, server, NAS, UPS) e due piani;
+  - Teatro con FTTH, VPN verso il Municipio e una scatola di giunzione;
+  - Scuola media collegata in radio dal Municipio, con rilancio radio alla Scuola materna;
+  - ogni piano con 2 patch panel da 48 cablati per 3/4 (72/96) verso 36 prese, due switch PoE da 48 e 16 apparati.
+- **Telefono**: installato l'APK con database v1 e importato il demo precedente; salvata una copia grezza dei dati v14 in `build/phone-backup/` (fuori da Git).
+- **Verifica**: `gradlew test --rerun` `BUILD SUCCESSFUL in 1m 16s`, 250 test superati (Core 90, Exchange 41, Desktop 95, Android JVM 24); `DemoSeedTest` controlla 3/4 delle porte cablate, i percorsi radio completi, dorsali, WAN e giunzione. Render Desktop di piano e copertura ispezionati.
+- **Emulatore Pixel 9**: installato l'APK aggiornato e importato «Demo Comune» (356 apparati · 7 rack · 1001 cavi); mappa della copertura della Scuola media con i due ponti radio verificata.
+- **Da completare sul telefono fisico**, che si è disconnesso:
+  - eliminare le due cartelle foto orfane del 3 ottobre (`files/attachments`, presenti nella copia grezza);
+  - installare l'APK aggiornato e importare «Demo Comune»;
+  - chiedere all'utente se eliminare il vecchio «Demo OnlyField».
+
 ## Consegna per cambio sessione — 5 ottobre 2026
 
 - Ramo `main`, commit e push su `origin/main` di tracciamento fisico, scheda rapida delle porte, foto primaria e ripartenza greenfield v1, con documentazione e tracker aggiornati.
 - Verifica: 249 test superati, APK debug e portable Windows generati; demo rigenerato in `fixtures/demo/onlyfield-demo.ofam`.
+- Seconda consegna dello stesso giorno: commit e push di ponte radio e «Demo Comune»; lavori sul telefono in sospeso (vedi sezione precedente).
 - Ripartenza: sui telefoni di prova il database v1 si ricrea vuoto, quindi reimportare il demo; poi RES-19 (scheda rapida della porta su Android nativo, TalkBack, moto g86) e FOTO-04 in RES-13. Restano RES-17 e RES-01.
 
 ## UI/UX — 4 ottobre 2026

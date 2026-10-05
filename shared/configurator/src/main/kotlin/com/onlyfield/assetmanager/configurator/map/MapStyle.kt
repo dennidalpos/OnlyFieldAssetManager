@@ -20,14 +20,16 @@ object MapStyle {
 
     fun medium(media: Set<LinkMedium>, fallback: Color): Color = when (media.singleOrNull()) {
         LinkMedium.FIBER -> Color(0xFFE65100)
+        LinkMedium.RADIO -> Color(0xFF6A1B9A)
         LinkMedium.POWER -> Color(0xFFB71C1C)
         LinkMedium.OTHER -> Color(0xFF616161)
         else -> fallback
     }
 
-    /** Copper solid, fiber dashed, power dotted, other dash-dot; mixed bundles stay solid. */
+    /** Copper solid, fiber dashed, radio long dashes, power dotted, other dash-dot; mixed bundles stay solid. */
     fun dash(media: Set<LinkMedium>, unit: Float): PathEffect? = when (media.singleOrNull()) {
         LinkMedium.FIBER -> PathEffect.dashPathEffect(floatArrayOf(unit * 3, unit * 2))
+        LinkMedium.RADIO -> PathEffect.dashPathEffect(floatArrayOf(unit * 6, unit * 3))
         LinkMedium.POWER -> PathEffect.dashPathEffect(floatArrayOf(unit * .8f, unit * 1.6f))
         LinkMedium.OTHER -> PathEffect.dashPathEffect(floatArrayOf(unit * 3, unit * 1.5f, unit, unit * 1.5f))
         else -> null

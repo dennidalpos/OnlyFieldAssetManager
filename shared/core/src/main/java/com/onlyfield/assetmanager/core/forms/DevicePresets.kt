@@ -107,6 +107,11 @@ object DevicePresets {
         DevicePreset("outlet", setOf("outlet"), listOf(PresetParam("ports", listOf("1", "2", "4"), "2"))) { v ->
             PresetResult(groups(Triple(PortKind.RJ45, v.getValue("ports").toInt(), null), paired = true), passive = true)
         },
+        // Transparent radio bridge: LAN (PoE) on the front, RF on the rear; the air link is a RADIO cable between RF ports.
+        DevicePreset("radio-bridge", setOf("radio-bridge"), emptyList()) {
+            PresetResult(listOf(PortTemplate("LAN", portCount = 1, connector = "RJ45", mediaType = "Copper", speed = "1G",
+                poeStandard = PoeStandard.IEEE_802_3AT, pairedSides = true, rearPrefix = "RF", rearConnector = "RF", rearMedia = "Radio")), passive = true)
+        },
         // Wall box or splice joining two cable runs: one front/rear pass-through per run.
         DevicePreset("junction-box", setOf("junction-box"), listOf(
             PresetParam("ports", listOf("1", "2", "4"), "1"),

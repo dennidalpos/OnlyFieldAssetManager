@@ -45,7 +45,7 @@ object ObjectCatalog {
     val builtins = listOf(
         device("switch", "Switch", DeviceCategory.NETWORK_SWITCH), device("router", "Router"),
         device("modem", "Modem"), device("ont", "ONT"), device("firewall", "Firewall"),
-        device("access-point", "Access point"), device("wifi-controller", "Controller Wi-Fi"),
+        device("access-point", "Access point"), device("wifi-controller", "Controller Wi-Fi"), device("radio-bridge", "Ponte radio"),
         device("server", "Server", DeviceCategory.SERVER_STORAGE), device("workstation", "Workstation"),
         device("nas", "NAS", DeviceCategory.SERVER_STORAGE), device("san", "SAN", DeviceCategory.SERVER_STORAGE),
         device("ip-phone", "Telefono IP"), device("pbx", "Centralino"),
@@ -91,6 +91,7 @@ object ObjectCatalog {
             "rack" -> i18n.text("text.4cd265c2b8c6")
             "patch-panel" -> i18n.text("text.e97fc26f3676")
             "outlet" -> i18n.text("text.4803b51f3912")
+            "radio-bridge" -> i18n.text("type.radioBridge")
             "junction-box" -> i18n.text("type.junctionBox")
             "shelf" -> i18n.text("text.ae286ff299bb")
             "cabinet" -> i18n.text("type.cabinet")

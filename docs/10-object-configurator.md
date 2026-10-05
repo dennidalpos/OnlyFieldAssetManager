@@ -60,6 +60,7 @@ Il contesto esplicito di piano o contenitore viene conservato. Rack, cavi e mode
 | Patch panel | 12/24/48 RJ45, LC o SC, fronte/retro accoppiati |
 | Prese | 1/2/4 porte accoppiate |
 | Scatola di giunzione | 1/2/4 passanti RJ45, LC o SC, fronte/retro accoppiati |
+| Ponte radio | LAN1 RJ45 PoE (fronte) e RF1 (retro) accoppiati; la tratta radio è un cavo con mezzo Radio |
 | Router, firewall | 4/8 LAN, 1/2 WAN, 0/1/2 SFP o SFP+ |
 | AP, telecamere, telefoni, sensori | 1/2 RJ45 con PoE 802.3af/at/bt |
 | Server, workstation | 1/2/4 NIC RJ45 o SFP+, porta di gestione |

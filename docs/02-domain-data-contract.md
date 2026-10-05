@@ -8,7 +8,7 @@ Un progetto contiene organizzazione e siti, aree/piani, apparati e porte, rack, 
 
 Il collegamento fisico è registrato solo dai cavi (`Cable`): estremità A e B sono porte, oppure un apparato quando la porta non è nota. Un cavo conserva etichetta, mezzo, colore, lunghezza, rilievo e note.
 
-I passanti sono porte accoppiate fronte/retro (stesso `passageKey`) di un oggetto passivo: patch panel, presa dati, scatola di giunzione. Il passaggio interno è un `PanelMapping` con le due porte, oppure senza la seconda e `isUnknownPassage` quando è ignoto. Un cavallotto è un cavo tra due porte frontali; una giunta è una scatola di giunzione inserita nel cavo.
+I passanti sono porte accoppiate fronte/retro (stesso `passageKey`) di un oggetto passivo: patch panel, presa dati, scatola di giunzione. Il passaggio interno è un `PanelMapping` con le due porte, oppure senza la seconda e `isUnknownPassage` quando è ignoto. Un cavallotto è un cavo tra due porte frontali; una giunta è una scatola di giunzione inserita nel cavo. Il ponte radio è un apparato passante: LAN (fronte, PoE) e RF (retro); la tratta in aria è un cavo con mezzo `RADIO` tra le porte RF delle due unità, così il percorso resta completo tra le sedi.
 
 `ConnectionGraph` percorre cavi e passaggi: un percorso è completo con due apparati attivi agli estremi, incompleto se termina su un passante o un passaggio ignoto, in conflitto con cicli o più cavi sulla stessa porta. `HardwareConfigurator.insertPassage` divide un cavo attraverso un passante libero: il primo tratto conserva id, etichetta e foto. Eliminare un apparato rimuove passaggi, VLAN, PoE e LAG delle sue porte; il ripristino ricrea i passaggi interni.
 

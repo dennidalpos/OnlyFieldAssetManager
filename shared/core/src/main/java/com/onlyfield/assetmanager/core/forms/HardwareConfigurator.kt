@@ -25,9 +25,11 @@ object HardwareConfigurator {
         (g.startNumber until g.startNumber + g.portCount).flatMap { n ->
             val sides = if (g.pairedSides) listOf(PortSide.FRONT, PortSide.REAR) else listOf(g.side)
             sides.map { side ->
-                Port(deviceId = deviceId, name = "${g.namePrefix}$n", hardware = PortHardware(
-                    side = side, position = n, group = g.namePrefix, mediaType = g.mediaType, connector = g.connector,
-                    speed = g.speed, role = g.role, poeStandard = g.poeStandard,
+                val rear = side == PortSide.REAR && g.pairedSides
+                Port(deviceId = deviceId, name = "${(if (rear) g.rearPrefix else null) ?: g.namePrefix}$n", hardware = PortHardware(
+                    side = side, position = n, group = g.namePrefix, mediaType = (if (rear) g.rearMedia else null) ?: g.mediaType,
+                    connector = (if (rear) g.rearConnector else null) ?: g.connector,
+                    speed = g.speed, role = g.role, poeStandard = g.poeStandard.takeUnless { rear && g.rearConnector != null },
                     comboKey = g.comboGroup?.let { "$it:$n" } ?: if (g.isCombo) "${g.namePrefix}:$n" else null,
                     passageKey = if (g.pairedSides) "${g.namePrefix}:$n" else null,
                 ))

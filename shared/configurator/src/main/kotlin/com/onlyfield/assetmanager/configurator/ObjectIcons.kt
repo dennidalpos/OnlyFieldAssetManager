@@ -12,7 +12,7 @@ import com.onlyfield.assetmanager.core.model.Glyph
 /** Line drawings of the built-in object types; custom types keep their text code. */
 enum class ObjectIcon {
     RACK, SWITCH, ROUTER, FIREWALL, PATCH_PANEL, OUTLET, ACCESS_POINT, CAMERA, PHONE, SENSOR, ACCESS_CONTROL,
-    SERVER, WORKSTATION, STORAGE, NVR, UPS, PDU, POWER_SUPPLY, MODEM, WIFI_CONTROLLER, PBX, BLANK_PANEL,
+    SERVER, WORKSTATION, STORAGE, NVR, UPS, PDU, POWER_SUPPLY, MODEM, WIFI_CONTROLLER, RADIO, PBX, BLANK_PANEL,
     SHELF, CABINET, ENCLOSURE, CABLE;
 
     companion object {
@@ -38,6 +38,7 @@ enum class ObjectIcon {
             "power-supply" -> POWER_SUPPLY
             "modem", "ont" -> MODEM
             "wifi-controller" -> WIFI_CONTROLLER
+            "radio-bridge" -> RADIO
             "pbx" -> PBX
             "blank-panel" -> BLANK_PANEL
             "shelf" -> SHELF
@@ -91,6 +92,8 @@ fun DrawScope.drawObjectIcon(icon: ObjectIcon, topLeft: Offset, side: Float, col
         ObjectIcon.POWER_SUPPLY -> { box(7f, 9f, 10f, 8f); line(10f, 4f, 10f, 9f); line(14f, 4f, 14f, 9f); line(12f, 17f, 12f, 21f) }
         ObjectIcon.MODEM -> { box(3f, 11f, 18f, 8f); line(17f, 11f, 18f, 5f); dot(7f, 15f, .9f); dot(10f, 15f, .9f); dot(13f, 15f, .9f) }
         ObjectIcon.WIFI_CONTROLLER -> { box(2f, 14f, 20f, 6f); arc(12f, 12f, 3f, 225f, 90f); arc(12f, 12f, 6.5f, 225f, 90f); dot(5f, 17f, .9f) }
+        // Dish on a mast with two waves.
+        ObjectIcon.RADIO -> { arc(9f, 10f, 5f, 90f, 180f); line(9f, 5f, 9f, 15f); line(9f, 15f, 9f, 21f); line(6f, 21f, 12f, 21f); arc(13f, 10f, 4f, -45f, 90f); arc(13f, 10f, 7.5f, -45f, 90f) }
         ObjectIcon.PBX -> { box(4f, 4f, 16f, 16f); for (r in 0..2) repeat(3) { dot(8f + it * 4f, 8f + r * 4f, 1f) } }
         ObjectIcon.BLANK_PANEL -> { box(2f, 9f, 20f, 6f); ring(4.5f, 12f, .9f); ring(19.5f, 12f, .9f) }
         ObjectIcon.SHELF -> { line(3f, 14f, 21f, 14f); line(5f, 14f, 5f, 19f); line(19f, 14f, 19f, 19f); box(7f, 8f, 7f, 6f) }

@@ -80,6 +80,10 @@ data class PortTemplate(
     val poeStandard: PoeStandard? = null,
     val pairedSides: Boolean = false,
     val comboGroup: String? = null,
+    /** Paired rear side with its own name and connector, e.g. RF1 of a radio bridge. */
+    val rearPrefix: String? = null,
+    val rearConnector: String? = null,
+    val rearMedia: String? = null,
 )
 
 @Serializable
@@ -286,6 +290,8 @@ enum class CableMedium {
     DAC,
     AOC,
     FIBER_OVERALL,
+    /** Air link between two radio bridge units. */
+    RADIO,
     CONSOLE,
     OTHER,
     UNKNOWN

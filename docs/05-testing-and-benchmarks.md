@@ -18,12 +18,23 @@ Le suite coprono dominio, serializzazione/cifratura, fusione, storage Room, inte
 .\gradlew.bat :shared:exchange:demoPackage
 ```
 
-Contenuto («Demo OnlyField»):
+Contenuto («Demo Comune», 356 apparati, 7 rack, 1001 cavi):
 
-- Sede Nord e Sede Sud, ognuna con Piano terra e Primo piano.
-- Per piano: rack RK da 42 U con patch panel PP (24 RJ45, U42) e due switch A/B (24 porte, metà PoE, 4 SFP+, U40 e U39). Sulla mappa: sei prese a muro PR da due porte e due access point.
-- Ogni porta di presa arriva a una porta del patch panel (cavi H); il patch panel va agli switch (cavi PC). Gli AP sono collegati alla presa, quindi il percorso fino allo switch è completo.
-- 6 switch su 8 sono cablati. Restano vuoti SW-S0-B e SW-S1-B. Ogni switch cablato ha un uplink in fibra verso un altro piano (FO-01…05), utile anche per provare monconi e Vai a. Sui piani Nord il primo cavo orizzontale dell'AP passa per una scatola di giunzione (GB-N0-01, GB-N1-01): il percorso resta completo e mostra le due direzioni.
+- **Comune – Municipio** (CED, Piano terra, Primo piano, Copertura). Il rack CED è il centro stella. Contiene: patch panel fibra PPF-COM-CED (24 LC), SW-COM-CORE (24 RJ45 + 12 SFP+), FW-COM-01, RTR-COM-01, ONT-COM-01, due server, NAS e UPS. La catena WAN è ONT → router → firewall → core.
+- **Teatro comunale** (Piano terra): ONT e router propri con linea FTTH e VPN verso il firewall del Municipio (collegamenti logici). Il cavo della presa PR-TEA-PT-01 passa per la scatola di giunzione GB-TEA-PT-01.
+- **Scuola media** (Piano terra, Primo piano, Copertura): il rack del piano terra è il centro stella della scuola.
+- **Scuola materna** (Piano terra, Copertura).
+- **Ogni piano** ha un rack RK da 42 U con:
+  - due patch panel da 48 RJ45 (PP-…-A/B), cablati per 3/4 (72 porte su 96) verso 36 prese PR da due porte;
+  - due switch da 48 porte PoE con 4 SFP+;
+  - sui piani con dorsale, un patch panel fibra da 12 LC.
+- **Sulla mappa**, per piano: le prese in quattro file e 16 apparati sulle prime prese (4 AP, 2 telecamere, 4 telefoni, 6 PC).
+- **Dorsali**: gli switch dei piani salgono in fibra (cavi FO) al patch panel del centro stella e da lì al core. Nelle sedi a un solo rack lo switch B è collegato allo switch A con un DAC.
+- **Ponti radio**, tutti di tipo Ponte radio con tratta radio tracciabile:
+  - RAD-COM-01 sulla copertura del Municipio (alimentato da SW-COM-P1-A P40) verso RAD-MED-01 della Scuola media (tratta PR-COM-MED, 1200 m);
+  - la media rilancia con RAD-MED-02 verso RAD-MAT-01 della materna (PR-MED-MAT, 450 m).
+
+  I percorsi porta sono completi tra le sedi, ad esempio SW-COM-P1-A P40 → … → SW-MED-PT-A P40.
 
 Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di `:shared:exchange`); `DemoSeedTest` ne verifica struttura, cablaggio e import.
 
@@ -139,3 +150,5 @@ Baseline prima delle modifiche: `gradlew test` verde. Verifica finale con `gradl
 - **Exchange**: versione "1" in export, rifiuto dei pacchetti 1.11, demo con giunzioni a percorso completo.
 - **Desktop**: collegamento dalla scheda rapida nell'editor; collegamenti logici in Altri dettagli. Render del demo ispezionato (pannello mappa, porta collegata e libera, inserimento passaggio).
 - **Da fare**: scheda rapida su Android nativo e foto porta/cavo (RES-19, FOTO-04 in RES-13).
+
+Ponte radio e «Demo Comune»: `gradlew test --rerun` `BUILD SUCCESSFUL in 1m 16s`, 250 test superati (Core 90, Exchange 41, Desktop 95, Android JVM 24). `DemoSeedTest` verifica sedi, 3/4 delle porte cablate per piano, percorsi radio Municipio → Scuola media → Scuola materna, dorsali, catena WAN e giunzione del Teatro.

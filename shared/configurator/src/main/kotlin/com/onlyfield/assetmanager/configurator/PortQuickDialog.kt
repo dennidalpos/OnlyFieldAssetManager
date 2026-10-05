@@ -220,6 +220,7 @@ private fun withNewJunction(project: Project, cable: Cable, device: Device, area
 
 private fun defaultMedium(port: Port): CableMedium = when (port.hardware.mediaType) {
     "Fiber" -> CableMedium.FIBER_OVERALL
+    "Radio" -> CableMedium.RADIO
     "Console" -> CableMedium.CONSOLE
     "Power" -> CableMedium.OTHER
     else -> CableMedium.ETHERNET_COPPER
