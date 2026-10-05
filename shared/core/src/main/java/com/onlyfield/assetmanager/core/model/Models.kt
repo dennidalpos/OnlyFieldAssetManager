@@ -622,7 +622,11 @@ data class ReportSelection(
     val includeCablingAndPorts: Boolean = true,
     val includeLogicalNetwork: Boolean = true,
     val includePowerAndBadges: Boolean = true,
-    val includeNotesAndAttachments: Boolean = true
+    val includeNotesAndAttachments: Boolean = true,
+    /** Desktop PDF drawings: floor plans with objects and cables, end-to-end paths, physical topology. */
+    val includeFloorPlans: Boolean = true,
+    val includePaths: Boolean = true,
+    val includeTopology: Boolean = true,
 )
 
 @Serializable

@@ -5,9 +5,12 @@ import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.display.EntityTypeLabels
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
+import com.onlyfield.assetmanager.core.forms.PathSchematics
+import com.onlyfield.assetmanager.core.model.ConnectionState
+import com.onlyfield.assetmanager.core.model.MapScene
+import com.onlyfield.assetmanager.core.model.isPassive
 import com.onlyfield.assetmanager.core.model.AttachmentClassification
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
-import com.onlyfield.assetmanager.core.model.NumberingDirection
 import com.onlyfield.assetmanager.core.model.OperationalStatus
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
@@ -24,6 +27,18 @@ sealed interface ReportLine {
     data class SubHeading(override val text: String) : ReportLine
     data class Item(override val text: String, val indent: Int = 0) : ReportLine
     data object Spacer : ReportLine { override val text = "" }
+    /** Drawing between text lines; [text] is its caption. */
+    data class Figure(override val text: String, val figure: ReportFigure) : ReportLine
+    /** Table row; [widths] are fractions of the text width. */
+    data class Row(val cells: List<String>, val widths: List<Float>, val header: Boolean = false) : ReportLine {
+        override val text get() = cells.joinToString(" | ")
+    }
+}
+
+sealed interface ReportFigure {
+    data class FloorPlan(val areaId: String) : ReportFigure
+    data class RackElevation(val rackId: String) : ReportFigure
+    data object Topology : ReportFigure
 }
 
 /** Builds selected report content without credentials. */
@@ -71,19 +86,52 @@ object ReportContent {
             }
         }
 
+        if (selection.includeFloorPlans) {
+            // Floors with objects or a plan: the drawing places objects and cables as on the map.
+            val floors = project.sites.flatMap { site -> site.areas.map { site to it } }
+                .filter { (_, area) -> area.floorplanAttachmentId != null || MapScene.area(project, area.id).nodes.isNotEmpty() }
+            if (floors.isNotEmpty()) {
+                heading(i18n.text("report.floorPlans"))
+                floors.forEach { (site, area) -> lines += ReportLine.Figure("${site.name} › ${area.name}", ReportFigure.FloorPlan(area.id)) }
+            }
+        }
+
         if (selection.includeRackCards && project.racks.isNotEmpty()) {
             heading(i18n.text("text.4cd265c2b8c6"))
             for (rack in project.racks) {
-                lines += ReportLine.SubHeading(i18n.text("text.f0f63aaad4b6", rack.name, rack.heightU, index.areaName(rack.areaId, i18n.text("text.1abc7243c3dd"))))
+                val caption = i18n.text("text.f0f63aaad4b6", rack.name, rack.heightU, index.areaName(rack.areaId, i18n.text("text.1abc7243c3dd")))
                 val mounted = index.devices.filter { it.rackId == rack.id }
-                    .sortedBy { it.positionU ?: Int.MAX_VALUE }
-                    .let { if (rack.numberingDirection == NumberingDirection.BOTTOM_TO_TOP) it.reversed() else it }
-                if (mounted.isEmpty()) item(i18n.text("text.4a1ac9701d21"), 1)
-                mounted.forEach { d ->
-                    val pos = d.positionU?.let { if (d.heightU > 1) "U$it–U${it + d.heightU - 1}" else "U$it" } ?: i18n.text("text.3fc3745f990b")
-                    item("$pos: ${d.technicalName} (${d.category.toDisplayString(i18n = i18n)}, ${d.rackSide.toDisplayString(i18n = i18n).lowercase()})", 1)
+                if (mounted.isEmpty()) { lines += ReportLine.SubHeading(caption); item(i18n.text("text.4a1ac9701d21"), 1); continue }
+                lines += ReportLine.Figure(caption, ReportFigure.RackElevation(rack.id))
+                // Devices without a U position are not in the drawing: list them.
+                mounted.filter { it.positionU == null }.forEach { d -> item("${i18n.text("text.3fc3745f990b")}: ${d.technicalName}", 1) }
+            }
+        }
+
+        if (selection.includePaths) {
+            val paths = PathSchematics.all(project, index = index)
+            if (paths.isNotEmpty()) {
+                heading(i18n.text("report.paths"))
+                val widths = listOf(.2f, .3f, .2f, .2f, .1f)
+                lines += ReportLine.Row(listOf("report.pathFrom", "report.pathVia", "report.pathTo", "report.pathCables", "report.pathState").map(i18n::text), widths, header = true)
+                paths.forEach { path ->
+                    fun end(i: Int) = path.stations[i].let { s ->
+                        val port = (if (i == 0) s.ports.firstOrNull() else s.ports.lastOrNull())?.name
+                        listOfNotNull(s.device?.technicalName ?: "?", port).joinToString("/") + if (path.openEnd(i)) " (${i18n.text("path.openEnd")})" else ""
+                    }
+                    val via = path.stations.drop(1).dropLast(1).joinToString(" → ") { s -> "${s.device?.technicalName ?: "?"} ${s.ports.joinToString("→") { it.name }}" }
+                    val state = i18n.text(when (path.state) {
+                        ConnectionState.COMPLETE -> "config.complete"; ConnectionState.CONFLICT -> "config.conflict"
+                        ConnectionState.INCOMPLETE -> "config.incomplete"; ConnectionState.AVAILABLE -> "config.available"
+                    })
+                    lines += ReportLine.Row(listOf(end(0), via.ifBlank { "—" }, end(path.stations.lastIndex), path.segments.joinToString(", ") { it.label }, state), widths)
                 }
             }
+        }
+
+        if (selection.includeTopology && index.devices.any { !it.isPassive() }) {
+            heading(i18n.text("report.topology"))
+            lines += ReportLine.Figure(i18n.text("report.topologyCaption"), ReportFigure.Topology)
         }
 
         if (selection.includeCablingAndPorts && (project.cables.isNotEmpty() || project.panelMappings.isNotEmpty())) {

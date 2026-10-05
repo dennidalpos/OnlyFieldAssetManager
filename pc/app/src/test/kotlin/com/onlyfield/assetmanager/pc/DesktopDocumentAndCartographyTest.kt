@@ -74,9 +74,9 @@ class DesktopDocumentAndCartographyTest {
         val baos = ByteArrayOutputStream()
 
         DesktopDocumentManager.exportCompositePdf(project, filterConfig, selection, baos)
-        val text = baos.toString(Charsets.UTF_8.name())
+        assertTrue("Composite PDF output should start with %PDF", baos.toString(Charsets.ISO_8859_1.name()).startsWith("%PDF"))
+        val text = org.apache.pdfbox.Loader.loadPDF(baos.toByteArray()).use { org.apache.pdfbox.text.PDFTextStripper().getText(it) }
 
-        assertTrue("Composite PDF output should start with %PDF", text.startsWith("%PDF"))
         assertTrue("Composite PDF should contain author name", text.contains("Ingegnere Desktop"))
         assertTrue("Composite PDF should contain device technical name", text.contains("SW-CORE-01"))
     }

@@ -265,9 +265,9 @@ private fun DocumentsDialog(state: DesktopAppState) {
                 DocFormat.MARKDOWN -> DesktopStorageHelper.pickSaveFile(i18n.text("text.d1e5e5fedfc4"), "$baseName.md", i18n.text("text.091a5fb0185f"), "md", i18n = i18n)
                     ?.also { f -> f.outputStream().use { DesktopDocumentManager.exportMarkdown(project, filter, it, i18n = i18n) } }
                 DocFormat.PDF -> DesktopStorageHelper.pickSaveFile(i18n.text("text.25c282ca0290"), "${baseName}_report.pdf", i18n.text("text.7e9c89b812eb"), "pdf", i18n = i18n)
-                    ?.also { f -> f.outputStream().use { DesktopDocumentManager.exportCompositePdf(project, filter, selection, it, i18n = i18n) } }
+                    ?.also { f -> f.outputStream().use { DesktopDocumentManager.exportCompositePdf(project, filter, selection, it, i18n = i18n, planImage = state::planImage) } }
                 DocFormat.PRINT -> {
-                    val printed = DesktopDocumentManager.printDocumentNative(project, filter, selection, i18n = i18n)
+                    val printed = DesktopDocumentManager.printDocumentNative(project, filter, selection, i18n = i18n, planImage = state::planImage)
                     state.notify(if (printed) i18n.text("text.c984feea82e6") else i18n.text("text.947bcd7a84c3"))
                     null
                 }
@@ -309,7 +309,10 @@ private fun DocumentsDialog(state: DesktopAppState) {
         if (format == DocFormat.PDF || format == DocFormat.PRINT) {
             Text(i18n.text("text.ad0136b0ca69"), fontWeight = FontWeight.SemiBold)
             LabeledCheckbox(selection.includeInventoryTable, { selection = selection.copy(includeInventoryTable = it) }, i18n.text("text.dae8f6194460"))
+            LabeledCheckbox(selection.includeFloorPlans, { selection = selection.copy(includeFloorPlans = it) }, i18n.text("report.floorPlans"))
             LabeledCheckbox(selection.includeRackCards, { selection = selection.copy(includeRackCards = it) }, i18n.text("text.37ee6ae1d2bd"))
+            LabeledCheckbox(selection.includePaths, { selection = selection.copy(includePaths = it) }, i18n.text("report.paths"))
+            LabeledCheckbox(selection.includeTopology, { selection = selection.copy(includeTopology = it) }, i18n.text("report.topology"))
             LabeledCheckbox(selection.includeCablingAndPorts, { selection = selection.copy(includeCablingAndPorts = it) }, i18n.text("text.541795bb3ec5"))
             LabeledCheckbox(selection.includeLogicalNetwork, { selection = selection.copy(includeLogicalNetwork = it) }, i18n.text("text.7070d68f65b5"))
             LabeledCheckbox(selection.includePowerAndBadges, { selection = selection.copy(includePowerAndBadges = it) }, i18n.text("text.0a2258044f91"))

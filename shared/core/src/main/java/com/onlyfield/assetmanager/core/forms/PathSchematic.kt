@@ -47,6 +47,22 @@ object PathSchematics {
         return PathSchematic(stations, segments, focus, graph.state(portId))
     }
 
+    /**
+     * Every distinct path that reaches at least one active device, for reports: each is listed once
+     * (not once per end), ordered by its first device and port.
+     */
+    fun all(project: Project, graph: ConnectionGraph = ConnectionGraph(project), index: ProjectIndex = ProjectIndex(project)): List<PathSchematic> {
+        val seen = mutableSetOf<Pair<String, String>>()
+        return index.devices.filter { !it.isPassive() }.sortedBy { it.technicalName.lowercase() }.flatMap { d ->
+            d.ports.filter { graph.occupied(it.id) }.mapNotNull { port ->
+                of(project, port.id, graph, index)?.takeIf { it.segments.isNotEmpty() }?.takeIf { path ->
+                    val ends = listOf(path.stations.first().ports.firstOrNull()?.id.orEmpty(), path.stations.last().ports.lastOrNull()?.id.orEmpty()).sorted()
+                    seen.add(ends[0] to ends[1])
+                }
+            }
+        }
+    }
+
     private class Leg(val stations: List<PathStation>, val segments: List<PathSegment>)
 
     private class Walker(private val project: Project, private val index: ProjectIndex) {

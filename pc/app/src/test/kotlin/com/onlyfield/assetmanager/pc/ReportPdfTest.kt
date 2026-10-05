@@ -3,6 +3,8 @@ package com.onlyfield.assetmanager.pc
 import com.onlyfield.assetmanager.core.model.*
 import org.junit.Assert.*
 import org.junit.Test
+import org.apache.pdfbox.Loader
+import org.apache.pdfbox.text.PDFTextStripper
 import java.io.ByteArrayOutputStream
 
 class ReportPdfTest {
@@ -25,27 +27,16 @@ class ReportPdfTest {
         )
     )
 
-    private fun pdf(filter: ExportFilterConfig = ExportFilterConfig(authorName = "Tecnico")): String {
-        val out = ByteArrayOutputStream()
-        DesktopDocumentManager.exportCompositePdf(project, filter, ReportSelection(), out)
-        return out.toString(Charsets.ISO_8859_1.name())
-    }
+    private fun bytes(filter: ExportFilterConfig = ExportFilterConfig(authorName = "Tecnico")): ByteArray =
+        ByteArrayOutputStream().also { DesktopDocumentManager.exportCompositePdf(project, filter, ReportSelection(), it) }.toByteArray()
+
+    private fun pdf(filter: ExportFilterConfig = ExportFilterConfig(authorName = "Tecnico")): String =
+        Loader.loadPDF(bytes(filter)).use { PDFTextStripper().getText(it) }
 
     @Test
     fun producesStructurallyValidMultiPagePdf() {
+        Loader.loadPDF(bytes()).use { doc -> assertTrue("120 devices need more than one page", doc.numberOfPages > 1) }
         val text = pdf()
-        assertTrue(text.startsWith("%PDF-1.4"))
-        assertTrue(text.trimEnd().endsWith("%%EOF"))
-        val pageCount = Regex("/Type /Pages /Kids \\[[^]]*] /Count (\\d+)").find(text)!!.groupValues[1].toInt()
-        assertTrue("120 devices need more than one page", pageCount > 1)
-
-        // Every xref offset must point exactly at the start of its object.
-        val xrefStart = Regex("startxref\\n(\\d+)").find(text)!!.groupValues[1].toInt()
-        val entries = text.substring(xrefStart).lines().drop(3).takeWhile { it.endsWith(" n ") }
-        entries.forEachIndexed { i, e ->
-            val offset = e.substring(0, 10).toInt()
-            assertTrue("object ${i + 1} offset", text.startsWith("${i + 1} 0 obj", offset))
-        }
         assertTrue(text.contains("SW-120"))
         assertTrue(text.contains("Tecnico"))
     }

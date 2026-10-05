@@ -243,6 +243,13 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         }
     }
 
+    /** Floor plan background for documents; null without a plan or when it cannot be read. */
+    fun planImage(area: Area): java.awt.image.BufferedImage? {
+        val attachment = project?.attachments?.find { it.id == area.floorplanAttachmentId } ?: return null
+        val file = attachmentFile(attachment) ?: return null
+        return runCatching { PlanMedia.bufferedImage(file, attachment.fileType == AttachmentType.PDF, area.floorplanPageIndex ?: 0, i18n = i18n) }.getOrNull()
+    }
+
     fun attachmentFile(attachment: Attachment): File? =
         project?.let { storage.attachmentFile(it.id, attachment) }?.takeIf { it.isFile }
 
