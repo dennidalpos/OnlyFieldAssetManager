@@ -11,6 +11,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sitesForDisplay
+import com.onlyfield.assetmanager.core.display.displayName
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
@@ -33,8 +35,8 @@ fun FloorHomeSection(state: DesktopAppState) {
     val i18n = LocalMessages.current
 
     val project = state.project ?: return
-    val bu = project.businessUnits.find { it.id == state.selectedBuId }
-    val area = bu?.let { ObjectMap.areas(it).find { it.id == state.selectedAreaId } }
+    val site = project.sites.find { it.id == state.selectedSiteId }
+    val area = site?.let { it.areas.find { it.id == state.selectedAreaId } }
     var addingStructure by remember { mutableStateOf(false) }
     var adding by remember { mutableStateOf<Pair<ObjectRef?, MapPoint?>?>(null) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
@@ -56,25 +58,25 @@ fun FloorHomeSection(state: DesktopAppState) {
     }
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            TextButton(onClick = { state.selectedBuId = null; state.selectedAreaId = null }) { Text(project.name) }
-            bu?.let { TextButton(onClick = { state.selectedAreaId = null }) { Text("› ${it.name}") } }
-            area?.let { Text("› ${ObjectMap.areaLabel(bu, it)}", Modifier.padding(top = 12.dp)) }
+            TextButton(onClick = { state.selectedSiteId = null; state.selectedAreaId = null }) { Text(project.name) }
+            site?.let { TextButton(onClick = { state.selectedAreaId = null }) { Text("› ${it.name}") } }
+            area?.let { Text("› ${it.name}", Modifier.padding(top = 12.dp)) }
         }
         if (area == null) {
-            Text(if (bu == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.headlineSmall)
-            Button(onClick = { addingStructure = true }) { Text(if (bu == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
+            Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.headlineSmall)
+            Button(onClick = { addingStructure = true }) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
             LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (bu == null) items(project.businessUnits.sortedForDisplay(i18n) { it.name }, key = { it.id }) { b ->
-                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { state.selectedBuId = b.id; state.selectedAreaId = null }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.edc54eb6f93e", b.name, ObjectMap.areas(b).size)) } }
-                } else items(ObjectMap.areas(bu).sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
-                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { focus = null; state.selectedAreaId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.0b16578ff793", ObjectMap.areaLabel(bu, a), ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)) } }
+                if (site == null) items(project.sites.sitesForDisplay(i18n), key = { it.id }) { b ->
+                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { state.selectedSiteId = b.id; state.selectedAreaId = null }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.edc54eb6f93e", b.displayName(), b.areas.size)) } }
+                } else items(site.areas.sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
+                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { focus = null; state.selectedAreaId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.0b16578ff793", a.name, ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)) } }
                 }
             }
         } else {
             imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             MapWorkspace(project, area.id, image, i18n, MapActions(
                 update = state::update,
-                goTo = { target, ref -> state.selectedBuId = ObjectMap.floorBusinessUnit(project, target); state.selectedAreaId = target; focus = ref },
+                goTo = { target, ref -> state.selectedSiteId = ObjectMap.floorSite(project, target); state.selectedAreaId = target; focus = ref },
                 edit = { draft, page -> editorPage = page; editor = draft },
                 add = { parent, point -> adding = parent to point },
                 trash = { ref ->
@@ -104,8 +106,8 @@ fun FloorHomeSection(state: DesktopAppState) {
     }
     if (addingStructure) {
         var name by remember { mutableStateOf("") }
-        FormDialog(if (bu == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", bu.name), { addingStructure = false }, {
-            state.update(if (bu == null) ProjectEdits.addBusinessUnit(project, name.trim()) else ProjectEdits.addArea(project, bu.id, Area(name = name.trim())), i18n.text("text.ad31ce615e92"))
+        FormDialog(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { addingStructure = false }, {
+            state.update(if (site == null) ProjectEdits.addSite(project, name.trim()) else ProjectEdits.addArea(project, site.id, Area(name = name.trim())), i18n.text("text.ad31ce615e92"))
             addingStructure = false
         }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
     }
@@ -127,12 +129,12 @@ fun FloorHomeSection(state: DesktopAppState) {
             scanning = false
             val index = ProjectIndex(project)
             when (val match = CodeLookup.find(index, code, i18n = i18n)) {
-                is CodeMatch.DeviceMatch -> editor = MapObjectDraft.device(project, index.businessUnitOf(match.device.id)!!.id, match.device.areaId ?: area.id, match.device.id, i18n = i18n)
-                is CodeMatch.PortMatch -> editor = MapObjectDraft.device(project, index.businessUnitOf(match.port.device.id)!!.id, match.port.device.areaId ?: area.id, match.port.device.id, i18n = i18n)
-                is CodeMatch.RackMatch -> editor = MapObjectDraft.rack(project, bu.id, match.rack.areaId ?: area.id, match.rack.id)
-                is CodeMatch.CableMatch -> editor = MapObjectDraft.cable(project, bu.id, area.id, match.cable.id, i18n = i18n)
+                is CodeMatch.DeviceMatch -> editor = MapObjectDraft.device(project, index.siteOf(match.device.id)!!.id, match.device.areaId ?: area.id, match.device.id, i18n = i18n)
+                is CodeMatch.PortMatch -> editor = MapObjectDraft.device(project, index.siteOf(match.port.device.id)!!.id, match.port.device.areaId ?: area.id, match.port.device.id, i18n = i18n)
+                is CodeMatch.RackMatch -> editor = MapObjectDraft.rack(project, site.id, match.rack.areaId ?: area.id, match.rack.id)
+                is CodeMatch.CableMatch -> editor = MapObjectDraft.cable(project, site.id, area.id, match.cable.id, i18n = i18n)
                 is CodeMatch.OtherProject -> state.error = i18n.text("text.b18a8bb53b19")
-                is CodeMatch.NotFound -> { val draft = MapObjectDraft(type = ObjectCatalog.builtins.first(), buId = bu.id, areaId = area.id); editor = draft.copy(device = draft.device.copy(serialNumber = match.code)) }
+                is CodeMatch.NotFound -> { val draft = MapObjectDraft(type = ObjectCatalog.builtins.first(), siteId = site.id, areaId = area.id); editor = draft.copy(device = draft.device.copy(serialNumber = match.code)) }
             }
         }, confirmEnabled = code.isNotBlank(), confirmLabel = i18n.text("text.12abcf9ee7d6")) { FormField(code, { code = it }, i18n.text("text.dabfdc4bb56c"), hint = i18n.text("text.dcf70239e881")) }
     }

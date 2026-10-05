@@ -19,12 +19,12 @@ class ProtectedTrashTest {
         val state = DesktopAppState(DesktopStorageManager(dir))
         val reopened = DesktopAppState(DesktopStorageManager(dir))
         try {
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))), password = "test", passwordConfirm = "test")))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))), password = "test", passwordConfirm = "test")))
             val p = state.project!!
-            val rack = Rack(name = "Rack", areaId = p.businessUnits.single().areas.single().id)
+            val rack = Rack(name = "Rack", areaId = p.sites.single().areas.single().id)
             val dev = Device(technicalName = "Deleted private device", rackId = rack.id, areaId = rack.areaId, positionU = 3)
-            state.update(ProjectEdits.addDevice(ProjectEdits.addRack(p, rack), p.businessUnits.single().id, dev), "added")
-            val storedDevice = state.project!!.businessUnits.single().devices.single()
+            state.update(ProjectEdits.addDevice(ProjectEdits.addRack(p, rack), p.sites.single().id, dev), "added")
+            val storedDevice = state.project!!.sites.single().devices.single()
             val (updated, item) = ProjectEdits.deleteDeviceToTrash(state.project!!, dev.id)
             state.addToTrash(item!!)
             state.update(updated, "deleted")
@@ -33,7 +33,7 @@ class ProtectedTrashTest {
             reopened.importFile(file, "test", compare = false)
             assertNull(reopened.error)
             assertEquals(item, reopened.trash.single())
-            assertEquals(storedDevice, ProjectEdits.restoreFromTrash(reopened.project!!, reopened.trash.single()).businessUnits.single().devices.single())
+            assertEquals(storedDevice, ProjectEdits.restoreFromTrash(reopened.project!!, reopened.trash.single()).sites.single().devices.single())
             assertFalse(File(dir, "trash/${p.id}.json").exists())
             val encrypted = PackageSerializer.importPackage(file.readBytes(), "test").pkg!!
             assertFalse(file.readBytes().toString(Charsets.UTF_8).contains(dev.technicalName))
@@ -55,7 +55,7 @@ class ProtectedTrashTest {
     @Test fun legacyTrashMigratesAndCorruptionNeverOverwritesTheCopy() {
         val dir = folder.newFolder()
         val storage = DesktopStorageManager(dir)
-        val project = NewSiteWizard(draft = NewSiteDraft(projectName = "Site", businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))))).buildProject()
+        val project = NewSiteWizard(draft = NewSiteDraft(projectName = "Site", sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))))).buildProject()
         val local = File(storage.getProjectsFolder(), "${project.id}.ofam")
         local.writeBytes(PackageSerializer.exportPackage(project))
         val item = TrashItem(projectId = project.id, itemType = "DEVICE", itemId = "deleted", displayName = "Legacy", serializedJson = "{}")

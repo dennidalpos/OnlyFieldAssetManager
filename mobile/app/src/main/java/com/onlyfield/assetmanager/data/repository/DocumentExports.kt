@@ -21,7 +21,7 @@ internal class DocumentExports(private val load: suspend (String) -> Project?) {
         val project = getProjectById(projectId) ?: return false
         val rack = project.racks.find { it.id == rackId } ?: return false
 
-        val allDevices = project.businessUnits.flatMap { it.devices }
+        val allDevices = project.sites.flatMap { it.devices }
         val devicesInRack = allDevices.filter { it.rackId == rackId }
         val unmountedDevices = allDevices.filter { (it.rackId == null) && (it.areaId == rack.areaId) }
 

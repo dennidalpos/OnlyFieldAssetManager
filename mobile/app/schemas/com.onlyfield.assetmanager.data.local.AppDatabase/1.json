@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "34189681468bd3735887a9246e4174ec",
+    "identityHash": "18f4e44ab206c759b0771aca66cf5aed",
     "entities": [
       {
         "tableName": "projects",
@@ -75,8 +75,8 @@
         }
       },
       {
-        "tableName": "business_units",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `code` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "tableName": "sites",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `projectId` TEXT NOT NULL, `name` TEXT NOT NULL, `code` TEXT, `groupName` TEXT, `address` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`projectId`) REFERENCES `projects`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
@@ -100,6 +100,16 @@
             "fieldPath": "code",
             "columnName": "code",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "groupName",
+            "columnName": "groupName",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "address",
+            "columnName": "address",
+            "affinity": "TEXT"
           }
         ],
         "primaryKey": {
@@ -110,13 +120,13 @@
         },
         "indices": [
           {
-            "name": "index_business_units_projectId",
+            "name": "index_sites_projectId",
             "unique": false,
             "columnNames": [
               "projectId"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_business_units_projectId` ON `${TABLE_NAME}` (`projectId`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_sites_projectId` ON `${TABLE_NAME}` (`projectId`)"
           }
         ],
         "foreignKeys": [
@@ -134,84 +144,20 @@
         ]
       },
       {
-        "tableName": "sites",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `businessUnitId` TEXT NOT NULL, `name` TEXT NOT NULL, `address` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`businessUnitId`) REFERENCES `business_units`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
-        "fields": [
-          {
-            "fieldPath": "id",
-            "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "businessUnitId",
-            "columnName": "businessUnitId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "name",
-            "columnName": "name",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "address",
-            "columnName": "address",
-            "affinity": "TEXT"
-          }
-        ],
-        "primaryKey": {
-          "autoGenerate": false,
-          "columnNames": [
-            "id"
-          ]
-        },
-        "indices": [
-          {
-            "name": "index_sites_businessUnitId",
-            "unique": false,
-            "columnNames": [
-              "businessUnitId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_sites_businessUnitId` ON `${TABLE_NAME}` (`businessUnitId`)"
-          }
-        ],
-        "foreignKeys": [
-          {
-            "table": "business_units",
-            "onDelete": "CASCADE",
-            "onUpdate": "NO ACTION",
-            "columns": [
-              "businessUnitId"
-            ],
-            "referencedColumns": [
-              "id"
-            ]
-          }
-        ]
-      },
-      {
         "tableName": "areas",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `businessUnitId` TEXT NOT NULL, `siteId` TEXT, `name` TEXT NOT NULL, `floor` TEXT, `description` TEXT, `floorplanAttachmentId` TEXT, `floorplanPageIndex` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`businessUnitId`) REFERENCES `business_units`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` TEXT NOT NULL, `siteId` TEXT NOT NULL, `name` TEXT NOT NULL, `floor` TEXT, `description` TEXT, `floorplanAttachmentId` TEXT, `floorplanPageIndex` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`siteId`) REFERENCES `sites`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "id",
             "columnName": "id",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "businessUnitId",
-            "columnName": "businessUnitId",
             "affinity": "TEXT",
             "notNull": true
           },
           {
             "fieldPath": "siteId",
             "columnName": "siteId",
-            "affinity": "TEXT"
+            "affinity": "TEXT",
+            "notNull": true
           },
           {
             "fieldPath": "name",
@@ -249,15 +195,6 @@
         },
         "indices": [
           {
-            "name": "index_areas_businessUnitId",
-            "unique": false,
-            "columnNames": [
-              "businessUnitId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_areas_businessUnitId` ON `${TABLE_NAME}` (`businessUnitId`)"
-          },
-          {
             "name": "index_areas_siteId",
             "unique": false,
             "columnNames": [
@@ -269,11 +206,11 @@
         ],
         "foreignKeys": [
           {
-            "table": "business_units",
+            "table": "sites",
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "businessUnitId"
+              "siteId"
             ],
             "referencedColumns": [
               "id"
@@ -283,7 +220,7 @@
       },
       {
         "tableName": "devices",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hardwareJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `businessUnitId` TEXT NOT NULL, `siteId` TEXT, `areaId` TEXT, `technicalName` TEXT NOT NULL, `physicalLabel` TEXT, `alias` TEXT, `ipAddress` TEXT, `macAddress` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `rackId` TEXT, `positionU` INTEGER, `heightU` INTEGER NOT NULL, `rackSide` TEXT NOT NULL, `mountingType` TEXT NOT NULL, `deviceModelId` TEXT, `category` TEXT NOT NULL, `objectTypeId` TEXT, `serialNumber` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`businessUnitId`) REFERENCES `business_units`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hardwareJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `siteId` TEXT NOT NULL, `areaId` TEXT, `technicalName` TEXT NOT NULL, `physicalLabel` TEXT, `alias` TEXT, `ipAddress` TEXT, `macAddress` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `rackId` TEXT, `positionU` INTEGER, `heightU` INTEGER NOT NULL, `rackSide` TEXT NOT NULL, `mountingType` TEXT NOT NULL, `deviceModelId` TEXT, `category` TEXT NOT NULL, `objectTypeId` TEXT, `serialNumber` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`siteId`) REFERENCES `sites`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "hardwareJson",
@@ -299,15 +236,10 @@
             "notNull": true
           },
           {
-            "fieldPath": "businessUnitId",
-            "columnName": "businessUnitId",
-            "affinity": "TEXT",
-            "notNull": true
-          },
-          {
             "fieldPath": "siteId",
             "columnName": "siteId",
-            "affinity": "TEXT"
+            "affinity": "TEXT",
+            "notNull": true
           },
           {
             "fieldPath": "areaId",
@@ -418,15 +350,6 @@
         },
         "indices": [
           {
-            "name": "index_devices_businessUnitId",
-            "unique": false,
-            "columnNames": [
-              "businessUnitId"
-            ],
-            "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_devices_businessUnitId` ON `${TABLE_NAME}` (`businessUnitId`)"
-          },
-          {
             "name": "index_devices_siteId",
             "unique": false,
             "columnNames": [
@@ -483,11 +406,11 @@
         ],
         "foreignKeys": [
           {
-            "table": "business_units",
+            "table": "sites",
             "onDelete": "CASCADE",
             "onUpdate": "NO ACTION",
             "columns": [
-              "businessUnitId"
+              "siteId"
             ],
             "referencedColumns": [
               "id"
@@ -2697,7 +2620,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '34189681468bd3735887a9246e4174ec')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '18f4e44ab206c759b0771aca66cf5aed')"
     ]
   }
 }

@@ -1,6 +1,6 @@
 package com.onlyfield.assetmanager.exchange
 
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Cable
 import com.onlyfield.assetmanager.core.model.Device
 import com.onlyfield.assetmanager.core.model.Project
@@ -16,7 +16,7 @@ class LabelSheetPdfTest {
         val devices = (1..25).map { Device(technicalName = "SW-$it") }
         val project = Project(
             name = "Etichette", createdEpochMs = 0, updatedEpochMs = 0,
-            businessUnits = listOf(BusinessUnit(name = "BU", devices = devices)),
+            sites = listOf(Site(name = "BU", devices = devices)),
             racks = listOf(Rack(name = "R1")),
             cables = listOf(Cable(codeOrLabel = "CV-1"), Cable())
         )

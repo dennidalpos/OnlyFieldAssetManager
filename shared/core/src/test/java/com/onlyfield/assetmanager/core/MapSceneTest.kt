@@ -14,7 +14,7 @@ class MapSceneTest {
     private val ap = Device(technicalName = "AP", areaId = area.id, objectTypeId = "access-point")
     private val remote = Device(technicalName = "REMOTE", areaId = other.id)
     private fun project(vararg cables: Cable) = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area, other), devices = listOf(box, sw, ap, remote))),
+        sites = listOf(Site(name = "BU", areas = listOf(area, other), devices = listOf(box, sw, ap, remote))),
         racks = listOf(rack), objectTypes = listOf(boxType), cables = cables.toList())
     private val rackRef = ObjectRef(PlacementTargetType.RACK, rack.id)
     private val apRef = ObjectRef(PlacementTargetType.DEVICE, ap.id)
@@ -56,21 +56,21 @@ class MapSceneTest {
         assertEquals(scene.node(apRef)!!.point, route.points.last())
     }
 
-    @Test fun stubKnowsRemoteDeviceFloorAndBusinessUnit() {
+    @Test fun stubKnowsRemoteDeviceFloorAndSite() {
         val north = Area(name = "Nord 1")
         val northRack = Rack(name = "RN", areaId = north.id)
         val sw5 = Device(technicalName = "SW-05", rackId = northRack.id, positionU = 1)
         val c = Cable(deviceAId = ap.id, deviceBId = sw5.id)
-        val p = project(c).let { it.copy(businessUnits = it.businessUnits + BusinessUnit(name = "BU Nord", areas = listOf(north), devices = listOf(sw5)),
+        val p = project(c).let { it.copy(sites = it.sites + Site(name = "BU Nord", areas = listOf(north), devices = listOf(sw5)),
             racks = it.racks + northRack) }
         val scene = MapScene.area(p, area.id)
         val end = scene.links.single().remotes.getValue(c.id)
         assertEquals(ObjectRef(PlacementTargetType.DEVICE, sw5.id), end.ref)
         assertEquals(north.id, end.areaId)
-        assertEquals("SW-05 · Nord 1 · BU Nord", end.label(scene.areaId, scene.buId))
-        assertEquals("SW-05", end.label(north.id, end.buId))
+        assertEquals("SW-05 · Nord 1 · BU Nord", end.label(scene.areaId, scene.siteId))
+        assertEquals("SW-05", end.label(north.id, end.siteId))
         // The far floor shows the same cable as a stub towards AP.
-        assertEquals("AP · Terra · BU", MapScene.area(p, north.id).links.single().remotes.getValue(c.id).let { it.label(north.id, end.buId) })
+        assertEquals("AP · Terra · BU", MapScene.area(p, north.id).links.single().remotes.getValue(c.id).let { it.label(north.id, end.siteId) })
     }
 
     @Test fun containerShowsChildrenInUnitOrderAndOutsideLinks() {
@@ -93,7 +93,7 @@ class MapSceneTest {
 
     @Test fun portUsageCountsTheWholeSubtree() {
         val swWithPorts = sw.copy(ports = listOf(Port(deviceId = sw.id, name = "1"), Port(deviceId = sw.id, name = "2")))
-        val p = project().let { it.copy(businessUnits = it.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d -> if (d.id == sw.id) swWithPorts else d }) }) }
+        val p = project().let { it.copy(sites = it.sites.map { site -> site.copy(devices = site.devices.map { d -> if (d.id == sw.id) swWithPorts else d }) }) }
         val used = p.copy(cables = listOf(Cable(portAId = swWithPorts.ports.first().id, deviceBId = ap.id)))
         val node = MapScene.area(used, area.id).node(rackRef)!!
         assertEquals(1, node.portsUsed); assertEquals(2, node.portsTotal)

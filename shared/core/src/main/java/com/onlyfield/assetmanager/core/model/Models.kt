@@ -138,7 +138,6 @@ data class Device(
     val alias: String? = null,
     val ipAddress: String? = null,
     val macAddress: String? = null,
-    val siteId: String? = null,
     val areaId: String? = null,
     val ports: List<Port> = emptyList(),
     val observation: Observation? = null,
@@ -251,16 +250,10 @@ data class Area(
 data class Site(
     val id: String = UUID.randomUUID().toString(),
     val name: String,
-    val address: String? = null,
-    val areas: List<Area> = emptyList(),
-)
-
-@Serializable
-data class BusinessUnit(
-    val id: String = UUID.randomUUID().toString(),
-    val name: String,
     val code: String? = null,
-    val sites: List<Site> = emptyList(),
+    /** Optional free grouping of sites (e.g. "Scuole"). */
+    val group: String? = null,
+    val address: String? = null,
     val areas: List<Area> = emptyList(),
     val devices: List<Device> = emptyList(),
 )
@@ -326,7 +319,6 @@ data class PanelMapping(
 @Serializable
 enum class VlanScopeType {
     PROJECT,
-    BUSINESS_UNIT,
     SITE,
     DEVICE
 }
@@ -553,7 +545,7 @@ data class DocumentBadge(
 data class TrashItem(
     val id: String = UUID.randomUUID().toString(),
     val projectId: String,
-    val itemType: String, // "DEVICE", "PORT", "CABLE", "RACK", "AREA", "SITE", "BUSINESS_UNIT", "ATTACHMENT", "CREDENTIAL"
+    val itemType: String, // "DEVICE", "PORT", "CABLE", "RACK", "AREA", "SITE", "ATTACHMENT", "CREDENTIAL"
     val itemId: String,
     val displayName: String,
     val serializedJson: String,
@@ -561,7 +553,7 @@ data class TrashItem(
     val containments: List<ObjectContainment> = emptyList(),
     val mountSnapshots: List<MountSnapshot> = emptyList(),
     val containmentPlacements: List<FloorplanPlacement> = emptyList(),
-    val originalBusinessUnitId: String? = null,
+    val originalSiteId: String? = null,
     val affectedReferencesSummary: String? = null
 )
 
@@ -582,8 +574,6 @@ data class MergeDataChoices(
 
 @Serializable
 data class BatchDeviceChanges(
-    val siteId: String? = null,
-    val updateSiteId: Boolean = false,
     val areaId: String? = null,
     val updateAreaId: Boolean = false,
     val category: DeviceCategory? = null,
@@ -606,7 +596,6 @@ data class BatchEditPreview(
 
 @Serializable
 data class ExportFilterConfig(
-    val selectedBusinessUnitId: String? = null,
     val selectedSiteId: String? = null,
     val selectedAreaId: String? = null,
     val selectedCategory: DeviceCategory? = null,
@@ -633,7 +622,7 @@ data class Project(
     val description: String? = null,
     val createdEpochMs: Long,
     val updatedEpochMs: Long,
-    val businessUnits: List<BusinessUnit> = emptyList(),
+    val sites: List<Site> = emptyList(),
     val credentials: List<Credential> = emptyList(),
     val racks: List<Rack> = emptyList(),
     val deviceModels: List<DeviceModel> = emptyList(),

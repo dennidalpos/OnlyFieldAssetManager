@@ -87,7 +87,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     var canUndo by mutableStateOf(false)
         private set
     val undoLabel: String? get() = history.lastOrNull()?.third
-    var selectedBuId by mutableStateOf<String?>(null)
+    var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
     val detailSlot = com.onlyfield.assetmanager.pc.ui.components.DetailSlot()
     private var currentSection by mutableStateOf(AppSection.PROJECT)
@@ -326,7 +326,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             clearHistory()
             trashState = loadedTrash
             issues = ModelValidator.validateProject(newProject, i18n = i18n).issues
-            selectedBuId = null
+            selectedSiteId = null
             selectedAreaId = null
             currentSection = AppSection.FLOORPLANS
             status = message
@@ -398,7 +398,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             }
         }
         dialog = null
-        if (open(pkg.project, pkg.manifest, password, i18n.text("text.644b750a4abb", pkg.project.name, pkg.project.businessUnits.sumOf { it.devices.size }), pkg, if (storage.isLocalProjectFile(file)) releaseLockOnFailure else !storage.ownsProjectLock(pkg.project.id)) && !storage.isLocalProjectFile(file)) rememberSyncBase(pkg.project, password)
+        if (open(pkg.project, pkg.manifest, password, i18n.text("text.644b750a4abb", pkg.project.name, pkg.project.sites.sumOf { it.devices.size }), pkg, if (storage.isLocalProjectFile(file)) releaseLockOnFailure else !storage.ownsProjectLock(pkg.project.id)) && !storage.isLocalProjectFile(file)) rememberSyncBase(pkg.project, password)
     }
 
     fun acceptIncoming(pkg: ProjectPackage, incomingPassword: String?) {

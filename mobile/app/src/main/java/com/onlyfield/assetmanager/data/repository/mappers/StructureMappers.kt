@@ -1,7 +1,7 @@
 package com.onlyfield.assetmanager.data.repository.mappers
 
 import com.onlyfield.assetmanager.core.model.Area
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.CredentialType
 import com.onlyfield.assetmanager.core.model.Device
@@ -17,16 +17,14 @@ import com.onlyfield.assetmanager.core.model.PortTemplate
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.core.model.RackSide
-import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.data.local.AreaEntity
-import com.onlyfield.assetmanager.data.local.BusinessUnitEntity
+import com.onlyfield.assetmanager.data.local.SiteEntity
 import com.onlyfield.assetmanager.data.local.CredentialEntity
 import com.onlyfield.assetmanager.data.local.DeviceEntity
 import com.onlyfield.assetmanager.data.local.DeviceModelEntity
 import com.onlyfield.assetmanager.data.local.PortEntity
 import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.local.RackEntity
-import com.onlyfield.assetmanager.data.local.SiteEntity
 import kotlinx.serialization.json.Json
 
 // Room <-> domain mapping: project tree, devices, racks, models, credentials.
@@ -134,28 +132,20 @@ internal fun toCredential(entity: CredentialEntity): Credential {
     )
 }
 
-internal fun toBusinessUnitEntity(projectId: String, bu: BusinessUnit): BusinessUnitEntity {
-    return BusinessUnitEntity(
-        id = bu.id,
-        projectId = projectId,
-        name = bu.name,
-        code = bu.code
-    )
-}
-
-internal fun toSiteEntity(buId: String, site: Site): SiteEntity {
+internal fun toSiteEntity(projectId: String, site: Site): SiteEntity {
     return SiteEntity(
         id = site.id,
-        businessUnitId = buId,
+        projectId = projectId,
         name = site.name,
+        code = site.code,
+        groupName = site.group,
         address = site.address
     )
 }
 
-internal fun toAreaEntity(buId: String, siteId: String?, area: Area): AreaEntity {
+internal fun toAreaEntity(siteId: String, area: Area): AreaEntity {
     return AreaEntity(
         id = area.id,
-        businessUnitId = buId,
         siteId = siteId,
         name = area.name,
         floor = area.floor,
@@ -165,11 +155,10 @@ internal fun toAreaEntity(buId: String, siteId: String?, area: Area): AreaEntity
     )
 }
 
-internal fun toDeviceEntity(buId: String, device: Device): DeviceEntity {
+internal fun toDeviceEntity(siteId: String, device: Device): DeviceEntity {
     return DeviceEntity(
         id = device.id,
-        businessUnitId = buId,
-        siteId = device.siteId,
+        siteId = siteId,
         areaId = device.areaId,
         technicalName = device.technicalName,
         physicalLabel = device.physicalLabel,
@@ -210,7 +199,6 @@ internal fun toPortEntity(port: Port): PortEntity {
 
 internal fun toProject(
     entity: ProjectEntity,
-    buEntities: List<BusinessUnitEntity>,
     siteEntities: List<SiteEntity>,
     areaEntities: List<AreaEntity>,
     deviceEntities: List<DeviceEntity>,
@@ -237,34 +225,11 @@ internal fun toProject(
     documentBadgeEntities: List<com.onlyfield.assetmanager.data.local.DocumentBadgeEntity> = emptyList()
 ): Project {
     val portsByDevice = portEntities.groupBy { it.deviceId }
-    val devicesByBu = deviceEntities.groupBy { it.businessUnitId }
-    val sitesByBu = siteEntities.groupBy { it.businessUnitId }
-    val areasByBu = areaEntities.groupBy { it.businessUnitId }
+    val devicesBySite = deviceEntities.groupBy { it.siteId }
+    val areasBySite = areaEntities.groupBy { it.siteId }
 
-    val businessUnits = buEntities.map { buEnt ->
-        val buSites = sitesByBu[buEnt.id].orEmpty().map { siteEnt ->
-            val siteAreas = areasByBu[buEnt.id].orEmpty()
-                .filter { it.siteId == siteEnt.id }
-                .map { areaEnt ->
-                    Area(
-                        id = areaEnt.id,
-                        name = areaEnt.name,
-                        floor = areaEnt.floor,
-                        description = areaEnt.description,
-                        floorplanAttachmentId = areaEnt.floorplanAttachmentId,
-                        floorplanPageIndex = areaEnt.floorplanPageIndex
-                    )
-                }
-            Site(
-                id = siteEnt.id,
-                name = siteEnt.name,
-                address = siteEnt.address,
-                areas = siteAreas
-            )
-        }
-
-        val buDirectAreas = areasByBu[buEnt.id].orEmpty()
-            .filter { it.siteId == null }
+    val sites = siteEntities.map { siteEnt ->
+        val siteDirectAreas = areasBySite[siteEnt.id].orEmpty()
             .map { areaEnt ->
                 Area(
                     id = areaEnt.id,
@@ -276,7 +241,7 @@ internal fun toProject(
                 )
             }
 
-        val buDevices = devicesByBu[buEnt.id].orEmpty().map { devEnt ->
+        val siteDevices = devicesBySite[siteEnt.id].orEmpty().map { devEnt ->
             val devPorts = portsByDevice[devEnt.id].orEmpty().map { portEnt ->
                 val obs = if ((portEnt.obsSource != null) && (portEnt.obsTimestampEpochMs != null) && (portEnt.obsStatus != null)) {
                     Observation(
@@ -314,7 +279,6 @@ internal fun toProject(
                 alias = devEnt.alias,
                 ipAddress = devEnt.ipAddress,
                 macAddress = devEnt.macAddress,
-                siteId = devEnt.siteId,
                 areaId = devEnt.areaId,
                 ports = devPorts,
                 observation = devObs,
@@ -331,13 +295,14 @@ internal fun toProject(
             )
         }
 
-        BusinessUnit(
-            id = buEnt.id,
-            name = buEnt.name,
-            code = buEnt.code,
-            sites = buSites,
-            areas = buDirectAreas,
-            devices = buDevices
+        Site(
+            id = siteEnt.id,
+            name = siteEnt.name,
+            code = siteEnt.code,
+            group = siteEnt.groupName,
+            address = siteEnt.address,
+            areas = siteDirectAreas,
+            devices = siteDevices
         )
     }
 
@@ -368,7 +333,7 @@ internal fun toProject(
         description = entity.description,
         createdEpochMs = entity.createdEpochMs,
         updatedEpochMs = entity.updatedEpochMs,
-        businessUnits = businessUnits,
+        sites = sites,
         credentials = credentials,
         racks = racks,
         deviceModels = deviceModels,

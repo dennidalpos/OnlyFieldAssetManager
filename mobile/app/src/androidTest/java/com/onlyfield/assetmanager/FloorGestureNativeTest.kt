@@ -26,7 +26,7 @@ class FloorGestureNativeTest {
         val area = Area(name = "Terra")
         val device = Device(technicalName = "SW", areaId = area.id)
         var project by mutableStateOf(Project(name = "Native map", createdEpochMs = 1, updatedEpochMs = 1,
-            businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))),
+            sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(device))),
             floorplanPlacements = listOf(FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = device.id, xRatio = .3f, yRatio = .4f))))
         var saves = 0
         rule.setContent { MaterialTheme { Box(Modifier.fillMaxSize()) {

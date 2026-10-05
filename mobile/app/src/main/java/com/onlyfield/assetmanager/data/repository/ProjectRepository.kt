@@ -22,8 +22,7 @@ import kotlinx.coroutines.withContext
 
 data class SearchResult(
     val device: Device,
-    val businessUnitName: String,
-    val siteName: String?,
+    val siteName: String,
     val areaName: String?,
     val matchedField: String,
 )
@@ -161,22 +160,15 @@ class ProjectRepository(
 
     suspend fun updateAreaFloorplan(projectId: String, areaId: String, attachmentId: String?, pageIndex: Int = 0) {
         val project = getProjectById(projectId) ?: return
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedSites = bu.sites.map { site ->
-                val updatedAreas = site.areas.map { area ->
-                    if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = pageIndex)
-                    else area
-                }
-                site.copy(areas = updatedAreas)
-            }
-            val updatedDirectAreas = bu.areas.map { area ->
+        val updatedSites = project.sites.map { site ->
+            val updatedDirectAreas = site.areas.map { area ->
                 if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = pageIndex)
                 else area
             }
-            bu.copy(sites = updatedSites, areas = updatedDirectAreas)
+            site.copy(areas = updatedDirectAreas)
         }
         val updatedProject = project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             updatedEpochMs = System.currentTimeMillis(),
         )
         saveProject(updatedProject)

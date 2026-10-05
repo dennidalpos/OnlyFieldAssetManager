@@ -31,7 +31,7 @@ private const val UnitGap = 2
 @Composable
 fun RackElevation(project: Project, rack: Rack, side: RackSide, i18n: Messages, modifier: Modifier = Modifier,
                   onDevice: ((Device) -> Unit)? = null, onAddAt: ((Int) -> Unit)? = null) {
-    val devices = project.businessUnits.flatMap { it.devices }.filter { it.rackId == rack.id && it.positionU != null && (it.rackSide == RackSide.BOTH || it.rackSide == side) }
+    val devices = project.sites.flatMap { it.devices }.filter { it.rackId == rack.id && it.positionU != null && (it.rackSide == RackSide.BOTH || it.rackSide == side) }
     fun at(u: Int) = devices.find { d -> u >= d.positionU!! && u < d.positionU!! + d.heightU }
     Surface(modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.small) {
         Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(UnitGap.dp)) {

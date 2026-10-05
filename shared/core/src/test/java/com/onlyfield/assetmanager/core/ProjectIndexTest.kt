@@ -14,12 +14,11 @@ class ProjectIndexTest {
         name = "Sede Milano",
         createdEpochMs = 0,
         updatedEpochMs = 0,
-        businessUnits = listOf(
-            BusinessUnit(
+        sites = listOf(
+            Site(
                 id = "bu1",
                 name = "IT",
-                sites = listOf(Site(id = "s1", name = "HQ", areas = listOf(Area(id = "a2", name = "CED")))),
-                areas = listOf(Area(id = "a1", name = "Ufficio")),
+                areas = listOf(Area(id = "a1", name = "Ufficio"), Area(id = "a2", name = "CED")),
                 devices = listOf(Device(id = "d1", technicalName = "SW-CORE01", ports = listOf(port)))
             )
         ),

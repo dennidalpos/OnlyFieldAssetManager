@@ -91,9 +91,9 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         newCategory: com.onlyfield.assetmanager.core.model.DeviceCategory,
         i18n: Messages = Messages()): Pair<com.onlyfield.assetmanager.core.model.TrashItem?, com.onlyfield.assetmanager.core.model.Device> {
         val project = getProjectById(projectId) ?: throw IllegalArgumentException(i18n.text("text.758e8416eb8a"))
-        val bu = project.businessUnits.find { bu -> bu.devices.any { it.id == oldDeviceId } }
+        val site = project.sites.find { site -> site.devices.any { it.id == oldDeviceId } }
             ?: throw IllegalArgumentException(i18n.text("text.4ac20cd01b41", oldDeviceId))
-        val oldDevice = bu.devices.find { it.id == oldDeviceId }!!
+        val oldDevice = site.devices.find { it.id == oldDeviceId }!!
 
         val trashItem = moveToTrash(projectId, "DEVICE", oldDeviceId, i18n = i18n)
 
@@ -101,14 +101,13 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
             id = java.util.UUID.randomUUID().toString(),
             technicalName = newTechnicalName,
             category = newCategory,
-            siteId = oldDevice.siteId,
             areaId = oldDevice.areaId,
             rackId = oldDevice.rackId,
             ports = emptyList()
         )
 
         db.withTransaction {
-            inventoryDao.insertDevices(listOf(toDeviceEntity(bu.id, newDevice)))
+            inventoryDao.insertDevices(listOf(toDeviceEntity(site.id, newDevice)))
         }
 
         return Pair(trashItem, newDevice)
@@ -123,15 +122,15 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         if (survivingDeviceId == duplicateDeviceId) return null
         val project = getProjectById(projectId) ?: return null
 
-        var survivingBuId: String? = null
+        var survivingSiteId: String? = null
         var survivingDev: com.onlyfield.assetmanager.core.model.Device? = null
         var duplicateDev: com.onlyfield.assetmanager.core.model.Device? = null
 
-        for (bu in project.businessUnits) {
-            for (dev in bu.devices) {
+        for (site in project.sites) {
+            for (dev in site.devices) {
                 if (dev.id == survivingDeviceId) {
                     survivingDev = dev
-                    survivingBuId = bu.id
+                    survivingSiteId = site.id
                 }
                 if (dev.id == duplicateDeviceId) {
                     duplicateDev = dev
@@ -139,14 +138,13 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
             }
         }
 
-        if (survivingDev == null || duplicateDev == null || survivingBuId == null) return null
+        if (survivingDev == null || duplicateDev == null || survivingSiteId == null) return null
 
         val mergedTechnicalName = if (choices.useTechnicalNameFromDuplicate) duplicateDev.technicalName else survivingDev.technicalName
         val mergedPhysicalLabel = if (choices.usePhysicalLabelFromDuplicate) duplicateDev.physicalLabel else survivingDev.physicalLabel
         val mergedAlias = if (choices.useAliasFromDuplicate) duplicateDev.alias else survivingDev.alias
         val mergedIp = if (choices.useIpFromDuplicate) duplicateDev.ipAddress else survivingDev.ipAddress
         val mergedMac = if (choices.useMacFromDuplicate) duplicateDev.macAddress else survivingDev.macAddress
-        val mergedSiteId = if (choices.useLocationFromDuplicate) duplicateDev.siteId else survivingDev.siteId
         val mergedAreaId = if (choices.useLocationFromDuplicate) duplicateDev.areaId else survivingDev.areaId
 
         val mergedPorts = survivingDev.ports.toMutableList()
@@ -162,13 +160,12 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
             alias = mergedAlias,
             ipAddress = mergedIp,
             macAddress = mergedMac,
-            siteId = mergedSiteId,
             areaId = mergedAreaId,
             ports = mergedPorts
         )
 
         db.withTransaction {
-            inventoryDao.insertDevices(listOf(toDeviceEntity(survivingBuId, updatedSurvivingDevice)))
+            inventoryDao.insertDevices(listOf(toDeviceEntity(survivingSiteId, updatedSurvivingDevice)))
             if (updatedSurvivingDevice.ports.isNotEmpty()) {
                 inventoryDao.insertPorts(updatedSurvivingDevice.ports.map { toPortEntity(it) })
             }

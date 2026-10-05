@@ -11,21 +11,19 @@ class DesktopDocumentAndCartographyTest {
     private fun createSampleProject(): Project {
         val now = System.currentTimeMillis()
         val area = Area(id = "area-1", name = "Sala Server")
-        val site = Site(id = "site-1", name = "Sede A", areas = listOf(area))
         return Project(
             id = UUID.randomUUID().toString(),
             name = "Progetto Test Documenti W04",
             createdEpochMs = now,
             updatedEpochMs = now,
-            businessUnits = listOf(
-                BusinessUnit(
+            sites = listOf(
+                Site(
                     id = UUID.randomUUID().toString(),
                     name = "Sede Centrale",
-                    sites = listOf(site),
+                    areas = listOf(area),
                     devices = listOf(
                         Device(
                             id = "dev-1",
-                            siteId = "site-1",
                             areaId = "area-1",
                             technicalName = "SW-CORE-01",
                             category = DeviceCategory.NETWORK_SWITCH,

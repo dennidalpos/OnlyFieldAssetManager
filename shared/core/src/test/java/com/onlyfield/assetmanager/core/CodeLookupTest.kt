@@ -14,8 +14,8 @@ class CodeLookupTest {
     private val index = ProjectIndex(
         Project(
             name = "P", createdEpochMs = 0, updatedEpochMs = 0,
-            businessUnits = listOf(
-                BusinessUnit(
+            sites = listOf(
+                Site(
                     name = "BU",
                     devices = listOf(
                         Device(id = "d1", technicalName = "SW-01", physicalLabel = "A-001", ports = listOf(port)),

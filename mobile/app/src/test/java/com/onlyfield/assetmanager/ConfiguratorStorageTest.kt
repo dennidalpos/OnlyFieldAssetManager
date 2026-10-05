@@ -28,7 +28,7 @@ class ConfiguratorStorageTest {
             val device = d.copy(ports = HardwareConfigurator.ports(model.portTemplates, d.id).mapIndexed { n, port -> if (n == 24) port.copy(hardware = port.hardware.copy(opticalModule = "Optic")) else port })
             val rackModel = DeviceModel(name = "Rack model", kind = ObjectKind.RACK, rackDefaults = RackDefaults(42, 1000, 900))
             val cableModel = DeviceModel(name = "Cable model", kind = ObjectKind.CABLE, cableDefaults = CableDefaults())
-            val p = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(device))),
+            val p = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(device))),
                 racks = listOf(Rack(name = "Rack", depthMm = 1000, mountingDepthMm = 900, deviceModelId = rackModel.id)), deviceModels = listOf(model, rackModel, cableModel),
                 cables = listOf(Cable(portAId = device.ports.first().id, deviceModelId = cableModel.id)))
             val repository = ProjectRepository(db)

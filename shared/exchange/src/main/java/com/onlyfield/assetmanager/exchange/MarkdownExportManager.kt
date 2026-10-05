@@ -20,13 +20,9 @@ object MarkdownExportManager {
         filterConfig: ExportFilterConfig,
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
-        val filteredDevices = project.businessUnits
-            .filter { (filterConfig.selectedBusinessUnitId == null) || (it.id == filterConfig.selectedBusinessUnitId) }
-            .flatMap { bu -> bu.devices.filter { device ->
-                val siteId = device.siteId ?: bu.sites.find { site -> site.areas.any { it.id == device.areaId } }?.id
-                ((filterConfig.selectedSiteId == null) || (siteId == filterConfig.selectedSiteId)) &&
-                    ((filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId))
-            } }
+        val filteredDevices = project.sites
+            .filter { (filterConfig.selectedSiteId == null) || (it.id == filterConfig.selectedSiteId) }
+            .flatMap { site -> site.devices.filter { device -> (filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId) } }
             .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
             .distinctBy { it.id }
 
@@ -51,7 +47,7 @@ object MarkdownExportManager {
         sb.append(i18n.text("text.e064d5838d84"))
         sb.append(i18n.text("text.763262b5c2db"))
         sb.append("| :--- | :--- |\n")
-        sb.append(i18n.text("text.5213a63a1aab", project.businessUnits.size))
+        sb.append(i18n.text("text.5213a63a1aab", project.sites.size))
         sb.append(i18n.text("text.d26f1e1ab803", filteredDevices.size))
         sb.append(i18n.text("text.ba8e0c852cf8", project.racks.size))
         sb.append(i18n.text("text.d4fb508e5005", project.cables.size))
@@ -115,8 +111,8 @@ object MarkdownExportManager {
             sb.append(i18n.text("text.453b1efb174a"))
             sb.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
 
-            val allPorts = project.businessUnits.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
-            val allDevices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+            val allPorts = project.sites.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
+            val allDevices = project.sites.flatMap { it.devices }.associateBy { it.id }
 
             for (cable in project.cables) {
                 val portA = cable.portAId?.let { allPorts[it] }

@@ -13,7 +13,7 @@ class ConfiguratorExchangeTest {
             hardware = HardwareSpec(depthMm = 250, poeBudgetWatts = 370.0, redundantPower = true))
         val d = Device(technicalName = "SW1", deviceModelId = model.id, hardware = model.hardware.copy(portGroups = model.portTemplates))
         val device = d.copy(ports = HardwareConfigurator.ports(model.portTemplates, d.id).mapIndexed { n, p -> if (n == 24) p.copy(hardware = p.hardware.copy(opticalModule = "OPTICAL-MODULE")) else p })
-        return Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(device))),
+        return Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(device))),
             deviceModels = listOf(model, DeviceModel(name = "Rack", kind = ObjectKind.RACK, rackDefaults = RackDefaults(42, 1000, 900))), racks = listOf(Rack(name = "R1", mountingDepthMm = 900)))
     }
 
@@ -30,15 +30,15 @@ class ConfiguratorExchangeTest {
 
     @Test fun mergeCarriesHardwareChangesWithStablePorts() {
         val base = project()
-        val original = base.businessUnits.single().devices.single()
-        val incoming = base.copy(businessUnits = listOf(base.businessUnits.single().copy(devices = listOf(original.copy(hardware = original.hardware.copy(poeBudgetWatts = 500.0))))))
+        val original = base.sites.single().devices.single()
+        val incoming = base.copy(sites = listOf(base.sites.single().copy(devices = listOf(original.copy(hardware = original.hardware.copy(poeBudgetWatts = 500.0))))))
         val local = base.copy(name = "Local")
         val plan = ProjectMerger.merge(base, local, incoming)
         assertTrue(plan.conflicts.isEmpty())
         val result = plan.resolve(emptyMap())
         assertEquals("Local", result.name)
-        assertEquals(500.0, result.businessUnits.single().devices.single().hardware.poeBudgetWatts)
-        assertEquals(original.ports.map { it.id }, result.businessUnits.single().devices.single().ports.map { it.id })
+        assertEquals(500.0, result.sites.single().devices.single().hardware.poeBudgetWatts)
+        assertEquals(original.ports.map { it.id }, result.sites.single().devices.single().ports.map { it.id })
     }
 
     @Test fun tabularExportsIncludePortHardware() {

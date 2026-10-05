@@ -8,7 +8,7 @@ import org.junit.Test
 
 class DemoSeedTest {
     private val project = DemoSeed.build()
-    private val devices = project.businessUnits.flatMap { it.devices }
+    private val devices = project.sites.flatMap { it.devices }
     private val graph = ConnectionGraph(project)
     private fun named(name: String) = devices.single { it.technicalName == name }
     private fun port(device: String, name: String) = named(device).ports.single { it.name == name }.id
@@ -21,8 +21,8 @@ class DemoSeedTest {
     }
 
     @Test fun municipalityHasFourSitesAndValidStructure() {
-        assertEquals(listOf("COM", "TEA", "MED", "MAT"), project.businessUnits.map { it.code })
-        assertEquals(listOf(4, 1, 3, 2), project.businessUnits.map { it.areas.size })
+        assertEquals(listOf("COM", "TEA", "MED", "MAT"), project.sites.map { it.code })
+        assertEquals(listOf(4, 1, 3, 2), project.sites.map { it.areas.size })
         val result = ModelValidator.validateProject(project)
         assertTrue(result.issues.filter { it.severity == ValidationSeverity.STRUCTURAL_ERROR }.toString(), result.isValid)
         val count = devices.groupingBy { it.objectTypeId!! }.eachCount()

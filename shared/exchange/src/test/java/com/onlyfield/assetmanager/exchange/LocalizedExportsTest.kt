@@ -12,10 +12,10 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 class LocalizedExportsTest {
     @Test
-    fun devicesOnDirectBusinessUnitFloorsAreIncluded() {
+    fun devicesOnDirectSiteFloorsAreIncluded() {
         val floor = Area(name = "Planta del usuario")
         val project = Project(name = "Proyecto", createdEpochMs = 0, updatedEpochMs = 0,
-            businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(floor), devices = listOf(
+            sites = listOf(Site(name = "BU", areas = listOf(floor), devices = listOf(
                 Device(technicalName = "SW-FLOOR-001", areaId = floor.id)
             ))))
         val messages = Messages(Locale.ENGLISH)
@@ -34,7 +34,7 @@ class LocalizedExportsTest {
 
     @Test
     fun exportsTranslateLabelsPreserveUserContentAndExcludeCredentials() {
-        val project = Project(createdEpochMs = 0, updatedEpochMs = 0, name = "Sede dell'utente — España", businessUnits = listOf(BusinessUnit(
+        val project = Project(createdEpochMs = 0, updatedEpochMs = 0, name = "Sede dell'utente — España", sites = listOf(Site(
             name = "BU del usuario", devices = listOf(Device(technicalName = "SW-CODICE-001"))
         )), credentials = listOf(Credential(username = "SECRET_USER", secret = "SECRET_VALUE")))
         listOf("it" to "Nome", "en" to "Name", "es" to "Nombre").forEach { (language, header) ->

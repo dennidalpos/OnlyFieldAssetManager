@@ -12,14 +12,14 @@ class EntityFormsTest {
     fun deviceEditPreservesHiddenFields() {
         val obs = Observation("Android", 1000L, ObservationStatus.VERIFIED, "ok")
         val original = Device(
-            technicalName = "SW-01", siteId = "site-1", areaId = "a1", deviceModelId = "m1",
+            technicalName = "SW-01", areaId = "a1", deviceModelId = "m1",
             rackSide = RackSide.REAR, ports = listOf(Port(deviceId = "x", name = "Gi1")), observation = obs
         )
         val edited = DeviceForm.from(original, "bu1").copy(technicalName = "SW-01-NEW").toDevice(original, "Test")
 
         assertEquals("SW-01-NEW", edited.technicalName)
         assertEquals(original.id, edited.id)
-        assertEquals("site-1", edited.siteId)
+        assertEquals("a1", edited.areaId)
         assertEquals("m1", edited.deviceModelId)
         assertEquals(RackSide.REAR, edited.rackSide)
         assertEquals(original.ports, edited.ports)
@@ -29,10 +29,10 @@ class EntityFormsTest {
     @Test
     fun deviceFormValidatesFields() {
         val rack = 42
-        val form = DeviceForm(technicalName = "", businessUnitId = null, ipAddress = "300.1.1.1", macAddress = "zz", rackId = "r", positionU = "42", heightU = "2")
+        val form = DeviceForm(technicalName = "", siteId = null, ipAddress = "300.1.1.1", macAddress = "zz", rackId = "r", positionU = "42", heightU = "2")
         val errors = form.errors(rack)
-        assertTrue(errors.keys.containsAll(listOf("technicalName", "businessUnitId", "ipAddress", "macAddress", "positionU")))
-        assertTrue(DeviceForm(technicalName = "A", businessUnitId = "bu", ipAddress = "10.0.0.1", rackId = "r", positionU = "41", heightU = "2").errors(rack).isEmpty())
+        assertTrue(errors.keys.containsAll(listOf("technicalName", "siteId", "ipAddress", "macAddress", "positionU")))
+        assertTrue(DeviceForm(technicalName = "A", siteId = "bu", ipAddress = "10.0.0.1", rackId = "r", positionU = "41", heightU = "2").errors(rack).isEmpty())
     }
 
     @Test

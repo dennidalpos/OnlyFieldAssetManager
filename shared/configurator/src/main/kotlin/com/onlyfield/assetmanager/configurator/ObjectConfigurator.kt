@@ -113,8 +113,8 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     fun stage(p: Project) = change(draft.copy(session = ConfigurationSession(draft.session?.original ?: project, p)))
     fun openDevice(device: Device) {
         stage(preview)
-        val bu = index.businessUnitOf(device.id)?.id ?: draft.buId
-        nested = MapObjectDraft.device(preview, bu, ObjectMap.areaId(preview, device).orEmpty(), device.id, i18n)
+        val site = index.siteOf(device.id)?.id ?: draft.siteId
+        nested = MapObjectDraft.device(preview, site, ObjectMap.areaId(preview, device).orEmpty(), device.id, i18n)
     }
     val kind = draft.type.kind
     val rootName = when (kind) { ObjectKind.DEVICE -> draft.device.technicalName; ObjectKind.RACK -> draft.rack.name; ObjectKind.CABLE -> draft.cable.codeOrLabel }
@@ -150,7 +150,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         LaunchedEffect(id) { bringIntoView.bringIntoView() }
         PortConfiguration(preview, ref, draft.id, i18n, { stage(it) }, { openDevice(it) }, { type ->
             stage(preview)
-            nested = MapObjectDraft(type = type, buId = draft.buId, areaId = draft.areaId)
+            nested = MapObjectDraft(type = type, siteId = draft.siteId, areaId = draft.areaId)
         })
         return
     } }
@@ -205,11 +205,11 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         ObjectKind.DEVICE -> {
             val d = draft.device
             val h = d.hardware
-            if (!modelEditor) ConfiguratorSection(i18n.text("config.section.position"), error = errors["businessUnitId"] ?: errors["heightU"] ?: errors["positionU"], summary = place) {
+            if (!modelEditor) ConfiguratorSection(i18n.text("config.section.position"), error = errors["siteId"] ?: errors["heightU"] ?: errors["positionU"], summary = place) {
                 containerPick()
-                val bu = preview.businessUnits.find { it.id == d.businessUnitId }
-                Pick(i18n.text("config.bu"), bu, preview.businessUnits, i18n, { it.name }, error = errors["businessUnitId"], allowClear = false) { it?.let { b -> change(draft.copy(buId = b.id, device = d.copy(businessUnitId = b.id))) } }
-                Pick(i18n.text("config.floor"), index.area(d.areaId), bu?.let { ObjectMap.areas(it) }.orEmpty(), i18n, { it.name }) { change(draft.copy(device = d.copy(areaId = it?.id))) }
+                val site = preview.sites.find { it.id == d.siteId }
+                Pick(i18n.text("config.site"), site, preview.sites, i18n, { it.name }, error = errors["siteId"], allowClear = false) { it?.let { b -> change(draft.copy(siteId = b.id, device = d.copy(siteId = b.id))) } }
+                Pick(i18n.text("config.floor"), index.area(d.areaId), site?.areas.orEmpty(), i18n, { it.name }) { change(draft.copy(device = d.copy(areaId = it?.id))) }
                 floorMoved(d.areaId)
                 Choice(i18n.text("config.units"), d.heightU, (listOf(1, 2, 3, 4) + index.devices.map { it.heightU }).map { it.toString() }, error = errors["heightU"]) { change(draft.copy(device = d.copy(heightU = it))) }
                 if (d.rackId != null) {
@@ -228,7 +228,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
                 PortGroups(preview, draft, i18n, change)
                 if (device != null) {
                     if ((draft.portsConfigured || h.portGroups.isNotEmpty()) && HardwareConfigurator.validGroups(h.portGroups)) {
-                        val existing = (draft.session?.apply(project) ?: project).businessUnits.flatMap { it.devices }.find { it.id == draft.id } ?: device.copy(ports = emptyList())
+                        val existing = (draft.session?.apply(project) ?: project).sites.flatMap { it.devices }.find { it.id == draft.id } ?: device.copy(ports = emptyList())
                         val differences = HardwareConfigurator.preview(preview, existing, h.portGroups)
                         Text(i18n.text("config.differences", differences.added, differences.removed.size, differences.connectedRemoved.size), style = MaterialTheme.typography.bodySmall)
                         if (differences.connectedRemoved.isNotEmpty()) Toggle(i18n.text("config.removeConnected"), draft.allowConnectedRemoval) { change(draft.copy(allowConnectedRemoval = it)) }
@@ -630,7 +630,7 @@ private fun PortLink(project: Project, ref: ProjectIndex.PortRef, rootId: String
     var medium by remember(port.id, existing) { mutableStateOf(existing?.medium ?: if (port.hardware.mediaType == "Fiber") CableMedium.FIBER_OVERALL else CableMedium.ETHERNET_COPPER) }
     val floor = ObjectMap.areaId(project, ref.device)
     var sameFloor by remember(port.id) { mutableStateOf(floor != null) }
-    // One searchable list replaces the BU/floor/rack/device filters; same connector first.
+    // One searchable list replaces the site/floor/rack/device filters; same connector first.
     val candidates = index.ports.filter { p ->
         p.port.id != port.id && (p.port.id == currentDestination || !graph.occupied(p.port.id, existing?.id)) &&
             (!sameFloor || ObjectMap.areaId(project, p.device) == floor)

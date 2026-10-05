@@ -118,14 +118,14 @@ class DesktopStorageTest {
         assertNotNull("Fixture project should be loaded", fixture)
         assertEquals("11111111-1111-1111-1111-111111111111", fixture.id)
         assertEquals("Progetto Campione Infrastruttura v1", fixture.name)
-        assertEquals(2, fixture.businessUnits.size)
+        assertEquals(2, fixture.sites.size)
 
         val validation = ModelValidator.validateProject(fixture)
         assertTrue("Fixture should pass structural validation", validation.isValid)
         assertTrue("Fixture should contain documentary warnings", validation.hasWarnings)
 
         val codes = validation.issues.map { it.code }
-        assertTrue("Expected DUPLICATE_IP_IN_BU warning", codes.contains("DUPLICATE_IP_IN_BU"))
+        assertTrue("Expected DUPLICATE_IP_IN_SITE warning", codes.contains("DUPLICATE_IP_IN_SITE"))
         assertTrue("Expected DETACHED_PORT_ENDPOINT warning", codes.contains("DETACHED_PORT_ENDPOINT"))
         assertTrue("Expected UNPOSITIONED_DEVICE warning", codes.contains("UNPOSITIONED_DEVICE"))
     }

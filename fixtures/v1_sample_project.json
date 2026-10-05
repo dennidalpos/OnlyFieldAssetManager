@@ -1,30 +1,23 @@
 {
   "id": "11111111-1111-1111-1111-111111111111",
   "name": "Progetto Campione Infrastruttura v1",
-  "description": "Fixtures sintetica con due BU, nomi/IP ripetuti in ambiti diversi e sede facoltativa",
+  "description": "Fixture sintetica con due sedi, nomi/IP ripetuti in ambiti diversi e piano facoltativo",
   "createdEpochMs": 1770000000000,
   "updatedEpochMs": 1770000000000,
-  "businessUnits": [
+  "sites": [
     {
       "id": "22222222-2222-2222-2222-222222222222",
-      "name": "BU 01 - Direzione Generale",
-      "code": "BU-HQ",
-      "sites": [
+      "name": "Direzione Generale - Palazzo A",
+      "code": "HQ",
+      "address": "Via Roma 100, Milano",
+      "areas": [
         {
-          "id": "33333333-3333-3333-3333-333333333333",
-          "name": "Sede Centrale - Palazzo A",
-          "address": "Via Roma 100, Milano",
-          "areas": [
-            {
-              "id": "44444444-4444-4444-4444-444444444444",
-              "name": "Data Center Piano Interrato",
-              "floor": "-1",
-              "description": "Sala CED Principale"
-            }
-          ]
+          "id": "44444444-4444-4444-4444-444444444444",
+          "name": "Data Center Piano Interrato",
+          "floor": "-1",
+          "description": "Sala CED Principale"
         }
       ],
-      "areas": [],
       "devices": [
         {
           "id": "55555555-5555-5555-5555-555555555551",
@@ -33,7 +26,6 @@
           "alias": "Switch Accesso HQ 1",
           "ipAddress": "10.10.1.5",
           "macAddress": "00:11:22:33:44:55",
-          "siteId": "33333333-3333-3333-3333-333333333333",
           "areaId": "44444444-4444-4444-4444-444444444444",
           "ports": [
             {
@@ -61,7 +53,6 @@
           "technicalName": "sw-core-01",
           "physicalLabel": "SW-CORE-HQ",
           "ipAddress": "10.10.1.5",
-          "siteId": "33333333-3333-3333-3333-333333333333",
           "areaId": "44444444-4444-4444-4444-444444444444",
           "ports": [
             {
@@ -84,9 +75,8 @@
     },
     {
       "id": "77777777-7777-7777-7777-777777777777",
-      "name": "BU 02 - Filiale Nord",
-      "code": "BU-NORD",
-      "sites": [],
+      "name": "Filiale Nord",
+      "code": "NORD",
       "areas": [],
       "devices": [
         {
@@ -95,7 +85,6 @@
           "physicalLabel": "SW-NORD-01",
           "alias": "Switch Filiale Nord (stesso nome di HQ ma BU diversa)",
           "ipAddress": "10.10.1.5",
-          "siteId": null,
           "areaId": null,
           "ports": [],
           "observation": {

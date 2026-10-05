@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sitesForDisplay
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
@@ -44,34 +45,34 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val i18n = LocalMessages.current
 
     val confirm = LocalConfirm.current
-    var editBu by remember { mutableStateOf<BusinessUnit?>(null) }
-    var newBu by remember { mutableStateOf(false) }
-    var areaTarget by remember { mutableStateOf<Pair<BusinessUnit, Area?>?>(null) }
+    var editSite by remember { mutableStateOf<Site?>(null) }
+    var newSite by remember { mutableStateOf(false) }
+    var areaTarget by remember { mutableStateOf<Pair<Site, Area?>?>(null) }
     val takePhoto = rememberPhotoCapture(vm)
     val index = remember(project) { ProjectIndex(project) }
 
     AppScaffold(
         i18n.text("text.0ce8316b807d"), onBack = { vm.back() }, snackbarHost = snackbar,
         subtitle = i18n.text("text.3fd68ef551e3"),
-        floatingActionButton = { ExtendedFloatingActionButton(onClick = { newBu = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.e4de7d26b141")) }) }
+        floatingActionButton = { ExtendedFloatingActionButton(onClick = { newSite = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.e4de7d26b141")) }) }
     ) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            project.businessUnits.forEach { bu ->
-                val areas = bu.areas + bu.sites.flatMap { it.areas }
-                item(key = bu.id) {
+            project.sites.sitesForDisplay(i18n).forEach { site ->
+                val areas = site.areas
+                item(key = site.id) {
                     ItemCard(
-                        title = bu.name,
-                        details = listOf(i18n.text("text.6c039d300c29", bu.devices.size, areas.size)),
+                        title = site.name,
+                        details = listOfNotNull(site.group, site.address, i18n.text("text.6c039d300c29", site.devices.size, areas.size)),
                         menu = listOf(
-                            MenuAction(i18n.text("text.aeeb0ed4eaa8")) { areaTarget = bu to null },
-                            MenuAction(i18n.text("text.98b79b084f23")) { editBu = bu },
+                            MenuAction(i18n.text("text.aeeb0ed4eaa8")) { areaTarget = site to null },
+                            MenuAction(i18n.text("text.98b79b084f23")) { editSite = site },
                             MenuAction(i18n.text("text.7efe336bd548"), destructive = true) {
-                                confirm(ConfirmRequest(i18n.text("text.e36c23dfb086", bu.name), i18n.text("text.256ea58c5c85")) {
-                                    vm.edit(i18n.text("text.d4cbe1b8af3d")) { ProjectEdits.deleteBusinessUnit(it, bu.id) ?: error(i18n.text("text.1fcaf8b3ea81")) }
+                                confirm(ConfirmRequest(i18n.text("text.e36c23dfb086", site.name), i18n.text("text.256ea58c5c85")) {
+                                    vm.edit(i18n.text("text.d4cbe1b8af3d")) { ProjectEdits.deleteSite(it, site.id) ?: error(i18n.text("text.1fcaf8b3ea81")) }
                                 })
                             }
                         ),
-                        onClick = { areaTarget = bu to null }
+                        onClick = { areaTarget = site to null }
                     )
                 }
                 items(areas.sortedForDisplay(i18n) { it.name }, key = { it.id }) { area ->
@@ -79,7 +80,7 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                         title = area.name,
                         details = listOfNotNull(area.floor?.let { i18n.text("text.6e61502a3560", it) }, area.description, index.attachmentsOf(area.id).size.takeIf { it > 0 }?.let { i18n.text("text.5b587bc5bd9e", it) }),
                         modifier = Modifier.padding(start = 24.dp),
-                        onClick = { areaTarget = bu to area },
+                        onClick = { areaTarget = site to area },
                         menu = listOf(MenuAction(i18n.text("text.d88211a9e4b9")) { takePhoto(AttachmentTargetType.AREA, area.id) }, MenuAction(i18n.text("text.7efe336bd548"), destructive = true) {
                             confirm(ConfirmRequest(i18n.text("text.653fc942318e", area.name), i18n.text("text.67328da70967")) {
                                 vm.edit(i18n.text("text.1d50eb1afff7")) { ProjectEdits.deleteArea(it, area.id) ?: error(i18n.text("text.4969d887c7f4")) }
@@ -91,23 +92,31 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     }
 
-    if (newBu || editBu != null) {
-        val bu = editBu
-        var name by remember(bu) { mutableStateOf(bu?.name.orEmpty()) }
-        EditScreen(if (bu == null) i18n.text("text.9058af538683") else i18n.text("text.98b79b084f23"), { newBu = false; editBu = null }, {
-            newBu = false; editBu = null
-            vm.edit(i18n.text("text.2f92bdd5ba64")) { if (bu == null) ProjectEdits.addBusinessUnit(it, name.trim()) else ProjectEdits.renameBusinessUnit(it, bu.id, name.trim()) }
-        }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
+    if (newSite || editSite != null) {
+        val site = editSite
+        var name by remember(site) { mutableStateOf(site?.name.orEmpty()) }
+        var group by remember(site) { mutableStateOf(site?.group.orEmpty()) }
+        var address by remember(site) { mutableStateOf(site?.address.orEmpty()) }
+        EditScreen(if (site == null) i18n.text("text.9058af538683") else i18n.text("text.98b79b084f23"), { newSite = false; editSite = null }, {
+            newSite = false; editSite = null
+            val g = group.trim().ifBlank { null }
+            val a = address.trim().ifBlank { null }
+            vm.edit(i18n.text("text.2f92bdd5ba64")) { if (site == null) ProjectEdits.addSite(it, name.trim(), g, a) else ProjectEdits.updateSite(it, site.copy(name = name.trim(), group = g, address = a)) }
+        }, confirmEnabled = name.isNotBlank()) {
+            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
+            FormField(group, { group = it }, i18n.text("site.group"))
+            FormField(address, { address = it }, i18n.text("site.address"))
+        }
     }
 
-    areaTarget?.let { (bu, area) ->
-        var name by remember(area, bu) { mutableStateOf(area?.name.orEmpty()) }
-        var floor by remember(area, bu) { mutableStateOf(area?.floor.orEmpty()) }
-        var description by remember(area, bu) { mutableStateOf(area?.description.orEmpty()) }
-        EditScreen(if (area == null) i18n.text("text.884e872b782f", bu.name) else i18n.text("text.e325f13a6dee"), { areaTarget = null }, {
+    areaTarget?.let { (site, area) ->
+        var name by remember(area, site) { mutableStateOf(area?.name.orEmpty()) }
+        var floor by remember(area, site) { mutableStateOf(area?.floor.orEmpty()) }
+        var description by remember(area, site) { mutableStateOf(area?.description.orEmpty()) }
+        EditScreen(if (area == null) i18n.text("text.884e872b782f", site.name) else i18n.text("text.e325f13a6dee"), { areaTarget = null }, {
             areaTarget = null
             val edited = (area ?: Area(name = name.trim())).copy(name = name.trim(), floor = floor.trim().ifBlank { null }, description = description.trim().ifBlank { null })
-            vm.edit(i18n.text("text.b0e1d3b2c943", edited.name)) { if (area == null) ProjectEdits.addArea(it, bu.id, edited) else ProjectEdits.updateArea(it, edited) }
+            vm.edit(i18n.text("text.b0e1d3b2c943", edited.name)) { if (area == null) ProjectEdits.addArea(it, site.id, edited) else ProjectEdits.updateArea(it, edited) }
         }, confirmEnabled = name.isNotBlank()) {
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"), hint = i18n.text("text.306610be3be7"))
             FormField(floor, { floor = it }, i18n.text("text.fa2bd181d8ba"))

@@ -23,7 +23,7 @@ fun Device.isPassive() = hardware.passive || category == DeviceCategory.PATCH_PA
 
 /** Physical continuity only: active devices terminate a path. */
 class ConnectionGraph(val project: Project) {
-    private val devices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+    private val devices = project.sites.flatMap { it.devices }.associateBy { it.id }
     private val ports = devices.values.flatMap { it.ports }.associateBy { it.id }
     private val comboPeers = ports.values.filter { it.hardware.comboKey != null }.groupBy { it.deviceId to it.hardware.comboKey }
     private data class Edge(val id: String, val a: String, val b: String?, val cable: Cable? = null, val mapping: PanelMapping? = null)

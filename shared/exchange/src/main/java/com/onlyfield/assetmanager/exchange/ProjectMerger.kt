@@ -79,8 +79,8 @@ object ProjectMerger {
     internal data class Node(val json: JsonObject, val parent: MergeKey?)
 
     private val json = PackageSerializer.jsonConfig
-    private const val BU = "businessUnits"
-    private val nested = setOf("sites", "areas", "devices")
+    private const val SITES = "sites"
+    private val nested = setOf("areas", "devices")
 
     fun merge(base: Project?, local: Project, incoming: Project, i18n: Messages = Messages()): MergeResult {
         require(local.id == incoming.id) { i18n.text("text.8eb69c5de288") }
@@ -109,8 +109,8 @@ object ProjectMerger {
 
     private fun root(p: Project) = json.encodeToJsonElement(Project.serializer(), com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(p)).jsonObject
 
-    /** ID-keyed project collections, excluding business units. */
-    private fun listKindsOf(p: Project) = root(p).filter { (k, v) -> k != BU && isEntityList(v) }.keys.toList()
+    /** ID-keyed project collections, excluding sites. */
+    private fun listKindsOf(p: Project) = root(p).filter { (k, v) -> k != SITES && isEntityList(v) }.keys.toList()
 
     private fun isEntityList(v: JsonElement) = v is JsonArray && v.all { it is JsonObject && "id" in it.jsonObject }
 
@@ -122,22 +122,16 @@ object ProjectMerger {
         val r = root(p)
         val out = LinkedHashMap<MergeKey, Node>()
         // Rebuild assigns updatedEpochMs.
-        out[MergeKey("project", "project")] = Node(JsonObject(r.filter { (k, v) -> k != "updatedEpochMs" && k != BU && !isEntityList(v) }), null)
-        for (buEl in r.getValue(BU).jsonArray) {
-            val bu = buEl.jsonObject
-            val buKey = MergeKey(BU, bu.id())
-            out[buKey] = Node(bu.without("sites", "areas", "devices"), null)
-            for (siteEl in bu["sites"]?.jsonArray.orEmpty()) {
-                val site = siteEl.jsonObject
-                val siteKey = MergeKey("sites", site.id())
-                out[siteKey] = Node(site.without("areas"), buKey)
-                site["areas"]?.jsonArray.orEmpty().forEach { a -> out[MergeKey("areas", a.jsonObject.id())] = Node(a.jsonObject, siteKey) }
-            }
-            bu["areas"]?.jsonArray.orEmpty().forEach { a -> out[MergeKey("areas", a.jsonObject.id())] = Node(a.jsonObject, buKey) }
-            bu["devices"]?.jsonArray.orEmpty().forEach { d -> out[MergeKey("devices", d.jsonObject.id())] = Node(d.jsonObject, buKey) }
+        out[MergeKey("project", "project")] = Node(JsonObject(r.filter { (k, v) -> k != "updatedEpochMs" && k != SITES && !isEntityList(v) }), null)
+        for (siteEl in r.getValue(SITES).jsonArray) {
+            val site = siteEl.jsonObject
+            val siteKey = MergeKey(SITES, site.id())
+            out[siteKey] = Node(site.without("areas", "devices"), null)
+            site["areas"]?.jsonArray.orEmpty().forEach { a -> out[MergeKey("areas", a.jsonObject.id())] = Node(a.jsonObject, siteKey) }
+            site["devices"]?.jsonArray.orEmpty().forEach { d -> out[MergeKey("devices", d.jsonObject.id())] = Node(d.jsonObject, siteKey) }
         }
         for ((kind, value) in r) {
-            if (kind == BU || !isEntityList(value)) continue
+            if (kind == SITES || !isEntityList(value)) continue
             value.jsonArray.forEach { e -> out[MergeKey(kind, e.jsonObject.id())] = Node(e.jsonObject, null) }
         }
         return out
@@ -145,22 +139,18 @@ object ProjectMerger {
 
     internal fun rebuild(nodes: Map<MergeKey, Node>, listKinds: List<String>, nowMs: Long, i18n: Messages = Messages()): Project {
         fun children(kind: String, parent: MergeKey) = nodes.filter { (k, n) -> k.kind == kind && n.parent == parent }
-        val bus = nodes.filterKeys { it.kind == BU }.toMutableMap()
-        // Keep orphaned children under the first business unit.
+        val sites = nodes.filterKeys { it.kind == SITES }.toMutableMap()
+        // Keep orphaned children under the first site.
         val orphans = nodes.filter { (k, n) -> k.kind in nested && n.parent != null && n.parent !in nodes }
-        if (orphans.isNotEmpty() && bus.isEmpty()) {
+        if (orphans.isNotEmpty() && sites.isEmpty()) {
             val id = UUID.randomUUID().toString()
-            bus[MergeKey(BU, id)] = Node(JsonObject(mapOf("id" to JsonPrimitive(id), "name" to JsonPrimitive(i18n.text("text.bbd413756f43")))), null)
+            sites[MergeKey(SITES, id)] = Node(JsonObject(mapOf("id" to JsonPrimitive(id), "name" to JsonPrimitive(i18n.text("text.bbd413756f43")))), null)
         }
-        val firstBu = bus.keys.firstOrNull()
-        val buArray = JsonArray(bus.map { (buKey, buNode) ->
-            fun adopt(kind: String) = children(kind, buKey) + if (buKey == firstBu) orphans.filterKeys { it.kind == kind } else emptyMap()
-            val sites = adopt("sites").map { (siteKey, site) ->
-                JsonObject(site.json + ("areas" to JsonArray(children("areas", siteKey).values.map { it.json })))
-            }
+        val firstSite = sites.keys.firstOrNull()
+        val siteArray = JsonArray(sites.map { (siteKey, siteNode) ->
+            fun adopt(kind: String) = children(kind, siteKey) + if (siteKey == firstSite) orphans.filterKeys { it.kind == kind } else emptyMap()
             JsonObject(
-                buNode.json + mapOf(
-                    "sites" to JsonArray(sites),
+                siteNode.json + mapOf(
                     "areas" to JsonArray(adopt("areas").values.map { it.json }),
                     "devices" to JsonArray(adopt("devices").values.map { it.json }),
                 )
@@ -168,7 +158,7 @@ object ProjectMerger {
         })
         val meta = nodes[MergeKey("project", "project")]?.json ?: JsonObject(emptyMap())
         val lists = listKinds.associateWith { kind -> JsonArray(nodes.filterKeys { it.kind == kind }.values.map { it.json }) }
-        val project = JsonObject(meta + lists + mapOf(BU to buArray, "updatedEpochMs" to JsonPrimitive(nowMs)))
+        val project = JsonObject(meta + lists + mapOf(SITES to siteArray, "updatedEpochMs" to JsonPrimitive(nowMs)))
         return com.onlyfield.assetmanager.core.model.ObjectHierarchy.synchronize(json.decodeFromJsonElement(Project.serializer(), project))
     }
 
@@ -183,8 +173,7 @@ object ProjectMerger {
 
     private fun kindLabel(kind: String, i18n: Messages = Messages()) = when (kind) {
         "project" -> i18n.text("text.388c767cf744")
-        BU -> i18n.text("text.e4de7d26b141")
-        "sites" -> i18n.text("text.f163aa3f6310")
+        SITES -> i18n.text("text.e4de7d26b141")
         "areas" -> i18n.text("text.7b417b994cc4")
         "devices" -> i18n.text("text.cf301d95d32c")
         "credentials" -> i18n.text("text.602206d4ebfc")

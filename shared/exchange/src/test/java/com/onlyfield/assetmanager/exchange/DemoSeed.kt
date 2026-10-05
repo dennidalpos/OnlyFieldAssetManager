@@ -33,34 +33,34 @@ object DemoSeed {
     const val OUTLETS = 36
 
     fun build(now: Long = 1_760_000_000_000): Project {
-        val com = BusinessUnit(name = "Comune – Municipio", code = "COM", areas = listOf(
+        val com = Site(name = "Comune – Municipio", code = "COM", group = "Sedi comunali", address = "Piazza del Municipio 1", areas = listOf(
             Area(name = "CED", floor = "-1"), Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
-        val tea = BusinessUnit(name = "Teatro comunale", code = "TEA", areas = listOf(Area(name = "Piano terra", floor = "0")))
-        val med = BusinessUnit(name = "Scuola media", code = "MED", areas = listOf(
+        val tea = Site(name = "Teatro comunale", code = "TEA", group = "Sedi comunali", address = "Via del Teatro 5", areas = listOf(Area(name = "Piano terra", floor = "0")))
+        val med = Site(name = "Scuola media", code = "MED", group = "Scuole", address = "Via delle Scuole 10", areas = listOf(
             Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
-        val mat = BusinessUnit(name = "Scuola materna", code = "MAT", areas = listOf(Area(name = "Piano terra", floor = "0"), Area(name = "Copertura", floor = "1")))
+        val mat = Site(name = "Scuola materna", code = "MAT", group = "Scuole", address = "Via dei Giardini 3", areas = listOf(Area(name = "Piano terra", floor = "0"), Area(name = "Copertura", floor = "1")))
         var p = Project(name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna",
-            createdEpochMs = now, updatedEpochMs = now, businessUnits = listOf(com, tea, med, mat))
+            createdEpochMs = now, updatedEpochMs = now, sites = listOf(com, tea, med, mat))
 
         fun add(draft: MapObjectDraft): String { p = draft.apply(p, i18n); return draft.id }
-        fun device(id: String) = p.businessUnits.flatMap { it.devices }.first { it.id == id }
+        fun device(id: String) = p.sites.flatMap { it.devices }.first { it.id == id }
         fun port(deviceId: String, name: String, side: PortSide? = null) = device(deviceId).ports.first { it.name == name && (side == null || it.hardware.side == side) }.id
         fun cable(code: String?, a: String, b: String, medium: CableMedium = CableMedium.ETHERNET_COPPER, length: Double? = null, color: String? = null) {
             p = p.copy(cables = p.cables + Cable(codeOrLabel = code, portAId = a, portBId = b, medium = medium, lengthValue = length, color = color))
         }
-        fun onMap(bu: BusinessUnit, area: Area, typeId: String, name: String, point: MapPoint, result: PresetResult? = DevicePresets.forType(typeId)?.let { preset(typeId) }) =
-            add(QuickAdd.draft(MapObjectDraft(type = type(typeId), buId = bu.id, areaId = area.id, mapPoint = point), name, result))
-        fun rack(bu: BusinessUnit, area: Area, name: String, point: MapPoint): Rack {
-            val id = add(QuickAdd.draft(MapObjectDraft(type = type("rack"), buId = bu.id, areaId = area.id, rack = RackForm(areaId = area.id), mapPoint = point), name, rackHeightU = 42))
+        fun onMap(site: Site, area: Area, typeId: String, name: String, point: MapPoint, result: PresetResult? = DevicePresets.forType(typeId)?.let { preset(typeId) }) =
+            add(QuickAdd.draft(MapObjectDraft(type = type(typeId), siteId = site.id, areaId = area.id, mapPoint = point), name, result))
+        fun rack(site: Site, area: Area, name: String, point: MapPoint): Rack {
+            val id = add(QuickAdd.draft(MapObjectDraft(type = type("rack"), siteId = site.id, areaId = area.id, rack = RackForm(areaId = area.id), mapPoint = point), name, rackHeightU = 42))
             return p.racks.first { it.id == id }
         }
         fun mounted(rack: Rack, typeId: String, name: String, unit: Int, result: PresetResult?) =
             add(QuickAdd.draft(QuickAdd.inRack(p, rack, type(typeId), unit, RackSide.FRONT), name, result))
 
         /** Floor rack, outlets on the map, horizontal cables, patch cords and endpoints. */
-        fun floor(bu: BusinessUnit, area: Area, fibre: Boolean): Kit {
-            val code = "${bu.code}-${if (area.floor == "0") "PT" else "P${area.floor}"}"
-            val rack = rack(bu, area, "RK-$code", MapPoint(.06f, .5f))
+        fun floor(site: Site, area: Area, fibre: Boolean): Kit {
+            val code = "${site.code}-${if (area.floor == "0") "PT" else "P${area.floor}"}"
+            val rack = rack(site, area, "RK-$code", MapPoint(.06f, .5f))
             val ppA = mounted(rack, "patch-panel", "PP-$code-A", 41, preset("patch-panel", mapOf("ports" to "48")))
             val swA = mounted(rack, "switch", "SW-$code-A", 40, preset("switch", mapOf("ports" to "48", "poe" to "ALL")))
             val ppB = mounted(rack, "patch-panel", "PP-$code-B", 38, preset("patch-panel", mapOf("ports" to "48")))
@@ -69,7 +69,7 @@ object DemoSeed {
             // Two rows above and two below the floor, nine outlets each.
             val outlets = (1..OUTLETS).map { k ->
                 val row = (k - 1) / 9
-                onMap(bu, area, "outlet", "PR-$code-%02d".format(k), MapPoint(.20f + (k - 1) % 9 * .095f, listOf(.10f, .24f, .76f, .90f)[row]))
+                onMap(site, area, "outlet", "PR-$code-%02d".format(k), MapPoint(.20f + (k - 1) % 9 * .095f, listOf(.10f, .24f, .76f, .90f)[row]))
             }
             outlets.forEachIndexed { o, outlet ->
                 (1..2).forEach { side ->
@@ -88,7 +88,7 @@ object DemoSeed {
             endpoints.forEachIndexed { k, (typeId, prefix) ->
                 val n = counters.merge(prefix, 1, Int::plus)!!
                 val values = if (typeId == "workstation") mapOf("nics" to "1", "management" to "NO") else emptyMap()
-                val id = onMap(bu, area, typeId, "$prefix-$code-%02d".format(n), MapPoint(.20f + k % 9 * .095f, if (k < 9) .40f else .58f), preset(typeId, values))
+                val id = onMap(site, area, typeId, "$prefix-$code-%02d".format(n), MapPoint(.20f + k % 9 * .095f, if (k < 9) .40f else .58f), preset(typeId, values))
                 cable(null, device(id).ports.first().id, port(outlets[k], "P1", PortSide.FRONT), length = 3.0)
             }
             return Kit(rack, swA, swB, ppf)
@@ -130,7 +130,7 @@ object DemoSeed {
         }
         val coreUplinks = (1..12).map { "X$it" }.iterator()
         listOf(comPt, comP1).forEach { area -> backbone(floor(com, area, fibre = true), ppfCed, core, coreUplinks, 40.0) }
-        val comFloor1 = p.businessUnits.flatMap { it.devices }.first { it.technicalName == "SW-COM-P1-A" }.id
+        val comFloor1 = p.sites.flatMap { it.devices }.first { it.technicalName == "SW-COM-P1-A" }.id
         val radCom = onMap(com, comRoof, "radio-bridge", "RAD-COM-01", MapPoint(.7f, .3f))
         cable("RAD-COM-01-LAN", port(comFloor1, "P40"), port(radCom, "LAN1", PortSide.FRONT), length = 25.0)
 

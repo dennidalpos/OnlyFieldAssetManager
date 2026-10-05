@@ -19,7 +19,7 @@ Il censimento parte da menu precompilati. `ObjectPickerDialog` usa lo stesso flu
    - nome proposto (`SW-03`), sempre modificabile;
    - preset porte;
    - per i rack l'altezza, predefinita 42 U;
-   - la business unit, solo se il contesto non la dà e ce n'è più d'una.
+   - la sede, solo se il contesto non la dà e ce n'è più d'una.
 
 Aggiungi salva subito come una sola modifica annullabile. Aggiungi e modifica apre l'editor completo; una bozza nuova lì è già lavoro non salvato, quindi chiudere chiede conferma.
 
@@ -30,7 +30,7 @@ Regole del flusso:
 - Una tipologia personalizzata nasce insieme all'oggetto.
 - Un rack nasce vuoto e si riempie man mano.
 
-La logica pura è in `core.forms.QuickAdd`: bozza con nome, preset, altezza e business unit; dispositivo in una U del rack. È coperta da `QuickAddTest`.
+La logica pura è in `core.forms.QuickAdd`: bozza con nome, preset, altezza e sede; dispositivo in una U del rack. È coperta da `QuickAddTest`.
 
 ## Dati essenziali e dettagli
 
@@ -38,7 +38,7 @@ In testa una riga di contesto mostra simbolo, tipo e posizione (`Terra › R1 �
 
 Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo; l'intestazione è rettangolare perché titolo e riepilogo su due righe non vengano tagliati dagli angoli arrotondati:
 
-1. **Posizione**: contenitore, business unit, piano, altezza U e, in rack, posizione U e lato. Se il piano cambia per un oggetto esistente compare un avviso. Dall'inventario la business unit deve essere selezionata (la sezione si apre per l'errore); piano, rack e porte non sono obbligatori.
+1. **Posizione**: contenitore, sede, piano, altezza U e, in rack, posizione U e lato. Se il piano cambia per un oggetto esistente compare un avviso. Dall'inventario la sede deve essere selezionata (la sezione si apre per l'errore); piano, rack e porte non sono obbligatori.
 2. **Porte** (`24 porte · 4 occupate`).
 3. **Identificativi e rete**: IP, MAC, numero di serie, alias.
 4. **Hardware**.

@@ -12,7 +12,7 @@ class ConfiguratorTest {
         return d.copy(ports = HardwareConfigurator.ports(groups, d.id))
     }
     private fun project(vararg devices: Device) = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", devices = devices.toList())))
+        sites = listOf(Site(name = "BU", devices = devices.toList())))
 
     @Test fun switchHasSeparateCopperAndFiberGroups() {
         val d = device("SW", groups = listOf(PortTemplate("Gi", portCount = 24, connector = "RJ45"), PortTemplate("SFP", portCount = 4, connector = "SFP", role = "UPLINK")))
@@ -101,7 +101,7 @@ class ConfiguratorTest {
         val reduced = a.copy(hardware = a.hardware.copy(portGroups = listOf(PortTemplate("P", portCount = 1))))
         assertThrows(IllegalArgumentException::class.java) { HardwareConfigurator.configure(p, reduced) }
         val updated = HardwareConfigurator.configure(p, reduced, true)
-        assertEquals(a.ports[0].id, updated.businessUnits.single().devices.first().ports.single().id)
+        assertEquals(a.ports[0].id, updated.sites.single().devices.first().ports.single().id)
         assertEquals(p.cables.single().id, updated.cables.single().id)
         assertNull(updated.cables.single().portAId)
         assertEquals(ObservationStatus.TO_VERIFY, updated.cables.single().observation?.status)
@@ -110,9 +110,9 @@ class ConfiguratorTest {
     @Test fun emptyGroupsRemovePortsOnlyWithExplicitConfiguration() {
         val a = device("A")
         val updated = HardwareConfigurator.configure(project(a), a.copy(hardware = HardwareSpec()), replacePorts = true)
-        assertTrue(updated.businessUnits.single().devices.single().ports.isEmpty())
+        assertTrue(updated.sites.single().devices.single().ports.isEmpty())
         val legacy = HardwareConfigurator.configure(project(a), a.copy(hardware = HardwareSpec()))
-        assertEquals(a.ports, legacy.businessUnits.single().devices.single().ports)
+        assertEquals(a.ports, legacy.sites.single().devices.single().ports)
     }
 
     @Test fun sessionMergesOnlyItsEditsAndCanBeDiscarded() {
@@ -121,8 +121,8 @@ class ConfiguratorTest {
         val latest = ProjectEdits.updateDevice(original.copy(name = "Concurrent"), b.copy(alias = "latest"))
         val result = ConfigurationSession(original, edited).apply(latest)
         assertEquals("Concurrent", result.name)
-        assertEquals(listOf("session", "latest"), result.businessUnits.single().devices.map { it.alias })
-        assertNull(original.businessUnits.single().devices.first().alias)
+        assertEquals(listOf("session", "latest"), result.sites.single().devices.map { it.alias })
+        assertNull(original.sites.single().devices.first().alias)
     }
 
     @Test fun savedModelExcludesInstanceIdentityAndPrivateFields() {
@@ -144,7 +144,7 @@ class ConfiguratorTest {
         val stagedRack = rackDraft.apply(original)
         val parent = ObjectRef(PlacementTargetType.RACK, rackDraft.id)
         val custom = ObjectType(name = "Custom terminal", canContainObjects = true)
-        val child = MapObjectDraft.newObject(stagedRack, custom, original.businessUnits.single().id, "", parent)
+        val child = MapObjectDraft.newObject(stagedRack, custom, original.sites.single().id, "", parent)
             .let { it.copy(device = it.device.copy(technicalName = "Child", positionU = "1")) }
         val edited = child.apply(stagedRack).copy(
             floorplanPlacements = listOf(FloorplanPlacement(areaId = "floor", targetType = PlacementTargetType.RACK, targetId = rackDraft.id, xRatio = .5f, yRatio = .5f)),
@@ -162,7 +162,7 @@ class ConfiguratorTest {
         val a = device("A")
         val port = a.ports.single().copy(label = "Desk", hardware = a.ports.single().hardware.copy(connector = "Custom", opticalModule = "Module", customized = true))
         val edited = a.copy(ports = listOf(port))
-        val result = HardwareConfigurator.configure(project(edited), edited).businessUnits.single().devices.single().ports.single()
+        val result = HardwareConfigurator.configure(project(edited), edited).sites.single().devices.single().ports.single()
         assertEquals(port.id, result.id)
         assertEquals(port.label, result.label)
         assertEquals(port.hardware, result.hardware)
@@ -227,7 +227,7 @@ class ConfiguratorTest {
     private fun junctionBox(p: Project): Pair<Project, Device> {
         val groups = DevicePresets.forType("junction-box")!!.result(mapOf("ports" to "1", "kind" to "RJ45")).groups
         val box = device("GB-1", passive = true, groups = groups).copy(objectTypeId = "junction-box")
-        val added = p.copy(businessUnits = p.businessUnits.map { it.copy(devices = it.devices + box) })
+        val added = p.copy(sites = p.sites.map { it.copy(devices = it.devices + box) })
         return HardwareConfigurator.configure(added, box) to box
     }
 
@@ -236,7 +236,7 @@ class ConfiguratorTest {
         val cabled = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
         val cable = cabled.cables.single().let { it.copy(codeOrLabel = "C1", color = "Blu") }
         val (p, box) = junctionBox(cabled.copy(cables = listOf(cable)))
-        val ports = p.businessUnits.single().devices.first { it.id == box.id }.ports
+        val ports = p.sites.single().devices.first { it.id == box.id }.ports
         val rear = ports.single { it.hardware.side == PortSide.REAR }; val front = ports.single { it.hardware.side == PortSide.FRONT }
         assertEquals(mapOf(rear.id to front.id, front.id to rear.id), HardwareConfigurator.freePassages(p))
         val split = HardwareConfigurator.insertPassage(p, cable.id, rear.id)
@@ -247,7 +247,7 @@ class ConfiguratorTest {
         assertEquals(front.id, added.portAId); assertEquals(b.ports.single().id, added.portBId); assertEquals("Blu", added.color)
         val graph = ConnectionGraph(split)
         assertEquals(ConnectionState.COMPLETE, graph.state(a.ports.single().id))
-        assertEquals(b.id, graph.trace(a.ports.single().id).last().let { step -> split.cables.single { it.id == step.cable?.id }.portBId }?.let { id -> split.businessUnits.single().devices.first { d -> d.ports.any { it.id == id } }.id })
+        assertEquals(b.id, graph.trace(a.ports.single().id).last().let { step -> split.cables.single { it.id == step.cable?.id }.portBId }?.let { id -> split.sites.single().devices.first { d -> d.ports.any { it.id == id } }.id })
         assertTrue(HardwareConfigurator.freePassages(split).isEmpty())
         assertTrue(HardwareConfigurator.disconnect(split, b.ports.single().id).cables.none { it.id == added.id })
     }
@@ -266,12 +266,12 @@ class ConfiguratorTest {
         val a = device("SW"); val b = device("PC")
         val cabled = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
         val (p, box) = junctionBox(cabled)
-        val split = HardwareConfigurator.insertPassage(p, cabled.cables.single().id, p.businessUnits.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.REAR }.id)
+        val split = HardwareConfigurator.insertPassage(p, cabled.cables.single().id, p.sites.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.REAR }.id)
         val summary = requireNotNull(PortSummaries.of(split, a.ports.single().id))
         assertEquals(listOf("GB-1", "PC"), summary.hops.map { it.device.technicalName })
         assertEquals(listOf("PC"), summary.terminals.map { it.device.technicalName })
         // From the junction front port, both directions are listed: back to SW, forward to PC.
-        val front = split.businessUnits.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.FRONT }
+        val front = split.sites.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.FRONT }
         val both = requireNotNull(PortSummaries.of(split, front.id))
         assertEquals(listOf("PC"), both.hops.map { it.device.technicalName })
         assertEquals(listOf("SW"), both.backHops.map { it.device.technicalName })

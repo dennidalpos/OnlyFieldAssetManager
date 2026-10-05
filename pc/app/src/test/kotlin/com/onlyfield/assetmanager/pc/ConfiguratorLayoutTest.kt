@@ -25,8 +25,8 @@ class ConfiguratorLayoutTest {
     private val rack = Rack(name = "R1", areaId = area.id, heightU = 42)
     private val sw = Device(technicalName = "SW-01", areaId = area.id, rackId = rack.id, positionU = 10, heightU = 2, ipAddress = "10.0.0.2", objectTypeId = "switch")
     private val loose = Device(technicalName = "SW-09", areaId = area.id, rackId = rack.id, objectTypeId = "switch")
-    private val bu = BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(sw, loose))
-    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu), racks = listOf(rack))
+    private val site = Site(name = "BU", areas = listOf(area), devices = listOf(sw, loose))
+    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(site), racks = listOf(rack))
 
     private fun show(draft: MapObjectDraft, extra: @androidx.compose.runtime.Composable () -> Unit = {}) {
         val state = mutableStateOf(draft)
@@ -38,7 +38,7 @@ class ConfiguratorLayoutTest {
     }
 
     @Test fun collapsedSectionsSummarizeTheirDataAndContextShowsThePlace() {
-        show(MapObjectDraft.device(project, bu.id, area.id, sw.id))
+        show(MapObjectDraft.device(project, site.id, area.id, sw.id))
         rule.onNodeWithText("Switch · Terra › R1 › U10–11").assertExists()
         rule.onNodeWithText("10.0.0.2").assertExists()
         rule.onNode(hasSetTextAction() and hasText("Indirizzo IP")).assertDoesNotExist()
@@ -46,7 +46,7 @@ class ConfiguratorLayoutTest {
     }
 
     @Test fun hostSectionsComeBeforeTheOtherSectionWithCustomFieldsAndAdvancedOptions() {
-        show(MapObjectDraft.device(project, bu.id, area.id, sw.id)) { Text("HOST-SECTION") }
+        show(MapObjectDraft.device(project, site.id, area.id, sw.id)) { Text("HOST-SECTION") }
         fun top(text: String) = rule.onNodeWithText(text).fetchSemanticsNode().positionInRoot.y
         assertTrue(top("Note e rilievo") < top("HOST-SECTION"))
         assertTrue(top("HOST-SECTION") < top("Altro"))
@@ -55,7 +55,7 @@ class ConfiguratorLayoutTest {
     }
 
     @Test fun rackContentsListOnlyMountedDevicesAndFreeRanges() {
-        show(MapObjectDraft.rack(project, bu.id, area.id, rack.id))
+        show(MapObjectDraft.rack(project, site.id, area.id, rack.id))
         rule.onNodeWithText("Dispositivi nel rack").performScrollTo().performClick()
         rule.onNodeWithContentDescription("U10–11 SW-01").assertExists()
         rule.onNodeWithText("U libere: 1–9, 12–42").assertExists()

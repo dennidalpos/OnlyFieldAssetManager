@@ -92,7 +92,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private val _importState = MutableStateFlow<ImportState?>(null)
     val importState: StateFlow<ImportState?> = _importState.asStateFlow()
 
-    var selectedBuId by mutableStateOf<String?>(null)
+    var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
 
     var busy by mutableStateOf<String?>(null)
@@ -147,7 +147,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 fail(i18n.text("text.05065b58f085"))
                 return@launch
             }
-            selectedBuId = null
+            selectedSiteId = null
             selectedAreaId = null
             setProject(p)
             refreshTrash()

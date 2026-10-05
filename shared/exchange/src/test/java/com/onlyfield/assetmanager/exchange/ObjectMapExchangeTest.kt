@@ -14,7 +14,7 @@ class ObjectMapExchangeTest {
     private val cable = Cable(codeOrLabel = "C1", deviceAId = device.id)
     private val attachment = Attachment(name = "Foto cavo", originalFileName = "cavo.jpg", relativePath = "attachments/cavo.jpg", targetType = AttachmentTargetType.CABLE, targetId = cable.id)
     private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))),
+        sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(device))),
         objectTypes = listOf(type), cables = listOf(cable), cableRoutes = listOf(CableRoute(cableId = cable.id, areaId = area.id)), attachments = listOf(attachment))
 
     @Test fun mapAndTypesRoundTripWithEncryptedPhotos() {
@@ -24,7 +24,7 @@ class ObjectMapExchangeTest {
         assertTrue(result.validationResult.isValid)
         assertEquals(project.objectTypes, result.pkg!!.project.objectTypes)
         assertEquals(project.cableRoutes, result.pkg!!.project.cableRoutes)
-        assertEquals(device.objectTypeId, result.pkg!!.project.businessUnits.single().devices.single().objectTypeId)
+        assertEquals(device.objectTypeId, result.pkg!!.project.sites.single().devices.single().objectTypeId)
         assertEquals(device.id, result.pkg!!.project.cables.single().deviceAId)
         assertArrayEquals(bytes, result.pkg!!.attachments[attachment.relativePath])
     }

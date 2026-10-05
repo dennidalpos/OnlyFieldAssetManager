@@ -22,7 +22,7 @@ class FixtureTest {
         val project = PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), jsonContent)
         assertNotNull(project)
         assertEquals("Progetto Campione Infrastruttura v1", project.name)
-        assertEquals(2, project.businessUnits.size)
+        assertEquals(2, project.sites.size)
 
         // Validate model constraints
         val validationResult = ModelValidator.validateProject(project)
@@ -30,7 +30,7 @@ class FixtureTest {
         assertTrue(validationResult.hasWarnings)
 
         // Verify specific issues match expected fixture validation behavior
-        assertTrue(validationResult.issues.any { it.code == "DUPLICATE_IP_IN_BU" })
+        assertTrue(validationResult.issues.any { it.code == "DUPLICATE_IP_IN_SITE" })
         assertTrue(validationResult.issues.any { it.code == "UNPOSITIONED_DEVICE" })
         assertTrue(validationResult.issues.any { it.code == "DETACHED_PORT_ENDPOINT" })
 

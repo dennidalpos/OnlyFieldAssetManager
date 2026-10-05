@@ -1,6 +1,6 @@
 package com.onlyfield.assetmanager.exchange
 
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Device
 import com.onlyfield.assetmanager.core.model.Project
 import org.junit.Assert.assertEquals
@@ -16,14 +16,14 @@ import java.util.zip.ZipOutputStream
 class ContractVersionTest {
     private val project = Project(
         name = "Contratto", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(Device(technicalName = "SW-01", serialNumber = "FOC123"))))
+        sites = listOf(Site(name = "BU", devices = listOf(Device(technicalName = "SW-01", serialNumber = "FOC123"))))
     )
 
     @Test
     fun serialNumberRoundTripsInVersion1() {
         val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(project))
         assertEquals("1", result.pkg!!.manifest.formatVersion)
-        assertEquals("FOC123", result.pkg!!.project.businessUnits.single().devices.single().serialNumber)
+        assertEquals("FOC123", result.pkg!!.project.sites.single().devices.single().serialNumber)
     }
 
     @Test

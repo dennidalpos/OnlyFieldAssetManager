@@ -134,19 +134,17 @@ object ObjectMap {
             val portId = if (first) cable.portAId else cable.portBId
             val port = device.ports.find { it.id == portId }
             val floor = areaId(project, device)
-            val area = project.businessUnits.flatMap { areas(it) }.find { it.id == floor }
+            val area = project.sites.flatMap { it.areas }.find { it.id == floor }
             return device.technicalName + (port?.let { " / ${it.name}" } ?: "") + " (${area?.name ?: i18n.text("text.37a8636584b2")})"
         }
         return "${cable.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${label(true, i18n = i18n)} → ${label(false, i18n = i18n)}"
     }
-    fun areas(bu: BusinessUnit) = bu.areas + bu.sites.flatMap { it.areas }
-    /** Business unit that owns the floor; falls back to the first one for legacy data. */
-    fun floorBusinessUnit(project: Project, areaId: String): String =
-        project.businessUnits.firstOrNull { bu -> areas(bu).any { it.id == areaId } }?.id ?: project.businessUnits.firstOrNull()?.id.orEmpty()
-    fun areaLabel(bu: BusinessUnit, area: Area): String = bu.sites.find { s -> s.areas.any { it.id == area.id } }?.let { "${it.name} / ${area.name}" } ?: area.name
+    /** site that owns the floor; falls back to the first one for legacy data. */
+    fun floorSite(project: Project, areaId: String): String =
+        project.sites.firstOrNull { site -> site.areas.any { it.id == areaId } }?.id ?: project.sites.firstOrNull()?.id.orEmpty()
 
     fun nodes(project: Project, areaId: String, hierarchy: HierarchyIndex = HierarchyIndex(project)): List<MapNode> {
-        val devices = project.businessUnits.flatMap { it.devices }.filter { d -> d.areaId == areaId && ObjectRef(PlacementTargetType.DEVICE, d.id) !in hierarchy.parents }
+        val devices = project.sites.flatMap { it.devices }.filter { d -> d.areaId == areaId && ObjectRef(PlacementTargetType.DEVICE, d.id) !in hierarchy.parents }
         val racks = project.racks.filter { it.areaId == areaId && ObjectRef(PlacementTargetType.RACK, it.id) !in hierarchy.parents }
         val items = racks.map { Triple(PlacementTargetType.RACK, it.id, it.name) } + devices.map { Triple(PlacementTargetType.DEVICE, it.id, it.technicalName) }
         val placements = project.floorplanPlacements.filter { it.areaId == areaId }.associateBy { it.targetType to it.targetId }
@@ -181,7 +179,7 @@ object ObjectMap {
     }
 
     fun endpoint(project: Project, cable: Cable, first: Boolean): Device? {
-        val devices = project.businessUnits.flatMap { it.devices }
+        val devices = project.sites.flatMap { it.devices }
         val port = if (first) cable.portAId else cable.portBId
         val id = if (first) cable.deviceAId else cable.deviceBId
         return if (port != null) devices.find { d -> d.ports.any { it.id == port } } else devices.find { it.id == id }

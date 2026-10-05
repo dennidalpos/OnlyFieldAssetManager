@@ -7,17 +7,17 @@ import org.junit.Test
 
 class QuickAddTest {
     private val area = Area(name = "Terra")
-    private val bu = BusinessUnit(name = "BU", areas = listOf(area))
-    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu))
+    private val site = Site(name = "BU", areas = listOf(area))
+    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(site))
     private fun type(id: String) = ObjectCatalog.builtins.first { it.id == id }
 
     @Test fun switchFromPresetIsSavedWithPortsNameAndMapPlacement() {
         val preset = DevicePresets.forType("switch")!!
-        val base = MapObjectDraft(type = type("switch"), buId = bu.id, areaId = area.id)
+        val base = MapObjectDraft(type = type("switch"), siteId = site.id, areaId = area.id)
         val draft = QuickAdd.draft(base, " SW-01 ", preset.result(preset.defaults()))
         assertTrue(draft.errors(project).isEmpty())
         val saved = draft.apply(project)
-        val device = saved.businessUnits.single().devices.single()
+        val device = saved.sites.single().devices.single()
         assertEquals("SW-01", device.technicalName)
         assertTrue(device.ports.isNotEmpty())
         assertTrue(ObjectMap.nodes(saved, area.id).any { it.id == device.id })
@@ -30,12 +30,12 @@ class QuickAddTest {
         assertTrue(QuickAdd.needsDetails(draft, hasPreset = false, hasErrors = false))
     }
 
-    @Test fun businessUnitIsRequiredUntilChosen() {
-        val base = MapObjectDraft(type = type("modem"), buId = "", areaId = "", device = DeviceForm(businessUnitId = null, objectTypeId = "modem"))
+    @Test fun siteIsRequiredUntilChosen() {
+        val base = MapObjectDraft(type = type("modem"), siteId = "", areaId = "", device = DeviceForm(siteId = null, objectTypeId = "modem"))
         assertTrue(QuickAdd.draft(base, "MD-01").errors(project).isNotEmpty())
-        val chosen = QuickAdd.draft(base, "MD-01", buId = bu.id)
+        val chosen = QuickAdd.draft(base, "MD-01", siteId = site.id)
         assertTrue(chosen.errors(project).isEmpty())
-        assertEquals("MD-01", chosen.apply(project).businessUnits.single().devices.single().technicalName)
+        assertEquals("MD-01", chosen.apply(project).sites.single().devices.single().technicalName)
         assertFalse(QuickAdd.needsDetails(chosen, hasPreset = false, hasErrors = false))
     }
 }

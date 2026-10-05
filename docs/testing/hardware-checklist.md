@@ -31,7 +31,7 @@ Eseguire ogni scenario a 360 e 412 dp, in tema chiaro e scuro, con testo standar
 
 | ID | Scenario | Atteso |
 | --- | --- | --- |
-| UX-01 | Nuovo dispositivo dall'inventario | Nome e business unit bastano; dettagli avanzati chiusi e salvataggio disponibile. |
+| UX-01 | Nuovo dispositivo dall'inventario | Nome e sede bastano; dettagli avanzati chiusi e salvataggio disponibile. |
 | UX-02 | Nome o identificativo con tastiera aperta | Campo raggiungibile, titolo e azioni riconoscibili; nessun controllo tagliato. |
 | UX-03 | Sezione chiusa con IP non valido | Sezione riaperta, errore presso il campo e nel footer. |
 | UX-04 | Modello e gruppo di porte collegato | Ricerca utilizzabile; rimozione collegata esplicita; porte conservate con gli stessi ID. |

@@ -96,7 +96,7 @@ data class CredentialEntity(
 )
 
 @Entity(
-    tableName = "business_units",
+    tableName = "sites",
     foreignKeys = [
         ForeignKey(
             entity = ProjectEntity::class,
@@ -107,48 +107,30 @@ data class CredentialEntity(
     ],
     indices = [Index("projectId")]
 )
-data class BusinessUnitEntity(
+data class SiteEntity(
     @PrimaryKey val id: String,
     val projectId: String,
     val name: String,
-    val code: String?
-)
-
-@Entity(
-    tableName = "sites",
-    foreignKeys = [
-        ForeignKey(
-            entity = BusinessUnitEntity::class,
-            parentColumns = ["id"],
-            childColumns = ["businessUnitId"],
-            onDelete = ForeignKey.CASCADE
-        )
-    ],
-    indices = [Index("businessUnitId")]
-)
-data class SiteEntity(
-    @PrimaryKey val id: String,
-    val businessUnitId: String,
-    val name: String,
-    val address: String?
+    val code: String?,
+    val groupName: String? = null,
+    val address: String? = null
 )
 
 @Entity(
     tableName = "areas",
     foreignKeys = [
         ForeignKey(
-            entity = BusinessUnitEntity::class,
+            entity = SiteEntity::class,
             parentColumns = ["id"],
-            childColumns = ["businessUnitId"],
+            childColumns = ["siteId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("businessUnitId"), Index("siteId")]
+    indices = [Index("siteId")]
 )
 data class AreaEntity(
     @PrimaryKey val id: String,
-    val businessUnitId: String,
-    val siteId: String?,
+    val siteId: String,
     val name: String,
     val floor: String?,
     val description: String?,
@@ -238,14 +220,13 @@ data class FloorplanPlacementEntity(
     tableName = "devices",
     foreignKeys = [
         ForeignKey(
-            entity = BusinessUnitEntity::class,
+            entity = SiteEntity::class,
             parentColumns = ["id"],
-            childColumns = ["businessUnitId"],
+            childColumns = ["siteId"],
             onDelete = ForeignKey.CASCADE
         )
     ],
     indices = [
-        Index("businessUnitId"),
         Index("siteId"),
         Index("areaId"),
         Index("rackId"),
@@ -258,8 +239,7 @@ data class DeviceEntity(
     @ColumnInfo(defaultValue = "'{}'")
     val hardwareJson: String = "{}",
     @PrimaryKey val id: String,
-    val businessUnitId: String,
-    val siteId: String?,
+    val siteId: String,
     val areaId: String?,
     val technicalName: String,
     val physicalLabel: String?,

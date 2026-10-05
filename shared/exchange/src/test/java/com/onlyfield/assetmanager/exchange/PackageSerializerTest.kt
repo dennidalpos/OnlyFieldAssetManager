@@ -1,11 +1,11 @@
 package com.onlyfield.assetmanager.exchange
 
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
+import com.onlyfield.assetmanager.core.model.Area
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.CredentialType
 import com.onlyfield.assetmanager.core.model.Device
 import com.onlyfield.assetmanager.core.model.Project
-import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import java.io.ByteArrayOutputStream
 import java.util.UUID
@@ -23,22 +23,22 @@ class PackageSerializerTest {
 
     @Test
     fun testExportAndImportRoundTrip() {
-        val siteId = UUID.randomUUID().toString()
+        val floorId = UUID.randomUUID().toString()
         val dev = Device(
             id = UUID.randomUUID().toString(),
             technicalName = "sw-core-01",
             ipAddress = "10.0.1.1",
-            siteId = siteId
+            areaId = floorId
         )
-        val site = Site(id = siteId, name = "Data Center 1")
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "HQ BU", sites = listOf(site), devices = listOf(dev))
+        val area = Area(id = floorId, name = "Data Center 1")
+        val site = Site(id = UUID.randomUUID().toString(), name = "HQ BU", areas = listOf(area), devices = listOf(dev))
 
         val project = Project(
             id = UUID.randomUUID().toString(),
             name = "Export Test Project",
             createdEpochMs = 1700000000000L,
             updatedEpochMs = 1700000000000L,
-            businessUnits = listOf(bu)
+            sites = listOf(site)
         )
 
         val attachmentBytes = "Sample Rack Diagram Content".toByteArray(Charsets.UTF_8)
@@ -54,7 +54,7 @@ class PackageSerializerTest {
         assertNotNull(importedPkg)
         assertEquals(project.id, importedPkg!!.project.id)
         assertEquals(project.name, importedPkg.project.name)
-        assertEquals(1, importedPkg.project.businessUnits.size)
+        assertEquals(1, importedPkg.project.sites.size)
 
         val importedAttachment = importedPkg.attachments["attachments/rack_diagram.png"]
         assertNotNull(importedAttachment)
@@ -200,8 +200,8 @@ class PackageSerializerTest {
     fun testA08EntitiesRoundTrip() {
         val devId = UUID.randomUUID().toString()
         val portId = UUID.randomUUID().toString()
-        val dev = Device(id = devId, technicalName = "sw-a08-01", siteId = UUID.randomUUID().toString(), ports = listOf(com.onlyfield.assetmanager.core.model.Port(id = portId, deviceId = devId, name = "port1")))
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU A08", devices = listOf(dev))
+        val dev = Device(id = devId, technicalName = "sw-a08-01", areaId = UUID.randomUUID().toString(), ports = listOf(com.onlyfield.assetmanager.core.model.Port(id = portId, deviceId = devId, name = "port1")))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU A08", devices = listOf(dev))
 
         val vlan = com.onlyfield.assetmanager.core.model.Vlan(vlanId = 100, name = "SERVERS")
         val subnet = com.onlyfield.assetmanager.core.model.Subnet(cidrBlock = "10.100.0.0/24", gatewayIp = "10.100.0.1")
@@ -218,7 +218,7 @@ class PackageSerializerTest {
             name = "A08 Package Test",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             vlans = listOf(vlan),
             subnets = listOf(subnet),
             portVlanMemberships = listOf(portMembership),
@@ -254,7 +254,7 @@ class PackageSerializerTest {
         val devId = UUID.randomUUID().toString()
         val portId = UUID.randomUUID().toString()
         val dev = Device(id = devId, technicalName = "sw-a09-01", ports = listOf(com.onlyfield.assetmanager.core.model.Port(id = portId, deviceId = devId, name = "port1")))
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU A09", devices = listOf(dev))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU A09", devices = listOf(dev))
 
         val feed = com.onlyfield.assetmanager.core.model.PowerFeed(
             deviceId = devId,
@@ -287,7 +287,7 @@ class PackageSerializerTest {
             name = "A09 Package Test",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             powerFeeds = listOf(feed),
             poeMappings = listOf(poe),
             documentBadges = listOf(badge)

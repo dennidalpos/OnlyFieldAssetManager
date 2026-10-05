@@ -212,13 +212,9 @@ object PdfExportManager {
         val pdfDoc = PdfDocument()
 
         try {
-            val filteredDevices = project.businessUnits
-                .filter { filterConfig.selectedBusinessUnitId == null || it.id == filterConfig.selectedBusinessUnitId }
-                .flatMap { bu -> bu.devices.filter { device ->
-                    val siteId = device.siteId ?: bu.sites.find { site -> site.areas.any { it.id == device.areaId } }?.id
-                    (filterConfig.selectedSiteId == null || siteId == filterConfig.selectedSiteId) &&
-                        (filterConfig.selectedAreaId == null || device.areaId == filterConfig.selectedAreaId)
-                } }
+            val filteredDevices = project.sites
+                .filter { filterConfig.selectedSiteId == null || it.id == filterConfig.selectedSiteId }
+                .flatMap { site -> site.devices.filter { device -> filterConfig.selectedAreaId == null || device.areaId == filterConfig.selectedAreaId } }
                 .filter { filterConfig.selectedCategory == null || it.category == filterConfig.selectedCategory }
                 .distinctBy { it.id }
 
@@ -259,7 +255,7 @@ object PdfExportManager {
                 canvas.drawText(i18n.text("text.0ea77b6420df", filterConfig.authorName), 35f, y, textPaint)
                 canvas.drawText(i18n.text("text.ddaa8218e575", dateStr), 300f, y, textPaint)
                 y += 18f
-                canvas.drawText(i18n.text("text.54c2933191f6", filterConfig.selectedBusinessUnitId ?: i18n.text("text.8497975606d6")), 35f, y, textPaint)
+                canvas.drawText(i18n.text("text.54c2933191f6", filterConfig.selectedSiteId ?: i18n.text("text.8497975606d6")), 35f, y, textPaint)
                 canvas.drawText(i18n.text("text.44f131081b2d", if (filterConfig.includeConfidential) i18n.text("text.b3186dc0586e") else i18n.text("text.0c2690153ac8")), 300f, y, textPaint)
 
                 y += 35f

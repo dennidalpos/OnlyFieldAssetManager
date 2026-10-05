@@ -111,8 +111,7 @@ fun CableMedium.toDisplayString(i18n: Messages = Messages()): String = when (thi
 
 fun VlanScopeType.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     VlanScopeType.PROJECT -> i18n.text("text.b7700d71d0ce")
-    VlanScopeType.BUSINESS_UNIT -> i18n.text("text.e4de7d26b141")
-    VlanScopeType.SITE -> i18n.text("text.f163aa3f6310")
+    VlanScopeType.SITE -> i18n.text("text.e4de7d26b141")
     VlanScopeType.DEVICE -> i18n.text("text.cf301d95d32c")
 }
 
@@ -191,8 +190,7 @@ fun ValidationSeverity.toDisplayString(i18n: Messages = Messages()): String = wh
 object EntityTypeLabels {
     fun of(type: String, i18n: Messages = Messages()): String = when (type.uppercase()) {
         "PROJECT" -> i18n.text("text.b7700d71d0ce")
-        "BUSINESS_UNIT" -> i18n.text("text.e4de7d26b141")
-        "SITE" -> i18n.text("text.f163aa3f6310")
+        "SITE" -> i18n.text("text.e4de7d26b141")
         "AREA" -> i18n.text("text.024dc204d7ba")
         "RACK" -> i18n.text("text.4cd265c2b8c6")
         "DEVICE" -> i18n.text("text.cf301d95d32c")

@@ -17,7 +17,7 @@ class PasswordRotationTest {
         val storage = DesktopStorageManager(dir)
         val state = DesktopAppState(storage)
         try {
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))))))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))))))
             val base = state.project!!
             storage.saveSyncBase(base, null)
             state.update(base.copy(name = "Changed"), "Changed")
@@ -27,7 +27,7 @@ class PasswordRotationTest {
                 if (password.isNotEmpty()) assertNull(PackageSerializer.importPackage(bytes).pkg)
                 val restored = storage.loadSyncBase(base.id, password.ifEmpty { null })!!
                 assertEquals(base.name, restored.name)
-                assertEquals(base.businessUnits, restored.businessUnits)
+                assertEquals(base.sites, restored.sites)
             }
         } finally { state.shutdown() }
     }
@@ -36,7 +36,7 @@ class PasswordRotationTest {
         val dir = folder.newFolder()
         val state = DesktopAppState(DesktopStorageManager(dir))
         try {
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))))))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))))))
             val before = state.project!!
             File(dir, "sync/${before.id}.ofam").apply { parentFile.mkdirs(); writeText("broken") }
             assertNotNull(state.changePassword("", "test", "test"))
@@ -50,7 +50,7 @@ class PasswordRotationTest {
         val state = DesktopAppState(DesktopStorageManager(dir))
         try {
             state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site",
-                businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))))))
+                sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))))))
             val before = state.project!!
             val item = TrashItem(projectId = before.id, itemType = "DEVICE", itemId = "deleted",
                 displayName = "Private item", serializedJson = "{}")
@@ -82,7 +82,7 @@ class PasswordRotationTest {
         val state = DesktopAppState(DesktopStorageManager(dir))
         try {
             state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site",
-                businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))))))
+                sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))))))
             val before = state.project!!
             state.storage.saveSyncBase(before, null)
             assertTrue(File(dir, "sync/${before.id}.ofam").delete())

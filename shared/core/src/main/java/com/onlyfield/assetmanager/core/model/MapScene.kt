@@ -60,7 +60,7 @@ object ObjectGlyph {
 
 /** Resolves cable ends to devices with one lookup table. */
 class CableEnds(project: Project) {
-    private val devices = project.businessUnits.flatMap { it.devices }
+    private val devices = project.sites.flatMap { it.devices }
     private val byId = devices.associateBy { it.id }
     private val byPort = devices.flatMap { d -> d.ports.map { it.id to d } }.toMap()
     fun device(cable: Cable, first: Boolean): Device? {
@@ -80,7 +80,7 @@ class CableEnds(project: Project) {
     }
 }
 
-/** Cable end outside the current view, with its floor and business unit for labels and navigation. */
+/** Cable end outside the current view, with its floor and site for labels and navigation. */
 data class RemoteEnd(
     val device: Device,
     val port: Port?,
@@ -88,12 +88,12 @@ data class RemoteEnd(
     val ref: ObjectRef,
     val areaId: String?,
     val areaName: String?,
-    val buId: String?,
-    val buName: String?,
+    val siteId: String?,
+    val siteName: String?,
 ) {
-    /** "SW-05 · Primo · BU Nord"; floor and BU only when they differ from the viewer's. */
-    fun label(fromAreaId: String? = null, fromBuId: String? = null, name: String = device.technicalName): String =
-        listOfNotNull(name, areaName?.takeIf { areaId != fromAreaId }, buName?.takeIf { buId != fromBuId }).joinToString(" · ")
+    /** "SW-05 · Primo · Sede Nord"; floor and site only when they differ from the viewer's. */
+    fun label(fromAreaId: String? = null, fromSiteId: String? = null, name: String = device.technicalName): String =
+        listOfNotNull(name, areaName?.takeIf { areaId != fromAreaId }, siteName?.takeIf { siteId != fromSiteId }).joinToString(" · ")
 }
 
 data class SceneNode(
@@ -129,7 +129,7 @@ data class SceneLink(
 )
 
 /** What a map view shows: a floor or the inside of a container, with simplified links. */
-data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: List<SceneNode>, val links: List<SceneLink>, val buId: String? = null) {
+data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: List<SceneNode>, val links: List<SceneLink>, val siteId: String? = null) {
     private val byRef = nodes.associateBy { it.ref }
     val editable get() = container == null
 
@@ -181,7 +181,7 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
 
         /** Id tables for one scene build, so names and container roles are not scanned per node. */
         private class Lookup(private val project: Project) {
-            val devices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+            val devices = project.sites.flatMap { it.devices }.associateBy { it.id }
             private val racks = project.racks.associateBy { it.id }
             private val types = ObjectCatalog.types(project).reversed().associateBy { it.id } // first match wins, as in ObjectCatalog.type
             fun name(ref: ObjectRef): String = when (ref.type) {
@@ -243,7 +243,7 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
                     isContainer = children.isNotEmpty() || lookup.canContain(ref), childCount = children.size,
                     portsUsed = ports.count { graph.occupied(it.id) }, portsTotal = ports.size, internalCables = internal[ref].orEmpty())
             }
-            return MapScene(areaId, container, nodes, links, ObjectMap.floorBusinessUnit(project, areaId).ifBlank { null })
+            return MapScene(areaId, container, nodes, links, ObjectMap.floorSite(project, areaId).ifBlank { null })
         }
 
         /** Nearest border point, slightly inside the page so the stub stays visible. */
@@ -258,15 +258,15 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
 /** Resolves cable ends to [RemoteEnd] with one set of lookup tables. */
 class RemoteEnds(private val project: Project, private val hierarchy: HierarchyIndex = HierarchyIndex(project)) {
     private val ends = CableEnds(project)
-    private val areas = project.businessUnits.flatMap { bu -> ObjectMap.areas(bu).map { it.id to it } }.toMap()
-    private val owners = project.businessUnits.flatMap { bu -> bu.devices.map { it.id to bu } }.toMap()
+    private val areas = project.sites.flatMap { site -> site.areas.map { it.id to it } }.toMap()
+    private val owners = project.sites.flatMap { site -> site.devices.map { it.id to site } }.toMap()
 
     fun of(cable: Cable, first: Boolean): RemoteEnd? {
         val device = ends.device(cable, first) ?: return null
         val portId = if (first) cable.portAId else cable.portBId
         val ref = ObjectRef(PlacementTargetType.DEVICE, device.id)
         val areaId = hierarchy.areaId(ref)
-        val bu = owners[device.id]
-        return RemoteEnd(device, device.ports.find { it.id == portId }, ref, areaId, areaId?.let(areas::get)?.name, bu?.id, bu?.name)
+        val site = owners[device.id]
+        return RemoteEnd(device, device.ports.find { it.id == portId }, ref, areaId, areaId?.let(areas::get)?.name, site?.id, site?.name)
     }
 }

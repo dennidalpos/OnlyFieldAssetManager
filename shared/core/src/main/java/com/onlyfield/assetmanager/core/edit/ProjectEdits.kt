@@ -17,92 +17,87 @@ object ProjectEdits {
     }
 
 
-    fun addBusinessUnit(project: Project, name: String): Project = project.copy(
-        businessUnits = project.businessUnits + BusinessUnit(name = name),
+    fun addSite(project: Project, name: String, group: String? = null, address: String? = null): Project = project.copy(
+        sites = project.sites + Site(name = name, group = group, address = address),
         updatedEpochMs = System.currentTimeMillis()
     )
 
-    fun renameBusinessUnit(project: Project, buId: String, name: String): Project = project.copy(
-        businessUnits = project.businessUnits.map { if (it.id == buId) it.copy(name = name) else it },
+    /** Replaces name, group and address of an existing site. */
+    fun updateSite(project: Project, site: Site): Project = project.copy(
+        sites = project.sites.map { if (it.id == site.id) it.copy(name = site.name, group = site.group, address = site.address) else it },
         updatedEpochMs = System.currentTimeMillis()
     )
 
-    /** Deletes an empty business unit or returns null. */
-    fun deleteBusinessUnit(project: Project, buId: String): Project? {
-        val bu = project.businessUnits.find { it.id == buId } ?: return project
-        if (bu.devices.isNotEmpty() || bu.areas.isNotEmpty() || bu.sites.any { it.areas.isNotEmpty() }) return null
-        return project.copy(businessUnits = project.businessUnits - bu, updatedEpochMs = System.currentTimeMillis())
+    /** Deletes an empty site or returns null. */
+    fun deleteSite(project: Project, siteId: String): Project? {
+        val site = project.sites.find { it.id == siteId } ?: return project
+        if (site.devices.isNotEmpty() || site.areas.isNotEmpty()) return null
+        return project.copy(sites = project.sites - site, updatedEpochMs = System.currentTimeMillis())
     }
 
-    fun addArea(project: Project, buId: String, area: Area): Project = project.copy(
-        businessUnits = project.businessUnits.map { if (it.id == buId) it.copy(areas = it.areas + area) else it },
+    fun addArea(project: Project, siteId: String, area: Area): Project = project.copy(
+        sites = project.sites.map { if (it.id == siteId) it.copy(areas = it.areas + area) else it },
         updatedEpochMs = System.currentTimeMillis()
     )
 
     fun updateArea(project: Project, area: Area): Project = project.copy(
-        businessUnits = project.businessUnits.map { bu ->
-            bu.copy(
-                areas = bu.areas.map { if (it.id == area.id) area else it },
-                sites = bu.sites.map { site -> site.copy(areas = site.areas.map { if (it.id == area.id) area else it }) }
-            )
+        sites = project.sites.map { site ->
+            site.copy(areas = site.areas.map { if (it.id == area.id) area else it })
         },
         updatedEpochMs = System.currentTimeMillis()
     )
 
     /** Deletes an unreferenced area or returns null. */
     fun deleteArea(project: Project, areaId: String): Project? {
-        val inUse = project.businessUnits.any { bu -> bu.devices.any { it.areaId == areaId } } ||
+        val inUse = project.sites.any { site -> site.devices.any { it.areaId == areaId } } ||
             project.racks.any { it.areaId == areaId } ||
             project.floorplanPlacements.any { it.areaId == areaId } || project.cableRoutes.any { it.areaId == areaId }
         if (inUse) return null
         return project.copy(
-            businessUnits = project.businessUnits.map { bu ->
-                bu.copy(
-                    areas = bu.areas.filterNot { it.id == areaId },
-                    sites = bu.sites.map { site -> site.copy(areas = site.areas.filterNot { it.id == areaId }) }
-                )
+            sites = project.sites.map { site ->
+                site.copy(areas = site.areas.filterNot { it.id == areaId })
             },
             updatedEpochMs = System.currentTimeMillis()
         )
     }
 
 
-    fun addDevice(project: Project, buId: String, device: Device): Project {
-        val updatedBus = project.businessUnits.map { bu ->
-            if (bu.id == buId) {
-                bu.copy(devices = bu.devices + device)
+    fun addDevice(project: Project, siteId: String, device: Device): Project {
+        val updatedSites = project.sites.map { site ->
+            if (site.id == siteId) {
+                site.copy(devices = site.devices + device)
             } else {
-                bu
+                site
             }
         }
         return project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             updatedEpochMs = System.currentTimeMillis()
         )
     }
 
     fun updateDevice(project: Project, updatedDevice: Device, i18n: Messages = Messages()): Project {
-        val previous = project.businessUnits.flatMap { it.devices }.find { it.id == updatedDevice.id }
-        val updatedBus = project.businessUnits.map { bu ->
-            val hasDev = bu.devices.any { it.id == updatedDevice.id }
+        val previous = project.sites.flatMap { it.devices }.find { it.id == updatedDevice.id }
+        val updatedSites = project.sites.map { site ->
+            val hasDev = site.devices.any { it.id == updatedDevice.id }
             if (hasDev) {
-                val newDevs = bu.devices.map { if (it.id == updatedDevice.id) updatedDevice else it }
-                bu.copy(devices = newDevs)
+                val newDevs = site.devices.map { if (it.id == updatedDevice.id) updatedDevice else it }
+                site.copy(devices = newDevs)
             } else {
-                bu
+                site
             }
         }
         val result = project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             updatedEpochMs = System.currentTimeMillis()
         )
         return if (previous?.rackId != updatedDevice.rackId) ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, updatedDevice.id), updatedDevice.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) }, i18n = i18n) else ObjectHierarchy.synchronize(result)
     }
 
     fun deleteDeviceToTrash(project: Project, deviceId: String, i18n: Messages = Messages()): Pair<Project, TrashItem?> {
-        val deviceBU = project.businessUnits.find { bu -> bu.devices.any { it.id == deviceId } }
+        val deviceSite = project.sites.find { site -> site.devices.any { it.id == deviceId } }
             ?: return Pair(project, null)
-        val device = deviceBU.devices.find { it.id == deviceId } ?: return Pair(project, null)
+        val device = deviceSite.devices.find { it.id == deviceId } ?: return Pair(project, null)
 
         val jsonStr = jsonSerializer.encodeToString(Device.serializer(), device)
         val affectedPortIds = device.ports.map { it.id }.toSet()
@@ -138,18 +133,18 @@ object ProjectEdits {
             affectedReferencesSummary = i18n.text("text.0a039cbd68d3", device.ports.size, updatedCablesCount)
         )
 
-        val updatedBus = project.businessUnits.map { bu ->
-            if (bu.id == deviceBU.id) {
-                bu.copy(devices = bu.devices.filterNot { it.id == deviceId })
+        val updatedSites = project.sites.map { site ->
+            if (site.id == deviceSite.id) {
+                site.copy(devices = site.devices.filterNot { it.id == deviceId })
             } else {
-                bu
+                site
             }
         }
 
         val updatedProject = project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             cables = updatedCables,
-            cableRoutes = project.businessUnits.flatMap { ObjectMap.areas(it) }.flatMap { ObjectMap.routes(project, it.id) }.map { route ->
+            cableRoutes = project.sites.flatMap { it.areas }.flatMap { ObjectMap.routes(project, it.id) }.map { route ->
                 route.copy(points = ObjectMap.routePoints(project, route, ObjectMap.nodes(project, route.areaId)))
             },
             floorplanPlacements = project.floorplanPlacements.filterNot { (it.targetType == PlacementTargetType.DEVICE) && (it.targetId == deviceId) },
@@ -168,11 +163,10 @@ object ProjectEdits {
         if (deviceIds.isEmpty()) return project
 
         val deviceIdSet = deviceIds.toSet()
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedDevs = bu.devices.map { dev ->
+        val updatedSites = project.sites.map { site ->
+            val updatedDevs = site.devices.map { dev ->
                 if (deviceIdSet.contains(dev.id)) {
                     var updated = dev
-                    if (changes.updateSiteId) updated = updated.copy(siteId = changes.siteId)
                     if (changes.updateAreaId) updated = updated.copy(areaId = changes.areaId)
                     if (changes.updateCategory && changes.category != null) updated = updated.copy(category = changes.category)
                     if (changes.updateRackId) updated = updated.copy(rackId = changes.rackId)
@@ -186,11 +180,11 @@ object ProjectEdits {
                     dev
                 }
             }
-            bu.copy(devices = updatedDevs)
+            site.copy(devices = updatedDevs)
         }
 
         var result = project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             updatedEpochMs = System.currentTimeMillis()
         )
         if (changes.updateRackId) for (id in deviceIds) result = ObjectHierarchy.assign(result, ObjectRef(PlacementTargetType.DEVICE, id), changes.rackId?.let { ObjectRef(PlacementTargetType.RACK, it) }, i18n = i18n)
@@ -207,14 +201,13 @@ object ProjectEdits {
         if (trashItem == null) return Pair(project, null)
 
         val oldDevice = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
-        val targetBU = project.businessUnits.find { bu -> bu.devices.any { it.id == oldDeviceId } }
-            ?: project.businessUnits.firstOrNull() ?: return Pair(projAfterTrash, trashItem)
+        val targetSite = project.sites.find { site -> site.devices.any { it.id == oldDeviceId } }
+            ?: project.sites.firstOrNull() ?: return Pair(projAfterTrash, trashItem)
 
         val newDevice = Device(
             id = UUID.randomUUID().toString(),
             technicalName = newTechnicalName,
             category = newCategory,
-            siteId = oldDevice.siteId,
             areaId = oldDevice.areaId,
             rackId = oldDevice.rackId,
             mountingType = oldDevice.mountingType,
@@ -222,7 +215,7 @@ object ProjectEdits {
             heightU = oldDevice.heightU
         )
 
-        val finalProj = addDevice(projAfterTrash, targetBU.id, newDevice)
+        val finalProj = addDevice(projAfterTrash, targetSite.id, newDevice)
         return Pair(finalProj, trashItem)
     }
 
@@ -237,8 +230,8 @@ object ProjectEdits {
         var survivingDev: Device? = null
         var duplicateDev: Device? = null
 
-        for (bu in project.businessUnits) {
-            for (dev in bu.devices) {
+        for (site in project.sites) {
+            for (dev in site.devices) {
                 if (dev.id == survivingDeviceId) survivingDev = dev
                 if (dev.id == duplicateDeviceId) duplicateDev = dev
             }
@@ -251,7 +244,6 @@ object ProjectEdits {
         val mergedAlias = if (choices.useAliasFromDuplicate) duplicateDev.alias else survivingDev.alias
         val mergedIp = if (choices.useIpFromDuplicate) duplicateDev.ipAddress else survivingDev.ipAddress
         val mergedMac = if (choices.useMacFromDuplicate) duplicateDev.macAddress else survivingDev.macAddress
-        val mergedSiteId = if (choices.useLocationFromDuplicate) duplicateDev.siteId else survivingDev.siteId
         val mergedAreaId = if (choices.useLocationFromDuplicate) duplicateDev.areaId else survivingDev.areaId
 
         val mergedPorts = survivingDev.ports.toMutableList()
@@ -267,7 +259,6 @@ object ProjectEdits {
             alias = mergedAlias,
             ipAddress = mergedIp,
             macAddress = mergedMac,
-            siteId = mergedSiteId,
             areaId = mergedAreaId,
             ports = mergedPorts
         )
@@ -284,29 +275,29 @@ object ProjectEdits {
             label = label
         )
 
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedDevs = bu.devices.map { dev ->
+        val updatedSites = project.sites.map { site ->
+            val updatedDevs = site.devices.map { dev ->
                 if (dev.id == deviceId) {
                     dev.copy(ports = dev.ports + newPort)
                 } else {
                     dev
                 }
             }
-            bu.copy(devices = updatedDevs)
+            site.copy(devices = updatedDevs)
         }
 
         return project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             updatedEpochMs = System.currentTimeMillis()
         )
     }
 
     fun deletePortFromDevice(project: Project, deviceId: String, portId: String): Project {
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedDevs = bu.devices.map { dev ->
+        val updatedSites = project.sites.map { site ->
+            val updatedDevs = site.devices.map { dev ->
                 if (dev.id == deviceId) dev.copy(ports = dev.ports.filterNot { it.id == portId }) else dev
             }
-            bu.copy(devices = updatedDevs)
+            site.copy(devices = updatedDevs)
         }
 
         val updatedCables = project.cables.map { cable ->
@@ -323,7 +314,7 @@ object ProjectEdits {
             }
         }
 
-        return dropPortReferences(project.copy(businessUnits = updatedBus, cables = updatedCables), setOf(portId))
+        return dropPortReferences(project.copy(sites = updatedSites, cables = updatedCables), setOf(portId))
     }
 
     /** Removes passages, VLAN, PoE and LAG rows of deleted ports; a passage that loses one end becomes unknown. */
@@ -373,16 +364,16 @@ object ProjectEdits {
         val rack = project.racks.find { it.id == rackId } ?: return Pair(project, null)
         val jsonStr = jsonSerializer.encodeToString(Rack.serializer(), rack)
 
-        val devicesInRack = project.businessUnits.flatMap { it.devices }.filter { it.rackId == rackId }
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedDevs = bu.devices.map { dev ->
+        val devicesInRack = project.sites.flatMap { it.devices }.filter { it.rackId == rackId }
+        val updatedSites = project.sites.map { site ->
+            val updatedDevs = site.devices.map { dev ->
                 if (dev.rackId == rackId) {
                     dev.copy(rackId = null, positionU = null, areaId = dev.areaId ?: rack.areaId)
                 } else {
                     dev
                 }
             }
-            bu.copy(devices = updatedDevs)
+            site.copy(devices = updatedDevs)
         }
 
         val trashItem = TrashItem(
@@ -395,7 +386,7 @@ object ProjectEdits {
         )
 
         val updatedProject = project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             racks = project.racks.filterNot { it.id == rackId },
             floorplanPlacements = project.floorplanPlacements.filterNot { it.targetType == PlacementTargetType.RACK && it.targetId == rackId },
             updatedEpochMs = System.currentTimeMillis()
@@ -435,7 +426,7 @@ object ProjectEdits {
     fun applyModelToDevice(project: Project, deviceId: String, modelId: String, i18n: Messages = Messages()): Project {
         val model = project.deviceModels.find { it.id == modelId } ?: return project
         require(model.kind == ObjectKind.DEVICE)
-        val device = project.businessUnits.flatMap { it.devices }.find { it.id == deviceId } ?: return project
+        val device = project.sites.flatMap { it.devices }.find { it.id == deviceId } ?: return project
         return com.onlyfield.assetmanager.core.forms.HardwareConfigurator.configure(project, device.copy(
             deviceModelId = model.id, category = model.category, heightU = model.defaultHeightU,
             hardware = model.hardware.copy(portGroups = model.portTemplates)))
@@ -449,21 +440,15 @@ object ProjectEdits {
     }
 
     fun deleteAttachment(project: Project, attachmentId: String): Project {
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedSites = bu.sites.map { site ->
-                val updatedAreas = site.areas.map { area ->
-                    if (area.floorplanAttachmentId == attachmentId) area.copy(floorplanAttachmentId = null, floorplanPageIndex = 0) else area
-                }
-                site.copy(areas = updatedAreas)
-            }
-            val updatedAreas = bu.areas.map { area ->
+        val updatedSites = project.sites.map { site ->
+            val updatedAreas = site.areas.map { area ->
                 if (area.floorplanAttachmentId == attachmentId) area.copy(floorplanAttachmentId = null, floorplanPageIndex = 0) else area
             }
-            bu.copy(sites = updatedSites, areas = updatedAreas)
+            site.copy(areas = updatedAreas)
         }
 
         return project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             attachments = project.attachments.filterNot { it.id == attachmentId },
             updatedEpochMs = System.currentTimeMillis()
         )
@@ -472,28 +457,22 @@ object ProjectEdits {
     fun setAreaFloorplan(project: Project, areaId: String, attachmentId: String?, pageIndex: Int = 0, pageCount: Int? = null): Project {
         require(pageIndex >= 0)
         require(pageCount == null || attachmentId == null || pageIndex < pageCount)
-        require(project.businessUnits.any { ObjectMap.areas(it).any { a -> a.id == areaId } })
+        require(project.sites.any { it.areas.any { a -> a.id == areaId } })
         if (attachmentId != null) {
             val attachment = project.attachments.first { it.id == attachmentId }
             require(attachment.fileType == AttachmentType.IMAGE || attachment.fileType == AttachmentType.PDF)
             // The picker refreshes legacy page counts from the file.
             require(attachment.fileType != AttachmentType.IMAGE || pageIndex == 0)
         }
-        val updatedBus = project.businessUnits.map { bu ->
-            val updatedSites = bu.sites.map { site ->
-                val updatedAreas = site.areas.map { area ->
-                    if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = pageIndex) else area
-                }
-                site.copy(areas = updatedAreas)
-            }
-            val updatedAreas = bu.areas.map { area ->
+        val updatedSites = project.sites.map { site ->
+            val updatedAreas = site.areas.map { area ->
                 if (area.id == areaId) area.copy(floorplanAttachmentId = attachmentId, floorplanPageIndex = pageIndex) else area
             }
-            bu.copy(sites = updatedSites, areas = updatedAreas)
+            site.copy(areas = updatedAreas)
         }
 
         return project.copy(
-            businessUnits = updatedBus,
+            sites = updatedSites,
             attachments = project.attachments.map { if (it.id == attachmentId && pageCount != null) it.copy(pageCount = pageCount) else it },
             updatedEpochMs = System.currentTimeMillis()
         )
@@ -539,8 +518,8 @@ object ProjectEdits {
         val restored = when (trashItem.itemType.uppercase()) {
             "DEVICE" -> {
                 val device = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
-                val targetBU = project.businessUnits.find { it.id == trashItem.originalBusinessUnitId } ?: project.businessUnits.firstOrNull() ?: return project
-                withInternalPassages(addDevice(project, targetBU.id, device), device.ports)
+                val targetSite = project.sites.find { it.id == trashItem.originalSiteId } ?: project.sites.firstOrNull() ?: return project
+                withInternalPassages(addDevice(project, targetSite.id, device), device.ports)
             }
             "RACK" -> {
                 val rack = jsonSerializer.decodeFromString(Rack.serializer(), trashItem.serializedJson)

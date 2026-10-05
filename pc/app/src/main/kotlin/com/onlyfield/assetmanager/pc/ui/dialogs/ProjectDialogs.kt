@@ -80,7 +80,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
                             FormField(d.projectName, { v -> set { it.copy(projectName = v) } }, i18n.text("text.85afe7453202"), error = errors["projectName"])
                             FormField(d.customer, { v -> set { it.copy(customer = v) } }, i18n.text("text.f851d9a83ab0"), hint = i18n.text("text.98c72991302e"))
                         }
-                        NewSiteStep.BUSINESS_UNIT, NewSiteStep.AREA -> WizardLists(w) { w = it }
+                        NewSiteStep.SITE, NewSiteStep.AREA -> WizardLists(w) { w = it }
                         NewSiteStep.PASSWORD -> {
                             WizardPassword(d.password, { v -> set { it.copy(password = v) } }, i18n.text("text.e7cf3ef4f17c"), null)
                             WizardPassword(d.passwordConfirm, { v -> set { it.copy(passwordConfirm = v) } }, i18n.text("text.44d09ab8e50d"), errors["passwordConfirm"])

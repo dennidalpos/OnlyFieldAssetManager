@@ -31,7 +31,7 @@ class LanguageTest {
 
     @Test
     fun reportsInAllThreeLanguagesAreRealPdfsAndKeepUserText() {
-        val project = Project(createdEpochMs = 0, updatedEpochMs = 0, name = "Proyecto del usuario — España", businessUnits = listOf(BusinessUnit(
+        val project = Project(createdEpochMs = 0, updatedEpochMs = 0, name = "Proyecto del usuario — España", sites = listOf(Site(
             name = "BU", devices = listOf(Device(technicalName = "SW-CODICE-001"))
         )), credentials = listOf(Credential(username = "SECRET_USER", secret = "SECRET_VALUE")))
         listOf("it", "en", "es").forEach { language ->

@@ -36,8 +36,8 @@ class DetailChangeTest {
     @Test fun globalActionsWaitForTheActiveDraft() {
         val state = DesktopAppState(DesktopStorageManager(folder.newFolder()))
         try {
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", businessUnits = listOf(
-                com.onlyfield.assetmanager.core.model.BusinessUnit(name = "BU", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = "Piano")))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(
+                com.onlyfield.assetmanager.core.model.Site(name = "BU", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = "Piano")))
             ))))
             val original = state.project!!
             state.update(ProjectEdits.addRack(original, Rack(name = "R1")), "Rack")

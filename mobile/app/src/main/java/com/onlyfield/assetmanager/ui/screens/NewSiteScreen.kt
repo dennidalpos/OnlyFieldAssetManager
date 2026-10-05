@@ -50,7 +50,7 @@ fun NewSiteScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
                         FormField(d.projectName, { v -> set { it.copy(projectName = v) } }, i18n.text("text.85afe7453202"), error = errors["projectName"])
                         FormField(d.customer, { v -> set { it.copy(customer = v) } }, i18n.text("text.f851d9a83ab0"), hint = i18n.text("text.98c72991302e"))
                     }
-                    NewSiteStep.BUSINESS_UNIT, NewSiteStep.AREA -> WizardLists(w) { vm.newSite = it }
+                    NewSiteStep.SITE, NewSiteStep.AREA -> WizardLists(w) { vm.newSite = it }
                     NewSiteStep.PASSWORD -> {
                         PasswordInput(d.password, { v -> set { it.copy(password = v) } }, i18n.text("text.e7cf3ef4f17c"), null)
                         PasswordInput(d.passwordConfirm, { v -> set { it.copy(passwordConfirm = v) } }, i18n.text("text.44d09ab8e50d"), errors["passwordConfirm"])

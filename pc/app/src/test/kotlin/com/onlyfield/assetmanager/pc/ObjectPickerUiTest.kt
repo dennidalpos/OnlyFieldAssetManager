@@ -16,7 +16,7 @@ class ObjectPickerUiTest {
     private val area = Area(name = "Terra")
     private val rack = Rack(name = "R1", areaId = area.id)
     private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area))), racks = listOf(rack))
+        sites = listOf(Site(name = "BU", areas = listOf(area))), racks = listOf(rack))
 
     @Test fun presetTypeShowsPrefilledMenusAndAddSavesAtOnce() {
         var added: MapObjectDraft? = null

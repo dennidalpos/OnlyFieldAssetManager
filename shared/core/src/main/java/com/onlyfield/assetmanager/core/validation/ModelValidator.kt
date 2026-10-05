@@ -66,31 +66,21 @@ object ModelValidator {
         val allPorts = mutableMapOf<String, Port>()
         val allDevices = mutableListOf<Pair<String, Device>>() // Pair(BU_ID, Device)
 
-        for (bu in project.businessUnits) {
-            checkUuid("INVALID_BU_UUID", bu.id, i18n.text("text.95d1c4267bec"), issues)
-            trackId(bu.id, "DUPLICATE_BU_ID", i18n.text("text.cb0e7cb5a360", bu.id), seenIds, issues)
+        for (site in project.sites) {
+            checkUuid("INVALID_SITE_UUID", site.id, i18n.text("text.95d1c4267bec"), issues)
+            trackId(site.id, "DUPLICATE_SITE_ID", i18n.text("text.cb0e7cb5a360", site.id), seenIds, issues)
 
-            for (site in bu.sites) {
-                checkUuid("INVALID_SITE_UUID", site.id, i18n.text("text.91cc7ead7552"), issues)
-                trackId(site.id, "DUPLICATE_SITE_ID", i18n.text("text.3a57f298c821", site.id), seenIds, issues)
-
-                for (area in site.areas) {
-                    checkUuid("INVALID_AREA_UUID", area.id, i18n.text("text.b4bcc3ce0e37"), issues)
-                    trackId(area.id, "DUPLICATE_AREA_ID", i18n.text("text.951d5d37b4da", area.id), seenIds, issues)
-                }
-            }
-
-            for (area in bu.areas) {
+            for (area in site.areas) {
                 checkUuid("INVALID_AREA_UUID", area.id, i18n.text("text.b4bcc3ce0e37"), issues)
                 trackId(area.id, "DUPLICATE_AREA_ID", i18n.text("text.951d5d37b4da", area.id), seenIds, issues)
             }
 
-            for (device in bu.devices) {
-                allDevices.add(bu.id to device)
+            for (device in site.devices) {
+                allDevices.add(site.id to device)
                 checkUuid("INVALID_DEVICE_UUID", device.id, i18n.text("text.7bcae484093f"), issues)
                 trackId(device.id, "DUPLICATE_DEVICE_ID", i18n.text("text.8b3f7ead59e2", device.id), seenIds, issues)
 
-                if ((device.siteId == null) && (device.areaId == null) && (device.rackId == null)) {
+                if ((device.areaId == null) && (device.rackId == null)) {
                     issues.add(
                         ValidationIssue(
                             code = "UNPOSITIONED_DEVICE",
@@ -212,40 +202,40 @@ object ModelValidator {
             }
         }
 
-        val devicesByBu = allDevices.groupBy { it.first }
-        for ((buId, buDevices) in devicesByBu) {
-            val namesInBu = mutableMapOf<String, String>() // name -> deviceId
-            val ipsInBu = mutableMapOf<String, String>()   // ip -> deviceId
+        val devicesBySite = allDevices.groupBy { it.first }
+        for ((siteId, siteDevices) in devicesBySite) {
+            val namesInSite = mutableMapOf<String, String>() // name -> deviceId
+            val ipsInSite = mutableMapOf<String, String>()   // ip -> deviceId
 
-            for ((_, device) in buDevices) {
-                val existingNameDeviceId = namesInBu[device.technicalName.lowercase()]
+            for ((_, device) in siteDevices) {
+                val existingNameDeviceId = namesInSite[device.technicalName.lowercase()]
                 if (existingNameDeviceId != null) {
                     issues.add(
                         ValidationIssue(
-                            code = "DUPLICATE_DEVICE_NAME_IN_BU",
+                            code = "DUPLICATE_DEVICE_NAME_IN_SITE",
                             message = i18n.text("text.e18788ee03d7", device.technicalName),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )
                     )
                 } else {
-                    namesInBu[device.technicalName.lowercase()] = device.id
+                    namesInSite[device.technicalName.lowercase()] = device.id
                 }
 
                 device.ipAddress?.let { ip ->
                     if (ip.isNotBlank()) {
-                        val existingIpDeviceId = ipsInBu[ip]
+                        val existingIpDeviceId = ipsInSite[ip]
                         if (existingIpDeviceId != null) {
                             issues.add(
                                 ValidationIssue(
-                                    code = "DUPLICATE_IP_IN_BU",
+                                    code = "DUPLICATE_IP_IN_SITE",
                                     message = i18n.text("text.2c04c9e1b0bf", ip),
                                     severity = ValidationSeverity.DOCUMENTARY_WARNING,
                                     targetEntityId = device.id
                                 )
                             )
                         } else {
-                            ipsInBu[ip] = device.id
+                            ipsInSite[ip] = device.id
                         }
                     }
                 }
@@ -286,25 +276,8 @@ object ModelValidator {
         }
 
         val allAreaIds = mutableSetOf<String>()
-        for (bu in project.businessUnits) {
-            for (site in bu.sites) {
-                for (area in site.areas) {
-                    allAreaIds.add(area.id)
-                    area.floorplanAttachmentId?.let { fpId ->
-                        if (!attachmentsById.containsKey(fpId)) {
-                            issues.add(
-                                ValidationIssue(
-                                    code = "INVALID_FLOORPLAN_ATTACHMENT",
-                                    message = i18n.text("text.8fd88b9ec7a0", area.name, fpId),
-                                    severity = ValidationSeverity.STRUCTURAL_ERROR,
-                                    targetEntityId = area.id
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-            for (area in bu.areas) {
+        for (site in project.sites) {
+            for (area in site.areas) {
                 allAreaIds.add(area.id)
                 area.floorplanAttachmentId?.let { fpId ->
                     if (!attachmentsById.containsKey(fpId)) {
@@ -878,7 +851,7 @@ object ModelValidator {
 
         when (targetType) {
             "DEVICE" -> {
-                val device = project.businessUnits.flatMap { it.devices }.firstOrNull { it.id == targetId }
+                val device = project.sites.flatMap { it.devices }.firstOrNull { it.id == targetId }
                 if (device != null) {
                     val portIds = device.ports.map { it.id }.toSet()
 
@@ -948,7 +921,7 @@ object ModelValidator {
 
                         val hasUps = feeds.any { f ->
                             f.feedType == com.onlyfield.assetmanager.core.model.PowerFeedType.UPS_BACKUP ||
-                                    (f.sourceDeviceId != null && project.businessUnits.flatMap { it.devices }
+                                    (f.sourceDeviceId != null && project.sites.flatMap { it.devices }
                                         .firstOrNull { it.id == f.sourceDeviceId }?.category == com.onlyfield.assetmanager.core.model.DeviceCategory.UPS_PDU)
                         }
                         val upsLabel = if (hasUps) i18n.text("text.d65d2454047d") else i18n.text("text.dbdeacd918a5")
@@ -1033,7 +1006,6 @@ object ModelValidator {
 
     fun generateBatchEditPreview(devices: List<Device>, changes: BatchDeviceChanges, i18n: Messages = Messages()): BatchEditPreview {
         val summaries = mutableListOf<String>()
-        if (changes.updateSiteId) summaries.add(i18n.text("text.dd101e6f2821", changes.siteId ?: i18n.text("text.f56b9cfaeb27")))
         if (changes.updateAreaId) summaries.add(i18n.text("text.a8fa7b3696e9", changes.areaId ?: i18n.text("text.f56b9cfaeb27")))
         if (changes.updateCategory) summaries.add(i18n.text("text.8a307dae951d", changes.category ?: i18n.text("text.7925666e5976")))
         if (changes.updateRackId) summaries.add(i18n.text("text.badf46c13b7d", changes.rackId ?: i18n.text("text.da968f7d518f")))

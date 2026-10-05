@@ -8,10 +8,8 @@ import androidx.room.Query
 @Dao
 interface InventoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertBusinessUnits(bus: List<BusinessUnitEntity>)
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertSites(sites: List<SiteEntity>)
+
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAreas(areas: List<AreaEntity>)
@@ -31,17 +29,15 @@ interface InventoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertDeviceModels(models: List<DeviceModelEntity>)
 
-    @Query("SELECT * FROM business_units WHERE projectId = :projectId")
-    suspend fun getBusinessUnitsByProjectId(projectId: String): List<BusinessUnitEntity>
+    @Query("SELECT * FROM sites WHERE projectId = :projectId")
+    suspend fun getSitesByProjectId(projectId: String): List<SiteEntity>
 
-    @Query("SELECT * FROM sites WHERE businessUnitId IN (:buIds)")
-    suspend fun getSitesByBuIds(buIds: List<String>): List<SiteEntity>
 
-    @Query("SELECT * FROM areas WHERE businessUnitId IN (:buIds)")
-    suspend fun getAreasByBuIds(buIds: List<String>): List<AreaEntity>
+    @Query("SELECT * FROM areas WHERE siteId IN (:siteIds)")
+    suspend fun getAreasBySiteIds(siteIds: List<String>): List<AreaEntity>
 
-    @Query("SELECT * FROM devices WHERE businessUnitId IN (:buIds)")
-    suspend fun getDevicesByBuIds(buIds: List<String>): List<DeviceEntity>
+    @Query("SELECT * FROM devices WHERE siteId IN (:siteIds)")
+    suspend fun getDevicesBySiteIds(siteIds: List<String>): List<DeviceEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAttachments(attachments: List<AttachmentEntity>)
@@ -159,8 +155,8 @@ interface InventoryDao {
     @Query("SELECT * FROM document_badges WHERE projectId = :projectId")
     suspend fun getDocumentBadgesByProjectId(projectId: String): List<DocumentBadgeEntity>
 
-    @Query("DELETE FROM business_units WHERE projectId = :projectId")
-    suspend fun deleteBusinessUnitsByProjectId(projectId: String)
+    @Query("DELETE FROM sites WHERE projectId = :projectId")
+    suspend fun deleteSitesByProjectId(projectId: String)
 
     @Query("DELETE FROM credentials WHERE projectId = :projectId")
     suspend fun deleteCredentialsByProjectId(projectId: String)
@@ -239,8 +235,8 @@ interface InventoryDao {
     @Query("DELETE FROM panel_mappings WHERE id = :mappingId")
     suspend fun deletePanelMappingById(mappingId: String)
 
-    @Query("SELECT * FROM devices WHERE businessUnitId IN (:buIds) AND (technicalName LIKE '%' || :query || '%' OR ipAddress LIKE '%' || :query || '%' OR physicalLabel LIKE '%' || :query || '%' OR alias LIKE '%' || :query || '%' OR serialNumber LIKE '%' || :query || '%')")
-    suspend fun searchDevices(buIds: List<String>, query: String): List<DeviceEntity>
+    @Query("SELECT * FROM devices WHERE siteId IN (:siteIds) AND (technicalName LIKE '%' || :query || '%' OR ipAddress LIKE '%' || :query || '%' OR physicalLabel LIKE '%' || :query || '%' OR alias LIKE '%' || :query || '%' OR serialNumber LIKE '%' || :query || '%')")
+    suspend fun searchDevices(siteIds: List<String>, query: String): List<DeviceEntity>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrashItems(trashItems: List<TrashItemEntity>)
@@ -272,11 +268,9 @@ interface InventoryDao {
     @Query("DELETE FROM areas WHERE id = :areaId")
     suspend fun deleteAreaById(areaId: String)
 
+
     @Query("DELETE FROM sites WHERE id = :siteId")
     suspend fun deleteSiteById(siteId: String)
-
-    @Query("DELETE FROM business_units WHERE id = :buId")
-    suspend fun deleteBusinessUnitById(buId: String)
 
     @Query("DELETE FROM credentials WHERE id = :credentialId")
     suspend fun deleteCredentialById(credentialId: String)

@@ -11,7 +11,7 @@ class ProjectEditsTest {
     private fun createSampleProject(): Project {
         val now = System.currentTimeMillis()
         val area = Area(id = "area-1", name = "Sala Server")
-        val bu = BusinessUnit(
+        val site = Site(
             id = "bu-1",
             name = "Sede Principale",
             areas = listOf(area),
@@ -49,7 +49,7 @@ class ProjectEditsTest {
             name = "Project Test Desktop",
             createdEpochMs = now,
             updatedEpochMs = now,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             racks = listOf(rack),
             deviceModels = listOf(model),
             cables = listOf(cable)
@@ -62,11 +62,11 @@ class ProjectEditsTest {
         val newDev = Device(id = "dev-3", technicalName = "SRV-DB-01", category = DeviceCategory.SERVER_STORAGE)
 
         proj = ProjectEdits.addDevice(proj, "bu-1", newDev)
-        assertEquals(3, proj.businessUnits[0].devices.size)
+        assertEquals(3, proj.sites[0].devices.size)
 
         val updatedDev = newDev.copy(physicalLabel = "LBL-SRV-01")
         proj = ProjectEdits.updateDevice(proj, updatedDev)
-        val found = proj.businessUnits[0].devices.find { it.id == "dev-3" }
+        val found = proj.sites[0].devices.find { it.id == "dev-3" }
         assertNotNull(found)
         assertEquals("LBL-SRV-01", found?.physicalLabel)
     }
@@ -80,7 +80,7 @@ class ProjectEditsTest {
         assertEquals("DEVICE", trashItem?.itemType)
         assertEquals("SW-CORE-01", trashItem?.displayName)
 
-        assertEquals(1, updatedProj.businessUnits[0].devices.size)
+        assertEquals(1, updatedProj.sites[0].devices.size)
         // Cable should have portAId set to null because port-1 was on dev-1
         val cable = updatedProj.cables.find { it.id == "cable-1" }
         assertNotNull(cable)
@@ -89,7 +89,7 @@ class ProjectEditsTest {
 
         // Test Restore
         val restoredProj = ProjectEdits.restoreFromTrash(updatedProj, trashItem!!)
-        assertEquals(2, restoredProj.businessUnits[0].devices.size)
+        assertEquals(2, restoredProj.sites[0].devices.size)
     }
 
     @Test
@@ -103,7 +103,7 @@ class ProjectEditsTest {
         )
 
         proj = ProjectEdits.batchEditDevices(proj, listOf("dev-1", "dev-2"), changes)
-        for (dev in proj.businessUnits[0].devices) {
+        for (dev in proj.sites[0].devices) {
             assertEquals(DeviceCategory.SERVER_STORAGE, dev.category)
             assertEquals("rack-1", dev.rackId)
         }
@@ -122,7 +122,7 @@ class ProjectEditsTest {
         assertNotNull(trashItem)
         assertEquals("SW-CORE-01", trashItem?.displayName)
 
-        val newDev = updatedProj.businessUnits[0].devices.find { it.technicalName == "SW-CORE-NEXTGEN" }
+        val newDev = updatedProj.sites[0].devices.find { it.technicalName == "SW-CORE-NEXTGEN" }
         assertNotNull(newDev)
         assertEquals(DeviceCategory.NETWORK_SWITCH, newDev?.category)
     }
@@ -143,8 +143,8 @@ class ProjectEditsTest {
         )
 
         assertNotNull(trashItem)
-        assertEquals(1, updatedProj.businessUnits[0].devices.size)
-        val survivor = updatedProj.businessUnits[0].devices[0]
+        assertEquals(1, updatedProj.sites[0].devices.size)
+        val survivor = updatedProj.sites[0].devices[0]
         assertEquals("SW-ACCESS-01", survivor.technicalName) // Used duplicate name
     }
 
@@ -176,7 +176,7 @@ class ProjectEditsTest {
         assertEquals("Gi1/0/24", ports[23].name)
 
         proj = ProjectEdits.applyModelToDevice(proj, "dev-2", model.id)
-        val dev2 = proj.businessUnits[0].devices.find { it.id == "dev-2" }
+        val dev2 = proj.sites[0].devices.find { it.id == "dev-2" }
         assertEquals(24, dev2?.ports?.size)
         assertEquals(model.id, dev2?.deviceModelId)
     }
@@ -195,7 +195,7 @@ class ProjectEditsTest {
         assertEquals(1, proj.attachments.size)
 
         proj = ProjectEdits.setAreaFloorplan(proj, "area-1", attachment.id)
-        val area = proj.businessUnits[0].areas.find { it.id == "area-1" }
+        val area = proj.sites[0].areas.find { it.id == "area-1" }
         assertEquals(attachment.id, area?.floorplanAttachmentId)
 
         val placement = FloorplanPlacement(

@@ -32,7 +32,7 @@ object PortLogic {
 
     /** Ids of ports that exist in [project]; stale UI selections must never create orphan rows. */
     private fun existing(project: Project, portIds: Collection<String>): List<String> {
-        val ids = project.businessUnits.flatMap { bu -> bu.devices.flatMap { d -> d.ports.map { it.id } } }.toSet()
+        val ids = project.sites.flatMap { site -> site.devices.flatMap { d -> d.ports.map { it.id } } }.toSet()
         return portIds.filter { it in ids }
     }
 

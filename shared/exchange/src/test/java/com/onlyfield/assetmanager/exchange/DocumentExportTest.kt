@@ -2,7 +2,7 @@ package com.onlyfield.assetmanager.exchange
 
 import com.onlyfield.assetmanager.core.model.Attachment
 import com.onlyfield.assetmanager.core.model.AttachmentClassification
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Cable
 import com.onlyfield.assetmanager.core.model.CableMedium
 import com.onlyfield.assetmanager.core.model.Credential
@@ -40,7 +40,7 @@ class DocumentExportTest {
             ports = listOf(Port(id = "port-2", deviceId = "dev-2", name = "Eth0"))
         )
 
-        val bu = BusinessUnit(
+        val site = Site(
             id = "bu-1",
             name = "Sede Centrale",
             devices = listOf(dev1, dev2)
@@ -87,7 +87,7 @@ class DocumentExportTest {
             name = "Progetto Reti Srl",
             createdEpochMs = System.currentTimeMillis(),
             updatedEpochMs = System.currentTimeMillis(),
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             credentials = listOf(cred),
             cables = listOf(cable),
             vlans = listOf(vlan),

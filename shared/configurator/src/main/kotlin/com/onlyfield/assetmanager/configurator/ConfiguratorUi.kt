@@ -68,7 +68,7 @@ fun ConfiguratorSection(
 val LocalConfiguratorMessages = staticCompositionLocalOf { Messages() }
 
 fun configuratorExists(project: Project, draft: MapObjectDraft): Boolean = when (draft.type.kind) {
-    ObjectKind.DEVICE -> project.businessUnits.any { bu -> bu.devices.any { it.id == draft.id } }
+    ObjectKind.DEVICE -> project.sites.any { site -> site.devices.any { it.id == draft.id } }
     ObjectKind.RACK -> project.racks.any { it.id == draft.id }
     ObjectKind.CABLE -> project.cables.any { it.id == draft.id }
 }
@@ -92,8 +92,8 @@ fun configuratorAction(project: Project, draft: MapObjectDraft, i18n: Messages):
 
 fun inventoryDeviceDraft(project: Project, device: Device?): MapObjectDraft {
     val draft = MapObjectDraft.forDevice(project, device)
-    return if (device != null) draft else draft.copy(buId = "", device = draft.device.copy(
-        businessUnitId = null, areaId = null, mountingType = MountingType.OUT_OF_RACK))
+    return if (device != null) draft else draft.copy(siteId = "", device = draft.device.copy(
+        siteId = null, areaId = null, mountingType = MountingType.OUT_OF_RACK))
 }
 
 fun configuratorValidation(project: Project, draft: MapObjectDraft, i18n: Messages): String? =

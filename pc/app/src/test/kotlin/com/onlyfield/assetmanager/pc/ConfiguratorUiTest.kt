@@ -30,7 +30,7 @@ class ConfiguratorUiTest {
     @Test fun portPanelExposesPortActionsAndFreeStates() {
         val original = Device(technicalName = "SW", hardware = HardwareSpec(portGroups = listOf(PortTemplate("P", portCount = 24), PortTemplate("SFP", portCount = 4))))
         val device = original.copy(ports = HardwareConfigurator.ports(original.hardware.portGroups, original.id))
-        val p = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(device))))
+        val p = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(device))))
         var selected: String? = null
         rule.setContent { MaterialTheme { PortPanel(PortLogic.panel(p, device), Messages(), onClick = { selected = it.port.id }) } }
         rule.onAllNodes(hasClickAction()).assertCountEquals(28)
@@ -42,7 +42,7 @@ class ConfiguratorUiTest {
     @Test fun connectedPortsShowOccupiedAndPeer() {
         val a = Device(technicalName = "A").let { it.copy(ports = listOf(Port(deviceId = it.id, name = "P1"))) }
         val b = Device(technicalName = "B").let { it.copy(ports = listOf(Port(deviceId = it.id, name = "P1"))) }
-        val p = HardwareConfigurator.connect(Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(a, b)))), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
+        val p = HardwareConfigurator.connect(Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(a, b)))), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
         rule.setContent { MaterialTheme { PortPanel(PortLogic.panel(p, a), Messages(), onClick = {}) } }
         rule.onNodeWithContentDescription("P1: Occupata, B › P1").assertHasClickAction()
     }
@@ -50,7 +50,7 @@ class ConfiguratorUiTest {
     @Test fun selectingDestinationStagesConnectionAndSaveKeepsPortIds() {
         val a = Device(technicalName = "A", hardware = HardwareSpec(portGroups = listOf(PortTemplate("P", portCount = 1)))).let { it.copy(ports = HardwareConfigurator.ports(it.hardware.portGroups, it.id)) }
         val b = a.copy(id = java.util.UUID.randomUUID().toString(), technicalName = "B").let { it.copy(ports = HardwareConfigurator.ports(it.hardware.portGroups, it.id)) }
-        val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(a, b))))
+        val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(a, b))))
         val draft = mutableStateOf(MapObjectDraft.forDevice(project, a))
         rule.setContent { MaterialTheme { Column(Modifier.width(800.dp).height(700.dp).testTag("editor").verticalScroll(rememberScrollState())) { ObjectConfigurator(project, draft.value, Messages()) { draft.value = it } } } }
         rule.onNodeWithText("Porte").performScrollTo().performClick()
@@ -83,9 +83,9 @@ class ConfiguratorUiTest {
 
     @Test fun presetCreatesPortsAndSelectedPortsReceiveVlan() {
         val area = Area(name = "Terra")
-        val bu = BusinessUnit(name = "BU", areas = listOf(area))
-        val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu))
-        val draft = mutableStateOf(MapObjectDraft(type = ObjectCatalog.builtins.first { it.id == "switch" }, buId = bu.id, areaId = area.id).let { it.copy(device = it.device.copy(technicalName = "SW-01")) })
+        val site = Site(name = "BU", areas = listOf(area))
+        val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(site))
+        val draft = mutableStateOf(MapObjectDraft(type = ObjectCatalog.builtins.first { it.id == "switch" }, siteId = site.id, areaId = area.id).let { it.copy(device = it.device.copy(technicalName = "SW-01")) })
         rule.setContent { MaterialTheme { Column(Modifier.width(800.dp).height(900.dp).verticalScroll(rememberScrollState())) {
             ObjectConfigurator(project, draft.value, Messages(), initialSection = com.onlyfield.assetmanager.configurator.ConfiguratorPage.PORTS) { draft.value = it }
         } } }
@@ -106,7 +106,7 @@ class ConfiguratorUiTest {
             val saved = draft.value.apply(project)
             assertEquals(listOf(20), saved.vlans.map { it.vlanId })
             assertEquals(2, saved.portVlanMemberships.size)
-            val ports = saved.businessUnits.single().devices.single().ports.map { it.id }.toSet()
+            val ports = saved.sites.single().devices.single().ports.map { it.id }.toSet()
             org.junit.Assert.assertTrue(saved.portVlanMemberships.all { it.portId in ports })
         }
     }

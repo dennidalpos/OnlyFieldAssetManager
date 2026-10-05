@@ -16,7 +16,7 @@ data class MountSnapshot(val deviceId: String, val rackId: String?, val position
 
 /** Precomputed hierarchy lookups for views that resolve many refs at once. */
 class HierarchyIndex(project: Project) {
-    private val devices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+    private val devices = project.sites.flatMap { it.devices }.associateBy { it.id }
     private val racks = project.racks.associateBy { it.id }
     val parents: Map<ObjectRef, ObjectRef> = ObjectHierarchy.relations(project).associate { it.child to it.parent }
     val children: Map<ObjectRef, List<ObjectRef>> = parents.entries.groupBy({ it.value }, { it.key })
@@ -43,23 +43,23 @@ class HierarchyIndex(project: Project) {
 
 object ObjectHierarchy {
     fun refs(project: Project): List<ObjectRef> = project.racks.map { ObjectRef(PlacementTargetType.RACK, it.id) } +
-        project.businessUnits.flatMap { it.devices }.map { ObjectRef(PlacementTargetType.DEVICE, it.id) }
+        project.sites.flatMap { it.devices }.map { ObjectRef(PlacementTargetType.DEVICE, it.id) }
 
     fun name(project: Project, ref: ObjectRef, i18n: Messages = Messages()): String = when (ref.type) {
         PlacementTargetType.RACK -> project.racks.find { it.id == ref.id }?.name
-        PlacementTargetType.DEVICE -> project.businessUnits.flatMap { it.devices }.find { it.id == ref.id }?.technicalName
+        PlacementTargetType.DEVICE -> project.sites.flatMap { it.devices }.find { it.id == ref.id }?.technicalName
     } ?: i18n.text("text.959a2f5a08e6")
 
     fun canContain(project: Project, ref: ObjectRef): Boolean = when (ref.type) {
         PlacementTargetType.RACK -> project.racks.any { it.id == ref.id }
-        PlacementTargetType.DEVICE -> project.businessUnits.flatMap { it.devices }.find { it.id == ref.id }
+        PlacementTargetType.DEVICE -> project.sites.flatMap { it.devices }.find { it.id == ref.id }
             ?.let { ObjectCatalog.type(project, it.objectTypeId)?.let { type -> type.kind == ObjectKind.DEVICE && type.canContainObjects } } == true
     }
 
     fun relations(project: Project): List<ObjectContainment> {
         val explicit = project.objectContainments
         val children = explicit.map { it.child }.toSet()
-        return explicit + project.businessUnits.flatMap { it.devices }.mapNotNull { d ->
+        return explicit + project.sites.flatMap { it.devices }.mapNotNull { d ->
             val rack = project.racks.find { it.id == d.rackId } ?: return@mapNotNull null
             val child = ObjectRef(PlacementTargetType.DEVICE, d.id)
             if (child in children) null else ObjectContainment(child, ObjectRef(PlacementTargetType.RACK, rack.id))
@@ -88,7 +88,7 @@ object ObjectHierarchy {
         val root = root(project, ref)
         return when (root.type) {
             PlacementTargetType.RACK -> project.racks.find { it.id == root.id }?.areaId
-            PlacementTargetType.DEVICE -> project.businessUnits.flatMap { it.devices }.find { it.id == root.id }?.areaId
+            PlacementTargetType.DEVICE -> project.sites.flatMap { it.devices }.find { it.id == root.id }?.areaId
         }
     }
 
@@ -111,7 +111,7 @@ object ObjectHierarchy {
         val updated = before.copy(objectContainments = before.objectContainments.filterNot { it.child == child } +
             if (parent == null) emptyList() else listOf(ObjectContainment(child, parent)))
         // Clear the legacy mounting link before resolving the new hierarchy.
-        val detached = updated.copy(businessUnits = updated.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d ->
+        val detached = updated.copy(sites = updated.sites.map { site -> site.copy(devices = site.devices.map { d ->
             if (child.type == PlacementTargetType.DEVICE && d.id == child.id) d.copy(rackId = null, areaId = if (parent == null) floor else d.areaId) else d
         }) }, racks = updated.racks.map { r ->
             if (child.type == PlacementTargetType.RACK && r.id == child.id && parent == null) r.copy(areaId = floor) else r
@@ -121,9 +121,9 @@ object ObjectHierarchy {
     }
 
     private fun synchronize(project: Project, before: Project): Project {
-        val devicesBefore = before.businessUnits.flatMap { it.devices }.associateBy { it.id }
+        val devicesBefore = before.sites.flatMap { it.devices }.associateBy { it.id }
         return project.copy(
-            businessUnits = project.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d ->
+            sites = project.sites.map { site -> site.copy(devices = site.devices.map { d ->
                 val ref = ObjectRef(PlacementTargetType.DEVICE, d.id)
                 val rackId = ancestors(project, ref).firstOrNull { it.type == PlacementTargetType.RACK }?.id
                 val old = devicesBefore[d.id]
@@ -148,7 +148,7 @@ object ObjectHierarchy {
         val children = children(before, ref).toSet()
         val result = before.copy(objectContainments = before.objectContainments.filterNot { it.child == ref || it.parent == ref } +
             if (parent == null) emptyList() else children.map { ObjectContainment(it, parent) },
-            businessUnits = before.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d ->
+            sites = before.sites.map { site -> site.copy(devices = site.devices.map { d ->
                 if (ObjectRef(PlacementTargetType.DEVICE, d.id) in children) d.copy(rackId = null, areaId = floor) else d
             }) },
             racks = before.racks.map { r -> if (ObjectRef(PlacementTargetType.RACK, r.id) in children) r.copy(areaId = floor) else r })
@@ -162,7 +162,7 @@ object ObjectHierarchy {
             if (entry.child !in available || entry.parent !in available) continue
             result = assign(result, entry.child, entry.parent, i18n = i18n)
         }
-        return result.copy(businessUnits = result.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d ->
+        return result.copy(sites = result.sites.map { site -> site.copy(devices = site.devices.map { d ->
             trash.mountSnapshots.find { it.deviceId == d.id && it.rackId == d.rackId }?.let {
                 d.copy(positionU = it.positionU, rackSide = it.side, mountingType = it.mounting)
             } ?: d
@@ -173,19 +173,19 @@ object ObjectHierarchy {
 
     fun snapshot(project: Project, ref: ObjectRef, trash: TrashItem): TrashItem = trash.copy(
         containments = relations(project).filter { it.child == ref || it.parent == ref },
-        mountSnapshots = project.businessUnits.flatMap { it.devices }.filter {
+        mountSnapshots = project.sites.flatMap { it.devices }.filter {
             val device = ObjectRef(PlacementTargetType.DEVICE, it.id)
             device == ref || ref in ancestors(project, device)
         }.map { MountSnapshot(it.id, it.rackId, it.positionU, it.rackSide, it.mountingType) },
         containmentPlacements = project.floorplanPlacements.filter { it.targetId == ref.id && it.targetType == ref.type },
-        originalBusinessUnitId = project.businessUnits.find { b -> b.devices.any { it.id == ref.id } }?.id
+        originalSiteId = project.sites.find { b -> b.devices.any { it.id == ref.id } }?.id
     )
 
     fun afterDeletion(before: Project, after: Project, ref: ObjectRef): Project {
         val released = release(before, ref)
-        val mounts = released.businessUnits.flatMap { it.devices }.associateBy { it.id }
+        val mounts = released.sites.flatMap { it.devices }.associateBy { it.id }
         return after.copy(objectContainments = released.objectContainments,
-            businessUnits = after.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { d ->
+            sites = after.sites.map { site -> site.copy(devices = site.devices.map { d ->
                 mounts[d.id]?.let { d.copy(rackId = it.rackId, positionU = it.positionU, mountingType = it.mountingType, areaId = it.areaId) } ?: d
             }) },
             racks = after.racks.map { r -> released.racks.find { it.id == r.id } ?: r })

@@ -102,8 +102,7 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
             }
             EnumPicker(i18n.text("text.03cbc24f25f2"), VlanScopeType.entries, form.scopeType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(scopeType = it, scopeTargetId = null) })
             when (form.scopeType) {
-                VlanScopeType.BUSINESS_UNIT -> OptionPicker(i18n.text("text.e4de7d26b141"), project.businessUnits, project.businessUnits.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
-                VlanScopeType.SITE -> OptionPicker(i18n.text("text.f163aa3f6310"), index.sites, index.sites.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
+                VlanScopeType.SITE -> OptionPicker(i18n.text("text.e4de7d26b141"), project.sites, project.sites.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
                 VlanScopeType.DEVICE -> DevicePicker(i18n.text("text.cf301d95d32c"), index, form.scopeTargetId, { form = form.copy(scopeTargetId = it) })
                 VlanScopeType.PROJECT -> Unit
             }

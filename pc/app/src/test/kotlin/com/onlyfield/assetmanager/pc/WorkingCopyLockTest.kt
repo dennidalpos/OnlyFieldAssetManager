@@ -2,7 +2,7 @@ package com.onlyfield.assetmanager.pc
 
 import com.onlyfield.assetmanager.core.onboarding.NewSiteDraft
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Area
 import org.junit.Assert.*
 import org.junit.Rule
@@ -13,7 +13,7 @@ class WorkingCopyLockTest {
     @get:Rule val folder = TemporaryFolder()
 
     private fun wizard(password: String = "") = NewSiteWizard(draft = NewSiteDraft(
-        projectName = "Lock test", businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))),
+        projectName = "Lock test", sites = listOf(Site(name = "BU", areas = listOf(Area(name = "Floor")))),
         password = password, passwordConfirm = password))
 
     @Test fun uiOpeningCannotStealAnotherWorkingCopy() {

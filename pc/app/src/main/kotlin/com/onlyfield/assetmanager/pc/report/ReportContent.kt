@@ -50,10 +50,10 @@ object ReportContent {
 
         if (selection.includeInventoryTable) {
             heading(i18n.text("text.dae8f6194460"))
-            for (bu in project.businessUnits) {
-                if (bu.devices.isEmpty()) continue
-                lines += ReportLine.SubHeading(bu.name)
-                bu.devices.groupBy { it.areaId }.forEach { (areaId, devices) ->
+            for (site in project.sites) {
+                if (site.devices.isEmpty()) continue
+                lines += ReportLine.SubHeading(site.name)
+                site.devices.groupBy { it.areaId }.forEach { (areaId, devices) ->
                     item(index.areaName(areaId, i18n.text("text.38426bccdab9")))
                     devices.sortedBy { it.technicalName }.forEach { d ->
                         val extra = listOfNotNull(

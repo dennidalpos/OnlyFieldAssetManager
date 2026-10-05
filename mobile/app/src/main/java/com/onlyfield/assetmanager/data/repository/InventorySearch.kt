@@ -12,24 +12,22 @@ internal class InventorySearch(db: AppDatabase) {
     suspend fun searchInventory(projectId: String, query: String, i18n: Messages = Messages()): List<SearchResult> {
         if (query.isBlank()) return emptyList()
 
-        val buEntities = inventoryDao.getBusinessUnitsByProjectId(projectId)
-        val buMap = buEntities.associateBy { it.id }
-        val buIds = buEntities.map { it.id }
-        if (buIds.isEmpty()) return emptyList()
+        val siteEntities = inventoryDao.getSitesByProjectId(projectId)
+        val siteMap = siteEntities.associateBy { it.id }
+        val siteIds = siteEntities.map { it.id }
+        if (siteIds.isEmpty()) return emptyList()
 
-        val matchedDeviceEntities = inventoryDao.searchDevices(buIds, query.trim())
+        val matchedDeviceEntities = inventoryDao.searchDevices(siteIds, query.trim())
         if (matchedDeviceEntities.isEmpty()) return emptyList()
 
-        val siteEntities = inventoryDao.getSitesByBuIds(buIds).associateBy { it.id }
-        val areaEntities = inventoryDao.getAreasByBuIds(buIds).associateBy { it.id }
+        val areaEntities = inventoryDao.getAreasBySiteIds(siteIds).associateBy { it.id }
         val matchedDevIds = matchedDeviceEntities.map { it.id }
         val portEntities = inventoryDao.getPortsByDeviceIds(matchedDevIds).groupBy { it.deviceId }
 
         val q = query.trim().lowercase()
 
         return matchedDeviceEntities.map { devEnt ->
-            val bu = buMap[devEnt.businessUnitId]
-            val site = devEnt.siteId?.let { siteEntities[it] }
+            val site = siteMap[devEnt.siteId]
             val area = devEnt.areaId?.let { areaEntities[it] }
 
             val devPorts = portEntities[devEnt.id].orEmpty().map { p ->
@@ -48,7 +46,6 @@ internal class InventorySearch(db: AppDatabase) {
                 alias = devEnt.alias,
                 ipAddress = devEnt.ipAddress,
                 macAddress = devEnt.macAddress,
-                siteId = devEnt.siteId,
                 areaId = devEnt.areaId,
                 ports = devPorts
             )
@@ -63,8 +60,7 @@ internal class InventorySearch(db: AppDatabase) {
 
             SearchResult(
                 device = device,
-                businessUnitName = bu?.name ?: i18n.text("text.aabb8f0ddb86"),
-                siteName = site?.name,
+                siteName = site?.name ?: i18n.text("text.aabb8f0ddb86"),
                 areaName = area?.name,
                 matchedField = matchedField
             )

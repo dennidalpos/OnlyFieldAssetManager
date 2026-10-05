@@ -59,7 +59,7 @@ fun stubLabel(scene: MapScene, link: SceneLink, i18n: Messages): String? {
     val devices = link.remotes.values.distinctBy { it.device.id }
     return "→ " + when (devices.size) {
         0 -> i18n.text("map.outside")
-        1 -> devices.single().label(scene.areaId, scene.buId)
+        1 -> devices.single().label(scene.areaId, scene.siteId)
         else -> i18n.plural("map.remoteCount", devices.size)
     }
 }

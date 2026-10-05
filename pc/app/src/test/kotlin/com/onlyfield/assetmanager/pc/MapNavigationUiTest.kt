@@ -27,7 +27,7 @@ class MapNavigationUiTest {
     private val sw = Device(technicalName = "SW", rackId = rack.id, areaId = area.id)
     private val ap = Device(technicalName = "AP", areaId = area.id)
     private val start = ObjectHierarchy.assign(Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(box, sw, ap))), racks = listOf(rack), objectTypes = listOf(type),
+        sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(box, sw, ap))), racks = listOf(rack), objectTypes = listOf(type),
         floorplanPlacements = listOf(
             FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.RACK, targetId = rack.id, xRatio = .3f, yRatio = .4f),
             FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = ap.id, xRatio = .7f, yRatio = .4f))),

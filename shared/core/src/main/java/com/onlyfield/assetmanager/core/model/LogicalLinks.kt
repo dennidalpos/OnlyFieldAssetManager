@@ -13,9 +13,9 @@ object LogicalLinks {
     /** "FW-02 · Primo · Sede B"; null when the far side is not described. */
     fun farLabel(project: Project, link: WanVpnConnection, deviceId: String): String? {
         val (id, site) = far(link, deviceId)
-        val device = id?.let { d -> project.businessUnits.flatMap { it.devices }.find { it.id == d } }
+        val device = id?.let { d -> project.sites.flatMap { it.devices }.find { it.id == d } }
         val area = device?.let { ObjectHierarchy.areaId(project, ObjectRef(PlacementTargetType.DEVICE, it.id)) }
-            ?.let { a -> project.businessUnits.flatMap(ObjectMap::areas).find { it.id == a }?.name }
+            ?.let { a -> project.sites.flatMap { it.areas }.find { it.id == a }?.name }
         return listOfNotNull(device?.technicalName, area, site?.takeIf { it.isNotBlank() }).joinToString(" · ").ifBlank { null }
     }
 }

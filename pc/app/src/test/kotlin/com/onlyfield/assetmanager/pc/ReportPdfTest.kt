@@ -11,8 +11,8 @@ class ReportPdfTest {
         name = "Sede di Prova",
         createdEpochMs = 0,
         updatedEpochMs = 0,
-        businessUnits = listOf(
-            BusinessUnit(
+        sites = listOf(
+            Site(
                 name = "IT",
                 areas = listOf(Area(id = "a1", name = "Sala server")),
                 devices = (1..120).map { Device(technicalName = "SW-%03d".format(it), areaId = "a1", ipAddress = "10.0.0.$it") }

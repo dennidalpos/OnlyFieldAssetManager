@@ -80,7 +80,7 @@ fun InventorySection(
                 }
             }
         ) {
-            Button(onClick = { changeDetail { creating = true } }, enabled = project.businessUnits.isNotEmpty()) { Text(i18n.text("text.8650e4573818")) }
+            Button(onClick = { changeDetail { creating = true } }, enabled = project.sites.isNotEmpty()) { Text(i18n.text("text.8650e4573818")) }
         }
 
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -112,16 +112,16 @@ fun InventorySection(
         }
 
         when {
-            project.businessUnits.isEmpty() -> EmptyState(i18n.text("text.d07b43aa8cb1"))
+            project.sites.isEmpty() -> EmptyState(i18n.text("text.d07b43aa8cb1"))
             index.devices.isEmpty() -> EmptyState(i18n.text("text.acc21f707eb1"), actionLabel = i18n.text("text.8650e4573818"), onAction = { creating = true })
             filtered.isEmpty() -> EmptyState(i18n.text("text.4e750f66126c"), actionLabel = i18n.text("text.c4483e052140"), onAction = {
                 query = ""; categoryFilter = null; areaFilter = null
             })
             else -> LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(filtered, key = { it.id }) { dev ->
-                    val bu = index.businessUnitOf(dev.id)
+                    val site = index.siteOf(dev.id)
                     val location = listOfNotNull(
-                        bu?.name,
+                        site?.name,
                         dev.areaId?.let { index.areaName(it, i18n.text("text.8b721ed0312b")) },
                         dev.rackId?.let { i18n.text("text.f5ba7982ad75", index.rackName(it)) + (dev.positionU?.let { u -> i18n.text("text.60c93506e0bf", u) } ?: "") }
                     ).joinToString(" › ")

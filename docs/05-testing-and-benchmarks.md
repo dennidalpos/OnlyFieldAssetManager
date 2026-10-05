@@ -63,7 +63,7 @@ Esito reale: `BUILD SUCCESSFUL in 34s`; 214 test, nessun fallimento né test sal
 | Desktop | 85 | 0 | 0 |
 | Android JVM | 28 | 0 | 0 |
 
-La suite è stata ampliata dopo i problemi emersi durante l'integrazione. Tre aspettative obsolete di `MasterDetailTest` sono state aggiornate alle azioni Annulla modifiche e Salva modifiche; nessun controllo è stato disabilitato. I sei scenari di `ConfiguratorUxTest` coprono creazione essenziale, scelta esplicita della business unit, valori conservati dopo chiusura dei dettagli, errori che aprono la sezione, applicazione e ricerca dei modelli, riduzione di gruppi collegati con consenso e conservazione degli ID.
+La suite è stata ampliata dopo i problemi emersi durante l'integrazione. Tre aspettative obsolete di `MasterDetailTest` sono state aggiornate alle azioni Annulla modifiche e Salva modifiche; nessun controllo è stato disabilitato. I sei scenari di `ConfiguratorUxTest` coprono creazione essenziale, scelta esplicita della sede, valori conservati dopo chiusura dei dettagli, errori che aprono la sezione, applicazione e ricerca dei modelli, riduzione di gruppi collegati con consenso e conservazione degli ID.
 
 `DesktopUxLayoutTest` esegue navigazione, protezione della bozza, creazione e accesso diretto alle porte a 1360×860 e 1024×768. Sei catture Compose Desktop sono in `pc/app/build/reports/ux/`: navigazione, editor e porte per entrambe le dimensioni. Catture ispezionate: titolo/footer riconoscibili, elenco selezionato evidente e sezione Porte raggiunta senza scorrimento manuale. Sono rendering del test Compose, non screenshot della finestra nativa con differenti scale Windows.
 
@@ -131,7 +131,7 @@ Baseline prima delle modifiche: `:shared:core:test :shared:exchange:test :pc:app
 Nuovi test:
 
 - `ConfiguratorTest.portGridFitsWidthAndWrapsInBalancedBands`;
-- `QuickAddTest`: switch da preset con porte e posizione sulla mappa, rack vuoto con altezza scelta, business unit obbligatoria finché non scelta;
+- `QuickAddTest`: switch da preset con porte e posizione sulla mappa, rack vuoto con altezza scelta, sede obbligatoria finché non scelta;
 - `ObjectPickerUiTest` riscritto: preset con Aggiungi immediato, tipo senza menu con un tocco, tipologia personalizzata.
 
 `DesktopUxLayoutTest` e `ConfiguratorLayoutTest` sono stati aggiornati al nuovo flusso e alla sezione Altro. Totale 247 test (Core 88, Exchange 37, Desktop 94, Android JVM 28).

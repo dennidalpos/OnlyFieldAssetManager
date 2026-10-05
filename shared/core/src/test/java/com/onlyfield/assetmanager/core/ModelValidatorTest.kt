@@ -1,7 +1,7 @@
 package com.onlyfield.assetmanager.core
 
 import com.onlyfield.assetmanager.core.model.Area
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Device
 import com.onlyfield.assetmanager.core.model.EndpointStatus
 import com.onlyfield.assetmanager.core.model.Observation
@@ -10,7 +10,6 @@ import com.onlyfield.assetmanager.core.model.Port
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.core.model.RackSide
-import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import org.junit.Assert.assertFalse
@@ -22,8 +21,8 @@ class ModelValidatorTest {
 
     @Test
     fun testValidProjectValidation() {
-        val buId = UUID.randomUUID().toString()
         val siteId = UUID.randomUUID().toString()
+        val floorId = UUID.randomUUID().toString()
         val areaId = UUID.randomUUID().toString()
 
         val dev1Id = UUID.randomUUID().toString()
@@ -50,7 +49,6 @@ class ModelValidatorTest {
             id = dev1Id,
             technicalName = "sw-access-01",
             ipAddress = "10.0.0.1",
-            siteId = siteId,
             areaId = areaId,
             ports = listOf(port1),
             observation = Observation("audit", System.currentTimeMillis(), ObservationStatus.VERIFIED)
@@ -60,22 +58,20 @@ class ModelValidatorTest {
             id = dev2Id,
             technicalName = "sw-access-02",
             ipAddress = "10.0.0.2",
-            siteId = siteId,
             areaId = areaId,
             ports = listOf(port2),
             observation = Observation("audit", System.currentTimeMillis(), ObservationStatus.VERIFIED)
         )
 
         val area = Area(id = areaId, name = "Server Room")
-        val site = Site(id = siteId, name = "HQ Building", areas = listOf(area))
-        val bu = BusinessUnit(id = buId, name = "IT Ops", sites = listOf(site), devices = listOf(dev1, dev2))
+        val site = Site(id = siteId, name = "IT Ops", areas = listOf(area), devices = listOf(dev1, dev2))
 
         val project = Project(
             id = UUID.randomUUID().toString(),
             name = "Test Project",
             createdEpochMs = System.currentTimeMillis(),
             updatedEpochMs = System.currentTimeMillis(),
-            businessUnits = listOf(bu)
+            sites = listOf(site)
         )
 
         val result = ModelValidator.validateProject(project)
@@ -98,39 +94,39 @@ class ModelValidatorTest {
     }
 
     @Test
-    fun testDuplicateIpInSameBuGeneratesWarning() {
-        val buId = UUID.randomUUID().toString()
+    fun testDuplicateIpInSameSiteGeneratesWarning() {
         val siteId = UUID.randomUUID().toString()
+        val floorId = UUID.randomUUID().toString()
 
         val dev1 = Device(
             id = UUID.randomUUID().toString(),
             technicalName = "sw-01",
             ipAddress = "192.168.1.1",
-            siteId = siteId
+            areaId = floorId
         )
 
         val dev2 = Device(
             id = UUID.randomUUID().toString(),
             technicalName = "sw-02",
             ipAddress = "192.168.1.1",
-            siteId = siteId
+            areaId = floorId
         )
 
-        val site = Site(id = siteId, name = "Main Site")
-        val bu = BusinessUnit(id = buId, name = "BU1", sites = listOf(site), devices = listOf(dev1, dev2))
+        val area = Area(id = floorId, name = "Main Site")
+        val site = Site(id = siteId, name = "BU1", areas = listOf(area), devices = listOf(dev1, dev2))
 
         val project = Project(
             id = UUID.randomUUID().toString(),
             name = "Duplicate IP Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu)
+            sites = listOf(site)
         )
 
         val result = ModelValidator.validateProject(project)
         assertTrue(result.isValid)
         assertTrue(result.hasWarnings)
-        assertTrue(result.issues.any { it.code == "DUPLICATE_IP_IN_BU" })
+        assertTrue(result.issues.any { it.code == "DUPLICATE_IP_IN_SITE" })
     }
 
     @Test
@@ -156,14 +152,14 @@ class ModelValidatorTest {
             rackSide = RackSide.FRONT
         )
 
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", devices = listOf(dev1, dev2))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU1", devices = listOf(dev1, dev2))
         val project = Project(
             id = UUID.randomUUID().toString(),
             name = "Rack Overlap Test",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
             racks = listOf(rack),
-            businessUnits = listOf(bu)
+            sites = listOf(site)
         )
 
         val result = ModelValidator.validateProject(project)
@@ -189,7 +185,7 @@ class ModelValidatorTest {
 
         val area = Area(id = areaId, name = "Sala CED", floorplanAttachmentId = attId)
         val dev = Device(id = devId, technicalName = "sw-ced-01", areaId = areaId)
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", areas = listOf(area), devices = listOf(dev))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU1", areas = listOf(area), devices = listOf(dev))
 
         val placement = com.onlyfield.assetmanager.core.model.FloorplanPlacement(
             areaId = areaId,
@@ -212,7 +208,7 @@ class ModelValidatorTest {
             name = "Attachment Floorplan Test",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             attachments = listOf(attachment),
             annotations = listOf(annotation),
             floorplanPlacements = listOf(placement)
@@ -239,7 +235,7 @@ class ModelValidatorTest {
 
         val dev1 = Device(id = dev1Id, technicalName = "dev1", areaId = areaId, ports = listOf(port1))
         val dev2 = Device(id = dev2Id, technicalName = "dev2", areaId = areaId, ports = listOf(port2))
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", areas = listOf(area), devices = listOf(dev1, dev2))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU1", areas = listOf(area), devices = listOf(dev1, dev2))
 
         // Cable 1: Port1 -> Port2
         val cable1 = com.onlyfield.assetmanager.core.model.Cable(
@@ -271,7 +267,7 @@ class ModelValidatorTest {
             name = "Cabling Test Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             cables = listOf(cable1, cable2),
             panelMappings = listOf(mapping)
         )
@@ -288,8 +284,8 @@ class ModelValidatorTest {
         val devId = UUID.randomUUID().toString()
         val portId = UUID.randomUUID().toString()
         val port = Port(id = portId, deviceId = devId, name = "Gi0/1")
-        val dev = Device(id = devId, technicalName = "sw-core-01", siteId = UUID.randomUUID().toString(), ports = listOf(port))
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU1", devices = listOf(dev))
+        val dev = Device(id = devId, technicalName = "sw-core-01", areaId = UUID.randomUUID().toString(), ports = listOf(port))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU1", devices = listOf(dev))
 
         val vlan1 = com.onlyfield.assetmanager.core.model.Vlan(vlanId = 10, name = "MGMT")
         val vlanDuplicateScope = com.onlyfield.assetmanager.core.model.Vlan(vlanId = 10, name = "MGMT_DUP")
@@ -348,7 +344,7 @@ class ModelValidatorTest {
             name = "A08 Test Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             vlans = listOf(vlan1, vlanDuplicateScope, invalidVlan),
             subnets = listOf(subnet1, invalidSubnet),
             portVlanMemberships = listOf(portMembership),
@@ -386,7 +382,7 @@ class ModelValidatorTest {
             category = com.onlyfield.assetmanager.core.model.DeviceCategory.UPS_PDU
         )
 
-        val bu = com.onlyfield.assetmanager.core.model.BusinessUnit(
+        val site = com.onlyfield.assetmanager.core.model.Site(
             id = UUID.randomUUID().toString(),
             name = "BU Power",
             devices = listOf(dev1, dev2)
@@ -417,7 +413,7 @@ class ModelValidatorTest {
             name = "A09 Test Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             powerFeeds = listOf(feedA),
             poeMappings = listOf(poe)
         )
@@ -468,7 +464,7 @@ class ModelValidatorTest {
         val loop = com.onlyfield.assetmanager.core.model.WanVpnConnection(name = "VPN-1", localEndpointDeviceId = fw.id, remoteEndpointDeviceId = fw.id)
         val ok = com.onlyfield.assetmanager.core.model.WanVpnConnection(name = "VPN-2", localEndpointDeviceId = fw.id, remoteEndpointSiteDescription = "Sede B")
         val project = com.onlyfield.assetmanager.core.model.Project(name = "P", createdEpochMs = 1, updatedEpochMs = 1,
-            businessUnits = listOf(com.onlyfield.assetmanager.core.model.BusinessUnit(name = "BU", devices = listOf(fw))), wanVpnConnections = listOf(empty, loop, ok))
+            sites = listOf(com.onlyfield.assetmanager.core.model.Site(name = "BU", devices = listOf(fw))), wanVpnConnections = listOf(empty, loop, ok))
         val issues = ModelValidator.validateProject(project).issues.filter { it.code.startsWith("WAN_VPN_") }
         org.junit.Assert.assertEquals(listOf("WAN_VPN_WITHOUT_ENDPOINTS" to empty.id, "WAN_VPN_SAME_DEVICE" to loop.id), issues.map { it.code to it.targetEntityId })
         assertTrue(issues.all { it.severity == ValidationSeverity.DOCUMENTARY_WARNING })

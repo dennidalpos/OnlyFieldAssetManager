@@ -37,7 +37,7 @@ class ObjectMapStorageTest {
             val type = ObjectType(name = "Gateway")
             val device = Device(technicalName = "GW", areaId = area.id, objectTypeId = type.id)
             val cable = Cable(deviceAId = device.id, objectTypeId = "coax-cable")
-            val p = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))), objectTypes = listOf(type), cables = listOf(cable), cableRoutes = listOf(CableRoute(cableId = cable.id, areaId = area.id)))
+            val p = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(device))), objectTypes = listOf(type), cables = listOf(cable), cableRoutes = listOf(CableRoute(cableId = cable.id, areaId = area.id)))
             repo.saveProject(p)
             assertEquals(p, repo.getProjectById(p.id))
         } finally { db.close() }

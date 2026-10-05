@@ -19,7 +19,7 @@ data class DeviceForm(
     val serialNumber: String = "",
     val objectTypeId: String? = null,
     val category: DeviceCategory = DeviceCategory.NETWORK_SWITCH,
-    val businessUnitId: String? = null,
+    val siteId: String? = null,
     val areaId: String? = null,
     val rackId: String? = null,
     val positionU: String = "",
@@ -33,7 +33,7 @@ data class DeviceForm(
 ) {
     fun errors(rackHeightU: Int?, i18n: Messages = Messages()): Map<String, String> = buildMap {
         FieldValidators.required(technicalName, i18n.text("text.4f1b2dcbe4ce"), i18n = i18n)?.let { put("technicalName", it) }
-        if (businessUnitId == null) put("businessUnitId", i18n.text("text.da384d522c1b"))
+        if (siteId == null) put("siteId", i18n.text("text.da384d522c1b"))
         FieldValidators.ipv4(ipAddress, i18n = i18n)?.let { put("ipAddress", it) }
         FieldValidators.mac(macAddress, i18n = i18n)?.let { put("macAddress", it) }
         FieldValidators.int(heightU, min = 1, max = 60, required = true, i18n = i18n)?.let { put("heightU", it) }
@@ -77,7 +77,7 @@ data class DeviceForm(
     }
 
     companion object {
-        fun from(device: Device?, businessUnitId: String?): DeviceForm = device?.let {
+        fun from(device: Device?, siteId: String?): DeviceForm = device?.let {
             DeviceForm(
                 technicalName = it.technicalName,
                 physicalLabel = it.physicalLabel.orEmpty(),
@@ -87,7 +87,7 @@ data class DeviceForm(
                 serialNumber = it.serialNumber.orEmpty(),
                 objectTypeId = it.objectTypeId,
                 category = it.category,
-                businessUnitId = businessUnitId,
+                siteId = siteId,
                 areaId = it.areaId,
                 rackId = it.rackId,
                 positionU = it.positionU?.toString().orEmpty(),
@@ -99,7 +99,7 @@ data class DeviceForm(
                 notes = it.observation?.notes.orEmpty(),
                 hardware = it.hardware,
             )
-        } ?: DeviceForm(businessUnitId = businessUnitId)
+        } ?: DeviceForm(siteId = siteId)
     }
 }
 

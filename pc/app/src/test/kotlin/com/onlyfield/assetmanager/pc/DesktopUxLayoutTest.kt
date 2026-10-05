@@ -3,7 +3,7 @@ package com.onlyfield.assetmanager.pc
 import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.v2.runDesktopComposeUiTest
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Area
 import com.onlyfield.assetmanager.core.onboarding.NewSiteDraft
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
@@ -27,8 +27,8 @@ class DesktopUxLayoutTest(private val width: Int, private val height: Int) {
         val directory = Files.createTempDirectory("ofam-ux-layout").toFile()
         val state = DesktopAppState(DesktopStorageManager(directory))
         try {
-            val businessUnit = BusinessUnit(name = "Operations", areas = listOf(Area(name = "Terra")))
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito dimostrativo", businessUnits = listOf(businessUnit))))
+            val site = Site(name = "Operations", areas = listOf(Area(name = "Terra")))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito dimostrativo", sites = listOf(site))))
             state.section = AppSection.INVENTORY
             setContent { DesktopApp(state) }
             onNode(hasText("Dispositivi") and hasClickAction()).assertIsDisplayed()
@@ -48,7 +48,7 @@ class DesktopUxLayoutTest(private val width: Int, private val height: Int) {
             onNodeWithText("Continua a modificare").performClick()
             onNode(hasSetTextAction() and hasText("SW-01")).assertExists()
             onNodeWithText("Aggiungi").performClick()
-            runOnIdle { assertEquals("SW-01", state.project!!.businessUnits.single().devices.single().technicalName) }
+            runOnIdle { assertEquals("SW-01", state.project!!.sites.single().devices.single().technicalName) }
             onNodeWithText("Porte").performClick()
             onNodeWithText("Configura porte · SW-01").assertIsDisplayed()
             onNodeWithText("Salva modifiche").assertIsDisplayed()

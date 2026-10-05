@@ -8,7 +8,7 @@ import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.data.local.AppDatabase
 import com.onlyfield.assetmanager.data.local.AreaEntity
-import com.onlyfield.assetmanager.data.local.BusinessUnitEntity
+import com.onlyfield.assetmanager.data.local.SiteEntity
 import com.onlyfield.assetmanager.data.local.CredentialEntity
 import com.onlyfield.assetmanager.exchange.AttachmentFiles
 import com.onlyfield.assetmanager.data.local.DeviceEntity
@@ -20,7 +20,6 @@ import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.local.RackEntity
-import com.onlyfield.assetmanager.data.local.SiteEntity
 import com.onlyfield.assetmanager.exchange.DeviceModelSerializer
 import com.onlyfield.assetmanager.exchange.MarkdownExportManager
 import com.onlyfield.assetmanager.exchange.PackageImportResult
@@ -44,12 +43,11 @@ internal class ProjectStore(private val db: AppDatabase) {
 
     suspend fun load(projectId: String): Project? {
         val projEntity = projectDao.getProjectById(projectId) ?: return null
-        val buEntities = inventoryDao.getBusinessUnitsByProjectId(projectId)
-        val buIds = buEntities.map { it.id }
+        val siteEntities = inventoryDao.getSitesByProjectId(projectId)
+        val siteIds = siteEntities.map { it.id }
 
-        val siteEntities = if (buIds.isNotEmpty()) inventoryDao.getSitesByBuIds(buIds) else emptyList()
-        val areaEntities = if (buIds.isNotEmpty()) inventoryDao.getAreasByBuIds(buIds) else emptyList()
-        val deviceEntities = if (buIds.isNotEmpty()) inventoryDao.getDevicesByBuIds(buIds) else emptyList()
+        val areaEntities = if (siteIds.isNotEmpty()) inventoryDao.getAreasBySiteIds(siteIds) else emptyList()
+        val deviceEntities = if (siteIds.isNotEmpty()) inventoryDao.getDevicesBySiteIds(siteIds) else emptyList()
         val devIds = deviceEntities.map { it.id }
         val portEntities = if (devIds.isNotEmpty()) inventoryDao.getPortsByDeviceIds(devIds) else emptyList()
         val credentialEntities = inventoryDao.getCredentialsByProjectId(projectId)
@@ -75,7 +73,6 @@ internal class ProjectStore(private val db: AppDatabase) {
 
         return toProject(
             entity = projEntity,
-            buEntities = buEntities,
             siteEntities = siteEntities,
             areaEntities = areaEntities,
             deviceEntities = deviceEntities,
@@ -115,7 +112,7 @@ internal class ProjectStore(private val db: AppDatabase) {
             if (existing == null) projectDao.insertProject(updatedProjEntity) else projectDao.updateProject(updatedProjEntity)
 
             // Delete existing inventory tree & all related entities
-            inventoryDao.deleteBusinessUnitsByProjectId(project.id)
+            inventoryDao.deleteSitesByProjectId(project.id)
             inventoryDao.deleteCredentialsByProjectId(project.id)
             inventoryDao.deleteRacksByProjectId(project.id)
             inventoryDao.deleteDeviceModelsByProjectId(project.id)
@@ -137,7 +134,6 @@ internal class ProjectStore(private val db: AppDatabase) {
             inventoryDao.deletePoeMappingsByProjectId(project.id)
             inventoryDao.deleteDocumentBadgesByProjectId(project.id)
 
-            val buEntities = mutableListOf<BusinessUnitEntity>()
             val siteEntities = mutableListOf<SiteEntity>()
             val areaEntities = mutableListOf<AreaEntity>()
             val deviceEntities = mutableListOf<DeviceEntity>()
@@ -163,22 +159,15 @@ internal class ProjectStore(private val db: AppDatabase) {
             val poeMappingEntities = mutableListOf<com.onlyfield.assetmanager.data.local.PoeMappingEntity>()
             val documentBadgeEntities = mutableListOf<com.onlyfield.assetmanager.data.local.DocumentBadgeEntity>()
 
-            for (bu in project.businessUnits) {
-                buEntities.add(toBusinessUnitEntity(project.id, bu))
+            for (site in project.sites) {
+                siteEntities.add(toSiteEntity(project.id, site))
 
-                for (site in bu.sites) {
-                    siteEntities.add(toSiteEntity(bu.id, site))
-                    for (area in site.areas) {
-                        areaEntities.add(toAreaEntity(bu.id, site.id, area))
-                    }
+                for (area in site.areas) {
+                    areaEntities.add(toAreaEntity(site.id, area))
                 }
 
-                for (area in bu.areas) {
-                    areaEntities.add(toAreaEntity(bu.id, null, area))
-                }
-
-                for (device in bu.devices) {
-                    deviceEntities.add(toDeviceEntity(bu.id, device))
+                for (device in site.devices) {
+                    deviceEntities.add(toDeviceEntity(site.id, device))
                     for (port in device.ports) {
                         portEntities.add(toPortEntity(port))
                     }
@@ -266,7 +255,6 @@ internal class ProjectStore(private val db: AppDatabase) {
                 documentBadgeEntities.add(toDocumentBadgeEntity(project.id, badge))
             }
 
-            if (buEntities.isNotEmpty()) inventoryDao.insertBusinessUnits(buEntities)
             if (siteEntities.isNotEmpty()) inventoryDao.insertSites(siteEntities)
             if (areaEntities.isNotEmpty()) inventoryDao.insertAreas(areaEntities)
             if (deviceEntities.isNotEmpty()) inventoryDao.insertDevices(deviceEntities)

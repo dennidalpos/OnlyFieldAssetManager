@@ -16,7 +16,7 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 - I modelli sono separati dalle istanze. Le modifiche dei modelli vengono applicate solo con un'azione esplicita.
 - La mappa usa coordinate normalizzate, contenitori annidati e percorsi cavo; immagini e PDF sono allegati offline.
 - I documenti non esportano credenziali. Il testo utente resta invariato dalla localizzazione.
-- Configuratori: dati essenziali prima, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la business unit richiede una scelta esplicita.
+- Configuratori: dati essenziali prima, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la sede richiede una scelta esplicita.
 - Navigazione condivisa per gruppi Lavoro, Dati tecnici, Supporto e Progetto. Gli elenchi nominali sono ordinati solo nella presentazione; porte, VLAN e unità rack mantengono il loro ordine tecnico.
 - Titolo operativo, corpo scorrevole e azioni persistenti distinguono gli editor. L'espansione delle sezioni non modifica i dati né il contratto di scambio.
 - Mappa: `MapScene` unica per piano e contenitori; ogni contenitore è un solo oggetto, navigabile fino all'ultimo livello. Una linea per coppia di oggetti, con elenco completo dei cavi al tocco. Pannello dettagli non modale, in basso o laterale da 840 dp. Rack, mensola, armadio e cassetta sono contenitori predefiniti; i tipi predefiniti non vengono più duplicati.
@@ -40,7 +40,7 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 **Decisioni.**
 
 - **Nessun modulo viene rimosso.** Videosorveglianza, credenziali, configurazioni e badge restano nel modello. Nella UI diventano sintetici: chiusi o nascosti se vuoti, espandibili in futuro.
-- **Gerarchia Sede → Piano.** La BU diventa un raggruppamento facoltativo delle sedi. Un apparato appartiene a un piano; la sede si ricava dal piano. È una modifica incompatibile ammessa dal greenfield v1; il demo va rigenerato.
+- **Gerarchia Sede → Piano** (applicata). La vecchia BU è diventata la sede (`Site`), con gruppo e indirizzo facoltativi; il livello intermedio `Site` e `Device.siteId` sono stati rimossi. L'apparato appartiene a una sede; il piano resta facoltativo e la sua assenza produce un avviso documentale.
 - **Stato operativo dell'apparato** (in servizio, spento, dismesso, da verificare). È distinto da `Observation`, che resta lo stato del rilievo.
 - **Mappa visiva su tre viste:**
   - la planimetria esistente;

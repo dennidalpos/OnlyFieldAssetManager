@@ -7,8 +7,8 @@ import org.junit.Test
 
 class PresetAndPortLogicTest {
     private val area = Area(name = "Terra")
-    private val bu = BusinessUnit(name = "BU", areas = listOf(area))
-    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu))
+    private val site = Site(name = "BU", areas = listOf(area))
+    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(site))
 
     @Test fun everyPresetCombinationProducesValidGroups() {
         DevicePresets.all.forEach { preset ->
@@ -32,9 +32,9 @@ class PresetAndPortLogicTest {
 
     @Test fun presetIsAppliedToTheDraftAndSavedAsPorts() {
         val type = ObjectCatalog.builtins.first { it.id == "patch-panel" }
-        val draft = MapObjectDraft(type = type, buId = bu.id, areaId = area.id).let { it.copy(device = it.device.copy(technicalName = "PP-01")) }
+        val draft = MapObjectDraft(type = type, siteId = site.id, areaId = area.id).let { it.copy(device = it.device.copy(technicalName = "PP-01")) }
         val saved = DevicePresets.apply(draft, DevicePresets.forType("patch-panel")!!.result(mapOf("ports" to "24"))).apply(project)
-        val device = saved.businessUnits.single().devices.single()
+        val device = saved.sites.single().devices.single()
         assertEquals(48, device.ports.size)
         assertEquals(24, saved.panelMappings.size)
         assertTrue(device.hardware.passive)
@@ -51,7 +51,7 @@ class PresetAndPortLogicTest {
 
     @Test fun bulkVlanAndPoeUseExistingEntities() {
         val device = Device(technicalName = "SW", areaId = area.id).let { d -> d.copy(ports = HardwareConfigurator.ports(listOf(PortGroups.create(emptyList(), PortKind.RJ45, 4)), d.id)) }
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(device))), subnets = emptyList())
+        val p = project.copy(sites = listOf(site.copy(devices = listOf(device))), subnets = emptyList())
         val ids = device.ports.take(2).map { it.id }
         val vlan = PortLogic.setVlan(p, ids, PortVlanMode.ACCESS, 20)
         assertEquals(listOf(20), vlan.vlans.map { it.vlanId })

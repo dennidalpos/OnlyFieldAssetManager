@@ -29,7 +29,7 @@ fun LogicalLinkDialog(project: Project, deviceId: String, existing: WanVpnConnec
         form = if (local) form.copy(remoteDeviceId = id, remoteSite = site) else form.copy(localDeviceId = id, localSite = site)
     }
     val devices = remember(project, deviceId) {
-        project.businessUnits.flatMap { it.devices }.filter { it.id != deviceId }.sortedBy { it.technicalName.lowercase() }.associate { it.id to it.technicalName }
+        project.sites.flatMap { it.devices }.filter { it.id != deviceId }.sortedBy { it.technicalName.lowercase() }.associate { it.id to it.technicalName }
     }
     val errors = form.errors(i18n)
     val nameError = errors["name"]?.takeIf { tried }

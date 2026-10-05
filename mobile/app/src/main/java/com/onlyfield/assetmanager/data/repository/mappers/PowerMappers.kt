@@ -1,7 +1,7 @@
 package com.onlyfield.assetmanager.data.repository.mappers
 
 import com.onlyfield.assetmanager.core.model.Area
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.CredentialType
 import com.onlyfield.assetmanager.core.model.Device
@@ -17,16 +17,14 @@ import com.onlyfield.assetmanager.core.model.PortTemplate
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.core.model.RackSide
-import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.data.local.AreaEntity
-import com.onlyfield.assetmanager.data.local.BusinessUnitEntity
+import com.onlyfield.assetmanager.data.local.SiteEntity
 import com.onlyfield.assetmanager.data.local.CredentialEntity
 import com.onlyfield.assetmanager.data.local.DeviceEntity
 import com.onlyfield.assetmanager.data.local.DeviceModelEntity
 import com.onlyfield.assetmanager.data.local.PortEntity
 import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.data.local.RackEntity
-import com.onlyfield.assetmanager.data.local.SiteEntity
 import kotlinx.serialization.json.Json
 
 // Room <-> domain mapping: power feeds, PoE, document badges, trash items.

@@ -9,8 +9,8 @@ import org.junit.Test
 class ObjectMapTest {
     private val area = Area(name = "Terra")
     private val other = Area(name = "Primo")
-    private val bu = BusinessUnit(name = "BU", areas = listOf(area, other))
-    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu))
+    private val site = Site(name = "BU", areas = listOf(area, other))
+    private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(site))
 
     @Test fun fittedCoordinatesRoundTripThroughMarginsZoomAndPan() {
         val view = MapViewport(800f, 600f, 1600f, 400f, 2f, 40f, -30f)
@@ -28,7 +28,7 @@ class ObjectMapTest {
         assertEquals(800f, small.left + small.pageWidth)
     }
     @Test fun newObjectsAppearAndStayOnTheirOwnFloor() {
-        val d = MapObjectDraft(type = ObjectCatalog.builtins.first(), buId = bu.id, areaId = area.id)
+        val d = MapObjectDraft(type = ObjectCatalog.builtins.first(), siteId = site.id, areaId = area.id)
         val saved = d.copy(device = d.device.copy(technicalName = "SW-01")).apply(project)
         assertEquals(listOf("SW-01"), ObjectMap.nodes(saved, area.id).map { it.name })
         assertTrue(ObjectMap.nodes(saved, other.id).isEmpty())
@@ -37,29 +37,29 @@ class ObjectMapTest {
         assertEquals(1, placed.floorplanPlacements.size)
     }
     @Test fun objectAddedWithoutPointStartsAwayFromTheEdges() {
-        val d = MapObjectDraft(type = ObjectCatalog.builtins.first(), buId = bu.id, areaId = area.id)
+        val d = MapObjectDraft(type = ObjectCatalog.builtins.first(), siteId = site.id, areaId = area.id)
         val saved = d.copy(device = d.device.copy(technicalName = "RK-01")).apply(project)
         val point = ObjectMap.nodes(saved, area.id).single().point
         assertTrue(point.toString(), point.x in .3f..(.7f) && point.y in .3f..(.7f))
     }
     @Test fun legacyLayoutHasNoRepeatedPositionsForOneHundredDevices() {
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = (1..100).map { Device(technicalName = "D$it", areaId = area.id) })))
+        val p = project.copy(sites = listOf(site.copy(devices = (1..100).map { Device(technicalName = "D$it", areaId = area.id) })))
         val nodes = ObjectMap.nodes(p, area.id)
         assertEquals(100, nodes.map { it.point }.distinct().size)
         assertEquals(nodes, ObjectMap.nodes(p, area.id))
     }
     @Test fun editsPreservePortsAndFieldsNotShownByTheMap() {
-        val device = Device(technicalName = "SW", areaId = area.id, siteId = "retained", ports = listOf(Port(deviceId = "device", name = "P1")))
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(device))))
-        val draft = MapObjectDraft.device(p, bu.id, area.id, device.id)
-        val saved = draft.copy(device = draft.device.copy(alias = "Core")).apply(p).businessUnits.single().devices.single()
-        assertEquals(device.ports, saved.ports); assertEquals(device.siteId, saved.siteId)
+        val device = Device(technicalName = "SW", areaId = area.id, serialNumber = "retained", ports = listOf(Port(deviceId = "device", name = "P1")))
+        val p = project.copy(sites = listOf(site.copy(devices = listOf(device))))
+        val draft = MapObjectDraft.device(p, site.id, area.id, device.id)
+        val saved = draft.copy(device = draft.device.copy(alias = "Core")).apply(p).sites.single().devices.single()
+        assertEquals(device.ports, saved.ports); assertEquals(device.serialNumber, saved.serialNumber)
         assertEquals("Core", saved.alias)
     }
     @Test fun cableGeometryFollowsDevicesAndSurvivesDisconnection() {
         val device = Device(technicalName = "SW", areaId = area.id)
         val cable = Cable(codeOrLabel = "C1", deviceAId = device.id)
-        var p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(device))), cables = listOf(cable))
+        var p = project.copy(sites = listOf(site.copy(devices = listOf(device))), cables = listOf(cable))
         p = ObjectMap.place(p, area.id, PlacementTargetType.DEVICE, device.id, MapPoint(.7f, .2f))
         assertEquals(MapPoint(.7f, .2f), ObjectMap.routePoints(p, ObjectMap.routes(p, area.id).single(), ObjectMap.nodes(p, area.id)).first())
         val deleted = ProjectEdits.deleteDeviceToTrash(p, device.id).first
@@ -71,7 +71,7 @@ class ObjectMapTest {
     @Test fun crossFloorCableAppearsOnBothRelevantMaps() {
         val a = Device(technicalName = "A", areaId = area.id)
         val b = Device(technicalName = "B", areaId = other.id)
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(a, b))), cables = listOf(Cable(deviceAId = a.id, deviceBId = b.id)))
+        val p = project.copy(sites = listOf(site.copy(devices = listOf(a, b))), cables = listOf(Cable(deviceAId = a.id, deviceBId = b.id)))
         assertEquals(1, ObjectMap.routes(p, area.id).size); assertEquals(1, ObjectMap.routes(p, other.id).size)
         val issues = com.onlyfield.assetmanager.core.validation.ModelValidator.validateProject(p).issues
         assertFalse(issues.any { it.code == "DETACHED_CABLE_ENDPOINT" })
@@ -80,10 +80,10 @@ class ObjectMapTest {
         val rack = Rack(name = "R1", areaId = area.id)
         val device = Device(technicalName = "SW", rackId = rack.id)
         val cable = Cable(deviceAId = device.id)
-        val p = ObjectMap.place(project.copy(businessUnits = listOf(bu.copy(devices = listOf(device))), racks = listOf(rack), cables = listOf(cable)), area.id, PlacementTargetType.RACK, rack.id, MapPoint(.5f, .5f))
+        val p = ObjectMap.place(project.copy(sites = listOf(site.copy(devices = listOf(device))), racks = listOf(rack), cables = listOf(cable)), area.id, PlacementTargetType.RACK, rack.id, MapPoint(.5f, .5f))
         assertEquals(1, ObjectMap.routes(p, area.id).size)
         val deleted = ProjectEdits.deleteRackToTrash(p, rack.id).first
-        assertEquals(area.id, deleted.businessUnits.single().devices.single().areaId)
+        assertEquals(area.id, deleted.sites.single().devices.single().areaId)
         assertEquals(listOf(device.id), ObjectMap.nodes(deleted, area.id).map { it.id })
         assertTrue(deleted.floorplanPlacements.isEmpty())
     }
@@ -93,7 +93,7 @@ class ObjectMapTest {
         val port = Port(deviceId = id, name = "P1")
         val device = Device(id = id, technicalName = "SW", areaId = area.id, ports = listOf(port))
         val cable = Cable(portAId = port.id)
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(device))), cables = listOf(cable))
+        val p = project.copy(sites = listOf(site.copy(devices = listOf(device))), cables = listOf(cable))
         val saved = ProjectEdits.deletePortFromDevice(p, id, port.id)
         assertNull(saved.cables.single().portAId)
         assertEquals(id, saved.cables.single().deviceAId)

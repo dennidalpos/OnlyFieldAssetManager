@@ -14,7 +14,7 @@ class DesktopAppStateTest {
     private fun newState() = DesktopAppState(DesktopStorageManager(Files.createTempDirectory("ofam_state").toFile()))
 
     private fun site(area: String, password: String = "") = NewSiteWizard(
-        draft = NewSiteDraft(projectName = "Prova", businessUnits = listOf(com.onlyfield.assetmanager.core.model.BusinessUnit(name = "Sede", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = area)))), password = password, passwordConfirm = password)
+        draft = NewSiteDraft(projectName = "Prova", sites = listOf(com.onlyfield.assetmanager.core.model.Site(name = "Sede", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = area)))), password = password, passwordConfirm = password)
     )
 
     @Test
@@ -23,7 +23,7 @@ class DesktopAppStateTest {
         state.createProject(site("CED", password = "segreta"))
         assertTrue(state.hasPassword)
         assertTrue(state.project!!.isPasswordProtected)
-        assertEquals("CED", state.project!!.businessUnits.single().areas.single().name)
+        assertEquals("CED", state.project!!.sites.single().areas.single().name)
     }
 
     @Test
@@ -51,7 +51,7 @@ class DesktopAppStateTest {
         state.createProject(site("CED"))
         val p = state.project!!
         val dev = Device(technicalName = "SW-01")
-        state.update(ProjectEdits.addDevice(p, p.businessUnits.first().id, dev), "aggiunto")
+        state.update(ProjectEdits.addDevice(p, p.sites.first().id, dev), "aggiunto")
         val (updated, item) = ProjectEdits.deleteDeviceToTrash(state.project!!, dev.id)
         state.addToTrash(item!!)
         state.update(updated, "eliminato")
@@ -67,9 +67,9 @@ class DesktopAppStateTest {
         val state = newState()
         state.createProject(site("CED"))
         val p = state.project!!
-        val buId = p.businessUnits.first().id
+        val siteId = p.sites.first().id
         val sw = Device(technicalName = "SW-01", ipAddress = "10.0.0.1")
-        state.update(ProjectEdits.addDevice(p, buId, sw), "aggiunto")
+        state.update(ProjectEdits.addDevice(p, siteId, sw), "aggiunto")
         val exported = state.project!!
         state.storage.saveSyncBase(exported, null) // as after an export
 
@@ -83,7 +83,7 @@ class DesktopAppStateTest {
         state.chooseMergeSide(com.onlyfield.assetmanager.exchange.MergeSide.INCOMING)
         val merged = state.project!!
         assertEquals(listOf("R-Telefono"), merged.racks.map { it.name })
-        assertEquals("SW-PIANO1", merged.businessUnits.first().devices.single().technicalName)
+        assertEquals("SW-PIANO1", merged.sites.first().devices.single().technicalName)
         assertTrue(state.canUndo)
     }
 }

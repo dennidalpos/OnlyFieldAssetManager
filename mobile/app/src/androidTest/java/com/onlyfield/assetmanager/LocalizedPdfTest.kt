@@ -26,7 +26,7 @@ class LocalizedPdfTest {
         val area = Area(name = "Planta del usuario")
         val rack = Rack(name = "Rack del usuario", heightU = 42, areaId = area.id)
         val project = Project(name = "Proyecto España", createdEpochMs = 0, updatedEpochMs = 0,
-            racks = listOf(rack), businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(
+            racks = listOf(rack), sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(
                 Device(technicalName = "SW-CODICE-001", rackId = rack.id, areaId = area.id, positionU = 1)
             ))), credentials = listOf(Credential(username = "SECRET_USER", secret = "SECRET_VALUE")))
         val database = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()

@@ -18,8 +18,8 @@ class DesktopToolchainTest {
             name = "Test Project Windows Desktop",
             createdEpochMs = now,
             updatedEpochMs = now,
-            businessUnits = listOf(
-                BusinessUnit(
+            sites = listOf(
+                Site(
                     id = UUID.randomUUID().toString(),
                     name = "BU Windows",
                     areas = listOf(
@@ -52,7 +52,7 @@ class DesktopToolchainTest {
         assertNotNull("Imported project should not be null", restored)
         assertEquals(project.id, restored?.id)
         assertEquals(project.name, restored?.name)
-        assertEquals(1, restored?.businessUnits?.size)
+        assertEquals(1, restored?.sites?.size)
     }
 
     @Test

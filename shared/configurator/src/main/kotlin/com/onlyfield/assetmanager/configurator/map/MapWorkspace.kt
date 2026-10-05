@@ -40,7 +40,7 @@ class MapActions(
     val edit: (MapObjectDraft, ConfiguratorPage) -> Unit,
     /** New object inside [parent] (or on the floor at [point]). */
     val add: (parent: ObjectRef?, point: MapPoint?) -> Unit,
-    /** Shows [focus] on floor [areaId] (any business unit); null hides "Go to". */
+    /** Shows [focus] on floor [areaId] (any site); null hides "Go to". */
     val goTo: ((areaId: String, focus: ObjectRef) -> Unit)? = null,
     /** Moves a device or rack to the trash (host storage); null hides "Move to trash". */
     val trash: ((ObjectRef) -> Unit)? = null,
@@ -48,12 +48,12 @@ class MapActions(
     val photo: ((AttachmentTargetType, String) -> Unit)? = null,
 )
 
-/** Business unit that owns the floor, used for new or legacy objects without one. */
-fun floorBusinessUnit(project: Project, areaId: String): String = ObjectMap.floorBusinessUnit(project, areaId)
+/** site that owns the floor, used for new or legacy objects without one. */
+fun floorSite(project: Project, areaId: String): String = ObjectMap.floorSite(project, areaId)
 
 fun editDraft(project: Project, ref: ObjectRef, areaId: String, i18n: Messages): MapObjectDraft {
-    val bu = ProjectIndex(project).businessUnitOf(ref.id)?.id ?: floorBusinessUnit(project, areaId)
-    return if (ref.type == PlacementTargetType.RACK) MapObjectDraft.rack(project, bu, areaId, ref.id) else MapObjectDraft.device(project, bu, areaId, ref.id, i18n)
+    val site = ProjectIndex(project).siteOf(ref.id)?.id ?: floorSite(project, areaId)
+    return if (ref.type == PlacementTargetType.RACK) MapObjectDraft.rack(project, site, areaId, ref.id) else MapObjectDraft.device(project, site, areaId, ref.id, i18n)
 }
 
 /**
@@ -158,15 +158,15 @@ fun MapWorkspace(
 
 /** "SW-03": glyph code plus the first free two-digit number among existing names. */
 fun suggestName(project: Project, type: ObjectType): String {
-    val used = (project.businessUnits.flatMap { it.devices }.map { it.technicalName } + project.racks.map { it.name }).toSet()
+    val used = (project.sites.flatMap { it.devices }.map { it.technicalName } + project.racks.map { it.name }).toSet()
     val code = ObjectGlyph.of(type).code
     return generateSequence(1) { it + 1 }.map { "$code-${it.toString().padStart(2, '0')}" }.first { it !in used }
 }
 
 /** Draft for an object added from the map: inside [parent], or on the floor at [point]. */
 fun newObjectDraft(project: Project, type: ObjectType, preset: com.onlyfield.assetmanager.core.forms.PresetResult?, areaId: String, parent: ObjectRef?, point: MapPoint?): MapObjectDraft {
-    val bu = floorBusinessUnit(project, areaId)
-    val base = if (parent != null) MapObjectDraft.newObject(project, type, bu, areaId, parent) else MapObjectDraft(type = type, buId = bu, areaId = areaId, mapPoint = point)
+    val site = floorSite(project, areaId)
+    val base = if (parent != null) MapObjectDraft.newObject(project, type, site, areaId, parent) else MapObjectDraft(type = type, siteId = site, areaId = areaId, mapPoint = point)
     val named = when (type.kind) {
         ObjectKind.DEVICE -> base.copy(device = base.device.copy(technicalName = suggestName(project, type)))
         ObjectKind.RACK -> base.copy(rack = base.rack.copy(name = suggestName(project, type)))

@@ -13,7 +13,7 @@ class ObjectHierarchyTest {
     private val sw = Device(technicalName = "SW", areaId = area.id, rackId = rack.id, positionU = 3, ports = listOf(Port(deviceId = "unused", name = "p1")))
     private val outside = Device(technicalName = "AP", areaId = area.id)
     private val initial = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(box, sw, outside))), racks = listOf(rack), objectTypes = listOf(boxType))
+        sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(box, sw, outside))), racks = listOf(rack), objectTypes = listOf(boxType))
     private val rackRef = ObjectRef(PlacementTargetType.RACK, rack.id)
     private val boxRef = ObjectRef(PlacementTargetType.DEVICE, box.id)
     private val swRef = ObjectRef(PlacementTargetType.DEVICE, sw.id)
@@ -22,13 +22,13 @@ class ObjectHierarchyTest {
         val p = ObjectHierarchy.normalize(initial)
         assertEquals(2, p.objectContainments.size)
         assertEquals(setOf(rack.id, outside.id), ObjectMap.nodes(p, area.id).map { it.id }.toSet())
-        assertEquals(3, p.businessUnits.single().devices.first { it.id == sw.id }.positionU)
+        assertEquals(3, p.sites.single().devices.first { it.id == sw.id }.positionU)
     }
 
     @Test fun nestedParentPreservesMountingAndMovingRackMovesTheWholeTree() {
         val p = ObjectHierarchy.assign(initial, swRef, boxRef)
         assertEquals(rackRef, ObjectHierarchy.root(p, swRef))
-        assertEquals(3, p.businessUnits.single().devices.first { it.id == sw.id }.positionU)
+        assertEquals(3, p.sites.single().devices.first { it.id == sw.id }.positionU)
         val other = Area(name = "Primo")
         val moved = p.copy(racks = listOf(rack.copy(areaId = other.id)))
         assertEquals(other.id, ObjectHierarchy.areaId(moved, swRef))
@@ -42,10 +42,10 @@ class ObjectHierarchyTest {
     }
 
     @Test fun detachRevealsTheDeviceWithoutDeletingCablesOrPorts() {
-        val legacy = initial.copy(businessUnits = initial.businessUnits.map { bu -> bu.copy(devices = bu.devices.map { if (it.id == sw.id) it.copy(areaId = null) else it }) })
+        val legacy = initial.copy(sites = initial.sites.map { site -> site.copy(devices = site.devices.map { if (it.id == sw.id) it.copy(areaId = null) else it }) })
         val p = ObjectHierarchy.assign(legacy, swRef, null)
         assertTrue(ObjectMap.nodes(p, area.id).any { it.id == sw.id })
-        val d = p.businessUnits.single().devices.first { it.id == sw.id }
+        val d = p.sites.single().devices.first { it.id == sw.id }
         assertNull(d.rackId)
         assertEquals(sw.ports, d.ports)
     }
@@ -56,7 +56,7 @@ class ObjectHierarchyTest {
         assertEquals(rackRef, ObjectHierarchy.parent(deleted, swRef))
         val restored = ProjectEdits.restoreFromTrash(deleted, trash!!)
         assertEquals(boxRef, ObjectHierarchy.parent(restored, swRef))
-        assertEquals(10, restored.businessUnits.single().devices.first { it.id == box.id }.positionU)
+        assertEquals(10, restored.sites.single().devices.first { it.id == box.id }.positionU)
         val (withoutRack, rackTrash) = ProjectEdits.deleteRackToTrash(p, rack.id)
         assertNull(ObjectHierarchy.parent(withoutRack, boxRef))
         assertEquals(boxRef, ObjectHierarchy.parent(withoutRack, swRef))

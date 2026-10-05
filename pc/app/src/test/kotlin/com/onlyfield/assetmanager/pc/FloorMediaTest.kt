@@ -41,9 +41,9 @@ class FloorMediaTest {
         try {
             val first = Area(name = "Terra")
             val second = Area(name = "Primo")
-            val bu = BusinessUnit(name = "BU", areas = listOf(first, second))
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", businessUnits = listOf(bu))))
-            val draft = MapObjectDraft(type = ObjectCatalog.builtins.first(), buId = bu.id, areaId = first.id)
+            val site = Site(name = "BU", areas = listOf(first, second))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(site))))
+            val draft = MapObjectDraft(type = ObjectCatalog.builtins.first(), siteId = site.id, areaId = first.id)
             assertTrue(state.saveMapObject(draft.copy(device = draft.device.copy(technicalName = "SW")), emptyList(), emptySet()))
             val positions = state.project!!.floorplanPlacements
             val pdf = File(dir, "plan.pdf")
@@ -53,7 +53,7 @@ class FloorMediaTest {
             state.update(ProjectEdits.setAreaFloorplan(ProjectEdits.setAreaFloorplan(state.project!!, first.id, attachment.id, 0, 2), second.id, attachment.id, 1, 2), "Pagine")
             pdf.delete()
             state.closeProject(); state.openStored(state.storedProjects.first().file)
-            val floors = state.project!!.businessUnits.single().areas
+            val floors = state.project!!.sites.single().areas
             assertEquals(listOf(0, 1), floors.map { it.floorplanPageIndex })
             assertEquals(attachment.id, floors[1].floorplanAttachmentId)
             assertEquals(2, PlanMedia.pageCount(state.attachmentFile(attachment)!!))
@@ -68,14 +68,14 @@ class FloorMediaTest {
         val state = DesktopAppState(DesktopStorageManager(File(dir, "data")))
         try {
             val area = Area(name = "Terra")
-            val bu = BusinessUnit(name = "BU", areas = listOf(area))
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", businessUnits = listOf(bu))))
+            val site = Site(name = "BU", areas = listOf(area))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(site))))
             val photo = File(dir, "cable.png")
             ImageIO.write(BufferedImage(80, 60, BufferedImage.TYPE_INT_RGB), "png", photo)
-            val draft = MapObjectDraft(type = ObjectCatalog.builtins.first { it.id == "coax-cable" }, buId = bu.id, areaId = area.id)
+            val draft = MapObjectDraft(type = ObjectCatalog.builtins.first { it.id == "coax-cable" }, siteId = site.id, areaId = area.id)
             assertTrue(state.saveMapObject(draft, listOf(photo), emptySet()))
             val saved = state.project!!
-            val edit = MapObjectDraft.cable(saved, bu.id, area.id, draft.id)
+            val edit = MapObjectDraft.cable(saved, site.id, area.id, draft.id)
             assertEquals("coax-cable", edit.type.id)
             assertTrue(state.saveMapObject(edit.copy(cable = edit.cable.copy(notes = "Connessione TV")), emptyList(), emptySet()))
             assertEquals(saved.attachments, state.project!!.attachments)
@@ -93,12 +93,12 @@ class FloorMediaTest {
         val state = DesktopAppState(DesktopStorageManager(File(dir, "data")))
         try {
             val area = Area(name = "Terra")
-            val bu = BusinessUnit(name = "BU", areas = listOf(area))
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", businessUnits = listOf(bu))))
-            assertNull(state.selectedBuId); assertNull(state.selectedAreaId)
+            val site = Site(name = "BU", areas = listOf(area))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(site))))
+            assertNull(state.selectedSiteId); assertNull(state.selectedAreaId)
             val type = ObjectType(name = "Gateway")
             state.update(state.project!!.copy(objectTypes = listOf(type)), "Tipologia")
-            val draft = MapObjectDraft(type = type, buId = bu.id, areaId = area.id)
+            val draft = MapObjectDraft(type = type, siteId = site.id, areaId = area.id)
             val filled = draft.copy(device = draft.device.copy(technicalName = "GW-01"))
             val photo = File(dir, "photo.png")
             ImageIO.write(BufferedImage(80, 60, BufferedImage.TYPE_INT_RGB), "png", photo)
@@ -111,11 +111,11 @@ class FloorMediaTest {
             val stored = state.storedProjects.first().file
             state.closeProject(); state.openStored(stored)
             assertEquals(beforeFailure, state.project)
-            assertEquals(type.id, state.project!!.businessUnits.single().devices.single().objectTypeId)
+            assertEquals(type.id, state.project!!.sites.single().devices.single().objectTypeId)
             val attachment = state.project!!.attachments.single()
             assertEquals(filled.id, attachment.targetId)
             assertTrue(state.attachmentFile(attachment)!!.isFile)
-            assertNull(state.selectedBuId); assertNull(state.selectedAreaId)
+            assertNull(state.selectedSiteId); assertNull(state.selectedAreaId)
         } finally { state.shutdown(); dir.deleteRecursively() }
     }
 }

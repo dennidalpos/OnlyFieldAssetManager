@@ -19,13 +19,9 @@ object XlsxExportManager {
         filterConfig: ExportFilterConfig,
         outputStream: OutputStream,
         i18n: Messages = Messages()) {
-        val filteredDevices = project.businessUnits
-            .filter { (filterConfig.selectedBusinessUnitId == null) || (it.id == filterConfig.selectedBusinessUnitId) }
-            .flatMap { bu -> bu.devices.filter { device ->
-                val siteId = device.siteId ?: bu.sites.find { site -> site.areas.any { it.id == device.areaId } }?.id
-                ((filterConfig.selectedSiteId == null) || (siteId == filterConfig.selectedSiteId)) &&
-                    ((filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId))
-            } }
+        val filteredDevices = project.sites
+            .filter { (filterConfig.selectedSiteId == null) || (it.id == filterConfig.selectedSiteId) }
+            .flatMap { site -> site.devices.filter { device -> (filterConfig.selectedAreaId == null) || (device.areaId == filterConfig.selectedAreaId) } }
             .filter { (filterConfig.selectedCategory == null) || (it.category == filterConfig.selectedCategory) }
             .distinctBy { it.id }
 
@@ -168,7 +164,7 @@ object XlsxExportManager {
   <sheetData>
 """)
 
-        val headers = listOf("BU", i18n.text("text.f163aa3f6310"), i18n.text("text.024dc204d7ba"), i18n.text("text.29caae5fe1e7"), i18n.text("text.d5680523de72"), i18n.text("text.b19e02e9502b"), i18n.text("text.ebb396f2d486"), i18n.text("text.8894b359b4e9"), i18n.text("text.54276aa0307f"), "Rack/Posizione", i18n.text("text.90c2d339a9d5"), i18n.text("text.2edfc95a3c46"), i18n.text("text.3b495129c5de"), i18n.text("text.d8da2c49df39")) + listOf(i18n.text("config.width"), i18n.text("config.depth"), i18n.text("config.poeBudget"), i18n.text("config.features"))
+        val headers = listOf(i18n.text("text.f163aa3f6310"), i18n.text("site.group"), i18n.text("text.024dc204d7ba"), i18n.text("text.29caae5fe1e7"), i18n.text("text.d5680523de72"), i18n.text("text.b19e02e9502b"), i18n.text("text.ebb396f2d486"), i18n.text("text.8894b359b4e9"), i18n.text("text.54276aa0307f"), "Rack/Posizione", i18n.text("text.90c2d339a9d5"), i18n.text("text.2edfc95a3c46"), i18n.text("text.3b495129c5de"), i18n.text("text.d8da2c49df39")) + listOf(i18n.text("config.width"), i18n.text("config.depth"), i18n.text("config.poeBudget"), i18n.text("config.features"))
         sb.append("<row r=\"1\">")
         headers.forEachIndexed { idx, h ->
             val colLetter = ('A' + idx).toString()
@@ -178,16 +174,15 @@ object XlsxExportManager {
 
         var rowIdx = 2
         for (dev in devices) {
-            val buName = project.businessUnits.find { bu -> bu.devices.any { it.id == dev.id } }?.name ?: "-"
-            val siteName = project.businessUnits.flatMap { it.sites }.find { it.id == dev.siteId }?.name ?: "-"
-            val areaName = project.businessUnits.flatMap { bu -> bu.sites.flatMap { it.areas } + bu.areas }.find { it.id == dev.areaId }?.name ?: "-"
+            val site = project.sites.find { s -> s.devices.any { it.id == dev.id } }
+            val areaName = site?.areas?.find { it.id == dev.areaId }?.name ?: "-"
             val rackName = project.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
             val rackPos = if (dev.rackId != null) i18n.text("text.cf603098c1b7", rackName, dev.positionU ?: "-", dev.rackSide.toDisplayString(i18n)) else i18n.text("text.3f03be4817b0")
             val modelName = project.deviceModels.find { it.id == dev.deviceModelId }?.name ?: "-"
 
             sb.append("<row r=\"$rowIdx\">")
-            sb.append(cellStr("A", rowIdx, buName))
-            sb.append(cellStr("B", rowIdx, siteName))
+            sb.append(cellStr("A", rowIdx, site?.name ?: "-"))
+            sb.append(cellStr("B", rowIdx, site?.group ?: "-"))
             sb.append(cellStr("C", rowIdx, areaName))
             sb.append(cellStr("D", rowIdx, dev.technicalName))
             sb.append(cellStr("E", rowIdx, dev.physicalLabel ?: "-"))
@@ -227,8 +222,8 @@ object XlsxExportManager {
         }
         sb.append("</row>\n")
 
-        val allPorts = project.businessUnits.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
-        val allDevices = project.businessUnits.flatMap { it.devices }.associateBy { it.id }
+        val allPorts = project.sites.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
+        val allDevices = project.sites.flatMap { it.devices }.associateBy { it.id }
 
         var rowIdx = 2
         for (cable in project.cables) {
@@ -339,7 +334,7 @@ object XlsxExportManager {
         }
         sb.append("</row>\n")
 
-        val allDevices = project.businessUnits.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }
+        val allDevices = project.sites.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }
 
         var rowIdx = 2
         for (dev in allDevices) {
@@ -403,7 +398,7 @@ object XlsxExportManager {
             rowIdx++
         }
 
-        for (dev in project.businessUnits.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }) {
+        for (dev in project.sites.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }) {
             val obs = dev.observation
             if (obs != null) {
                 sb.append("<row r=\"$rowIdx\">")

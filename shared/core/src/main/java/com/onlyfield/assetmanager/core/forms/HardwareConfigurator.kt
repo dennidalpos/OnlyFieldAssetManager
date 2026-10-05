@@ -68,7 +68,7 @@ object HardwareConfigurator {
     }
 
     fun connect(project: Project, from: String, to: String?, medium: CableMedium, existingCableId: String? = null): Project {
-        val allPorts = project.businessUnits.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
+        val allPorts = project.sites.flatMap { it.devices }.flatMap { it.ports }.associateBy { it.id }
         require(from in allPorts && (to == null || to in allPorts)) { "Unknown port" }
         require(from != to) { "A cable cannot connect a port to itself" }
         val a = allPorts.getValue(from)
@@ -83,7 +83,7 @@ object HardwareConfigurator {
     }
 
     fun passage(project: Project, from: String, to: String?, mappingId: String? = null): Project {
-        val ports = project.businessUnits.flatMap { it.devices }.flatMap { it.ports }.map { it.id }.toSet()
+        val ports = project.sites.flatMap { it.devices }.flatMap { it.ports }.map { it.id }.toSet()
         require(from in ports && (to == null || to in ports) && from != to) { "Invalid passage endpoint" }
         val existing = project.panelMappings.find { it.id == mappingId }
         require(project.panelMappings.none { it.id != existing?.id && (it.portAId in listOfNotNull(from, to) || it.portBId in listOfNotNull(from, to)) }) { "Passage endpoint already assigned" }
@@ -97,7 +97,7 @@ object HardwareConfigurator {
 
     /** Free pass-throughs: port → its internal partner, both without cables, on passive devices. */
     fun freePassages(project: Project, graph: ConnectionGraph = ConnectionGraph(project)): Map<String, String> {
-        val passive = project.businessUnits.flatMap { it.devices }.filter { it.isPassive() }.flatMap { it.ports }.map { it.id }.toSet()
+        val passive = project.sites.flatMap { it.devices }.filter { it.isPassive() }.flatMap { it.ports }.map { it.id }.toSet()
         return project.panelMappings.filter { !it.isUnknownPassage && it.portAId in passive && it.portBId in passive }
             .filter { !graph.occupied(it.portAId) && !graph.occupied(it.portBId!!) }
             .flatMap { listOf(it.portAId to it.portBId!!, it.portBId to it.portAId) }.toMap()
@@ -145,7 +145,7 @@ object HardwareConfigurator {
 
     fun modelDraft(project: Project, model: DeviceModel): MapObjectDraft {
         val type = ObjectCatalog.type(project, model.objectTypeId) ?: ObjectCatalog.types(project).first { it.kind == model.kind && (model.kind != ObjectKind.DEVICE || it.category == model.category) }
-        val draft = MapObjectDraft(id = model.id, type = type, buId = project.businessUnits.firstOrNull()?.id.orEmpty(), areaId = "")
+        val draft = MapObjectDraft(id = model.id, type = type, siteId = project.sites.firstOrNull()?.id.orEmpty(), areaId = "")
         return applyModel(draft, model).let { d -> d.copy(device = d.device.copy(technicalName = model.name, category = model.category), rack = d.rack.copy(name = model.name), cable = d.cable.copy(codeOrLabel = model.name)) }
     }
 }
@@ -161,11 +161,11 @@ data class ConfigurationSession(val original: Project, val project: Project = or
             return latest.filterNot { id(it) in removed }.map { changed[id(it)] ?: it } + changed.values.filter { item -> latest.none { id(it) == id(item) } }
         }
         return current.copy(
-            businessUnits = merge(original.businessUnits, project.businessUnits, current.businessUnits, BusinessUnit::id).map { bu ->
-                val old = original.businessUnits.find { it.id == bu.id }
-                val edited = project.businessUnits.find { it.id == bu.id }
-                val latest = current.businessUnits.find { it.id == bu.id }
-                if (old != null && edited != null && latest != null) latest.copy(devices = merge(old.devices, edited.devices, latest.devices, Device::id)) else bu
+            sites = merge(original.sites, project.sites, current.sites, Site::id).map { site ->
+                val old = original.sites.find { it.id == site.id }
+                val edited = project.sites.find { it.id == site.id }
+                val latest = current.sites.find { it.id == site.id }
+                if (old != null && edited != null && latest != null) latest.copy(devices = merge(old.devices, edited.devices, latest.devices, Device::id)) else site
             },
             racks = merge(original.racks, project.racks, current.racks, Rack::id),
             cables = merge(original.cables, project.cables, current.cables, Cable::id),

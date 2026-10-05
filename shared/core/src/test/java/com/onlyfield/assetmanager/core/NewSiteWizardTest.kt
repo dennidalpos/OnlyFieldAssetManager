@@ -9,37 +9,37 @@ class NewSiteWizardTest {
         val start = NewSiteWizard()
         assertSame(start, start.next())
         assertSame(start, start.skip())
-        val bu = start.update { it.copy(projectName = "Ospedale") }.next()
-        assertEquals(setOf("businessUnits"), bu.errors().keys)
-        assertSame(bu, bu.next())
-        val floors = bu.addBusinessUnit("Padiglione A").next()
+        val site = start.update { it.copy(projectName = "Ospedale") }.next()
+        assertEquals(setOf("sites"), site.errors().keys)
+        assertSame(site, site.next())
+        val floors = site.addSite("Padiglione A").next()
         assertEquals(NewSiteStep.AREA, floors.step)
         assertSame(floors, floors.next())
     }
-    @Test fun multipleBusinessUnitsAndFloorsKeepTheirIds() {
-        val bus = NewSiteWizard().update { it.copy(projectName = " Ospedale ", customer = "ASL") }
-            .addBusinessUnit("Padiglione A").addBusinessUnit("Padiglione B")
-        val a = bus.draft.businessUnits.first().id
-        val b = bus.draft.businessUnits.last().id
-        val ready = bus.addArea(a, "Terra").addArea(a, "Primo").addArea(b, "CED")
+    @Test fun multipleSitesAndFloorsKeepTheirIds() {
+        val sites = NewSiteWizard().update { it.copy(projectName = " Ospedale ", customer = "ASL") }
+            .addSite("Padiglione A").addSite("Padiglione B")
+        val a = sites.draft.sites.first().id
+        val b = sites.draft.sites.last().id
+        val ready = sites.addArea(a, "Terra").addArea(a, "Primo").addArea(b, "CED")
         val p = ready.buildProject(42)
-        assertEquals(listOf(a, b), p.businessUnits.map { it.id })
-        assertEquals(3, p.businessUnits.sumOf { it.areas.size })
-        assertTrue(p.businessUnits.all { it.devices.isEmpty() })
+        assertEquals(listOf(a, b), p.sites.map { it.id })
+        assertEquals(3, p.sites.sumOf { it.areas.size })
+        assertTrue(p.sites.all { it.devices.isEmpty() })
         assertEquals("Ospedale", p.name)
         assertEquals(42L, p.updatedEpochMs)
     }
-    @Test fun emptyAdditionalBusinessUnitAndOptionalPassword() {
-        val bus = NewSiteWizard().update { it.copy(projectName = "Sito") }.addBusinessUnit("BU1").addBusinessUnit("BU vuota")
-        val w = bus.addArea(bus.draft.businessUnits.first().id, "CED").copy(step = NewSiteStep.PASSWORD)
+    @Test fun emptyAdditionalSiteAndOptionalPassword() {
+        val sites = NewSiteWizard().update { it.copy(projectName = "Sito") }.addSite("BU1").addSite("BU vuota")
+        val w = sites.addArea(sites.draft.sites.first().id, "CED").copy(step = NewSiteStep.PASSWORD)
         assertNull(w.password)
-        assertEquals(2, w.buildProject().businessUnits.size)
+        assertEquals(2, w.buildProject().sites.size)
         val mismatch = w.update { it.copy(password = "abc", passwordConfirm = "abd") }
         assertFalse(mismatch.canProceed)
         assertTrue(mismatch.skip().canProceed)
         assertNull(mismatch.skip().password)
     }
     @Test(expected = IllegalArgumentException::class) fun cannotBuildWithoutFloor() {
-        NewSiteWizard().update { it.copy(projectName = "Sito") }.addBusinessUnit("BU").buildProject()
+        NewSiteWizard().update { it.copy(projectName = "Sito") }.addSite("BU").buildProject()
     }
 }

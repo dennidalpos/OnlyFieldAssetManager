@@ -162,7 +162,7 @@ private fun DeviceStep(project: Project, device: Device, areaId: String?, sameFl
                        graph: ConnectionGraph, port: Port, i18n: Messages, onPick: (Device) -> Unit) {
     var query by remember { mutableStateOf("") }
     val candidates = remember(project, sameFloor) {
-        project.businessUnits.flatMap { it.devices }.filter { it.id != device.id && it.ports.any { p -> !graph.occupied(p.id) } }
+        project.sites.flatMap { it.devices }.filter { it.id != device.id && it.ports.any { p -> !graph.occupied(p.id) } }
             .map { it to ObjectMap.areaId(project, it) }
             .filter { (_, area) -> !sameFloor || area == areaId }
             .sortedWith(compareBy({ it.second != areaId }, { (d, _) -> d.ports.none { p -> !graph.occupied(p.id) && p.hardware.connector == port.hardware.connector } }, { it.first.technicalName }))
@@ -214,7 +214,7 @@ private fun withNewJunction(project: Project, cable: Cable, device: Device, area
     val near = project.floorplanPlacements.firstOrNull { it.areaId == areaId && (it.targetId == device.id || it.targetId == device.rackId) }
     val draft = newObjectDraft(project, type, preset, areaId, null, near?.let { MapPoint((it.xRatio + .06f).coerceAtMost(.95f), it.yRatio) } ?: MapPoint(.5f, .5f))
     val added = draft.apply(project, i18n)
-    val rear = added.businessUnits.flatMap { it.devices }.first { it.id == draft.id }.ports.first { it.hardware.side == PortSide.REAR }
+    val rear = added.sites.flatMap { it.devices }.first { it.id == draft.id }.ports.first { it.hardware.side == PortSide.REAR }
     return HardwareConfigurator.insertPassage(added, cable.id, rear.id)
 }
 

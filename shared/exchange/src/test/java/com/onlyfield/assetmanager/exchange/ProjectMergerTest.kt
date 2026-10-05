@@ -11,18 +11,18 @@ class ProjectMergerTest {
     private val sw2 = Device(id = "d2", technicalName = "SW-02")
     private val base = Project(
         id = "proj", name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(
-            BusinessUnit(
+        sites = listOf(
+            Site(
                 id = "bu", name = "Sede",
-                sites = listOf(Site(id = "s1", name = "Edificio A", areas = listOf(Area(id = "a1", name = "CED")))),
+                areas = listOf(Area(id = "a1", name = "CED")),
                 devices = listOf(sw1, sw2)
             )
         ),
         racks = listOf(Rack(id = "r1", name = "Rack 1"))
     )
 
-    private fun Project.device(id: String) = businessUnits.flatMap { it.devices }.find { it.id == id }
-    private fun Project.editDevice(d: Device) = copy(businessUnits = businessUnits.map { bu -> bu.copy(devices = bu.devices.map { if (it.id == d.id) d else it }) })
+    private fun Project.device(id: String) = sites.flatMap { it.devices }.find { it.id == id }
+    private fun Project.editDevice(d: Device) = copy(sites = sites.map { site -> site.copy(devices = site.devices.map { if (it.id == d.id) d else it }) })
 
     @Test
     fun changesInDifferentPartsMergeWithoutConflicts() {
@@ -36,7 +36,7 @@ class ProjectMergerTest {
         assertEquals("SW-02-NEW", merged.device("d2")!!.technicalName)
         assertEquals(listOf("v10"), merged.vlans.map { it.id })
         // Nested structure survives the round trip.
-        assertEquals("CED", merged.businessUnits.single().sites.single().areas.single().name)
+        assertEquals("CED", merged.sites.single().areas.single().name)
         assertEquals(listOf("p1"), merged.device("d1")!!.ports.map { it.id })
         assertEquals(99, merged.updatedEpochMs)
     }
@@ -59,7 +59,7 @@ class ProjectMergerTest {
     @Test
     fun deletionsFollowTheBase() {
         // Local deleted SW-02 (incoming untouched): stays deleted. Incoming deleted the rack that local renamed: conflict.
-        val local = base.copy(businessUnits = base.businessUnits.map { it.copy(devices = listOf(sw1)) }, racks = listOf(Rack(id = "r1", name = "Rack principale")))
+        val local = base.copy(sites = base.sites.map { it.copy(devices = listOf(sw1)) }, racks = listOf(Rack(id = "r1", name = "Rack principale")))
         val incoming = base.copy(racks = emptyList())
         val result = ProjectMerger.merge(base, local, incoming)
         assertNull(result.resolve(emptyMap()).device("d2"))
@@ -79,16 +79,16 @@ class ProjectMergerTest {
     }
 
     @Test
-    fun deviceMovedToADeletedBusinessUnitIsKept() {
-        val withBu2 = base.copy(businessUnits = base.businessUnits + BusinessUnit(id = "bu2", name = "Magazzino"))
+    fun deviceMovedToADeletedSiteIsKept() {
+        val withBu2 = base.copy(sites = base.sites + Site(id = "bu2", name = "Magazzino"))
         // Local moves SW-02 into bu2; incoming deletes bu2.
-        val local = withBu2.copy(businessUnits = listOf(
-            withBu2.businessUnits[0].copy(devices = listOf(sw1)),
-            withBu2.businessUnits[1].copy(devices = listOf(sw2))
+        val local = withBu2.copy(sites = listOf(
+            withBu2.sites[0].copy(devices = listOf(sw1)),
+            withBu2.sites[1].copy(devices = listOf(sw2))
         ))
-        val incoming = withBu2.copy(businessUnits = listOf(withBu2.businessUnits[0]))
-        val merged = ProjectMerger.merge(withBu2, local, incoming).resolve(mapOf(MergeKey("businessUnits", "bu2") to MergeSide.INCOMING))
+        val incoming = withBu2.copy(sites = listOf(withBu2.sites[0]))
+        val merged = ProjectMerger.merge(withBu2, local, incoming).resolve(mapOf(MergeKey("sites", "bu2") to MergeSide.INCOMING))
         assertEquals("SW-02", merged.device("d2")!!.technicalName)
-        assertEquals(listOf("bu"), merged.businessUnits.map { it.id })
+        assertEquals(listOf("bu"), merged.sites.map { it.id })
     }
 }

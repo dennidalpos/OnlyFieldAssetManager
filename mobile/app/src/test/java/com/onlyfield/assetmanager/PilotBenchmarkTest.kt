@@ -3,7 +3,7 @@ package com.onlyfield.assetmanager
 import com.onlyfield.assetmanager.core.model.Attachment
 import com.onlyfield.assetmanager.core.model.AttachmentClassification
 import com.onlyfield.assetmanager.core.model.AttachmentType
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Cable
 import com.onlyfield.assetmanager.core.model.CableMedium
 import com.onlyfield.assetmanager.core.model.Credential
@@ -52,7 +52,7 @@ class PilotBenchmarkTest {
             )
         }
 
-        val bu = BusinessUnit(
+        val site = Site(
             id = UUID.randomUUID().toString(),
             name = "Business Unit Pilota Milano",
             code = "BU-MIL-01",
@@ -95,7 +95,7 @@ class PilotBenchmarkTest {
             name = "Progetto Pilota Collaudo A13",
             createdEpochMs = System.currentTimeMillis(),
             updatedEpochMs = System.currentTimeMillis(),
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             racks = racks,
             vlans = vlans,
             credentials = credentials,
@@ -129,8 +129,8 @@ class PilotBenchmarkTest {
         assertTrue("Tempo importazione cifrata < 2000 ms", importDurationMs < 2000)
 
         val reloadedProject = importResult.pkg!!.project
-        assertEquals(1, reloadedProject.businessUnits.size)
-        assertEquals(100, reloadedProject.businessUnits[0].devices.size)
+        assertEquals(1, reloadedProject.sites.size)
+        assertEquals(100, reloadedProject.sites[0].devices.size)
         assertEquals(5, reloadedProject.racks.size)
         assertEquals(20, reloadedProject.vlans.size)
         assertEquals(50, reloadedProject.cables.size)

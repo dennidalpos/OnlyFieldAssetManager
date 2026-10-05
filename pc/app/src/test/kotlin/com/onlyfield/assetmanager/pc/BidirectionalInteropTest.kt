@@ -30,8 +30,8 @@ class BidirectionalInteropTest {
 
     private fun createFullDomainProject(): Pair<Project, Map<String, ByteArray>> {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
         val siteId = UUID.randomUUID().toString()
+        val floorId = UUID.randomUUID().toString()
         val areaId = UUID.randomUUID().toString()
         val devId1 = UUID.randomUUID().toString()
         val devId2 = UUID.randomUUID().toString()
@@ -49,7 +49,6 @@ class BidirectionalInteropTest {
             physicalLabel = "TARG-001",
             alias = "Switch Core Data Center",
             ipAddress = "10.0.1.10",
-            siteId = siteId,
             areaId = areaId,
             rackId = rackId,
             positionU = 10,
@@ -64,7 +63,6 @@ class BidirectionalInteropTest {
             physicalLabel = "TARG-002",
             alias = "Switch Access Piano 1",
             ipAddress = "10.0.1.20",
-            siteId = siteId,
             areaId = areaId,
             rackId = rackId,
             positionU = 12,
@@ -84,8 +82,7 @@ class BidirectionalInteropTest {
         )
 
         val area = Area(id = areaId, name = "Sala Server CED", floor = "Piano 1")
-        val site = Site(id = siteId, name = "Sede Centrale HQ", areas = listOf(area))
-        val bu = BusinessUnit(id = buId, name = "Network Infra BU", sites = listOf(site), areas = emptyList(), devices = listOf(dev1, dev2))
+        val site = Site(id = siteId, name = "Network Infra BU", areas = listOf(area), devices = listOf(dev1, dev2))
 
         val cable = Cable(id = UUID.randomUUID().toString(), portAId = portId1, portBId = portId2, color = "BLUE", lengthValue = 5.0)
 
@@ -131,7 +128,7 @@ class BidirectionalInteropTest {
             name = "Android-Windows Interop Full Project",
             createdEpochMs = now,
             updatedEpochMs = now,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             racks = listOf(rack),
             deviceModels = listOf(model),
             attachments = listOf(attachment),
@@ -185,8 +182,8 @@ class BidirectionalInteropTest {
 
         assertEquals(originalProject.id, importedProj.id)
         assertEquals(originalProject.name, importedProj.name)
-        assertEquals(1, importedProj.businessUnits.size)
-        assertEquals(2, importedProj.businessUnits[0].devices.size)
+        assertEquals(1, importedProj.sites.size)
+        assertEquals(2, importedProj.sites[0].devices.size)
         assertEquals(1, importedProj.racks.size)
         assertEquals(1, importedProj.vlans.size)
         assertEquals(10, importedProj.vlans[0].vlanId)
@@ -208,7 +205,7 @@ class BidirectionalInteropTest {
             technicalName = "SRV-WIN-01",
             category = DeviceCategory.SERVER_STORAGE
         )
-        val modifiedProj = ProjectEdits.addDevice(importedProj, importedProj.businessUnits[0].id, newDev)
+        val modifiedProj = ProjectEdits.addDevice(importedProj, importedProj.sites[0].id, newDev)
         val targetLocalFile = storageManager.saveProjectLocally(modifiedProj)
         assertTrue("Local atomic save target file should exist", targetLocalFile.exists())
 
@@ -223,8 +220,8 @@ class BidirectionalInteropTest {
         val androidRestoredPkg = androidImportRes.pkg!!
         val androidRestoredProj = androidRestoredPkg.project
 
-        assertEquals(3, androidRestoredProj.businessUnits[0].devices.size)
-        assertNotNull(androidRestoredProj.businessUnits[0].devices.find { it.technicalName == "SRV-WIN-01" })
+        assertEquals(3, androidRestoredProj.sites[0].devices.size)
+        assertNotNull(androidRestoredProj.sites[0].devices.find { it.technicalName == "SRV-WIN-01" })
         assertEquals(3, androidRestoredPkg.attachments.size)
 
         val comparison = ProjectComparisonEvaluator.evaluate(originalProject, importedPkg.manifest, androidRestoredPkg)

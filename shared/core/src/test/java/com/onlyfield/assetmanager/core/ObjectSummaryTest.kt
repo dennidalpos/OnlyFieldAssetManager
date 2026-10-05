@@ -14,7 +14,7 @@ class ObjectSummaryTest {
         physicalLabel = "  ", ipAddress = "10.0.0.2", serialNumber = "SN1")
     private val ap = Device(technicalName = "AP", areaId = area.id)
     private val project = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-        businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(box, sw, ap))), racks = listOf(rack), objectTypes = listOf(boxType))
+        sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(box, sw, ap))), racks = listOf(rack), objectTypes = listOf(boxType))
 
     @Test fun identityKeepsOnlyFilledValuesWithLabels() {
         val summary = ObjectSummary.of(project, ObjectRef(PlacementTargetType.DEVICE, sw.id))

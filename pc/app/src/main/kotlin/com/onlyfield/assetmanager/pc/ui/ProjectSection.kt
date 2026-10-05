@@ -10,12 +10,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import com.onlyfield.assetmanager.core.display.sitesForDisplay
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.model.Area
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.pc.AppDialog
 import com.onlyfield.assetmanager.pc.DesktopAppState
@@ -82,7 +83,7 @@ private fun ProjectInfoCard(project: Project, state: DesktopAppState) {
                 OutlinedButton(onClick = state::closeProject) { Text(i18n.text("text.c00df9e3726e")) }
             }
             Text(project.description?.ifBlank { null } ?: i18n.text("text.842f2d4cab3f"), style = MaterialTheme.typography.bodyMedium)
-            val devices = project.businessUnits.sumOf { it.devices.size }
+            val devices = project.sites.sumOf { it.devices.size }
             Text(
                 i18n.text("text.d2c89e148209", devices, project.racks.size, project.cables.size, project.vlans.size) +
                     i18n.text("text.766c94472b45", formatDate(project.updatedEpochMs)),
@@ -114,15 +115,15 @@ private fun ProjectInfoCard(project: Project, state: DesktopAppState) {
     }
 }
 
-/** Business units and areas: needed to place devices, racks and floorplans. */
+/** sites and areas: needed to place devices, racks and floorplans. */
 @Composable
 private fun StructureCard(project: Project, state: DesktopAppState, modifier: Modifier) {
     val i18n = LocalMessages.current
 
-    var editBu by remember { mutableStateOf<BusinessUnit?>(null) }
+    var editSite by remember { mutableStateOf<Site?>(null) }
     val changeDetail = LocalDetailChange.current
-    var newBu by remember { mutableStateOf(false) }
-    var areaTarget by remember { mutableStateOf<Pair<BusinessUnit, Area?>?>(null) }
+    var newSite by remember { mutableStateOf(false) }
+    var areaTarget by remember { mutableStateOf<Pair<Site, Area?>?>(null) }
 
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -130,31 +131,31 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
                 i18n.text("text.bec99a784067"),
                 subtitle = i18n.text("text.ec43b2d77293")
             ) {
-                OutlinedButton(onClick = { changeDetail { newBu = true } }) { Text(i18n.text("text.a3236c18a4f4")) }
+                OutlinedButton(onClick = { changeDetail { newSite = true } }) { Text(i18n.text("text.a3236c18a4f4")) }
             }
             LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                items(project.businessUnits.sortedForDisplay(i18n) { it.name }, key = { it.id }) { bu ->
-                    val buAreas = bu.areas + bu.sites.flatMap { it.areas }
+                items(project.sites.sitesForDisplay(i18n), key = { it.id }) { site ->
+                    val siteAreas = site.areas
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         ItemCard(
-                            title = bu.name,
-                            details = listOf(i18n.text("text.6c039d300c29", bu.devices.size, buAreas.size))
+                            title = site.name,
+                            details = listOfNotNull(site.group, site.address, i18n.text("text.6c039d300c29", site.devices.size, siteAreas.size))
                         ) {
-                            TextButton(onClick = { changeDetail { areaTarget = bu to null } }) { Text(i18n.text("text.4e331706b4c0")) }
-                            EditButton { editBu = bu }
-                            DeleteButton(bu.name, onDelete = {
-                                val updated = ProjectEdits.deleteBusinessUnit(project, bu.id)
-                                if (updated == null) state.error = i18n.text("text.88b433158eb8", bu.name)
-                                else state.update(updated, i18n.text("text.03814dddd9fb", bu.name))
+                            TextButton(onClick = { changeDetail { areaTarget = site to null } }) { Text(i18n.text("text.4e331706b4c0")) }
+                            EditButton { editSite = site }
+                            DeleteButton(site.name, onDelete = {
+                                val updated = ProjectEdits.deleteSite(project, site.id)
+                                if (updated == null) state.error = i18n.text("text.88b433158eb8", site.name)
+                                else state.update(updated, i18n.text("text.03814dddd9fb", site.name))
                             })
                         }
-                        buAreas.forEach { area ->
+                        siteAreas.forEach { area ->
                             ItemCard(
                                 title = area.name,
                                 details = listOfNotNull(area.floor?.let { i18n.text("text.6e61502a3560", it) }, area.description),
                                 modifier = Modifier.padding(start = 24.dp)
                             ) {
-                                EditButton { areaTarget = bu to area }
+                                EditButton { areaTarget = site to area }
                                 DeleteButton(area.name, onDelete = {
                                     val updated = ProjectEdits.deleteArea(project, area.id)
                                     if (updated == null) state.error = i18n.text("text.7ef2296f1ba3", area.name)
@@ -168,37 +169,43 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
         }
     }
 
-    if (newBu || editBu != null) {
-        val bu = editBu
-        var name by remember(LocalDetailSlot.current?.editorVersion, bu) { mutableStateOf(bu?.name.orEmpty()) }
+    if (newSite || editSite != null) {
+        val site = editSite
+        var name by remember(LocalDetailSlot.current?.editorVersion, site) { mutableStateOf(site?.name.orEmpty()) }
+        var group by remember(LocalDetailSlot.current?.editorVersion, site) { mutableStateOf(site?.group.orEmpty()) }
+        var address by remember(LocalDetailSlot.current?.editorVersion, site) { mutableStateOf(site?.address.orEmpty()) }
         EditPanel(
-            title = if (bu == null) i18n.text("text.9058af538683") else i18n.text("text.f31c64d94469"),
-            onDismiss = { newBu = false; editBu = null },
+            title = if (site == null) i18n.text("text.9058af538683") else i18n.text("text.f31c64d94469"),
+            onDismiss = { newSite = false; editSite = null },
             onConfirm = {
-                val updated = if (bu == null) ProjectEdits.addBusinessUnit(project, name.trim())
-                else ProjectEdits.renameBusinessUnit(project, bu.id, name.trim())
-                newBu = false; editBu = null
+                val g = group.trim().ifBlank { null }
+                val a = address.trim().ifBlank { null }
+                val updated = if (site == null) ProjectEdits.addSite(project, name.trim(), g, a)
+                else ProjectEdits.updateSite(project, site.copy(name = name.trim(), group = g, address = a))
+                newSite = false; editSite = null
                 state.update(updated, i18n.text("text.0a195dba51c9", name.trim()))
             },
             confirmEnabled = name.isNotBlank(),
             width = 440.dp
         ) {
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
+            FormField(group, { group = it }, i18n.text("site.group"))
+            FormField(address, { address = it }, i18n.text("site.address"))
         }
     }
 
-    areaTarget?.let { (bu, area) ->
+    areaTarget?.let { (site, area) ->
         var name by remember(LocalDetailSlot.current?.editorVersion, area) { mutableStateOf(area?.name.orEmpty()) }
         var floor by remember(LocalDetailSlot.current?.editorVersion, area) { mutableStateOf(area?.floor.orEmpty()) }
         var description by remember(LocalDetailSlot.current?.editorVersion, area) { mutableStateOf(area?.description.orEmpty()) }
         EditPanel(
-            title = if (area == null) i18n.text("text.ca0d7a2e19a4", bu.name) else i18n.text("text.e325f13a6dee"),
+            title = if (area == null) i18n.text("text.ca0d7a2e19a4", site.name) else i18n.text("text.e325f13a6dee"),
             onDismiss = { areaTarget = null },
             onConfirm = {
                 val edited = (area ?: Area(name = name.trim())).copy(
                     name = name.trim(), floor = floor.trim().ifBlank { null }, description = description.trim().ifBlank { null }
                 )
-                val updated = if (area == null) ProjectEdits.addArea(project, bu.id, edited) else ProjectEdits.updateArea(project, edited)
+                val updated = if (area == null) ProjectEdits.addArea(project, site.id, edited) else ProjectEdits.updateArea(project, edited)
                 areaTarget = null
                 state.update(updated, i18n.text("text.b0e1d3b2c943", edited.name))
             },

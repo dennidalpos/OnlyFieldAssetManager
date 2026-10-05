@@ -1,6 +1,6 @@
 # Mappa e planimetrie
 
-La navigazione segue progetto, business unit, piano e mappa. Gli oggetti hanno coordinate normalizzate sul piano; zoom e panoramica non le modificano. La panoramica è limitata: la pagina più piccola della vista resta tutta visibile, quella ingrandita si ferma ai bordi (`MapViewport.clamped`).
+La navigazione segue progetto, sede, piano e mappa. Gli oggetti hanno coordinate normalizzate sul piano; zoom e panoramica non le modificano. La panoramica è limitata: la pagina più piccola della vista resta tutta visibile, quella ingrandita si ferma ai bordi (`MapViewport.clamped`).
 
 ## Scena e contenitori
 
@@ -15,8 +15,8 @@ Ogni nodo ha un simbolo univoco (SW, AP, CAM, NVR, UPS…) non tradotto, un colo
 ## Collegamenti semplificati
 
 - Una sola linea per coppia di nodi visibili, con il numero di cavi se più di uno. I cavi interni a un contenitore non sono disegnati: compaiono aprendolo.
-- Le estremità fuori vista (altro piano, fuori dal contenitore, sconosciute) diventano un tratto verso il bordo con un cerchio vuoto, uno per oggetto visibile. Un'etichetta accanto al cerchio indica dove prosegue: `→ SW-05 · Nord 1 · BU Nord` se c'è un solo dispositivo remoto (piano e BU solo se diversi da quelli in vista), altrimenti `→ 3 dispositivi remoti`. `core.model.RemoteEnds` risolve dispositivo, porta, piano e BU dell'estremità; `SceneLink.remotes` li conserva per cavo.
-- La scheda cavo ha come titolo l'etichetta del cavo o quella proposta (`CableLabels.suggest`) e mostra anche Estremità remota (porta, piano e BU sempre). Il cavo scelto ha Foto, Modifica cavo, Inserisci passaggio e Vai a, che apre il piano dell'altra estremità, anche di un'altra BU, con l'oggetto selezionato e i suoi contenitori aperti (`MapActions.goTo` e parametro `focus` di `MapWorkspace`). Scegliere un piano dall'elenco annulla la selezione in arrivo.
+- Le estremità fuori vista (altro piano, fuori dal contenitore, sconosciute) diventano un tratto verso il bordo con un cerchio vuoto, uno per oggetto visibile. Un'etichetta accanto al cerchio indica dove prosegue: `→ SW-05 · Nord 1 · Sede Nord` se c'è un solo dispositivo remoto (piano e sede solo se diversi da quelli in vista), altrimenti `→ 3 dispositivi remoti`. `core.model.RemoteEnds` risolve dispositivo, porta, piano e sede dell'estremità; `SceneLink.remotes` li conserva per cavo.
+- La scheda cavo ha come titolo l'etichetta del cavo o quella proposta (`CableLabels.suggest`) e mostra anche Estremità remota (porta, piano e sede sempre). Il cavo scelto ha Foto, Modifica cavo, Inserisci passaggio e Vai a, che apre il piano dell'altra estremità, anche di un'altra sede, con l'oggetto selezionato e i suoi contenitori aperti (`MapActions.goTo` e parametro `focus` di `MapWorkspace`). Scegliere un piano dall'elenco annulla la selezione in arrivo.
 - Il mezzo è distinto anche senza colore: rame continuo, fibra tratteggiata, radio a tratti lunghi (viola), alimentazione a puntini, altro tratto-punto.
 - I collegamenti senza percorso salvato sono archi: le linee da uno stesso nodo si annidano invece di passare sopra altri oggetti.
 - Il tocco su un collegamento apre l'elenco completo dei cavi (porta A → porta B, piano se diverso, mezzo). Il cavo scelto si apre nel configuratore.

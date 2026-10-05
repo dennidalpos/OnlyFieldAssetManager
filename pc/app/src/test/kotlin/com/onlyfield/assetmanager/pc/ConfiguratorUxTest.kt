@@ -20,8 +20,8 @@ import org.junit.Test
 
 class ConfiguratorUxTest {
     @get:Rule val rule = createComposeRule()
-    private val bu = BusinessUnit(name = "Operations")
-    private val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(bu))
+    private val site = Site(name = "Operations")
+    private val project = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(site))
 
     @Test fun essentialsCanSaveWithoutPortsOrLocationDetails() {
         val draft = mutableStateOf(inventoryDeviceDraft(project, null))
@@ -33,12 +33,12 @@ class ConfiguratorUxTest {
         rule.onNodeWithText("Numero di serie").assertDoesNotExist()
         rule.onNodeWithText("Numero porte").assertDoesNotExist()
         rule.onNode(hasSetTextAction() and hasText("Nome oggetto")).performTextInput("SW-01")
-        rule.runOnIdle { assertTrue(draft.value.errors(project).containsKey("businessUnitId")) }
-        rule.onNode(hasContentDescription("Business unit:", substring = true)).performScrollTo().performClick()
+        rule.runOnIdle { assertTrue(draft.value.errors(project).containsKey("siteId")) }
+        rule.onNode(hasContentDescription("Sede:", substring = true)).performScrollTo().performClick()
         rule.onNodeWithText("Operations").performClick()
         rule.runOnIdle {
             assertTrue(draft.value.errors(project).isEmpty())
-            val device = draft.value.apply(project).businessUnits.single().devices.single()
+            val device = draft.value.apply(project).sites.single().devices.single()
             assertEquals("SW-01", device.technicalName)
             assertTrue(device.ports.isEmpty())
             assertNull(device.areaId)
@@ -48,7 +48,7 @@ class ConfiguratorUxTest {
 
     @Test fun collapsingDetailsRetainsEditsAndUntouchedHardware() {
         val original = Device(technicalName = "SW", serialNumber = "OLD", physicalLabel = "Label", hardware = HardwareSpec(features = listOf("Custom")))
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(original))))
+        val p = project.copy(sites = listOf(site.copy(devices = listOf(original))))
         val draft = mutableStateOf(MapObjectDraft.forDevice(p, original))
         rule.setContent { MaterialTheme {
             Column(Modifier.width(560.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
@@ -59,12 +59,12 @@ class ConfiguratorUxTest {
         rule.onNodeWithText("Numero di serie").assertDoesNotExist()
         rule.onNodeWithText("Identificativi e rete").performClick()
         rule.onNode(hasSetTextAction() and hasText("NEW")).assertExists()
-        rule.runOnIdle { assertEquals(original.copy(serialNumber = "NEW"), draft.value.apply(p).businessUnits.single().devices.single()) }
+        rule.runOnIdle { assertEquals(original.copy(serialNumber = "NEW"), draft.value.apply(p).sites.single().devices.single()) }
     }
 
     @Test fun invalidHiddenNetworkFieldAutomaticallyOpensItsSection() {
         val original = Device(technicalName = "SW")
-        val p = project.copy(businessUnits = listOf(bu.copy(devices = listOf(original))))
+        val p = project.copy(sites = listOf(site.copy(devices = listOf(original))))
         val draft = mutableStateOf(MapObjectDraft.forDevice(p, original))
         rule.setContent { MaterialTheme {
             Column(Modifier.width(360.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
@@ -78,7 +78,7 @@ class ConfiguratorUxTest {
     @Test fun selectingModelPreservesOperationalIdentifiers() {
         val model = DeviceModel(name = "Standard switch", category = DeviceCategory.NETWORK_SWITCH, defaultHeightU = 2, portTemplates = listOf(PortTemplate("P", portCount = 4, connector = "RJ45")))
         val original = Device(technicalName = "SW", serialNumber = "KEEP", ipAddress = "192.0.2.1")
-        val p = project.copy(deviceModels = listOf(model), businessUnits = listOf(bu.copy(devices = listOf(original))))
+        val p = project.copy(deviceModels = listOf(model), sites = listOf(site.copy(devices = listOf(original))))
         val draft = mutableStateOf(MapObjectDraft.forDevice(p, original))
         rule.setContent { MaterialTheme {
             Column(Modifier.width(560.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
@@ -86,7 +86,7 @@ class ConfiguratorUxTest {
         rule.onNode(hasContentDescription("Modello:", substring = true)).performClick()
         rule.onNodeWithText("Standard switch").performClick()
         rule.runOnIdle {
-            val saved = draft.value.apply(p).businessUnits.single().devices.single()
+            val saved = draft.value.apply(p).sites.single().devices.single()
             assertEquals("SW", saved.technicalName)
             assertEquals("KEEP", saved.serialNumber)
             assertEquals("192.0.2.1", saved.ipAddress)
@@ -118,7 +118,7 @@ class ConfiguratorUxTest {
             it.copy(ports = HardwareConfigurator.ports(listOf(group), it.id))
         }
         val remote = Device(technicalName = "Remote").let { it.copy(ports = listOf(Port(name = "Uplink", deviceId = it.id))) }
-        val p = HardwareConfigurator.connect(project.copy(businessUnits = listOf(bu.copy(devices = listOf(original, remote)))),
+        val p = HardwareConfigurator.connect(project.copy(sites = listOf(site.copy(devices = listOf(original, remote)))),
             original.ports.last().id, remote.ports.single().id, CableMedium.ETHERNET_COPPER)
         val draft = mutableStateOf(MapObjectDraft.forDevice(p, original))
         rule.setContent { MaterialTheme {
@@ -135,10 +135,10 @@ class ConfiguratorUxTest {
         rule.runOnIdle {
             assertTrue(draft.value.errors(p).isEmpty())
             val saved = draft.value.apply(p)
-            assertEquals(original.ports.first().id, saved.businessUnits.single().devices.first().ports.single().id)
+            assertEquals(original.ports.first().id, saved.sites.single().devices.first().ports.single().id)
             assertEquals(p.cables.single().id, saved.cables.single().id)
             assertNull(saved.cables.single().portAId)
-            assertEquals(remote, saved.businessUnits.single().devices.last())
+            assertEquals(remote, saved.sites.single().devices.last())
         }
     }
 }

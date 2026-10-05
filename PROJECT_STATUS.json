@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Tracciamento fisico (greenfield v1), scheda rapida porte, foto primaria, ponte radio e demo comunale completati e verificati sui test JVM/Desktop.",
+  "currentPhase": "Evoluzione censimento rete: EVO-01 (gerarchia Sede → Piano) completato; prossimo EVO-02.",
   "activeTask": null,
-  "nextSession": "Emulatore Pixel 9: APK aggiornato e «Demo Comune» importato. Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam («Demo Comune») da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Restano RES-17 e RES-01.",
+  "nextSession": "EVO-02 stato operativo apparato. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Resta RES-17.",
   "remainingTasks": [
-    {
-      "id": "EVO-01",
-      "title": "Gerarchia Sede → Piano",
-      "status": "TODO",
-      "description": "BU come raggruppamento facoltativo di sedi; il piano appartiene a una sede; l'apparato (e il rack) appartiene solo a un piano e la sede si ricava. Rimuovere `BusinessUnit.areas/devices` e `Device.siteId`, aggiornare core, Room, `.ofam` 1, validatore, wizard, export e demo. Modifica incompatibile ammessa (greenfield).",
-      "closureCriteria": "Modello senza percorsi geografici duplicati; demo rigenerato; suite core/exchange/Desktop/Android JVM verdi."
-    },
     {
       "id": "EVO-02",
       "title": "Stato operativo apparato",

@@ -202,3 +202,12 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - Su richiesta dell'utente nuovo tag `v1.0.1` (versioni allineate: Android 1.0.1/versionCode 2, portable 1.0.1); `v1.0.0` resta senza release.
 - Run su tag 37238450362: build e publish verdi. Release con `OnlyFieldAssetManager-debug.apk`, `OnlyFieldAssetManager-portable-x64-1.0.1.zip` e `SHA256SUMS`.
 - APK 1.0.1 installato sul moto g86 con il progetto demo importato. Corretta la finestra di importazione: senza copia locale ora indica «Nuovo progetto locale».
+
+## EVO-01: gerarchia Sede → Piano — 5 ottobre 2026
+
+- Dall'intervista sul censimento di rete (decisioni in [plan.md](plan.md)): la vecchia business unit è diventata la sede (`Site`) in codice, `.ofam` 1 (`sites`, `siteId`), Room 1 (tabella `sites`) e UI («Sede»/«Site»/«Sede» in it/en/es). Modifica incompatibile ammessa dal greenfield.
+- Rimossi il livello intermedio `Site` (sede dentro la BU, senza editor), `Device.siteId`, `SiteEntity` con le relative colonne, l'ambito VLAN `SITE`, il filtro export per sede e la modifica massiva della sede. `ProjectMerger` non annida più sedi nelle BU.
+- Nuovi campi facoltativi `Site.group` e `Site.address`, modificabili negli editor della sede su Windows e Android. Elenchi ordinati per gruppo e poi per nome (`sitesForDisplay`, `displayName`); colonne Sede e Gruppo nell'inventario XLSX.
+- L'avviso `UNPOSITIONED_DEVICE` ora segnala un apparato senza piano né rack. I codici `*_BU` sono diventati `*_SITE`.
+- Fixture `v1_sample_project.json` appiattito; demo «Demo Comune» rigenerato con i gruppi Sedi comunali e Scuole.
+- Verifica: core 90, exchange 41, Desktop 95, Android JVM 24 test superati; test strumentali Android compilati.

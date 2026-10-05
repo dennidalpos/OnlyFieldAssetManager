@@ -2,7 +2,7 @@ package com.onlyfield.assetmanager
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import com.onlyfield.assetmanager.core.model.BusinessUnit
+import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.CredentialType
 import com.onlyfield.assetmanager.core.model.Device
@@ -14,7 +14,6 @@ import com.onlyfield.assetmanager.core.model.Port
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.core.model.RackSide
-import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.data.local.AppDatabase
 import com.onlyfield.assetmanager.data.repository.ProjectRepository
 import com.onlyfield.assetmanager.exchange.ComparisonStatus
@@ -57,7 +56,6 @@ class ProjectRepositoryTest {
     @Test
     fun testSaveAndReloadProjectPreservesAllDataAndIds() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
         val siteId = UUID.randomUUID().toString()
         val devId = UUID.randomUUID().toString()
         val portId = UUID.randomUUID().toString()
@@ -92,7 +90,6 @@ class ProjectRepositoryTest {
             physicalLabel = "Targhetta-1234",
             alias = "Switch CED",
             ipAddress = "192.168.1.50",
-            siteId = siteId,
             ports = listOf(port),
             rackId = rackId,
             positionU = 10,
@@ -110,15 +107,14 @@ class ProjectRepositoryTest {
             groupName = "Core Switches"
         )
 
-        val site = Site(id = siteId, name = "Sede Milano")
-        val bu = BusinessUnit(id = buId, name = "BU Operations", sites = listOf(site), devices = listOf(device))
+        val site = Site(id = siteId, name = "Sede Milano", group = "Uffici", address = "Via Roma 1", devices = listOf(device))
 
         val project = Project(
             id = projId,
             name = "Progetto Test Persistence",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             credentials = listOf(cred),
             racks = listOf(rack),
             deviceModels = listOf(model)
@@ -130,15 +126,15 @@ class ProjectRepositoryTest {
         assertNotNull(reloaded)
         assertEquals(projId, reloaded!!.id)
         assertEquals("Progetto Test Persistence", reloaded.name)
-        assertEquals(1, reloaded.businessUnits.size)
+        assertEquals(1, reloaded.sites.size)
 
-        val reloadedBu = reloaded.businessUnits[0]
-        assertEquals(buId, reloadedBu.id)
-        assertEquals(1, reloadedBu.sites.size)
-        assertEquals(siteId, reloadedBu.sites[0].id)
+        val reloadedSite = reloaded.sites[0]
+        assertEquals(siteId, reloadedSite.id)
+        assertEquals("Uffici", reloadedSite.group)
+        assertEquals("Via Roma 1", reloadedSite.address)
 
-        assertEquals(1, reloadedBu.devices.size)
-        val reloadedDev = reloadedBu.devices[0]
+        assertEquals(1, reloadedSite.devices.size)
+        val reloadedDev = reloadedSite.devices[0]
         assertEquals(devId, reloadedDev.id)
         assertEquals("sw-access-01", reloadedDev.technicalName)
         assertEquals("Targhetta-1234", reloadedDev.physicalLabel)
@@ -216,9 +212,9 @@ class ProjectRepositoryTest {
         val device = Device(technicalName = "SW-SER", serialNumber = "FOC1234X0AB")
         repository.saveProject(
             Project(id = projId, name = "Seriali", createdEpochMs = 1L, updatedEpochMs = 1L,
-                businessUnits = listOf(BusinessUnit(name = "BU", devices = listOf(device))))
+                sites = listOf(Site(name = "BU", devices = listOf(device))))
         )
-        assertEquals("FOC1234X0AB", repository.getProjectById(projId)!!.businessUnits.single().devices.single().serialNumber)
+        assertEquals("FOC1234X0AB", repository.getProjectById(projId)!!.sites.single().devices.single().serialNumber)
         assertEquals(listOf(device.id), repository.searchInventory(projId, "1234X0").map { it.device.id })
     }
 
@@ -260,7 +256,7 @@ class ProjectRepositoryTest {
     @Test
     fun testSearchInventoryByTechnicalNameIpLabelAndAlias() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
+        val siteId = UUID.randomUUID().toString()
 
         val dev1 = Device(
             id = UUID.randomUUID().toString(),
@@ -278,13 +274,13 @@ class ProjectRepositoryTest {
             ipAddress = "10.0.0.50"
         )
 
-        val bu = BusinessUnit(id = buId, name = "HQ BU", devices = listOf(dev1, dev2))
+        val site = Site(id = siteId, name = "HQ BU", devices = listOf(dev1, dev2))
         val project = Project(
             id = projId,
             name = "Search Test Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu)
+            sites = listOf(site)
         )
 
         repository.saveProject(project)
@@ -314,7 +310,7 @@ class ProjectRepositoryTest {
             name = "Export Stream Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(BusinessUnit(id = UUID.randomUUID().toString(), name = "BU Test"))
+            sites = listOf(Site(id = UUID.randomUUID().toString(), name = "BU Test"))
         )
 
         repository.saveProject(project)
@@ -402,7 +398,7 @@ class ProjectRepositoryTest {
             areaId = areaId
         )
 
-        val bu = BusinessUnit(
+        val site = Site(
             id = UUID.randomUUID().toString(),
             name = "BU Tech",
             areas = listOf(area),
@@ -433,7 +429,7 @@ class ProjectRepositoryTest {
             name = "Floorplan Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             attachments = listOf(attachment),
             annotations = listOf(annotation),
             floorplanPlacements = listOf(placement)
@@ -467,7 +463,7 @@ class ProjectRepositoryTest {
 
         val updatedReloaded = repository.getProjectById(projId)
         assertNotNull(updatedReloaded)
-        val updatedArea = updatedReloaded!!.businessUnits[0].areas.find { it.id == areaId }
+        val updatedArea = updatedReloaded!!.sites[0].areas.find { it.id == areaId }
         assertNotNull(updatedArea)
         assertEquals(newAttId, updatedArea!!.floorplanAttachmentId)
         assertEquals(1, updatedReloaded.floorplanPlacements.size)
@@ -497,7 +493,7 @@ class ProjectRepositoryTest {
         val dev2 = Device(id = dev2Id, technicalName = "patch-panel-01", category = DeviceCategory.PATCH_PANEL, areaId = areaId, ports = listOf(port2Front, port2Rear))
         val dev3 = Device(id = dev3Id, technicalName = "sw-core-01", category = DeviceCategory.NETWORK_SWITCH, areaId = areaId, ports = listOf(port3))
 
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU Net", devices = listOf(dev1, dev2, dev3))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU Net", devices = listOf(dev1, dev2, dev3))
 
         val cable1 = com.onlyfield.assetmanager.core.model.Cable(
             id = UUID.randomUUID().toString(),
@@ -529,7 +525,7 @@ class ProjectRepositoryTest {
             name = "Cabling Persistence Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             cables = listOf(cable1, cable2),
             panelMappings = listOf(panelMapping)
         )
@@ -562,8 +558,8 @@ class ProjectRepositoryTest {
         val portId = UUID.randomUUID().toString()
 
         val port = Port(id = portId, deviceId = devId, name = "Gi0/1")
-        val dev = Device(id = devId, technicalName = "sw-core-a08", siteId = UUID.randomUUID().toString(), ports = listOf(port))
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU A08", devices = listOf(dev))
+        val dev = Device(id = devId, technicalName = "sw-core-a08", ports = listOf(port))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU A08", devices = listOf(dev))
 
         val vlan = com.onlyfield.assetmanager.core.model.Vlan(vlanId = 20, name = "VOIP")
         val subnet = com.onlyfield.assetmanager.core.model.Subnet(cidrBlock = "10.20.0.0/24")
@@ -580,7 +576,7 @@ class ProjectRepositoryTest {
             name = "A08 Persistence Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             vlans = listOf(vlan),
             subnets = listOf(subnet),
             portVlanMemberships = listOf(membership),
@@ -632,7 +628,7 @@ class ProjectRepositoryTest {
         val portId = UUID.randomUUID().toString()
 
         val dev = Device(id = devId, technicalName = "sw-a09-test", ports = listOf(Port(id = portId, deviceId = devId, name = "port1")))
-        val bu = BusinessUnit(id = UUID.randomUUID().toString(), name = "BU A09", devices = listOf(dev))
+        val site = Site(id = UUID.randomUUID().toString(), name = "BU A09", devices = listOf(dev))
 
         val feed = com.onlyfield.assetmanager.core.model.PowerFeed(
             deviceId = devId,
@@ -665,7 +661,7 @@ class ProjectRepositoryTest {
             name = "A09 Persistence Project",
             createdEpochMs = 1000L,
             updatedEpochMs = 1000L,
-            businessUnits = listOf(bu),
+            sites = listOf(site),
             powerFeeds = listOf(feed),
             poeMappings = listOf(poe),
             documentBadges = listOf(badge)
@@ -690,14 +686,14 @@ class ProjectRepositoryTest {
     @Test
     fun testTrashAndRestoreDevice() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
+        val siteId = UUID.randomUUID().toString()
         val devId = UUID.randomUUID().toString()
         val portId = UUID.randomUUID().toString()
 
         val port = Port(id = portId, deviceId = devId, name = "ge-0/0/1")
         val dev = Device(id = devId, technicalName = "sw-trash-test", ports = listOf(port))
-        val bu = BusinessUnit(id = buId, name = "BU Trash", devices = listOf(dev))
-        val project = Project(id = projId, name = "Trash Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, businessUnits = listOf(bu))
+        val site = Site(id = siteId, name = "BU Trash", devices = listOf(dev))
+        val project = Project(id = projId, name = "Trash Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, sites = listOf(site))
 
         repository.saveProject(project)
 
@@ -710,25 +706,25 @@ class ProjectRepositoryTest {
 
         val projAfterTrash = repository.getProjectById(projId)
         assertNotNull(projAfterTrash)
-        assertTrue(projAfterTrash!!.businessUnits.flatMap { it.devices }.none { it.id == devId })
+        assertTrue(projAfterTrash!!.sites.flatMap { it.devices }.none { it.id == devId })
 
         val restored = repository.restoreFromTrash(projId, trashItem.id)
         assertTrue(restored)
 
         val projAfterRestore = repository.getProjectById(projId)
         assertNotNull(projAfterRestore)
-        assertTrue(projAfterRestore!!.businessUnits.flatMap { it.devices }.any { it.id == devId })
+        assertTrue(projAfterRestore!!.sites.flatMap { it.devices }.any { it.id == devId })
     }
 
     @Test
     fun testReplaceDevice() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
+        val siteId = UUID.randomUUID().toString()
         val oldDevId = UUID.randomUUID().toString()
 
         val oldDev = Device(id = oldDevId, technicalName = "old-sw", ipAddress = "192.168.1.100")
-        val bu = BusinessUnit(id = buId, name = "BU Replace", devices = listOf(oldDev))
-        val project = Project(id = projId, name = "Replace Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, businessUnits = listOf(bu))
+        val site = Site(id = siteId, name = "BU Replace", devices = listOf(oldDev))
+        val project = Project(id = projId, name = "Replace Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, sites = listOf(site))
 
         repository.saveProject(project)
 
@@ -746,7 +742,7 @@ class ProjectRepositoryTest {
 
         val updatedProj = repository.getProjectById(projId)
         assertNotNull(updatedProj)
-        val devices = updatedProj!!.businessUnits.flatMap { it.devices }
+        val devices = updatedProj!!.sites.flatMap { it.devices }
         assertTrue(devices.any { it.technicalName == "new-sw-clean" })
         assertFalse(devices.any { it.id == oldDevId })
     }
@@ -754,14 +750,14 @@ class ProjectRepositoryTest {
     @Test
     fun testMergeDevices() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
+        val siteId = UUID.randomUUID().toString()
         val dev1Id = UUID.randomUUID().toString()
         val dev2Id = UUID.randomUUID().toString()
 
         val dev1 = Device(id = dev1Id, technicalName = "sw-primary", ipAddress = "10.0.0.1")
         val dev2 = Device(id = dev2Id, technicalName = "sw-primary-dup", ipAddress = "10.0.0.2")
-        val bu = BusinessUnit(id = buId, name = "BU Merge", devices = listOf(dev1, dev2))
-        val project = Project(id = projId, name = "Merge Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, businessUnits = listOf(bu))
+        val site = Site(id = siteId, name = "BU Merge", devices = listOf(dev1, dev2))
+        val project = Project(id = projId, name = "Merge Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, sites = listOf(site))
 
         repository.saveProject(project)
 
@@ -773,7 +769,7 @@ class ProjectRepositoryTest {
 
         val updatedProj = repository.getProjectById(projId)
         assertNotNull(updatedProj)
-        val devices = updatedProj!!.businessUnits.flatMap { it.devices }
+        val devices = updatedProj!!.sites.flatMap { it.devices }
         assertEquals(1, devices.size)
         assertEquals(dev1Id, devices[0].id)
     }
@@ -781,14 +777,14 @@ class ProjectRepositoryTest {
     @Test
     fun testBatchEditDevices() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        val buId = UUID.randomUUID().toString()
+        val siteId = UUID.randomUUID().toString()
         val dev1Id = UUID.randomUUID().toString()
         val dev2Id = UUID.randomUUID().toString()
 
         val dev1 = Device(id = dev1Id, technicalName = "sw-batch-1")
         val dev2 = Device(id = dev2Id, technicalName = "sw-batch-2")
-        val bu = BusinessUnit(id = buId, name = "BU Batch", devices = listOf(dev1, dev2))
-        val project = Project(id = projId, name = "Batch Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, businessUnits = listOf(bu))
+        val site = Site(id = siteId, name = "BU Batch", devices = listOf(dev1, dev2))
+        val project = Project(id = projId, name = "Batch Test Project", createdEpochMs = 1000L, updatedEpochMs = 1000L, sites = listOf(site))
 
         repository.saveProject(project)
 
@@ -801,7 +797,7 @@ class ProjectRepositoryTest {
 
         val updatedProj = repository.getProjectById(projId)
         assertNotNull(updatedProj)
-        val devices = updatedProj!!.businessUnits.flatMap { it.devices }
+        val devices = updatedProj!!.sites.flatMap { it.devices }
         assertEquals("Batch Audit Complete", devices[0].observation?.notes)
         assertEquals("Batch Audit Complete", devices[1].observation?.notes)
     }

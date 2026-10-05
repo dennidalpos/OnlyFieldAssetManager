@@ -26,7 +26,7 @@ class FloorMapUiTest {
     @get:Rule val rule = createComposeRule()
     private val area = Area(name = "Terra")
     private val device = Device(technicalName = "SW-01", areaId = area.id)
-    private val initial = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, businessUnits = listOf(BusinessUnit(name = "BU", areas = listOf(area), devices = listOf(device))), floorplanPlacements = listOf(FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = device.id, xRatio = .3f, yRatio = .4f)))
+    private val initial = Project(name = "Sito", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", areas = listOf(area), devices = listOf(device))), floorplanPlacements = listOf(FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = device.id, xRatio = .3f, yRatio = .4f)))
 
     private fun viewport(node: SemanticsNodeInteraction) = node.fetchSemanticsNode().size.let { MapViewport(it.width.toFloat(), it.height.toFloat(), 1200f, 900f) }
     private fun SemanticsNodeInteraction.clickAt(viewport: MapViewport, point: MapPoint) = viewport.screen(point).let { p -> performTouchInput { click(Offset(p.x, p.y)) } }
@@ -90,9 +90,9 @@ class FloorMapUiTest {
         val state = DesktopAppState(DesktopStorageManager(dir))
         try {
             val second = Area(name = "Primo")
-            val bu = BusinessUnit(name = "BU-A", areas = listOf(area, second), devices = listOf(device))
-            val empty = BusinessUnit(name = "BU-B")
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", businessUnits = listOf(bu, empty))))
+            val site = Site(name = "BU-A", areas = listOf(area, second), devices = listOf(device))
+            val empty = Site(name = "BU-B")
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(site, empty))))
             rule.setContent { MaterialTheme { Box(Modifier.size(900.dp, 700.dp)) { FloorHomeSection(state) } } }
             rule.onNodeWithText("BU-A · 2 piani / zone").performClick()
             rule.onNodeWithText("Terra · 1 oggetti").performClick()
@@ -101,12 +101,12 @@ class FloorMapUiTest {
             rule.onNodeWithText("Cerca tipologia…").performTextInput("modem")
             rule.onNodeWithText("Modem").assertIsDisplayed()
             rule.onNodeWithText("Annulla").performClick()
-            rule.runOnIdle { assertEquals(1, state.project!!.businessUnits.first().devices.size) }
+            rule.runOnIdle { assertEquals(1, state.project!!.sites.first().devices.size) }
             rule.onNodeWithText("› BU-A").performClick()
             rule.onNodeWithText("Primo · 0 oggetti").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.onNodeWithText("Sito").performClick()
-            rule.onNodeWithText("Aggiungi BU").performClick()
+            rule.onNodeWithText("Aggiungi sede").performClick()
             rule.onNodeWithText("Nome *").performTextInput("BU-C")
             rule.onNodeWithText("Salva").performClick()
             rule.onNodeWithText("BU-C · 0 piani / zone").performClick()
@@ -115,7 +115,7 @@ class FloorMapUiTest {
             rule.onNodeWithText("Salva").performClick()
             rule.onNodeWithText("Zona nuova · 0 oggetti").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
-            rule.runOnIdle { assertEquals(3, state.project!!.businessUnits.size); assertEquals(empty, state.project!!.businessUnits[1]) }
+            rule.runOnIdle { assertEquals(3, state.project!!.sites.size); assertEquals(empty, state.project!!.sites[1]) }
         } finally { state.shutdown(); dir.deleteRecursively() }
     }
 
@@ -139,7 +139,7 @@ class FloorMapUiTest {
         val c1 = Cable(codeOrLabel = "C1", deviceAId = inside.id, deviceBId = peer.id)
         val c2 = Cable(codeOrLabel = "C2", deviceAId = otherInside.id, deviceBId = peer.id)
         val internal = Cable(codeOrLabel = "INT", deviceAId = inside.id, deviceBId = otherInside.id)
-        val p = initial.copy(racks = listOf(rack), businessUnits = listOf(initial.businessUnits.single().copy(devices = listOf(inside, peer, otherInside))),
+        val p = initial.copy(racks = listOf(rack), sites = listOf(initial.sites.single().copy(devices = listOf(inside, peer, otherInside))),
             cables = listOf(c1, c2, internal), floorplanPlacements = listOf(
                 FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.RACK, targetId = rack.id, xRatio = .2f, yRatio = .5f),
                 FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE, targetId = peer.id, xRatio = .8f, yRatio = .5f)))
@@ -171,7 +171,7 @@ class FloorMapUiTest {
         val rack = Rack(name = "RN", areaId = north.id)
         val remote = Device(technicalName = "SW-05", rackId = rack.id, positionU = 1)
         val cable = Cable(codeOrLabel = "C9", deviceAId = device.id, deviceBId = remote.id)
-        val p = initial.copy(businessUnits = initial.businessUnits + BusinessUnit(name = "BU Nord", areas = listOf(north), devices = listOf(remote)),
+        val p = initial.copy(sites = initial.sites + Site(name = "BU Nord", areas = listOf(north), devices = listOf(remote)),
             racks = listOf(rack), cables = listOf(cable))
         var shownArea by mutableStateOf(area.id)
         var focus by mutableStateOf<ObjectRef?>(null)

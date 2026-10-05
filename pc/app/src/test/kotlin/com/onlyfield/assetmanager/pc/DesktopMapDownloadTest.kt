@@ -106,7 +106,7 @@ class DesktopMapDownloadTest {
         val state = DesktopAppState(storage)
         val other = DesktopStorageManager(folder.newFolder("destination"))
         try {
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", businessUnits = listOf(com.onlyfield.assetmanager.core.model.BusinessUnit(name = "BU", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = "CED")))))))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(com.onlyfield.assetmanager.core.model.Site(name = "BU", areas = listOf(com.onlyfield.assetmanager.core.model.Area(name = "CED")))))))
             val snapshot = DesktopCartographyManager.acquireMapSnapshot(12.0, 42.0, 15) { tileBytes() }
             assertTrue(state.addMapSnapshot(snapshot, "Mappa CED"))
             val project = state.project!!

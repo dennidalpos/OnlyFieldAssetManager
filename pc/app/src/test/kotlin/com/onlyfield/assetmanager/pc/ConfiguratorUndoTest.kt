@@ -16,21 +16,21 @@ class ConfiguratorUndoTest {
         val state = DesktopAppState(DesktopStorageManager(folder.newFolder()))
         val reopened = DesktopAppState(DesktopStorageManager(folder.newFolder()))
         try {
-            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", businessUnits = listOf(
-                BusinessUnit(name = "BU", areas = listOf(Area(name = "Floor")))), password = "test", passwordConfirm = "test")))
+            state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Site", sites = listOf(
+                Site(name = "BU", areas = listOf(Area(name = "Floor")))), password = "test", passwordConfirm = "test")))
             val original = requireNotNull(state.project)
-            val bu = original.businessUnits.single()
-            val rackDraft = MapObjectDraft.forRack(original, null).let { it.copy(areaId = bu.areas.single().id,
-                rack = it.rack.copy(name = "Rack", areaId = bu.areas.single().id)) }
+            val site = original.sites.single()
+            val rackDraft = MapObjectDraft.forRack(original, null).let { it.copy(areaId = site.areas.single().id,
+                rack = it.rack.copy(name = "Rack", areaId = site.areas.single().id)) }
             var staged = rackDraft.apply(original)
             val parent = ObjectRef(PlacementTargetType.RACK, rackDraft.id)
             val type = ObjectCatalog.builtins.first { it.id == "switch" }
-            val drafts = (1..2).map { number -> MapObjectDraft.newObject(staged, type, bu.id, bu.areas.single().id, parent).let {
+            val drafts = (1..2).map { number -> MapObjectDraft.newObject(staged, type, site.id, site.areas.single().id, parent).let {
                 it.copy(device = it.device.copy(technicalName = "SW$number", positionU = number.toString(),
                     hardware = HardwareSpec(portGroups = listOf(PortTemplate("P", portCount = 24), PortTemplate("SFP", portCount = 4, connector = "SFP")))))
             } }
             drafts.forEach { staged = it.apply(staged) }
-            val devices = staged.businessUnits.single().devices
+            val devices = staged.sites.single().devices
             staged = HardwareConfigurator.connect(staged, devices[0].ports.first().id, devices[1].ports.first().id, CableMedium.ETHERNET_COPPER)
             val configured = rackDraft.copy(session = ConfigurationSession(original, staged)).apply(original)
             state.update(configured, "Configurator")

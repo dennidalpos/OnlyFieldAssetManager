@@ -186,7 +186,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
             if (moreDetails) item {
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        InfoRow(i18n.text("text.e4de7d26b141"), index.businessUnitOf(device.id)?.name)
+                        InfoRow(i18n.text("text.e4de7d26b141"), index.siteOf(device.id)?.name)
                         InfoRow(i18n.text("text.b19e02e9502b"), device.alias)
                         InfoRow("IP", device.ipAddress)
                         InfoRow("MAC", device.macAddress)

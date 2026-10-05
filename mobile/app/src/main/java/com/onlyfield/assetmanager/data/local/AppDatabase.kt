@@ -6,7 +6,6 @@ import androidx.room.RoomDatabase
 @Database(
     entities = [
         ProjectEntity::class,
-        BusinessUnitEntity::class,
         SiteEntity::class,
         AreaEntity::class,
         DeviceEntity::class,

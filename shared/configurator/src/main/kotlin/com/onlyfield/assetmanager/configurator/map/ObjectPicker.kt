@@ -73,7 +73,7 @@ fun MapObjectPicker(project: Project, i18n: Messages, areaId: String, parent: Ob
 
 /**
  * Quick insertion in one dialog: type (grouped, searchable, with icons), then prefilled menus
- * (name, preset ports, rack height, business unit when missing) and Add, which saves at once.
+ * (name, preset ports, rack height, site when missing) and Add, which saves at once.
  * Types without menus are added with one tap; a single matching type skips the list.
  */
 @OptIn(ExperimentalLayoutApi::class)
@@ -88,22 +88,22 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
     var chosen by remember { mutableStateOf(allTypes.singleOrNull()) }
     val start = remember(chosen) { chosen?.let(base) }
     val preset = chosen?.let { DevicePresets.forType(it.id) }
-    // A business unit is asked only when the context has none and there is a real choice.
-    val askBu = start?.type?.kind == ObjectKind.DEVICE && start.buId.isBlank() && project.businessUnits.size > 1
+    // A site is asked only when the context has none and there is a real choice.
+    val askSite = start?.type?.kind == ObjectKind.DEVICE && start.siteId.isBlank() && project.sites.size > 1
     var values by remember(chosen) { mutableStateOf(preset?.defaults().orEmpty()) }
     var name by remember(chosen) { mutableStateOf(chosen?.let { suggestName(project, it) }.orEmpty()) }
     var height by remember(chosen) { mutableStateOf(start?.rack?.heightU?.toIntOrNull() ?: 42) }
-    var buId by remember(chosen) { mutableStateOf(start?.takeIf { it.buId.isBlank() }?.let { project.businessUnits.firstOrNull()?.id }) }
-    val draft = start?.let { QuickAdd.draft(it, name, preset?.result(values), height, buId) }
+    var siteId by remember(chosen) { mutableStateOf(start?.takeIf { it.siteId.isBlank() }?.let { project.sites.firstOrNull()?.id }) }
+    val draft = start?.let { QuickAdd.draft(it, name, preset?.result(values), height, siteId) }
     val errors = draft?.errors(project, i18n).orEmpty()
 
     fun pick(type: ObjectType) {
         val first = base(type)
         if (type.kind == ObjectKind.CABLE) { onEdit?.invoke(first); return }
-        val bu = if (first.buId.isBlank()) project.businessUnits.firstOrNull()?.id else null
-        val quick = QuickAdd.draft(first, suggestName(project, type), buId = bu)
+        val site = if (first.siteId.isBlank()) project.sites.firstOrNull()?.id else null
+        val quick = QuickAdd.draft(first, suggestName(project, type), siteId = site)
         val needs = QuickAdd.needsDetails(quick, DevicePresets.forType(type.id) != null, quick.errors(project, i18n).isNotEmpty()) ||
-            (first.buId.isBlank() && project.businessUnits.size > 1)
+            (first.siteId.isBlank() && project.sites.size > 1)
         if (needs) chosen = type else onAdd(quick)
     }
 
@@ -125,7 +125,7 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
                         isError = errors["technicalName"] != null || errors["name"] != null)
                     if (draft.type.kind == ObjectKind.RACK)
                         ValueMenu(i18n.text("config.units"), height, (HardwareConfigurator.rackHeights + height).distinct().sorted(), { "$it U" }, Modifier.fillMaxWidth()) { height = it }
-                    if (askBu) ValueMenu(i18n.text("config.bu"), project.businessUnits.find { it.id == buId }, project.businessUnits, { it?.name.orEmpty() }, Modifier.fillMaxWidth()) { buId = it?.id }
+                    if (askSite) ValueMenu(i18n.text("config.site"), project.sites.find { it.id == siteId }, project.sites, { it?.name.orEmpty() }, Modifier.fillMaxWidth()) { siteId = it?.id }
                     preset?.let { p ->
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             p.params.forEach { param ->

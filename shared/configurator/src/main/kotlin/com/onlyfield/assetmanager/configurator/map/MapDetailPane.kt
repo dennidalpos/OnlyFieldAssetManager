@@ -285,7 +285,7 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
                     actions.photo?.let { photo -> FilledTonalButton(onClick = { photo(AttachmentTargetType.CABLE, cable.id) }) {
                         Text(i18n.text("quick.photo") + (project.attachments.count { it.targetType == AttachmentTargetType.CABLE && it.targetId == cable.id }.takeIf { it > 0 }?.let { " ($it)" } ?: ""))
                     } }
-                    Button(onClick = { actions.edit(MapObjectDraft.cable(project, floorBusinessUnit(project, scene.areaId), scene.areaId, cable.id, i18n), ConfiguratorPage.ESSENTIALS) }) {
+                    Button(onClick = { actions.edit(MapObjectDraft.cable(project, floorSite(project, scene.areaId), scene.areaId, cable.id, i18n), ConfiguratorPage.ESSENTIALS) }) {
                         Text(i18n.text("map.editCable"))
                     }
                     (cable.portAId ?: cable.portBId)?.let { end -> OutlinedButton(onClick = { passageFrom = end }) { Text(i18n.text("quick.insertPassage")) } }

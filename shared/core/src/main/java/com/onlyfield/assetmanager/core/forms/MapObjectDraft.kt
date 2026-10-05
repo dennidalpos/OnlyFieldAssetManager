@@ -9,9 +9,9 @@ import java.util.UUID
 data class MapObjectDraft(
     val id: String = UUID.randomUUID().toString(),
     val type: ObjectType,
-    val buId: String,
+    val siteId: String,
     val areaId: String,
-    val device: DeviceForm = DeviceForm(businessUnitId = buId, areaId = areaId, category = type.category, objectTypeId = type.id, mountingType = MountingType.OUT_OF_RACK),
+    val device: DeviceForm = DeviceForm(siteId = siteId, areaId = areaId, category = type.category, objectTypeId = type.id, mountingType = MountingType.OUT_OF_RACK),
     val rack: RackForm = RackForm(areaId = areaId),
     val cable: CableForm = CableForm(medium = type.cableMedium),
     val deviceAId: String? = null,
@@ -37,7 +37,7 @@ data class MapObjectDraft(
         ObjectKind.CABLE -> cable.errors(i18n = i18n)
         }
         val graph = ConnectionGraph(p)
-        val allDevices = p.businessUnits.flatMap { it.devices }
+        val allDevices = p.sites.flatMap { it.devices }
         val portIds = allDevices.flatMap { it.ports }.map { it.id }.toSet()
         return errors + buildMap {
             if (type.kind == ObjectKind.CABLE && (listOfNotNull(cable.portAId, cable.portBId).any { it !in portIds } || listOfNotNull(deviceAId, deviceBId).any { id -> allDevices.none { it.id == id } })) put("ports", i18n.text("config.invalidEndpoint"))
@@ -51,7 +51,7 @@ data class MapObjectDraft(
                     put("ports", i18n.text("config.invalidEndpoint"))
             }
             if (type.kind == ObjectKind.DEVICE && (portsConfigured || device.hardware.portGroups.isNotEmpty())) {
-                val existing = p.businessUnits.flatMap { it.devices }.find { it.id == id } ?: Device(id = id, technicalName = device.technicalName)
+                val existing = p.sites.flatMap { it.devices }.find { it.id == id } ?: Device(id = id, technicalName = device.technicalName)
                 if (!HardwareConfigurator.validGroups(device.hardware.portGroups)) put("ports", i18n.text("config.invalidHardware"))
                 else if (!allowConnectedRemoval && HardwareConfigurator.preview(p, existing, device.hardware.portGroups).connectedRemoved.isNotEmpty()) put("ports", i18n.text("config.removeConnected"))
             }
@@ -64,9 +64,9 @@ data class MapObjectDraft(
             configured.copy(objectTypes = configured.objectTypes.filterNot { it.id == type.id } + type) else configured
         return when (type.kind) {
             ObjectKind.DEVICE -> {
-                val existing = p.businessUnits.flatMap { it.devices }.find { it.id == id }
+                val existing = p.sites.flatMap { it.devices }.find { it.id == id }
                 val saved = device.toDevice(existing, i18n.text("text.2b71c6a11df1")).copy(id = id)
-                val added = if (existing == null) ProjectEdits.addDevice(p, device.businessUnitId ?: buId, saved) else ProjectEdits.updateDevice(p, saved)
+                val added = if (existing == null) ProjectEdits.addDevice(p, device.siteId ?: siteId, saved) else ProjectEdits.updateDevice(p, saved)
                 val ports = portsConfigured || saved.hardware.portGroups.isNotEmpty()
                 if (ports && HardwareConfigurator.validGroups(saved.hardware.portGroups) && (allowConnectedRemoval || HardwareConfigurator.preview(p, saved, saved.hardware.portGroups).connectedRemoved.isEmpty()))
                     HardwareConfigurator.configure(added, saved, allowConnectedRemoval, true) else added
@@ -87,12 +87,12 @@ data class MapObjectDraft(
         val configured = session?.apply(project) ?: project
         val source = if (type.id != "legacy" && ObjectCatalog.builtins.none { it.id == type.id })
             configured.copy(objectTypes = configured.objectTypes.filterNot { it.id == type.id } + type) else configured
-        val devices = source.businessUnits.flatMap { it.devices }
+        val devices = source.sites.flatMap { it.devices }
         val updated = when (type.kind) {
             ObjectKind.DEVICE -> {
                 val existing = devices.find { it.id == id }
                 val saved = device.toDevice(existing, i18n.text("text.2b71c6a11df1")).copy(id = id, objectTypeId = if (type.id == "legacy") existing?.objectTypeId else type.id)
-                val added = if (existing == null) ProjectEdits.addDevice(source, device.businessUnitId ?: buId, saved) else ProjectEdits.updateDevice(source, saved, i18n = i18n)
+                val added = if (existing == null) ProjectEdits.addDevice(source, device.siteId ?: siteId, saved) else ProjectEdits.updateDevice(source, saved, i18n = i18n)
                 val p = HardwareConfigurator.configure(added, saved, allowConnectedRemoval, portsConfigured || saved.hardware.portGroups.isNotEmpty())
                 if (existing == null && areaId.isNotBlank()) place(p, PlacementTargetType.DEVICE) else p
             }
@@ -117,36 +117,36 @@ data class MapObjectDraft(
 
     companion object {
         fun forDevice(project: Project, device: Device?): MapObjectDraft {
-            val bu = device?.let { d -> project.businessUnits.find { b -> b.devices.any { it.id == d.id } } } ?: project.businessUnits.firstOrNull()
+            val site = device?.let { d -> project.sites.find { b -> b.devices.any { it.id == d.id } } } ?: project.sites.firstOrNull()
             val area = device?.let { ObjectMap.areaId(project, it) }.orEmpty()
-            return if (device != null) device(project, bu?.id.orEmpty(), area, device.id) else
-                MapObjectDraft(type = ObjectCatalog.builtins.first { it.id == "switch" }, buId = bu?.id.orEmpty(), areaId = area,
-                    device = DeviceForm(businessUnitId = bu?.id, areaId = null))
+            return if (device != null) device(project, site?.id.orEmpty(), area, device.id) else
+                MapObjectDraft(type = ObjectCatalog.builtins.first { it.id == "switch" }, siteId = site?.id.orEmpty(), areaId = area,
+                    device = DeviceForm(siteId = site?.id, areaId = null))
         }
 
         fun forRack(project: Project, rack: Rack?): MapObjectDraft = if (rack != null)
-            rack(project, project.businessUnits.firstOrNull()?.id.orEmpty(), rack.areaId.orEmpty(), rack.id) else
-            MapObjectDraft(type = ObjectCatalog.builtins.first { it.kind == ObjectKind.RACK }, buId = project.businessUnits.firstOrNull()?.id.orEmpty(), areaId = "", rack = RackForm())
+            rack(project, project.sites.firstOrNull()?.id.orEmpty(), rack.areaId.orEmpty(), rack.id) else
+            MapObjectDraft(type = ObjectCatalog.builtins.first { it.kind == ObjectKind.RACK }, siteId = project.sites.firstOrNull()?.id.orEmpty(), areaId = "", rack = RackForm())
 
         fun forCable(project: Project, cable: Cable?): MapObjectDraft = if (cable != null)
-            cable(project, project.businessUnits.firstOrNull()?.id.orEmpty(), "", cable.id) else
-            MapObjectDraft(type = ObjectCatalog.builtins.first { it.kind == ObjectKind.CABLE }, buId = project.businessUnits.firstOrNull()?.id.orEmpty(), areaId = "")
+            cable(project, project.sites.firstOrNull()?.id.orEmpty(), "", cable.id) else
+            MapObjectDraft(type = ObjectCatalog.builtins.first { it.kind == ObjectKind.CABLE }, siteId = project.sites.firstOrNull()?.id.orEmpty(), areaId = "")
 
-        fun newObject(project: Project, type: ObjectType, buId: String, areaId: String, parent: ObjectRef): MapObjectDraft {
+        fun newObject(project: Project, type: ObjectType, siteId: String, areaId: String, parent: ObjectRef): MapObjectDraft {
             val rack = (listOf(parent) + ObjectHierarchy.ancestors(project, parent)).firstOrNull { it.type == PlacementTargetType.RACK }
-            val draft = MapObjectDraft(type = type, buId = buId, areaId = areaId, parentRef = parent)
+            val draft = MapObjectDraft(type = type, siteId = siteId, areaId = areaId, parentRef = parent)
             return draft.copy(device = draft.device.copy(rackId = rack?.id, mountingType = if (rack == null) MountingType.OUT_OF_RACK else MountingType.RACK_MOUNT))
         }
 
-        fun device(project: Project, buId: String, areaId: String, id: String, i18n: Messages = Messages()): MapObjectDraft {
-            val d = project.businessUnits.flatMap { it.devices }.first { it.id == id }
+        fun device(project: Project, siteId: String, areaId: String, id: String, i18n: Messages = Messages()): MapObjectDraft {
+            val d = project.sites.flatMap { it.devices }.first { it.id == id }
             val type = ObjectCatalog.type(project, d.objectTypeId) ?: ObjectType("legacy", i18n.text("text.cf301d95d32c"), d.category)
-            return MapObjectDraft(id = id, type = type, buId = buId, areaId = areaId, device = DeviceForm.from(d, buId), extraFields = project.customExtraFields.filter { it.targetId == id }, parentRef = ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, id)))
+            return MapObjectDraft(id = id, type = type, siteId = siteId, areaId = areaId, device = DeviceForm.from(d, siteId), extraFields = project.customExtraFields.filter { it.targetId == id }, parentRef = ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, id)))
         }
-        fun rack(project: Project, buId: String, areaId: String, id: String) = MapObjectDraft(id = id, type = ObjectCatalog.builtins.first { it.kind == ObjectKind.RACK }, buId = buId, areaId = areaId, rack = RackForm.from(project.racks.first { it.id == id }), extraFields = project.customExtraFields.filter { it.targetId == id }, parentRef = ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.RACK, id)))
-        fun cable(project: Project, buId: String, areaId: String, id: String, i18n: Messages = Messages()): MapObjectDraft {
+        fun rack(project: Project, siteId: String, areaId: String, id: String) = MapObjectDraft(id = id, type = ObjectCatalog.builtins.first { it.kind == ObjectKind.RACK }, siteId = siteId, areaId = areaId, rack = RackForm.from(project.racks.first { it.id == id }), extraFields = project.customExtraFields.filter { it.targetId == id }, parentRef = ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.RACK, id)))
+        fun cable(project: Project, siteId: String, areaId: String, id: String, i18n: Messages = Messages()): MapObjectDraft {
             val c = project.cables.first { it.id == id }
-            return MapObjectDraft(id = id, type = ObjectCatalog.type(project, c.objectTypeId) ?: ObjectType("cable", i18n.text("text.89dbe18e8407"), kind = ObjectKind.CABLE), buId = buId, areaId = areaId, cable = CableForm.from(c), deviceAId = c.deviceAId, deviceBId = c.deviceBId, extraFields = project.customExtraFields.filter { it.targetId == id })
+            return MapObjectDraft(id = id, type = ObjectCatalog.type(project, c.objectTypeId) ?: ObjectType("cable", i18n.text("text.89dbe18e8407"), kind = ObjectKind.CABLE), siteId = siteId, areaId = areaId, cable = CableForm.from(c), deviceAId = c.deviceAId, deviceBId = c.deviceBId, extraFields = project.customExtraFields.filter { it.targetId == id })
         }
     }
 }

@@ -74,7 +74,7 @@ class MasterDetailTest {
     fun inventorySwitchAndNewDeviceRespectUnsavedChanges() {
         var project by mutableStateOf(Project(
             id = "project", name = "Sito", createdEpochMs = 1, updatedEpochMs = 1,
-            businessUnits = listOf(BusinessUnit(
+            sites = listOf(Site(
                 id = "bu", name = "BU", devices = listOf(
                     Device(id = "first", technicalName = "SW-01", category = DeviceCategory.NETWORK_SWITCH),
                     Device(id = "second", technicalName = "SW-02", category = DeviceCategory.NETWORK_SWITCH)
@@ -95,8 +95,8 @@ class MasterDetailTest {
         rule.onNodeWithText("+ Nuovo apparato").performSemanticsAction(SemanticsActions.OnClick) { it() }
         rule.onNodeWithText("Continua a modificare").performClick()
         rule.onNodeWithText("Salva modifiche").performClick()
-        assertEquals("SW-01 modificato", project.businessUnits.single().devices[0].technicalName)
-        assertEquals("SW-02", project.businessUnits.single().devices[1].technicalName)
+        assertEquals("SW-01 modificato", project.sites.single().devices[0].technicalName)
+        assertEquals("SW-02", project.sites.single().devices[1].technicalName)
         rule.onNodeWithText("Modifica").performSemanticsAction(SemanticsActions.OnClick) { it() }
         rule.onNode(hasSetTextAction() and hasText("SW-02") and hasText("Nome oggetto")).assertExists()
         rule.onNodeWithText("Scartare le modifiche?").assertDoesNotExist()
