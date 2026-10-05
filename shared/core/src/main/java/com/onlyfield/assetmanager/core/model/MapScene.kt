@@ -107,6 +107,8 @@ data class SceneNode(
     val portsTotal: Int,
     /** Cables whose both ends are inside this node: shown only after opening it. */
     val internalCables: List<String>,
+    /** Device switched off or decommissioned: drawn faded. */
+    val inactive: Boolean = false,
 )
 
 /**
@@ -241,7 +243,8 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
                 val children = hierarchy.children[ref].orEmpty()
                 SceneNode(ref, lookup.name(ref), glyph, point,
                     isContainer = children.isNotEmpty() || lookup.canContain(ref), childCount = children.size,
-                    portsUsed = ports.count { graph.occupied(it.id) }, portsTotal = ports.size, internalCables = internal[ref].orEmpty())
+                    portsUsed = ports.count { graph.occupied(it.id) }, portsTotal = ports.size, internalCables = internal[ref].orEmpty(),
+                    inactive = devices[ref.id]?.operationalStatus.let { it == OperationalStatus.OFF || it == OperationalStatus.DECOMMISSIONED })
             }
             return MapScene(areaId, container, nodes, links, ObjectMap.floorSite(project, areaId).ifBlank { null })
         }

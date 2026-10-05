@@ -34,6 +34,13 @@ class MapSceneTest {
         assertEquals(2, rackNode.childCount)
     }
 
+    @Test fun switchedOffDeviceIsFaded() {
+        val p = project().let { it.copy(sites = it.sites.map { s -> s.copy(devices = s.devices.map { d -> if (d.id == ap.id) d.copy(operationalStatus = OperationalStatus.DECOMMISSIONED) else d }) }) }
+        val nodes = MapScene.area(p, area.id).nodes.associateBy { it.ref }
+        assertTrue(nodes.getValue(apRef).inactive)
+        assertFalse(nodes.getValue(rackRef).inactive)
+    }
+
     @Test fun defaultRouteIsStraightAndLegacyCentreBendIsIgnored() {
         val c = Cable(deviceAId = sw.id, deviceBId = ap.id)
         val legacy = project(c).copy(cableRoutes = listOf(CableRoute(cableId = c.id, areaId = area.id, points = CableRoute.LEGACY_DEFAULT)))

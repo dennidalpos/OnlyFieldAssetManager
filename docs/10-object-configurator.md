@@ -34,7 +34,7 @@ La logica pura è in `core.forms.QuickAdd`: bozza con nome, preset, altezza e se
 
 ## Dati essenziali e dettagli
 
-In testa una riga di contesto mostra simbolo, tipo e posizione (`Terra › R1 › U10–11`); il nome è già nel titolo della finestra. **Dati essenziali** contiene nome, tipo, modello ed etichetta fisica (per i rack l'altezza, per i cavi il mezzo). Il modello compare solo se esistono modelli applicabili o ne è già impostato uno. Il tipo imposta la categoria; la categoria compare in Hardware solo per tipi personalizzati, legacy e modelli.
+In testa una riga di contesto mostra simbolo, tipo e posizione (`Terra › R1 › U10–11`); il nome è già nel titolo della finestra. **Dati essenziali** contiene nome, tipo, modello, etichetta fisica e stato operativo (per i rack l'altezza, per i cavi il mezzo). Il modello compare solo se esistono modelli applicabili o ne è già impostato uno. Il tipo imposta la categoria; la categoria compare in Hardware solo per tipi personalizzati, legacy e modelli.
 
 Le sezioni seguono sempre questo ordine e, chiuse, mostrano un riepilogo; l'intestazione è rettangolare perché titolo e riepilogo su due righe non vengano tagliati dagli angoli arrotondati:
 

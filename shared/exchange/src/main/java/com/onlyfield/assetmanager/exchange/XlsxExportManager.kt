@@ -164,7 +164,7 @@ object XlsxExportManager {
   <sheetData>
 """)
 
-        val headers = listOf(i18n.text("text.f163aa3f6310"), i18n.text("site.group"), i18n.text("text.024dc204d7ba"), i18n.text("text.29caae5fe1e7"), i18n.text("text.d5680523de72"), i18n.text("text.b19e02e9502b"), i18n.text("text.ebb396f2d486"), i18n.text("text.8894b359b4e9"), i18n.text("text.54276aa0307f"), "Rack/Posizione", i18n.text("text.90c2d339a9d5"), i18n.text("text.2edfc95a3c46"), i18n.text("text.3b495129c5de"), i18n.text("text.d8da2c49df39")) + listOf(i18n.text("config.width"), i18n.text("config.depth"), i18n.text("config.poeBudget"), i18n.text("config.features"))
+        val headers = listOf(i18n.text("text.f163aa3f6310"), i18n.text("site.group"), i18n.text("text.024dc204d7ba"), i18n.text("text.29caae5fe1e7"), i18n.text("text.d5680523de72"), i18n.text("text.b19e02e9502b"), i18n.text("text.ebb396f2d486"), i18n.text("text.8894b359b4e9"), i18n.text("text.54276aa0307f"), "Rack/Posizione", i18n.text("text.90c2d339a9d5"), i18n.text("text.2edfc95a3c46"), i18n.text("text.3b495129c5de"), i18n.text("text.d8da2c49df39")) + listOf(i18n.text("config.width"), i18n.text("config.depth"), i18n.text("config.poeBudget"), i18n.text("config.features"), i18n.text("device.status"))
         sb.append("<row r=\"1\">")
         headers.forEachIndexed { idx, h ->
             val colLetter = ('A' + idx).toString()
@@ -199,6 +199,7 @@ object XlsxExportManager {
             sb.append(cellNum("P", rowIdx, dev.hardware.depthMm))
             sb.append(cellNum("Q", rowIdx, dev.hardware.poeBudgetWatts))
             sb.append(cellStr("R", rowIdx, dev.hardware.features.joinToString(", ")))
+            sb.append(cellStr("S", rowIdx, dev.operationalStatus.toDisplayString(i18n)))
             sb.append("</row>\n")
             rowIdx++
         }

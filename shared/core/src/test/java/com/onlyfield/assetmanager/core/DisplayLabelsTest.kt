@@ -33,6 +33,7 @@ class DisplayLabelsTest {
         assertReadable(NumberingDirection.values()) { it.toDisplayString() }
         assertReadable(MountingType.values()) { it.toDisplayString() }
         assertReadable(ValidationSeverity.values()) { it.toDisplayString() }
+        assertReadable(OperationalStatus.values()) { it.toDisplayString() }
     }
 
     @Test

@@ -27,6 +27,15 @@ enum class EndpointStatus {
     UNKNOWN
 }
 
+/** Operating state of a device, distinct from the survey [Observation]. */
+@Serializable
+enum class OperationalStatus {
+    IN_SERVICE,
+    OFF,
+    DECOMMISSIONED,
+    TO_VERIFY
+}
+
 @Serializable
 enum class NumberingDirection {
     BOTTOM_TO_TOP,
@@ -152,6 +161,7 @@ data class Device(
     val serialNumber: String? = null,
     val objectTypeId: String? = null,
     val hardware: HardwareSpec = HardwareSpec(),
+    val operationalStatus: OperationalStatus = OperationalStatus.IN_SERVICE,
 )
 
 @Serializable

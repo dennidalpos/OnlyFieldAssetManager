@@ -258,7 +258,8 @@ data class DeviceEntity(
     val deviceModelId: String? = null,
     val category: String = "CUSTOM",
     val objectTypeId: String? = null,
-    val serialNumber: String? = null
+    val serialNumber: String? = null,
+    val operationalStatus: String = "IN_SERVICE"
 )
 
 @Entity(

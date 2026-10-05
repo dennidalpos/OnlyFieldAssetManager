@@ -8,6 +8,7 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.AttachmentClassification
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.NumberingDirection
+import com.onlyfield.assetmanager.core.model.OperationalStatus
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import java.text.SimpleDateFormat
@@ -58,6 +59,7 @@ object ReportContent {
                     devices.sortedBy { it.technicalName }.forEach { d ->
                         val extra = listOfNotNull(
                             d.category.toDisplayString(i18n = i18n),
+                            d.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.toDisplayString(i18n),
                             d.ipAddress,
                             d.rackId?.let { i18n.text("text.4d2d924e8402", index.rackName(it)) + (d.positionU?.let { u -> i18n.text("text.bf28e779d560", u) } ?: "") },
                             d.physicalLabel?.let { i18n.text("text.49ac7ff5098a", it) },

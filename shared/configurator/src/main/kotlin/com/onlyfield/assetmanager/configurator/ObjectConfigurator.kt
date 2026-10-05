@@ -184,6 +184,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
         }
     }
     if (kind == ObjectKind.DEVICE && !modelEditor) Field(i18n.text("config.label"), draft.device.physicalLabel) { change(draft.copy(device = draft.device.copy(physicalLabel = it))) }
+    if (kind == ObjectKind.DEVICE && !modelEditor) Pick(i18n.text("device.status"), draft.device.operationalStatus, OperationalStatus.entries, i18n, { it.toDisplayString(i18n) }, allowClear = false) { it?.let { st -> change(draft.copy(device = draft.device.copy(operationalStatus = st))) } }
     if (kind == ObjectKind.RACK) Choice(i18n.text("config.units"), draft.rack.heightU, (HardwareConfigurator.rackHeights + preview.racks.map { it.heightU }).map { it.toString() }, error = errors["heightU"]) { change(draft.copy(rack = draft.rack.copy(heightU = it))) }
     if (kind == ObjectKind.CABLE) Pick(i18n.text("config.medium"), draft.cable.medium, CableMedium.entries, i18n, { it.toDisplayString(i18n) }) { it?.let { m -> change(draft.copy(cable = draft.cable.copy(medium = m))) } }
 

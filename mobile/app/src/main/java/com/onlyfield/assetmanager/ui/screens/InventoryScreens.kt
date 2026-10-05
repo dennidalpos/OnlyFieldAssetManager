@@ -35,6 +35,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val index = remember(project) { ProjectIndex(project) }
     var query by rememberSaveableString()
     var areaFilter by remember { mutableStateOf<Area?>(null) }
+    var statusFilter by remember { mutableStateOf<OperationalStatus?>(null) }
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
     var creating by remember { mutableStateOf(false) }
@@ -43,7 +44,8 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val confirm = LocalConfirm.current
 
     val devices = index.devices.filter {
-        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id)
+        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id) &&
+            (statusFilter == null || it.operationalStatus == statusFilter)
     }.sortedForDisplay(i18n) { it.technicalName }
 
     AppScaffold(
@@ -68,9 +70,13 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             if (index.areas.isNotEmpty()) {
                 OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, areaFilter, { it.name }, { areaFilter = it }, noneLabel = i18n.text("text.4c852ffc6db0"))
             }
+            // Only when statuses differ, to keep the phone list lean.
+            if (statusFilter != null || index.devices.any { it.operationalStatus != OperationalStatus.IN_SERVICE }) {
+                OptionPicker(i18n.text("device.status"), OperationalStatus.entries, statusFilter, { it.toDisplayString(i18n = i18n) }, { statusFilter = it }, noneLabel = i18n.text("status.filterAll"))
+            }
             when {
                 index.devices.isEmpty() -> EmptyState(i18n.text("text.8d6015db495b"))
-                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaFilter = null })
+                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaFilter = null; statusFilter = null })
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(devices, key = { it.id }) { d ->
                         ItemCard(
@@ -79,7 +85,8 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                             details = listOf(
                                 listOfNotNull(d.areaId?.let { index.areaName(it) }, d.rackId?.let { i18n.text("text.f5ba7982ad75", index.rackName(it)) + (d.positionU?.let { u -> i18n.text("text.bf28e779d560", u) } ?: "") })
                                     .joinToString(" › "),
-                                listOfNotNull(d.ipAddress, i18n.plural("text.53a2e3b94696", d.ports.size)).joinToString(" · ")
+                                listOfNotNull(d.ipAddress, i18n.plural("text.53a2e3b94696", d.ports.size),
+                                    d.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.toDisplayString(i18n)).joinToString(" · ")
                             ),
                             leading = if (selecting) {
                                 { Checkbox(checked = d.id in selected, onCheckedChange = { selected = if (it) selected + d.id else selected - d.id }) }

@@ -43,6 +43,7 @@ fun InventorySection(
     var query by remember { mutableStateOf("") }
     var categoryFilter by remember { mutableStateOf<DeviceCategory?>(null) }
     var areaFilter by remember { mutableStateOf<Area?>(null) }
+    var statusFilter by remember { mutableStateOf<OperationalStatus?>(null) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
     var editing by remember { mutableStateOf<Device?>(null) }
@@ -54,11 +55,12 @@ fun InventorySection(
     var mergeTarget by remember { mutableStateOf<Device?>(null) }
     var showBatch by remember { mutableStateOf(false) }
 
-    val filtered = remember(index, query, categoryFilter, areaFilter, i18n.locale) {
+    val filtered = remember(index, query, categoryFilter, areaFilter, statusFilter, i18n.locale) {
         index.devices.filter { d ->
             matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress, d.serialNumber) &&
                 (categoryFilter == null || d.category == categoryFilter) &&
-                (areaFilter == null || d.areaId == areaFilter?.id)
+                (areaFilter == null || d.areaId == areaFilter?.id) &&
+                (statusFilter == null || d.operationalStatus == statusFilter)
         }.sortedForDisplay(i18n) { it.technicalName }
     }
     // Drop selections of devices that no longer exist.
@@ -102,6 +104,15 @@ fun InventorySection(
                 noneLabel = i18n.text("text.4c852ffc6db0"),
                 modifier = Modifier.widthIn(max = 240.dp)
             )
+            OptionPicker(
+                label = i18n.text("device.status"),
+                options = OperationalStatus.entries,
+                selected = statusFilter,
+                optionLabel = { it.toDisplayString(i18n = i18n) },
+                onSelected = { statusFilter = it },
+                noneLabel = i18n.text("status.filterAll"),
+                modifier = Modifier.widthIn(max = 240.dp)
+            )
             if (selectedIds.isNotEmpty()) {
                 Text(i18n.text("text.a3de97a5039a", selectedIds.size), fontWeight = FontWeight.SemiBold)
                 OutlinedButton(onClick = { changeDetail { showBatch = true } }) { Text(i18n.text("text.12fea36b47a9")) }
@@ -115,7 +126,7 @@ fun InventorySection(
             project.sites.isEmpty() -> EmptyState(i18n.text("text.d07b43aa8cb1"))
             index.devices.isEmpty() -> EmptyState(i18n.text("text.acc21f707eb1"), actionLabel = i18n.text("text.8650e4573818"), onAction = { creating = true })
             filtered.isEmpty() -> EmptyState(i18n.text("text.4e750f66126c"), actionLabel = i18n.text("text.c4483e052140"), onAction = {
-                query = ""; categoryFilter = null; areaFilter = null
+                query = ""; categoryFilter = null; areaFilter = null; statusFilter = null
             })
             else -> LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(filtered, key = { it.id }) { dev ->
@@ -131,7 +142,8 @@ fun InventorySection(
                     ItemCard(
                         title = dev.technicalName + (dev.alias?.let { " ($it)" } ?: ""),
                         badge = dev.category.toDisplayString(i18n = i18n),
-                        details = listOf(location, listOf(network, i18n.plural("text.53a2e3b94696", dev.ports.size)).filter { it.isNotBlank() }.joinToString(" · ")),
+                        details = listOfNotNull(location, listOf(network, i18n.plural("text.53a2e3b94696", dev.ports.size)).filter { it.isNotBlank() }.joinToString(" · "),
+                            dev.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.let { i18n.text("device.status") + ": " + it.toDisplayString(i18n) }),
                         selected = editing?.id == dev.id || portsOf == dev.id,
                         onClick = { changeDetail { editing = dev } },
                         leading = {

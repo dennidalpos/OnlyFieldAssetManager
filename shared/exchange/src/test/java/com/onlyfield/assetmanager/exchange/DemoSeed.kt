@@ -170,6 +170,9 @@ object DemoSeed {
             WanVpnConnection(name = "FTTH Teatro", type = WanVpnType.INTERNET, providerOrCarrier = "Operatore FTTH", bandwidth = "300 Mbps", localEndpointDeviceId = rtrTea),
             WanVpnConnection(name = "VPN Teatro–Municipio", type = WanVpnType.VPN, localEndpointDeviceId = rtrTea, remoteEndpointDeviceId = fw),
         ))
+        // A few operational states so filters and faded map nodes have something to show.
+        val states = mapOf("PC-TEA-PT-06" to OperationalStatus.OFF, "TEL-MAT-PT-04" to OperationalStatus.DECOMMISSIONED, "CAM-MED-PT-02" to OperationalStatus.TO_VERIFY)
+        p = p.copy(sites = p.sites.map { s -> s.copy(devices = s.devices.map { d -> states[d.technicalName]?.let { d.copy(operationalStatus = it) } ?: d }) })
         return p.copy(updatedEpochMs = now)
     }
 

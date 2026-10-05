@@ -211,3 +211,12 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - L'avviso `UNPOSITIONED_DEVICE` ora segnala un apparato senza piano né rack. I codici `*_BU` sono diventati `*_SITE`.
 - Fixture `v1_sample_project.json` appiattito; demo «Demo Comune» rigenerato con i gruppi Sedi comunali e Scuole.
 - Verifica: core 90, exchange 41, Desktop 95, Android JVM 24 test superati; test strumentali Android compilati.
+
+## EVO-02: stato operativo dell'apparato — 5 ottobre 2026
+
+- `Device.operationalStatus` (`OperationalStatus`: in servizio, spento, dismesso, da verificare; predefinito in servizio), distinto da `Observation`. Persistito in `.ofam` 1 e Room 1 (colonna `operationalStatus`).
+- Configuratore: scelta in Dati essenziali. Pannello mappa: stato tra i dati primari quando non è In servizio; nodi spenti o dismessi attenuati (`SceneNode.inactive`).
+- Dispositivi: filtro per stato su Windows; su Android il filtro compare quando esistono apparati non in servizio; lo stato compare nel riepilogo della riga.
+- Export: colonna Stato operativo in XLSX e Markdown (la colonna del rilievo si chiama ora Rilievo); report PDF Desktop con lo stato se diverso da In servizio. Il PDF Android non è stato modificato.
+- Demo rigenerato con un PC spento, un telefono dismesso e una telecamera da verificare.
+- Verifica: core 91, exchange 41, Desktop 95, Android JVM 24 test superati; nuovi controlli `MapSceneTest.switchedOffDeviceIsFaded`, persistenza Room in `ProjectRepositoryTest`, etichette in `DisplayLabelsTest`.

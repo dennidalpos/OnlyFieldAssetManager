@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "18f4e44ab206c759b0771aca66cf5aed",
+    "identityHash": "454e6e67f615ce1f1c8e53d4a7aff70c",
     "entities": [
       {
         "tableName": "projects",
@@ -220,7 +220,7 @@
       },
       {
         "tableName": "devices",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hardwareJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `siteId` TEXT NOT NULL, `areaId` TEXT, `technicalName` TEXT NOT NULL, `physicalLabel` TEXT, `alias` TEXT, `ipAddress` TEXT, `macAddress` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `rackId` TEXT, `positionU` INTEGER, `heightU` INTEGER NOT NULL, `rackSide` TEXT NOT NULL, `mountingType` TEXT NOT NULL, `deviceModelId` TEXT, `category` TEXT NOT NULL, `objectTypeId` TEXT, `serialNumber` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`siteId`) REFERENCES `sites`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`hardwareJson` TEXT NOT NULL DEFAULT '{}', `id` TEXT NOT NULL, `siteId` TEXT NOT NULL, `areaId` TEXT, `technicalName` TEXT NOT NULL, `physicalLabel` TEXT, `alias` TEXT, `ipAddress` TEXT, `macAddress` TEXT, `obsSource` TEXT, `obsTimestampEpochMs` INTEGER, `obsStatus` TEXT, `obsNotes` TEXT, `rackId` TEXT, `positionU` INTEGER, `heightU` INTEGER NOT NULL, `rackSide` TEXT NOT NULL, `mountingType` TEXT NOT NULL, `deviceModelId` TEXT, `category` TEXT NOT NULL, `objectTypeId` TEXT, `serialNumber` TEXT, `operationalStatus` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`siteId`) REFERENCES `sites`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
         "fields": [
           {
             "fieldPath": "hardwareJson",
@@ -340,6 +340,12 @@
             "fieldPath": "serialNumber",
             "columnName": "serialNumber",
             "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "operationalStatus",
+            "columnName": "operationalStatus",
+            "affinity": "TEXT",
+            "notNull": true
           }
         ],
         "primaryKey": {
@@ -2620,7 +2626,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '18f4e44ab206c759b0771aca66cf5aed')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '454e6e67f615ce1f1c8e53d4a7aff70c')"
     ]
   }
 }

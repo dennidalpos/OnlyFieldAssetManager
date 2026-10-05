@@ -60,14 +60,14 @@ object MarkdownExportManager {
 
         sb.append(i18n.text("text.b94006e17dfd"))
         sb.append(i18n.text("text.e1f506cffab5"))
-        sb.append("| :--- | :--- | :--- | :--- | :--- | :--- |\n")
+        sb.append("| :--- | :--- | :--- | :--- | :--- | :--- | :--- |\n")
 
         for (dev in filteredDevices) {
             val rackName = project.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
             val rackLoc = if (dev.rackId != null) i18n.text("text.6a25a1235a6f", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
             val statusStr = (dev.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n)
 
-            sb.append("| **${dev.technicalName}** | `${dev.ipAddress ?: "-"}` | ${dev.category.toDisplayString(i18n)} | $rackLoc | ${dev.ports.size} | `$statusStr` |\n")
+            sb.append("| **${dev.technicalName}** | `${dev.ipAddress ?: "-"}` | ${dev.category.toDisplayString(i18n)} | $rackLoc | ${dev.ports.size} | ${dev.operationalStatus.toDisplayString(i18n)} | `$statusStr` |\n")
         }
         sb.append("\n")
 

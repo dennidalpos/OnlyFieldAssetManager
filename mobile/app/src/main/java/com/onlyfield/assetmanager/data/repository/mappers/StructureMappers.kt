@@ -178,7 +178,8 @@ internal fun toDeviceEntity(siteId: String, device: Device): DeviceEntity {
         category = device.category.name,
         objectTypeId = device.objectTypeId,
         hardwareJson = mapperJson.encodeToString(device.hardware),
-        serialNumber = device.serialNumber
+        serialNumber = device.serialNumber,
+        operationalStatus = device.operationalStatus.name
     )
 }
 
@@ -292,6 +293,7 @@ internal fun toProject(
                 objectTypeId = devEnt.objectTypeId,
                 serialNumber = devEnt.serialNumber,
                 hardware = mapperJson.decodeFromString<com.onlyfield.assetmanager.core.model.HardwareSpec>(devEnt.hardwareJson),
+                operationalStatus = runCatching { com.onlyfield.assetmanager.core.model.OperationalStatus.valueOf(devEnt.operationalStatus) }.getOrDefault(com.onlyfield.assetmanager.core.model.OperationalStatus.IN_SERVICE),
             )
         }
 

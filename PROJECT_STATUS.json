@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Evoluzione censimento rete: EVO-01 (gerarchia Sede → Piano) completato; prossimo EVO-02.",
+  "currentPhase": "Evoluzione censimento rete: EVO-01 (gerarchia Sede → Piano) e EVO-02 (stato operativo) completati; prossimo EVO-03.",
   "activeTask": null,
-  "nextSession": "EVO-02 stato operativo apparato. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Resta RES-17.",
+  "nextSession": "EVO-03 cablaggio in blocco. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Resta RES-17.",
   "remainingTasks": [
-    {
-      "id": "EVO-02",
-      "title": "Stato operativo apparato",
-      "status": "TODO",
-      "description": "Campo `operationalStatus` (in servizio, spento, dismesso, da verificare) distinto da `Observation`; visibile nel pannello mappa, filtri elenco ed export.",
-      "closureCriteria": "Campo in modello, Room, `.ofam`, form ed export con test."
-    },
     {
       "id": "EVO-03",
       "title": "Cablaggio in blocco",

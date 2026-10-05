@@ -6,6 +6,8 @@ Un progetto contiene sedi, piani, apparati e porte, rack, cavi e percorsi disegn
 
 La gerarchia geografica è Sede → Piano (`Site.areas`). Una sede (`Site`) ha nome, codice, gruppo facoltativo (raggruppamento libero, ad esempio «Scuole») e indirizzo; contiene i propri piani e apparati. Il piano dell'apparato (`Device.areaId`) è facoltativo: senza piano né rack il validatore produce l'avviso `UNPOSITIONED_DEVICE`. Gli elenchi delle sedi sono ordinati per gruppo e poi per nome.
 
+Ogni apparato ha uno stato operativo (`OperationalStatus`: in servizio, spento, dismesso, da verificare; predefinito in servizio), distinto dallo stato del rilievo (`Observation`).
+
 ## Tracciamento fisico
 
 Il collegamento fisico è registrato solo dai cavi (`Cable`): estremità A e B sono porte, oppure un apparato quando la porta non è nota. Un cavo conserva etichetta, mezzo, colore, lunghezza, rilievo e note.

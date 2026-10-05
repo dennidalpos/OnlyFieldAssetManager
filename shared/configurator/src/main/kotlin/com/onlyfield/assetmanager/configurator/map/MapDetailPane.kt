@@ -158,6 +158,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
         node.childCount.takeIf { node.isContainer && !current }?.let { ObjectSummary.Fact(i18n.text("map.contents"), i18n.plural("map.objectCount", it)) },
         summary.mount?.let { ObjectSummary.Fact(i18n.text("map.fact.mount"), it) },
         device?.physicalLabel?.takeIf { it.isNotBlank() }?.let { ObjectSummary.Fact(i18n.text("map.fact.label"), it) },
+        device?.operationalStatus?.takeIf { it != OperationalStatus.IN_SERVICE }?.let { ObjectSummary.Fact(i18n.text("device.status"), it.toDisplayString(i18n)) },
     )
     FactRows(primary)
     var quickPort by remember(node.ref) { mutableStateOf<String?>(null) }

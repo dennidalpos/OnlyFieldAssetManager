@@ -14,6 +14,8 @@ fun ObservationStatus.toDisplayString(i18n: Messages = Messages()): String = whe
     ObservationStatus.NOT_DETECTED -> i18n.text("text.d57bb6a9696c")
 }
 
+fun OperationalStatus.toDisplayString(i18n: Messages = Messages()): String = i18n.text("status.$name")
+
 fun EndpointStatus.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     EndpointStatus.CONNECTED -> i18n.text("text.67f964220772")
     EndpointStatus.DETACHED_TO_VERIFY -> i18n.text("text.8d8fdf8e6b6d")

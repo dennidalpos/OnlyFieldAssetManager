@@ -12,6 +12,7 @@ import com.onlyfield.assetmanager.core.model.Observation
 import com.onlyfield.assetmanager.core.model.ObservationStatus
 import com.onlyfield.assetmanager.core.model.Port
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.model.OperationalStatus
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.core.model.RackSide
 import com.onlyfield.assetmanager.data.local.AppDatabase
@@ -95,6 +96,7 @@ class ProjectRepositoryTest {
             positionU = 10,
             heightU = 1,
             rackSide = RackSide.FRONT,
+            operationalStatus = OperationalStatus.OFF,
             deviceModelId = modelId,
             category = DeviceCategory.NETWORK_SWITCH,
             observation = Observation(source = "Test", timestampEpochMs = 1000L, status = ObservationStatus.VERIFIED)
@@ -138,6 +140,7 @@ class ProjectRepositoryTest {
         assertEquals(devId, reloadedDev.id)
         assertEquals("sw-access-01", reloadedDev.technicalName)
         assertEquals("Targhetta-1234", reloadedDev.physicalLabel)
+        assertEquals(OperationalStatus.OFF, reloadedDev.operationalStatus)
         assertEquals("Switch CED", reloadedDev.alias)
         assertEquals("192.168.1.50", reloadedDev.ipAddress)
         assertEquals(rackId, reloadedDev.rackId)

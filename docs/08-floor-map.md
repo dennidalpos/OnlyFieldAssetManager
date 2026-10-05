@@ -10,7 +10,7 @@ La navigazione segue progetto, sede, piano e mappa. Gli oggetti hanno coordinate
 - **Contenitore**: il tocco su un contenitore con figli apre la sua vista, fino all'ultimo livello. I figli sono disposti automaticamente; nei rack l'ordine segue le unità, dall'alto. Il percorso di navigazione (`Piano › RACK-A › BOX`) e Indietro riportano ai livelli superiori; i livelli eliminati, spostati in un altro contenitore o su un altro piano vengono chiusi. La vista interna non modifica posizioni o percorsi salvati.
 - Sono contenitori di serie rack, mensola, armadio e cassetta. Per i tipi personalizzati la proprietà si imposta nel catalogo; i tipi predefiniti non vengono più duplicati.
 
-Ogni nodo ha un simbolo univoco (SW, AP, CAM, NVR, UPS…) non tradotto, un colore per famiglia (Rete, Sicurezza, Server, Alimentazione, Passivo, Strutture, Dispositivi finali) e una forma: cerchio per gli oggetti, quadrato con numero di figli per i contenitori. L'anello indica le porte occupate dell'intero sottoalbero. Le etichette sono abbreviate e nascoste se si sovrappongono; quella dell'oggetto selezionato resta visibile.
+Gli apparati spenti o dismessi sono disegnati attenuati (`SceneNode.inactive`). Ogni nodo ha un simbolo univoco (SW, AP, CAM, NVR, UPS…) non tradotto, un colore per famiglia (Rete, Sicurezza, Server, Alimentazione, Passivo, Strutture, Dispositivi finali) e una forma: cerchio per gli oggetti, quadrato con numero di figli per i contenitori. L'anello indica le porte occupate dell'intero sottoalbero. Le etichette sono abbreviate e nascoste se si sovrappongono; quella dell'oggetto selezionato resta visibile.
 
 ## Collegamenti semplificati
 
@@ -43,7 +43,7 @@ Per un oggetto l'ordine è sempre lo stesso:
 
 1. **Intestazione**: simbolo, nome, tipo e chiusura (annunciata come Chiudi).
 2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore come secondarie (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
-3. **Dati primari**: unità del rack, contenuto, posizione nel rack ed etichetta fisica.
+3. **Dati primari**: unità del rack, contenuto, posizione nel rack, etichetta fisica e stato operativo se diverso da In servizio.
 4. **Porte**: il disegno dell'apparato con le porte occupate su totali; il tocco su una porta apre la scheda rapida (`PortQuickDialog`, vedi [10-object-configurator.md](10-object-configurator.md)).
 5. **Collegamenti**, con il numero di elementi.
 6. **Foto e allegati**: sempre visibile, con Aggiungi foto e, se vuota, l'invito a documentare oggetto e collegamenti.

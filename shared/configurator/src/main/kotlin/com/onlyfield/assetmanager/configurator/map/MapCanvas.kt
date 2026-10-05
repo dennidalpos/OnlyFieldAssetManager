@@ -322,7 +322,7 @@ private fun DrawScope.drawNodes(scene: MapScene, screen: (MapPoint) -> Offset, s
     val crowded = zoom < .9f && scene.nodes.size > 30
     ordered.reversed().forEach { node ->
         val c = screen(node.point)
-        val color = MapStyle.family(node.glyph.family)
+        val color = MapStyle.family(node.glyph.family).let { if (node.inactive) it.copy(alpha = .35f) else it }
         if (node.ref == selected) drawCircle(highlight, radius + unit * 3, c, style = Stroke(unit * 2))
         if (node.isContainer) {
             val r = radius * .9f
