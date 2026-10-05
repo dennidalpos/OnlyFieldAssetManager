@@ -53,11 +53,11 @@ class ConfiguratorUxTest {
         rule.setContent { MaterialTheme {
             Column(Modifier.width(560.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
         } }
-        rule.onNodeWithText("Identificativi e rete").performScrollTo().performClick()
+        rule.onNodeWithText("Identificativi").performScrollTo().performClick()
         rule.onNode(hasSetTextAction() and hasText("Numero di serie")).performScrollTo().performTextReplacement("NEW")
-        rule.onNodeWithText("Identificativi e rete").performScrollTo().performClick()
+        rule.onNodeWithText("Identificativi").performScrollTo().performClick()
         rule.onNodeWithText("Numero di serie").assertDoesNotExist()
-        rule.onNodeWithText("Identificativi e rete").performClick()
+        rule.onNodeWithText("Identificativi").performClick()
         rule.onNode(hasSetTextAction() and hasText("NEW")).assertExists()
         rule.runOnIdle { assertEquals(original.copy(serialNumber = "NEW"), draft.value.apply(p).sites.single().devices.single()) }
     }
@@ -69,7 +69,9 @@ class ConfiguratorUxTest {
         rule.setContent { MaterialTheme {
             Column(Modifier.width(360.dp).height(700.dp).verticalScroll(rememberScrollState())) { ObjectConfigurator(p, draft.value, Messages()) { draft.value = it } }
         } }
-        rule.onNodeWithText("IP").assertDoesNotExist()
+        rule.onNode(hasSetTextAction() and hasText("Indirizzo IP")).assertExists()
+        rule.onNodeWithText("Rete").performScrollTo().performClick()
+        rule.onNode(hasSetTextAction() and hasText("Indirizzo IP")).assertDoesNotExist()
         rule.runOnIdle { draft.value = draft.value.copy(device = draft.value.device.copy(ipAddress = "invalid")) }
         rule.onNode(hasSetTextAction() and hasText("invalid")).assertExists()
         rule.runOnIdle { assertTrue(draft.value.errors(p).containsKey("ipAddress")) }

@@ -45,7 +45,7 @@ fun MapDetailPane(project: Project, scene: MapScene, selection: MapSelection?, i
     var assigning by remember(scene.container) { mutableStateOf(false) }
     Surface(modifier.testTag("map-detail"), tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium) {
         // A new selection starts at the top of the pane.
-        Column(Modifier.verticalScroll(remember(selection, scene.container) { ScrollState(0) }).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.then(if (selection is MapSelection.Node) Modifier else Modifier.verticalScroll(remember(selection, scene.container) { ScrollState(0) })).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (selection) {
                 is MapSelection.Node -> scene.node(selection.ref)?.let { node ->
                     NodeDetails(project, index, hierarchy, scene, node, i18n, actions, onSelect, onOpen, media, current = false)
@@ -122,7 +122,7 @@ private fun FloorHint(i18n: Messages) {
 }
 
 @Composable
-private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: HierarchyIndex, scene: MapScene, node: SceneNode, i18n: Messages, actions: MapActions,
+private fun ColumnScope.NodeDetails(project: Project, index: ProjectIndex, hierarchy: HierarchyIndex, scene: MapScene, node: SceneNode, i18n: Messages, actions: MapActions,
                         onSelect: (MapSelection?) -> Unit, onOpen: (ObjectRef) -> Unit, media: @Composable (ObjectRef) -> Unit, current: Boolean) {
     val device = index.device(node.ref.id).takeIf { node.ref.type == PlacementTargetType.DEVICE }
     val type = ObjectCatalog.type(project, device?.objectTypeId)
@@ -148,7 +148,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
     ActionRow(i18n,
         primary = if (opens) PaneAction(i18n.text("map.open")) { onOpen(node.ref) } else if (current) null else editAction,
         photo = photoAction,
-        secondary = listOfNotNull(editAction.takeIf { opens || current }, portsAction, removeAction),
+        overflow = listOfNotNull(editAction.takeIf { opens || current }, portsAction, removeAction),
         delete = delete)
 
     val rack = index.rack(node.ref.id).takeIf { node.ref.type == PlacementTargetType.RACK }
@@ -160,12 +160,13 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
         device?.physicalLabel?.takeIf { it.isNotBlank() }?.let { ObjectSummary.Fact(i18n.text("map.fact.label"), it) },
         device?.operationalStatus?.takeIf { it != OperationalStatus.IN_SERVICE }?.let { ObjectSummary.Fact(i18n.text("device.status"), it.toDisplayString(i18n)) },
     )
+    Column(Modifier.then(if (current) Modifier else Modifier.weight(1f).verticalScroll(remember(node.ref) { ScrollState(0) })), verticalArrangement = Arrangement.spacedBy(8.dp)) {
     FactRows(primary)
     var quickPort by remember(node.ref) { mutableStateOf<String?>(null) }
-    device?.takeIf { it.ports.isNotEmpty() }?.let { d ->
+    device?.let { d ->
         SectionTitle(i18n.text("ux.ports")) { Text("${node.portsUsed}/${node.portsTotal}", style = MaterialTheme.typography.labelMedium) }
         val cells = remember(project, d.id) { PortLogic.panel(project, d, index = index) }
-        PortPanel(cells, i18n, onClick = { quickPort = it.port.id })
+        DeviceDrawing(project, d, i18n, showName = false, onPort = { quickPort = it.port.id })
         // Field documentation loop: open the next cabled port still without a photo.
         val missing = cells.filter { it.photoMissing }
         if (missing.isNotEmpty() && actions.photo != null) Row(verticalAlignment = Alignment.CenterVertically) {
@@ -207,7 +208,6 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
 
     // Secondary: technical details, collapsed.
     val secondary = listOfNotNull(
-        rack?.depthMm?.let { ObjectSummary.Fact(i18n.text("map.fact.depth"), "$it mm") },
         node.internalCables.size.takeIf { it > 0 }?.let { ObjectSummary.Fact(i18n.text("map.fact.internal"), it.toString()) },
         device?.hardware?.poeBudgetWatts?.let { ObjectSummary.Fact(i18n.text("map.fact.poe"), "${PortLogic.poeLoad(project, device).toInt()}/${it.toInt()} W") },
     ) + (if (device != null && !current) summary.identity.filterNot { it.value == device.physicalLabel } else emptyList())
@@ -218,6 +218,7 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
             FactRows(secondary)
             if (device != null && !current) LogicalLinksSection(project, hierarchy, device, i18n, actions)
         }
+    }
     }
 }
 

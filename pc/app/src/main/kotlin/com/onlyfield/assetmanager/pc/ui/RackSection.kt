@@ -103,8 +103,7 @@ fun RackSection(
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(rack.name, style = MaterialTheme.typography.titleLarge)
                                 Text(
-                                    i18n.text("text.89c9553a084e", rack.heightU, rack.numberingDirection.toDisplayString(i18n = i18n).lowercase()) +
-                                        (rack.depthMm?.let { i18n.text("text.0b78a6a7d85b", it) } ?: ""),
+                                    i18n.text("text.89c9553a084e", rack.heightU, rack.numberingDirection.toDisplayString(i18n = i18n).lowercase()),
                                     style = MaterialTheme.typography.bodySmall
                                 )
                             }

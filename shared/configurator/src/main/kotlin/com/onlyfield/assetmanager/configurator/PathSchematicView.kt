@@ -23,6 +23,10 @@ import com.onlyfield.assetmanager.core.forms.PathStation
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.CableMedium
 import com.onlyfield.assetmanager.core.model.Device
+import com.onlyfield.assetmanager.core.model.ObjectCatalog
+import com.onlyfield.assetmanager.core.model.ObjectGlyph
+import com.onlyfield.assetmanager.core.model.Glyph
+import com.onlyfield.assetmanager.configurator.map.MapStyle
 
 /**
  * Vertical end-to-end path: objects as nodes (active filled, passive outlined, unknown dashed)
@@ -57,11 +61,14 @@ private fun Station(station: PathStation, focus: Boolean, open: Boolean, i18n: M
     val device = station.device
     val passive = station.passive
     val colors = MaterialTheme.colorScheme
+    val glyph = ObjectCatalog.builtins.firstOrNull { it.id == device?.objectTypeId }?.let(ObjectGlyph::of)
+        ?: device?.let { Glyph(ObjectGlyph.initials(it.technicalName), ObjectGlyph.family(it.category)) }
+    val color = glyph?.let(MapStyle::glyph) ?: colors.error
     Surface(color = if (focus) colors.secondaryContainer else Color.Transparent, shape = RoundedCornerShape(6.dp)) {
         Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.width(24.dp), contentAlignment = Alignment.Center) {
                 val shape = if (passive) RoundedCornerShape(2.dp) else CircleShape
-                Box(Modifier.size(12.dp).then(if (passive) Modifier.border(2.dp, if (device == null) colors.error else colors.primary, shape) else Modifier.background(colors.primary, shape)))
+                Box(Modifier.size(12.dp).then(if (passive) Modifier.border(2.dp, color, shape) else Modifier.background(color, shape)))
             }
             Column(Modifier.weight(1f).padding(vertical = 6.dp)) {
                 Text(device?.technicalName ?: "?", style = MaterialTheme.typography.bodyMedium, fontWeight = if (passive) null else FontWeight.Bold,

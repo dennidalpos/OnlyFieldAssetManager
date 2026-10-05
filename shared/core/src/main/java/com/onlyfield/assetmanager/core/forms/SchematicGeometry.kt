@@ -8,6 +8,15 @@ data class PortRow(val group: String?, val ports: List<Port>)
 data class PortGrid(val columns: Int, val cell: Float, val bands: List<List<List<Int>>>)
 
 object SchematicGeometry {
+    fun arrangedGrid(count: Int, rows: Int, width: Float, gap: Float, cellSize: Float): PortGrid {
+        if (count == 0) return PortGrid(0, cellSize, emptyList())
+        val natural = (count + rows - 1) / rows
+        val columns = ((width + gap) / (cellSize + gap)).toInt().coerceIn(1, natural)
+        val logicalRows = (0 until count).toList().chunked(natural)
+        val bands = (0 until natural step columns).map { start -> logicalRows.map { it.drop(start).take(columns) }.filter { it.isNotEmpty() } }
+        return PortGrid(columns, cellSize, bands)
+    }
+
     fun rows(device: Device, side: PortSide): List<PortRow> = device.ports
         .filter { it.hardware.side == null || it.hardware.side == side || it.hardware.side == PortSide.BOTH }
         .groupBy { it.hardware.group }.flatMap { (group, ports) -> ports.chunked(8).map { PortRow(group, it) } }

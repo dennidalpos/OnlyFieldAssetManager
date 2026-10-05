@@ -58,7 +58,7 @@ object ModelValidator {
         for (model in project.deviceModels) {
             checkUuid("INVALID_MODEL_UUID", model.id, i18n.text("text.e704f269fdf5"), issues)
             trackId(model.id, "DUPLICATE_MODEL_ID", i18n.text("text.18975c9e34a8", model.id), seenIds, issues)
-            if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(model.portTemplates) || model.defaultHeightU !in 1..60) {
+            if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(model.portTemplates) || !com.onlyfield.assetmanager.core.forms.PortArrangement.valid(model.hardware) || model.defaultHeightU !in 1..60) {
                 issues.add(ValidationIssue("INVALID_MODEL_HARDWARE", i18n.text("config.invalidHardware"), ValidationSeverity.STRUCTURAL_ERROR, model.id))
             }
         }
@@ -132,7 +132,7 @@ object ModelValidator {
                     )
                 }
 
-                if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(device.hardware.portGroups)) {
+                if (!com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(device.hardware.portGroups) || !com.onlyfield.assetmanager.core.forms.PortArrangement.valid(device.hardware)) {
                     issues.add(ValidationIssue("INVALID_DEVICE_HARDWARE", i18n.text("config.invalidHardware"), ValidationSeverity.STRUCTURAL_ERROR, device.id))
                 }
                 for (port in device.ports) {

@@ -5,8 +5,9 @@
 - Entry: `README.md`; domain docs: `docs/`; decisions: `plan.md`; progress/evidence: `roadmap.md`.
 - Code, identifiers and comments are in English. Documentation is in Italian.
 - `PROJECT_STATUS.json` holds only open work; completion evidence belongs in `roadmap.md`. Update domain docs after each task.
-- Gradle modules: `:mobile:app`, `:pc:app`, `:shared:core`, `:shared:exchange`. `:shared:core` and `:shared:exchange` must never depend on Android UI or Context APIs.
+- Core and exchange must never depend on Android UI or Context APIs.
 - Room v1 greenfield: no migrations; destructive fallback handles version changes, not a changed identity at v1 (AUD-03).
+- Hardware port layouts/PoE overrides use existing hardware JSON; no Room columns change.
 - Both apps compile `shared/configurator` Compose sources; hardware/ports/continuity stay in `core.forms` and `core.model.ConnectionGraph`.
 - Maps/containment: `core.model.MapScene/ObjectMap/ObjectHierarchy`; shared `configurator.map.MapWorkspace`; presets/ports: `core.forms.DevicePresets/PortLogic`. Rendering: Android PdfRenderer, Desktop PDFBox 3.0.8.
 - Shared edits/forms/labels/wizard: `core.edit`, `core.forms`, `core.display`, `core.onboarding`. Forms must `copy()` existing entities to preserve hidden fields.

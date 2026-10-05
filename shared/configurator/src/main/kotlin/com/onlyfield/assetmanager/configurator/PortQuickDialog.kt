@@ -4,6 +4,8 @@ import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +40,7 @@ class PortQuickActions(
     val openDevice: ((Device) -> Unit)? = null,
 )
 
-private enum class QuickStep { MAIN, DEVICE, PORT, PASSAGE }
+private enum class QuickStep { MAIN, DEVICE, PORT, PASSAGE, CONFIGURE }
 
 /**
  * Port card for field work: state, path and cable label first; connect, insert a passage,
@@ -68,23 +70,49 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     // Cable connected from this card: its photo is offered right away.
     var justConnected by remember(portId) { mutableStateOf<String?>(null) }
     var asking by remember { mutableStateOf(false) }
+    var fixed by remember(portId) { mutableStateOf(PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT) }
+    var configuration by remember(portId) { mutableStateOf<ConfigurationSession?>(null) }
+    var discard by remember { mutableStateOf(false) }
+    val dirty = configuration?.let { it.original != it.project } == true
+    fun close() { if (dirty) discard = true else onClose() }
+    fun pairs(to: String, requested: Int): List<Pair<Port, Port>> = if (fixed) PassiveCabling.pairs(project, port.id, to, requested)
+        else BulkCabling.pairs(project, port.id, to, requested, graph)
+
 
     fun done(updated: Project, message: String) { actions.update(updated, message); step = QuickStep.MAIN }
 
     val title = index.portLabel(port.id)
-    AlertDialog(onDismissRequest = onClose, title = {
+    AlertDialog(onDismissRequest = ::close, title = {
         Column {
             Text(title, modifier = Modifier.semantics { heading() })
             Text(listOfNotNull(port.hardware.side?.takeIf { device.isPassive() }?.toDisplayString(i18n), stateLabel(summary.state, i18n), port.hardware.connector)
                 .joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }, text = {
-        Column(Modifier.heightIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (step) {
-                QuickStep.MAIN -> MainStep(project, summary, path, index, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
-                    onConnect = { justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
-                QuickStep.DEVICE -> DeviceStep(project, device, areaId, sameFloor, { sameFloor = it }, graph, port, i18n) { d ->
+                QuickStep.CONFIGURE -> configuration?.let { session ->
+                    val configured = session.project.sites.flatMap { it.devices }.first { it.id == device.id }
+                    DeviceDrawing(session.project, configured, i18n, onDeviceChange = { updated ->
+                        configuration = session.copy(project = ProjectEdits.updateDevice(session.project, updated))
+                    })
+                }
+                QuickStep.MAIN -> {
+                    DeviceDrawing(project, device, i18n, selectedPortIds = setOf(port.id), onPort = { currentId = it.port.id })
+                    OutlinedButton(onClick = { configuration = ConfigurationSession(project); step = QuickStep.CONFIGURE }) { Text(i18n.text("visual.configure")) }
+                    if (PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT) {
+                        val rear = PassiveCabling.rear(project, port.id)
+                        if (rear == null) Text(i18n.text("visual.missingRear"), style = MaterialTheme.typography.bodySmall)
+                        else if (summary.cable != null) OutlinedButton(enabled = !graph.occupied(rear.id), onClick = { fixed = true; target = null; targetPort = null; step = QuickStep.DEVICE }) { Text(i18n.text("visual.fixedCable")) }
+                    }
+                    MainStep(project, summary, path, index, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected)
+                }
+                QuickStep.DEVICE -> {
+                    if (PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT)
+                        ValueMenu(i18n.text("visual.cablingMode"), fixed, listOf(true, false), { i18n.text(if (it) "visual.fixedCable" else "visual.frontCable") }) { fixed = it }
+                    DeviceStep(project, device, areaId, sameFloor, { sameFloor = it }, graph, port, i18n, fixed) { d ->
                     target = d; targetPort = null; step = QuickStep.PORT
+                    }
                 }
                 QuickStep.PORT -> target?.let { d ->
                     // Continuous cabling: photo of the cable just made without leaving the card.
@@ -97,9 +125,9 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
                         }
                     }
                     Text(i18n.text("quick.choosePort", d.technicalName), style = MaterialTheme.typography.bodyMedium)
-                    val cells = remember(project, d.id) { PortLogic.panel(project, d, graph, index) }
-                    PortPanel(cells, i18n, selected = setOfNotNull(targetPort), onClick = { cell ->
-                        if (!cell.occupied) {
+                    val cells = remember(project, d.id, fixed) { PortLogic.panel(project, d, graph, index).filter { !fixed || it.port.hardware.side == PortSide.FRONT } }
+                    PortPanel(cells, i18n, device = d, selected = setOfNotNull(targetPort), onClick = { cell ->
+                        if (if (fixed) PassiveCabling.rear(project, cell.port.id)?.let { !graph.occupied(it.id) } == true else !cell.occupied) {
                             targetPort = cell.port.id
                             count = 1
                             label = CableLabels.suggest(project, Cable(portAId = port.id, portBId = cell.port.id), index)
@@ -107,10 +135,12 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
                     })
                     ValueMenu(i18n.text("config.medium"), medium, CableMedium.entries, { it.toDisplayString(i18n) }, Modifier.fillMaxWidth()) { medium = it }
                     targetPort?.let { to ->
-                        val max = remember(project, port.id, to) { BulkCabling.maxCount(project, port.id, to, graph) }
+                        val actual = pairs(to, 1).firstOrNull()
+                        if (actual != null) Text(i18n.text("visual.actualEnds", index.portLabel(actual.first.id) + (if (fixed) " · " + i18n.text("port.side.REAR") else ""), index.portLabel(actual.second.id) + (if (fixed) " · " + i18n.text("port.side.REAR") else "")), style = MaterialTheme.typography.bodySmall)
+                        val max = pairs(to, Int.MAX_VALUE).size
                         if (max > 1) ValueMenu(i18n.text("quick.series"), count.coerceAtMost(max), seriesOptions(max), { i18n.plural("quick.seriesCount", it) }, Modifier.fillMaxWidth()) { count = it }
                         if (count > 1) {
-                            val pairs = remember(project, port.id, to, count) { BulkCabling.pairs(project, port.id, to, count, graph) }
+                            val pairs = pairs(to, count)
                             Text(i18n.text("quick.seriesPreview", "${pairs.first().first.name} → ${pairs.first().second.name}", "${pairs.last().first.name} → ${pairs.last().second.name}"),
                                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         } else OutlinedTextField(label, { label = it }, label = { Text(i18n.text("quick.cableLabel")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
@@ -126,20 +156,29 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
         }
     }, confirmButton = {
         when (step) {
-            QuickStep.PORT -> Button(enabled = targetPort != null, onClick = {
+            QuickStep.MAIN -> MainActions(summary, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
+                onConnect = { fixed = PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT; justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
+            QuickStep.CONFIGURE -> Button(enabled = dirty, onClick = {
+                configuration?.let { actions.update(it.apply(project), i18n.text("ux.saveChanges")) }
+                configuration = null; step = QuickStep.MAIN
+            }) { Text(i18n.text("ux.saveChanges")) }
+            QuickStep.PORT -> Button(enabled = targetPort?.let { pairs(it, 1).isNotEmpty() } == true, onClick = {
                 val to = targetPort ?: return@Button
-                val pairs = BulkCabling.pairs(project, port.id, to, count, graph)
+                val pairs = pairs(to, count)
+                if (pairs.isEmpty()) return@Button
+                val physicalFrom = pairs.first().first.id
+                val physicalTo = pairs.first().second.id
                 val updated = if (count > 1) BulkCabling.connect(project, pairs, medium) else {
-                    val connected = HardwareConfigurator.connect(project, port.id, to, medium)
-                    val cable = connected.cables.first { setOf(it.portAId, it.portBId) == setOf(port.id, to) }
+                    val connected = HardwareConfigurator.connect(project, physicalFrom, physicalTo, medium)
+                    val cable = connected.cables.first { setOf(it.portAId, it.portBId) == setOf(physicalFrom, physicalTo) }
                     ProjectEdits.updateCable(connected, cable.copy(codeOrLabel = label.trim().ifBlank { null }))
                 }
                 val message = if (count > 1) i18n.plural("quick.seriesDone", pairs.size) else i18n.text("quick.connect")
                 // A series makes many cables at once: no single photo to offer.
-                justConnected = if (count > 1) null else updated.cables.firstOrNull { setOf(it.portAId, it.portBId) == setOf(port.id, to) }?.id
+                justConnected = if (count > 1) null else updated.cables.firstOrNull { setOf(it.portAId, it.portBId) == setOf(physicalFrom, physicalTo) }?.id
                 val last = pairs.lastOrNull() ?: (port to null)
-                val nextFrom = if (continueNext) BulkCabling.nextFree(updated, last.first.id) else null
-                val nextTo = if (nextFrom != null) last.second?.let { BulkCabling.nextFree(updated, it.id) } else null
+                val nextFrom = if (!continueNext) null else if (fixed) PassiveCabling.nextFront(updated, port.id) else BulkCabling.nextFree(updated, last.first.id)
+                val nextTo = if (nextFrom == null) null else if (fixed) PassiveCabling.nextFront(updated, to) else last.second?.let { BulkCabling.nextFree(updated, it.id) }
                 if (nextFrom == null) done(updated, message) else {
                     // Same destination device, next pair already proposed: one tap per cable.
                     actions.update(updated, message)
@@ -147,13 +186,19 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
                     label = nextTo?.let { CableLabels.suggest(updated, Cable(portAId = nextFrom, portBId = it), ProjectIndex(updated)) }.orEmpty()
                 }
             }) { Text(if (count > 1) i18n.plural("quick.connectSeries", count) else i18n.text("quick.connect")) }
-            else -> TextButton(onClick = onClose) { Text(i18n.text("ux.close")) }
+            else -> TextButton(onClick = ::close) { Text(i18n.text("ux.close")) }
         }
     }, dismissButton = {
-        if (step != QuickStep.MAIN) TextButton(onClick = { step = if (step == QuickStep.PORT) QuickStep.DEVICE else QuickStep.MAIN }) { Text("‹ " + i18n.text("quick.back")) }
-        else actions.details?.let { open -> TextButton(onClick = { onClose(); open(port) }) { Text(i18n.text("quick.details")) } }
+        if (step != QuickStep.MAIN) TextButton(onClick = { if (dirty) discard = true else { configuration = null; step = if (step == QuickStep.PORT) QuickStep.DEVICE else QuickStep.MAIN } }) { Text("‹ " + i18n.text("quick.back")) }
+        else Column {
+            TextButton(onClick = ::close) { Text(i18n.text("ux.close")) }
+            actions.details?.let { open -> TextButton(onClick = { onClose(); open(port) }) { Text(i18n.text("quick.details")) } }
+        }
     })
 
+    if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text(i18n.text("visual.discardTitle")) },
+        text = { Text(i18n.text("visual.discardMessage")) }, confirmButton = { TextButton(onClick = { discard = false; configuration = null; step = QuickStep.MAIN }) { Text(i18n.text("ux.cancelChanges")) } },
+        dismissButton = { TextButton(onClick = { discard = false }) { Text(i18n.text("ux.cancel")) } })
     if (asking) AlertDialog(onDismissRequest = { asking = false }, title = { Text(i18n.text("quick.disconnectTitle", title)) },
         text = { Text(i18n.text("quick.disconnectMessage")) },
         confirmButton = { TextButton(onClick = { asking = false; done(HardwareConfigurator.disconnect(project, port.id), i18n.text("quick.disconnect")) },
@@ -163,8 +208,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic?, index: ProjectIndex, i18n: Messages, actions: PortQuickActions, fresh: Boolean,
-                     onConnect: () -> Unit, onPassage: () -> Unit, onDisconnect: () -> Unit) {
+private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic?, index: ProjectIndex, i18n: Messages, actions: PortQuickActions, fresh: Boolean) {
     val cable = summary.cable
     if (cable != null) {
         Text(cable.codeOrLabel ?: CableLabels.suggest(project, cable, index), style = MaterialTheme.typography.titleSmall)
@@ -177,6 +221,15 @@ private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic
         }
     }
     if (fresh && actions.photo != null) Text(i18n.text("quick.photoPrompt"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+
+}
+
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun MainActions(summary: PortSummary, i18n: Messages, actions: PortQuickActions, fresh: Boolean,
+                        onConnect: () -> Unit, onPassage: () -> Unit, onDisconnect: () -> Unit) {
+    val cable = summary.cable
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Photos are always available: the port itself and, when present, its cable (first right after connecting).
         actions.photo?.let { photo ->
@@ -191,7 +244,7 @@ private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic
             else Button(onClick = { photo(AttachmentTargetType.PORT, summary.port.id) }) { Text(portText) }
             if (!fresh) cablePhoto()
         }
-        if (cable == null) Button(onClick = onConnect) { Text(i18n.text("quick.connectTo")) }
+        if (cable == null) Button(onClick = onConnect) { Text(i18n.text(if (PassiveCabling.supported(summary.device) && summary.port.hardware.side == PortSide.FRONT) "visual.fixedCable" else "quick.connectTo")) }
         else {
             OutlinedButton(onClick = onPassage) { Text(i18n.text("quick.insertPassage")) }
             OutlinedButton(onClick = onDisconnect, colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(i18n.text("quick.disconnect")) }
@@ -202,10 +255,10 @@ private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic
 /** Devices with at least one free port; same floor first, then a matching connector. */
 @Composable
 private fun DeviceStep(project: Project, device: Device, areaId: String?, sameFloor: Boolean, onSameFloor: (Boolean) -> Unit,
-                       graph: ConnectionGraph, port: Port, i18n: Messages, onPick: (Device) -> Unit) {
+                       graph: ConnectionGraph, port: Port, i18n: Messages, fixed: Boolean, onPick: (Device) -> Unit) {
     var query by remember { mutableStateOf("") }
-    val candidates = remember(project, sameFloor) {
-        project.sites.flatMap { it.devices }.filter { it.id != device.id && it.ports.any { p -> !graph.occupied(p.id) } }
+    val candidates = remember(project, sameFloor, fixed) {
+        project.sites.flatMap { it.devices }.filter { it.id != device.id && it.ports.any { p -> if (fixed) PassiveCabling.rear(project, p.id)?.let { rear -> !graph.occupied(rear.id) } == true else !graph.occupied(p.id) } }
             .map { it to ObjectMap.areaId(project, it) }
             .filter { (_, area) -> !sameFloor || area == areaId }
             .sortedWith(compareBy({ it.second != areaId }, { (d, _) -> d.ports.none { p -> !graph.occupied(p.id) && p.hardware.connector == port.hardware.connector } }, { it.first.technicalName }))

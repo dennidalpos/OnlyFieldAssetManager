@@ -51,6 +51,7 @@ class MapNavigationUiTest {
         map.clickAt(MapPoint(.5f, .5f))
         rule.onNode(hasText("BOX") and hasClickAction().not()).assertExists()
         map.clickAt(MapPoint(.5f, .5f))
+        rule.onNodeWithText("Altre azioni").performClick()
         rule.onNodeWithText("Rimuovi dal contenitore").performClick()
         rule.runOnIdle {
             assertNull(ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, sw.id)))
@@ -60,6 +61,7 @@ class MapNavigationUiTest {
         rule.onNodeWithText("Assegna esistente").performClick()
         rule.onNodeWithText("AP").performClick()
         rule.runOnIdle { assertEquals(ObjectRef(PlacementTargetType.RACK, rack.id), ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.DEVICE, ap.id))) }
+        rule.onNodeWithText("Altre azioni").performClick()
         rule.onNodeWithText("Modifica").performClick()
         rule.runOnIdle { assertEquals(rack.id to ConfiguratorPage.ESSENTIALS, edited) }
     }

@@ -19,6 +19,19 @@ data class PortCell(
 
 /** Bulk logical edits on ports, stored in the existing PoE and VLAN entities. */
 object PortLogic {
+    fun setPoeCapability(project: Project, portIds: Collection<String>, standard: PoeStandard?): Project {
+        val ids = portIds.toSet()
+        return project.sites.flatMap { it.devices }.filter { d -> d.ports.any { it.id in ids } }.fold(project) { p, d ->
+            val overrides = d.ports.filter { it.id in ids && it.hardware.mediaType == "Copper" }.map {
+                PortPoeOverride(PortArrangement.side(it), it.hardware.group, PortArrangement.key(it), standard)
+            }
+            val merged = d.hardware.portPoeOverrides.filterNot { old -> overrides.any { it.side == old.side && it.group == old.group && it.key == old.key } } + overrides
+            ProjectEdits.updateDevice(p, d.copy(hardware = d.hardware.copy(portPoeOverrides = merged), ports = d.ports.map { port ->
+                if (port.id in ids && port.hardware.mediaType == "Copper") port.copy(hardware = port.hardware.copy(poeStandard = standard, customized = true)) else port
+            }))
+        }
+    }
+
     fun panel(project: Project, device: Device, graph: ConnectionGraph = ConnectionGraph(project), index: ProjectIndex = ProjectIndex(project)): List<PortCell> {
         val poe = project.poeMappings.associateBy { it.portId }
         val vlans = project.portVlanMemberships.associateBy { it.portId }

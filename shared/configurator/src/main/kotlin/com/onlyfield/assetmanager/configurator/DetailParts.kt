@@ -24,11 +24,11 @@ import com.onlyfield.assetmanager.core.display.ObjectSummary
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.Glyph
 
-/** Family colour with the drawn icon (or the code for custom types); the same badge on map, lists and editors. */
+/** Type colour with the drawn icon (or the code for custom types); the same badge on map, lists and editors. */
 @Composable
 fun GlyphBadge(glyph: Glyph, size: Dp = 40.dp) {
     val icon = ObjectIcon.of(glyph)
-    Box(Modifier.size(size).background(MapStyle.family(glyph.family), RoundedCornerShape(size / 8)), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(size).background(MapStyle.glyph(glyph), RoundedCornerShape(size / 8)), contentAlignment = Alignment.Center) {
         if (icon != null) Canvas(Modifier.fillMaxSize().padding(size / 8).semantics { contentDescription = glyph.code }) {
             drawObjectIcon(icon, Offset.Zero, this.size.minDimension, Color.White)
         } else Text(glyph.code, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1,
@@ -95,7 +95,7 @@ fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> 
         primary?.let { Button(onClick = it.onClick) { Text(it.label) } }
         photo?.let { FilledTonalButton(onClick = it.onClick) { Text(it.label) } }
         secondary.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
-        OverflowActions(i18n, overflow)
+        OverflowActions(i18n, overflow, i18n.text("visual.moreActions"))
         delete?.let { DeleteAction(it, i18n) }
     }
 }
@@ -117,10 +117,11 @@ fun DeleteAction(request: DeleteRequest, i18n: Messages, modifier: Modifier = Mo
 
 /** "⋮" button with a menu of [actions]; nothing when empty. */
 @Composable
-fun OverflowActions(i18n: Messages, actions: List<PaneAction>) {
+fun OverflowActions(i18n: Messages, actions: List<PaneAction>, label: String? = null) {
     if (actions.isNotEmpty()) Box {
         var open by remember { mutableStateOf(false) }
-        SymbolButton("⋮", i18n.text("ux.more")) { open = true }
+        if (label == null) SymbolButton("⋮", i18n.text("ux.more")) { open = true }
+        else TextButton(onClick = { open = true }, colors = ButtonDefaults.textButtonColors(containerColor = if (open) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)) { Text(label) }
         DropdownMenu(open, { open = false }) {
             actions.forEach { action -> DropdownMenuItem(text = { Text(action.label) }, onClick = { open = false; action.onClick() }) }
         }
@@ -132,10 +133,11 @@ fun OverflowActions(i18n: Messages, actions: List<PaneAction>) {
  * Screen readers get one button, "label: value".
  */
 @Composable
-fun SelectField(label: String, value: String, modifier: Modifier = Modifier, error: String? = null, enabled: Boolean = true, onOpen: () -> Unit) {
+fun SelectField(label: String, value: String, modifier: Modifier = Modifier, error: String? = null, enabled: Boolean = true, expanded: Boolean = false, onOpen: () -> Unit) {
     val scheme = MaterialTheme.colorScheme
     val colors = if (!enabled) OutlinedTextFieldDefaults.colors() else OutlinedTextFieldDefaults.colors(
         disabledTextColor = scheme.onSurface,
+        disabledContainerColor = if (expanded) scheme.secondaryContainer else scheme.surface,
         disabledBorderColor = if (error != null) scheme.error else scheme.outline,
         disabledLabelColor = if (error != null) scheme.error else scheme.onSurfaceVariant,
         disabledTrailingIconColor = scheme.onSurfaceVariant,
@@ -150,7 +152,7 @@ fun SelectField(label: String, value: String, modifier: Modifier = Modifier, err
             if (enabled) onClick(label) { onOpen(); true } else disabled()
         }) {
         OutlinedTextField(value, {}, enabled = false, readOnly = true, singleLine = true, label = { Text(label) },
-            trailingIcon = { Text("▾") }, isError = error != null, supportingText = error?.let { { Text(it) } },
+            trailingIcon = { Text(if (expanded) "▴" else "▾") }, isError = error != null, supportingText = error?.let { { Text(it) } },
             colors = colors, modifier = Modifier.fillMaxWidth())
     }
 }

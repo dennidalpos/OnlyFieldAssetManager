@@ -22,6 +22,12 @@ Gli allegati si collegano a progetto, rack, apparato, piano, cavo o porta (`Atta
 
 Le connessioni WAN/VPN (`WanVpnConnection`) sono agganciate ai dispositivi, non alle porte. Un riferimento a un apparato inesistente è un errore strutturale; una connessione senza alcuna estremità (apparato o sede) produce `WAN_VPN_WITHOUT_ENDPOINTS` e una con le due estremità sullo stesso apparato `WAN_VPN_SAME_DEVICE`, entrambi avvisi documentali.
 
+## Presentazione hardware facoltativa
+
+`HardwareSpec.portLayouts` conserva per lato e gruppo una/due righe e l’ordine delle chiavi tecniche delle porte (posizione nel gruppo, nome come fallback per porte legacy). Non cambia l’ordine tecnico né gli ID usati dai cavi. `portPoeOverrides` conserva supporto PoE personalizzato per le stesse chiavi, anche quando è nullo per togliere il supporto del preset. Entrambi i campi hanno lista vuota come valore predefinito, sono riutilizzabili nei modelli e vengono riconciliati con aggiunte/rimozioni di porte.
+
+Sono campi JSON dentro le colonne hardware già esistenti: nessuna tabella o identità Room modificata, nessun cambio di versione `.ofam`. Un pacchetto 1 precedente viene letto con disposizione predefinita. Le vecchie applicazioni ignorano i campi e possono perderli quando risalvano. Dimensioni e profondità esistenti restano nel modello, benché non siano più esposte dalla UI.
+
 ## Pacchetto
 
 `.ofam` e uno ZIP con `manifest.json`, `project.json` oppure `project.json.enc` e `attachments/`. Il manifest contiene versione, checksum SHA-256 e, quando necessario, parametri di cifratura.

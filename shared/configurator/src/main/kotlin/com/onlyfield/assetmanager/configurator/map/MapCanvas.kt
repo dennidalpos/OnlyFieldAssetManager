@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -142,7 +143,8 @@ fun MapCanvas(
 
     val latest by rememberUpdatedState(Triple(onSelect, onOpen, onLongPress))
     val latestCommit by rememberUpdatedState(onMove to onRoute)
-    Box(modifier) {
+    LaunchedEffect(width, height) { viewport().let { pan = Offset(it.panX, it.panY) } }
+    Box(modifier.clipToBounds()) {
         Canvas(Modifier.fillMaxSize().testTag("floor-map").background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics { contentDescription = i18n.text("map.description", shown.nodes.size, shown.links.size) }
             .onSizeChanged { width = it.width.toFloat().coerceAtLeast(1f); height = it.height.toFloat().coerceAtLeast(1f) }
@@ -322,8 +324,12 @@ private fun DrawScope.drawNodes(scene: MapScene, screen: (MapPoint) -> Offset, s
     val crowded = zoom < .9f && scene.nodes.size > 30
     ordered.reversed().forEach { node ->
         val c = screen(node.point)
-        val color = MapStyle.family(node.glyph.family).let { if (node.inactive) it.copy(alpha = .35f) else it }
-        if (node.ref == selected) drawCircle(highlight, radius + unit * 3, c, style = Stroke(unit * 2))
+        val color = MapStyle.glyph(node.glyph).let { if (node.inactive) it.copy(alpha = .35f) else it }
+        if (node.ref == selected) {
+            drawCircle(highlight.copy(alpha = .22f), radius + unit * 8, c)
+            drawCircle(surface, radius + unit * 5, c, style = Stroke(unit * 4))
+            drawCircle(highlight, radius + unit * 5, c, style = Stroke(unit * 2))
+        }
         if (node.isContainer) {
             val r = radius * .9f
             drawRoundRect(color.copy(alpha = .35f), c - Offset(r - unit * 2, r + unit * 2), Size(r * 2, r * 2), CornerRadius(unit * 1.5f))
@@ -350,7 +356,8 @@ private fun DrawScope.drawNodes(scene: MapScene, screen: (MapPoint) -> Offset, s
     ordered.forEach { node ->
         if (crowded && node.ref != selected) return@forEach
         val c = screen(node.point)
-        val text = measurer.measure(AnnotatedString(MapStyle.shortName(node.name)), TextStyle(color = onSurface, fontSize = 11.sp))
+        val text = measurer.measure(AnnotatedString(if (node.ref == selected) node.name else MapStyle.shortName(node.name)), TextStyle(color = onSurface, fontSize = 11.sp,
+            fontWeight = if (node.ref == selected) FontWeight.Bold else FontWeight.Normal))
         val rect = Rect(Offset(c.x - text.size.width / 2f - unit, c.y + radius + unit * 2), Size(text.size.width + unit * 2, text.size.height.toFloat()))
         if (labels.any { it.overlaps(rect) }) return@forEach
         labels += rect

@@ -160,12 +160,8 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
     ) { padding ->
         LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Primary: the panel drawing (tap a port to connect it), where the object is, its label and photos.
-            if (device.ports.isNotEmpty()) {
-                item { SectionTitle(i18n.text("text.625d94dac5fc", device.ports.size)) }
-                item {
-                    val cells = remember(project, device.id) { PortLogic.panel(project, device, index = index) }
-                    PortPanel(cells, i18n, onClick = { quickPort = it.port.id })
-                }
+            item {
+                com.onlyfield.assetmanager.configurator.DeviceDrawing(project, device, i18n, onPort = { quickPort = it.port.id })
             }
             item {
                 Card(Modifier.fillMaxWidth()) {

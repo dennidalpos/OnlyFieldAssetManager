@@ -7,7 +7,6 @@ data class PortChanges(val ports: List<Port>, val added: Int, val removed: List<
 
 object HardwareConfigurator {
     val rackHeights = listOf(6, 9, 12, 15, 24, 42, 45, 48)
-    val rackDepths = listOf(600, 800, 1000, 1070, 1200)
     val portCounts = listOf(1, 2, 4, 8, 12, 16, 24, 48)
 
     fun validGroups(groups: List<PortTemplate>): Boolean {
@@ -39,15 +38,28 @@ object HardwareConfigurator {
 
     fun preview(project: Project, device: Device, groups: List<PortTemplate>): PortChanges {
         val remaining = device.ports.toMutableList()
+        val generatedPorts = ports(groups, device.id)
+        val oldGroups = device.ports.mapNotNull { it.hardware.group }.toSet()
+        val newGroups = groups.map { it.namePrefix }.toSet()
+        val renamedFrom = (oldGroups - newGroups).singleOrNull()
+        val renamedTo = (newGroups - oldGroups).singleOrNull()
         var added = 0
-        val ports = ports(groups, device.id).map { generated ->
-            val old = remaining.firstOrNull { it.name == generated.name && (it.hardware.side == null || it.hardware.side == generated.hardware.side) }
+        val ports = generatedPorts.map { raw ->
+            val override = device.hardware.portPoeOverrides.singleOrNull { it.side == PortArrangement.side(raw) && it.group == raw.hardware.group && it.key == PortArrangement.key(raw) }
+            val generated = if (override == null) raw else raw.copy(hardware = raw.hardware.copy(poeStandard = override.standard, customized = true))
+            val old = remaining.firstOrNull { it.name == generated.name && (it.hardware.side == null || it.hardware.side == generated.hardware.side) } ?: run {
+                if (renamedFrom == null || renamedTo == null || generated.hardware.group != renamedTo) null else {
+                    val before = device.ports.filter { it.hardware.group == renamedFrom && it.hardware.side == generated.hardware.side }
+                    val after = generatedPorts.filter { it.hardware.group == renamedTo && it.hardware.side == generated.hardware.side }
+                    if (before.size != after.size) null else before.getOrNull(after.indexOfFirst { it.id == generated.id })?.takeIf { it in remaining }
+                }
+            }
             if (old == null) { added++; generated } else {
                 remaining.remove(old)
                 val hardware = if (old.hardware.customized) old.hardware.copy(side = generated.hardware.side, position = generated.hardware.position,
                     group = generated.hardware.group, passageKey = generated.hardware.passageKey, comboKey = generated.hardware.comboKey)
                 else generated.hardware.copy(opticalModule = old.hardware.opticalModule)
-                old.copy(hardware = hardware)
+                old.copy(name = generated.name, hardware = if (override == null) hardware else hardware.copy(poeStandard = override.standard, customized = true))
             }
         }
         val referenced = project.cables.flatMap { listOfNotNull(it.portAId, it.portBId) }.toSet() +
@@ -58,12 +70,12 @@ object HardwareConfigurator {
 
     fun configure(project: Project, device: Device, allowConnectedRemoval: Boolean = false, replacePorts: Boolean = device.hardware.portGroups.isNotEmpty()): Project {
         if (!replacePorts) return ProjectEdits.updateDevice(project, device)
-        require(validGroups(device.hardware.portGroups)) { "Invalid or overlapping port groups" }
+        require(validGroups(device.hardware.portGroups) && PortArrangement.valid(device.hardware)) { "Invalid or overlapping port groups" }
         val changes = preview(project, device, device.hardware.portGroups)
         require(allowConnectedRemoval || changes.connectedRemoved.isEmpty()) { "Connected ports require explicit removal" }
         var result = project
         changes.removed.forEach { result = ProjectEdits.deletePortFromDevice(result, device.id, it.id) }
-        result = ProjectEdits.updateDevice(result, device.copy(ports = changes.ports))
+        result = ProjectEdits.updateDevice(result, PortArrangement.rebind(device, changes.ports))
         return ProjectEdits.withInternalPassages(result, changes.ports)
     }
 

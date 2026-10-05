@@ -58,7 +58,7 @@ class FloorMapUiTest {
         } } }
         val node = rule.onNodeWithTag("floor-map")
         node.clickAt(viewport(node), MapPoint(.3f, .4f))
-        rule.onNodeWithText("Sposta nel cestino").performScrollTo().performClick()
+        rule.onNodeWithText("Sposta nel cestino").assertIsDisplayed().performClick()
         rule.onNodeWithText("Spostare «SW-01» nel cestino?").assertIsDisplayed()
         rule.onAllNodesWithText("Sposta nel cestino").filterToOne(hasAnyAncestor(isDialog())).performClick()
         rule.runOnIdle { assertEquals(ObjectRef(PlacementTargetType.DEVICE, device.id), trashed) }

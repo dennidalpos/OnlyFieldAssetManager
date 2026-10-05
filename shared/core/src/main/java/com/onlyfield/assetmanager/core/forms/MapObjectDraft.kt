@@ -52,7 +52,7 @@ data class MapObjectDraft(
             }
             if (type.kind == ObjectKind.DEVICE && (portsConfigured || device.hardware.portGroups.isNotEmpty())) {
                 val existing = p.sites.flatMap { it.devices }.find { it.id == id } ?: Device(id = id, technicalName = device.technicalName)
-                if (!HardwareConfigurator.validGroups(device.hardware.portGroups)) put("ports", i18n.text("config.invalidHardware"))
+                if (!HardwareConfigurator.validGroups(device.hardware.portGroups) || !PortArrangement.valid(device.hardware)) put("ports", i18n.text("config.invalidHardware"))
                 else if (!allowConnectedRemoval && HardwareConfigurator.preview(p, existing, device.hardware.portGroups).connectedRemoved.isNotEmpty()) put("ports", i18n.text("config.removeConnected"))
             }
         }

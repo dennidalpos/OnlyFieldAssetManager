@@ -1,6 +1,6 @@
 # Mappa e planimetrie
 
-La navigazione segue progetto, sede, piano e mappa. Gli oggetti hanno coordinate normalizzate sul piano; zoom e panoramica non le modificano. La panoramica è limitata: la pagina più piccola della vista resta tutta visibile, quella ingrandita si ferma ai bordi (`MapViewport.clamped`).
+La navigazione segue progetto, sede, piano e mappa. Gli oggetti hanno coordinate normalizzate sul piano; zoom e panoramica non le modificano. Il canvas è ritagliato al proprio riquadro e lo stato della panoramica viene ricondotto ai limiti dopo il ridimensionamento. La panoramica è limitata: la pagina più piccola della vista resta tutta visibile, quella ingrandita si ferma ai bordi (`MapViewport.clamped`).
 
 ## Scena e contenitori
 
@@ -10,7 +10,7 @@ La navigazione segue progetto, sede, piano e mappa. Gli oggetti hanno coordinate
 - **Contenitore**: il tocco su un contenitore con figli apre la sua vista, fino all'ultimo livello. I figli sono disposti automaticamente; nei rack l'ordine segue le unità, dall'alto. Il percorso di navigazione (`Piano › RACK-A › BOX`) e Indietro riportano ai livelli superiori; i livelli eliminati, spostati in un altro contenitore o su un altro piano vengono chiusi. La vista interna non modifica posizioni o percorsi salvati.
 - Sono contenitori di serie rack, mensola, armadio e cassetta. Per i tipi personalizzati la proprietà si imposta nel catalogo; i tipi predefiniti non vengono più duplicati.
 
-Gli apparati spenti o dismessi sono disegnati attenuati (`SceneNode.inactive`). Ogni nodo ha un simbolo univoco (SW, AP, CAM, NVR, UPS…) non tradotto, un colore per famiglia (Rete, Sicurezza, Server, Alimentazione, Passivo, Strutture, Dispositivi finali) e una forma: cerchio per gli oggetti, quadrato con numero di figli per i contenitori. L'anello indica le porte occupate dell'intero sottoalbero. Le etichette sono abbreviate e nascoste se si sovrappongono; quella dell'oggetto selezionato resta visibile.
+Gli apparati spenti o dismessi sono disegnati attenuati (`SceneNode.inactive`). Ogni nodo ha un simbolo univoco (SW, AP, CAM, NVR, UPS…) non tradotto, un colore per tipo di apparato (`MapStyle.glyph`, condiviso con topologia, rack e schede; famiglia come fallback per i tipi personalizzati) e una forma: cerchio per gli oggetti, quadrato con numero di figli per i contenitori. L'anello indica le porte occupate dell'intero sottoalbero. Le etichette sono abbreviate e nascoste se si sovrappongono; quella dell’oggetto selezionato resta completa e visibile. La selezione usa alone e doppio contorno contrastante ed è disegnata sopra gli altri nodi.
 
 ## Collegamenti semplificati
 
@@ -42,12 +42,12 @@ Le miniature degli allegati vanno a capo.
 Per un oggetto l'ordine è sempre lo stesso:
 
 1. **Intestazione**: simbolo, nome, tipo e chiusura (annunciata come Chiudi).
-2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore come secondarie (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
+2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore in Altre azioni (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
 3. **Dati primari**: unità del rack, contenuto, posizione nel rack, etichetta fisica e stato operativo se diverso da In servizio.
 4. **Porte**: il disegno dell'apparato con le porte occupate su totali; il tocco su una porta apre la scheda rapida (`PortQuickDialog`, vedi [10-object-configurator.md](10-object-configurator.md)). Le porte collegate senza foto della porta né del cavo hanno il segno • (`PortCell.photoMissing`, `core.forms.PhotoCoverage`); sotto il disegno il conteggio e **Apri la prima** portano alla scheda rapida della prima porta da fotografare.
 5. **Collegamenti**, con il numero di elementi.
 6. **Foto e allegati**: sempre visibile, con Aggiungi foto e, se vuota, l'invito a documentare oggetto e collegamenti.
-7. **Altri dettagli**, chiuso: profondità, cavi interni, carico PoE, alias, IP, MAC, numero di serie e collegamenti logici.
+7. **Altri dettagli**, chiuso: cavi interni, carico PoE, alias, IP, MAC, numero di serie e collegamenti logici.
 
 Le sezioni senza dati non compaiono, tranne Foto e allegati.
 
@@ -71,6 +71,7 @@ Il risultato scelto apre la mappa sul suo piano, anche di un'altra sede, con i c
 - Ogni rete collegata è una fascia di righe, a livelli in ampiezza dall'apparato più a monte (ONT o modem, router o firewall, poi lo switch con più collegamenti); gli apparati senza collegamenti chiudono il disegno. Le righe si adattano alla larghezza della finestra, quindi si scorre solo in verticale.
 - I terminali con un solo collegamento verso un apparato di infrastruttura sono raccolti su di esso (`+N`); **Mostra i terminali** li disegna tutti.
 - Filtri Sede e Piano: gli apparati fuori filtro all'altro capo di un collegamento restano visibili e attenuati. Apparati spenti o dismessi sono attenuati.
+- Ogni nodo usa colore per tipo, icona e nome, coerenti con la mappa; stato e appartenenza al filtro restano distinti.
 - Il tocco su un apparato chiude la topologia e lo seleziona sulla mappa del suo piano; senza piano apre l'editor.
 
 ## Planimetrie

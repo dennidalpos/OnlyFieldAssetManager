@@ -126,7 +126,8 @@ private fun TopologyCanvas(project: Project, topology: Topology, i18n: Messages,
                 val place = listOfNotNull(index.siteOf(node.device.id)?.code ?: index.siteOf(node.device.id)?.name, node.areaId?.let(index::areaName)).joinToString(" · ")
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (node.outside) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primaryContainer,
+                    color = MapStyle.glyph(ObjectGlyph.of(project, node.device)),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
                     tonalElevation = 1.dp,
                     modifier = Modifier.offset(c.x - NodeWidth / 2, c.y - NodeHeight / 2).size(NodeWidth, NodeHeight).alpha(if (faded) .5f else 1f)
                         .clickable(role = Role.Button) { onOpen(node.device) }
@@ -136,7 +137,10 @@ private fun TopologyCanvas(project: Project, topology: Topology, i18n: Messages,
                         },
                 ) {
                     Column(Modifier.padding(horizontal = 6.dp, vertical = 4.dp), verticalArrangement = Arrangement.Center) {
-                        Text(node.device.technicalName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            com.onlyfield.assetmanager.configurator.GlyphBadge(ObjectGlyph.of(project, node.device), 22.dp)
+                            Text(node.device.technicalName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
                         Text(listOfNotNull(endpointsHere.takeIf { it > 0 }?.let { "+$it" }, place.ifBlank { null }, stubs.takeIf { it > 0 }?.let { "⋯$it" }).joinToString(" · "),
                             style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }

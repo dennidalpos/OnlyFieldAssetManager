@@ -78,7 +78,7 @@ private fun DeviceBlock(project: Project, device: Device, span: Int, i18n: Messa
     val p = device.positionU!!
     val units = if (device.heightU > 1) "U$p–${p + device.heightU - 1}" else "U$p"
     val height = UnitHeight * span + (UnitGap * (span - 1)).dp
-    Surface(color = MapStyle.family(glyph.family), contentColor = Color.White, shape = MaterialTheme.shapes.extraSmall,
+    Surface(color = MapStyle.glyph(glyph), contentColor = Color.White, shape = MaterialTheme.shapes.extraSmall,
         modifier = Modifier.fillMaxWidth().height(height)
             .then(if (onDevice != null) Modifier.clickable(role = Role.Button) { onDevice(device) } else Modifier)
             .semantics(mergeDescendants = true) { contentDescription = "$units ${device.technicalName}" }) {

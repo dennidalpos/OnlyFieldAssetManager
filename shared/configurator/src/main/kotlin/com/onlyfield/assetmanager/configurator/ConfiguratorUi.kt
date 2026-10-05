@@ -2,6 +2,7 @@ package com.onlyfield.assetmanager.configurator
 
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
@@ -42,8 +43,10 @@ fun ConfiguratorSection(
     val bringIntoView = remember { BringIntoViewRequester() }
     LaunchedEffect(error) { if (error != null) expanded = true }
     LaunchedEffect(focusOnOpen) { if (focusOnOpen) bringIntoView.bringIntoView() }
-    Column(Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView).padding(top = 4.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        HorizontalDivider()
+    Surface(Modifier.fillMaxWidth().bringIntoViewRequester(bringIntoView).padding(top = 4.dp), shape = MaterialTheme.shapes.medium,
+        border = BorderStroke(1.dp, if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outlineVariant),
+        color = if (expanded) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainerLow) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         TextButton(
             onClick = { expanded = !expanded },
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).semantics { stateDescription = listOfNotNull(i18n.text(if (expanded) "ux.expanded" else "ux.collapsed"), error).joinToString(", ") },
@@ -62,6 +65,7 @@ fun ConfiguratorSection(
         }
         if (expanded && error != null) Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         if (expanded) Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)
+    }
     }
 }
 

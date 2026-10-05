@@ -27,7 +27,6 @@ class QuickAddTest {
         val draft = QuickAdd.draft(MapObjectDraft.forRack(project, null), "R1", rackHeightU = 24)
         val rack = draft.apply(project).racks.single()
         assertEquals(24, rack.heightU)
-        assertTrue(QuickAdd.needsDetails(draft, hasPreset = false, hasErrors = false))
     }
 
     @Test fun siteIsRequiredUntilChosen() {
@@ -36,6 +35,5 @@ class QuickAddTest {
         val chosen = QuickAdd.draft(base, "MD-01", siteId = site.id)
         assertTrue(chosen.errors(project).isEmpty())
         assertEquals("MD-01", chosen.apply(project).sites.single().devices.single().technicalName)
-        assertFalse(QuickAdd.needsDetails(chosen, hasPreset = false, hasErrors = false))
     }
 }

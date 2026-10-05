@@ -4,6 +4,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.onlyfield.assetmanager.configurator.map.MapObjectPicker
+import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
+import com.onlyfield.assetmanager.configurator.inventoryDeviceDraft
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
@@ -24,23 +26,41 @@ class ObjectPickerUiTest {
         rule.onNodeWithText("Sul piano Terra").assertIsDisplayed()
         rule.onNodeWithText("Cerca tipologia…").performTextInput("switch")
         rule.onNodeWithText("Switch").performClick()
-        rule.onNodeWithText("SW-01").assertIsDisplayed()
+        rule.onNodeWithText("SW-01").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("Aggiungi e modifica").assertIsDisplayed()
         rule.onNodeWithText("Indietro").assertIsDisplayed()
         rule.onNodeWithText("Aggiungi").performClick()
         rule.runOnIdle {
             assertEquals("SW-01", added?.device?.technicalName)
             assertTrue(added!!.device.hardware.portGroups.isNotEmpty())
-            assertTrue(added!!.errors(project).isEmpty())
+            assertTrue(added.errors(project).isEmpty())
         }
     }
 
-    @Test fun typeWithoutMenusIsAddedWithOneTap() {
+    @Test fun typeWithoutMenusShowsDrawingBeforeExplicitAdd() {
         var added: MapObjectDraft? = null
         rule.setContent { MaterialTheme { MapObjectPicker(project, Messages(), area.id, null, null, {}, { added = it }, {}) } }
         rule.onNodeWithText("Cerca tipologia…").performTextInput("modem")
         rule.onNodeWithText("Modem").performClick()
+        rule.runOnIdle { assertNull(added) }
+        rule.onNodeWithText("MD-01").assertExists()
+        rule.onNodeWithText("Aggiungi").performClick()
         rule.runOnIdle { assertEquals("MD-01", added?.device?.technicalName) }
+    }
+
+    @Test fun inventoryWithoutContextRequiresAnExplicitSiteWhenSeveralExist() {
+        val another = Site(name = "Operations")
+        val multiple = project.copy(sites = project.sites + another)
+        var added: MapObjectDraft? = null
+        rule.setContent { MaterialTheme {
+            ObjectPickerDialog(multiple, Messages(), null, {}, base = { inventoryDeviceDraft(multiple, null).withType(it) },
+                onAdd = { added = it }, filter = { it.id == "switch" })
+        } }
+        rule.onNodeWithText("Aggiungi").assertIsNotEnabled()
+        rule.onNode(hasContentDescription("Sede:", substring = true)).performScrollTo().performClick()
+        rule.onNodeWithText("Operations").performClick()
+        rule.onNodeWithText("Aggiungi").assertIsEnabled().performClick()
+        rule.runOnIdle { assertEquals(another.id, added?.device?.siteId) }
     }
 
     @Test fun insideAContainerCablesAreHiddenAndCustomTypeContinuesToAdd() {

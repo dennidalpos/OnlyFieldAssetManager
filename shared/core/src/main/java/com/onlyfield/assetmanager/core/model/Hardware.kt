@@ -11,7 +11,21 @@ data class HardwareSpec(
     val features: List<String> = emptyList(),
     val portGroups: List<PortTemplate> = emptyList(),
     val passive: Boolean = false,
+    val portLayouts: List<PortLayout> = emptyList(),
+    val portPoeOverrides: List<PortPoeOverride> = emptyList(),
 )
+
+/** Presentation only; keys are group positions, never cable endpoint ids. */
+@Serializable
+data class PortLayout(
+    val side: PortSide = PortSide.FRONT,
+    val group: String? = null,
+    val rows: Int = 1,
+    val order: List<String> = emptyList(),
+)
+
+@Serializable
+data class PortPoeOverride(val side: PortSide = PortSide.FRONT, val group: String? = null, val key: String, val standard: PoeStandard? = null)
 
 @Serializable
 data class PortHardware(

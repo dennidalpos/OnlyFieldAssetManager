@@ -2,7 +2,7 @@ package com.onlyfield.assetmanager.core.forms
 
 import com.onlyfield.assetmanager.core.model.*
 
-/** Quick insertion: a new object from a few menus, saved at once; details are filled later. */
+/** Shared draft creation for visual insertion. */
 object QuickAdd {
     /** [base] with name, preset hardware, rack height and site; null keeps the base value. */
     fun draft(base: MapObjectDraft, name: String, preset: PresetResult? = null, rackHeightU: Int? = null, siteId: String? = null): MapObjectDraft {
@@ -20,10 +20,6 @@ object QuickAdd {
         ObjectKind.RACK -> draft.rack.name
         ObjectKind.CABLE -> draft.cable.codeOrLabel
     }
-
-    /** Types with menus (preset or rack height) or missing data show a second step; others are added with one tap. */
-    fun needsDetails(draft: MapObjectDraft, hasPreset: Boolean, hasErrors: Boolean): Boolean =
-        hasPreset || hasErrors || draft.type.kind == ObjectKind.RACK
 
     /** New device mounted in [rack] from [unit] on [side]; the site follows the rack's floor. */
     fun inRack(project: Project, rack: Rack, type: ObjectType, unit: Int, side: RackSide): MapObjectDraft {

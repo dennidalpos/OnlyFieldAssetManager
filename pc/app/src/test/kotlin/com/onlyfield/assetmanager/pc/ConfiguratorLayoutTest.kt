@@ -41,7 +41,10 @@ class ConfiguratorLayoutTest {
         show(MapObjectDraft.device(project, site.id, area.id, sw.id))
         rule.onNodeWithText("Switch · Terra › R1 › U10–11").assertExists()
         rule.onNodeWithText("10.0.0.2").assertExists()
+        rule.onNode(hasSetTextAction() and hasText("Indirizzo IP")).assertExists()
+        rule.onNodeWithText("Rete").performScrollTo().performClick()
         rule.onNode(hasSetTextAction() and hasText("Indirizzo IP")).assertDoesNotExist()
+        rule.onNodeWithText("10.0.0.2").assertExists()
         rule.onNodeWithText("Dati essenziali").assertExists()
     }
 
@@ -56,7 +59,7 @@ class ConfiguratorLayoutTest {
 
     @Test fun rackContentsListOnlyMountedDevicesAndFreeRanges() {
         show(MapObjectDraft.rack(project, site.id, area.id, rack.id))
-        rule.onNodeWithText("Dispositivi nel rack").performScrollTo().performClick()
+        rule.onNodeWithText("Dispositivi nel rack").assertIsDisplayed()
         rule.onNodeWithContentDescription("U10–11 SW-01").assertExists()
         rule.onNodeWithText("U libere: 1–9, 12–42").assertExists()
         rule.onNodeWithText("U5").assertDoesNotExist()

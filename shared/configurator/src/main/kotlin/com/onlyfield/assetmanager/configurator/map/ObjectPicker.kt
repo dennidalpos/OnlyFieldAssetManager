@@ -4,6 +4,8 @@ import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.selection.toggleable
@@ -37,7 +39,7 @@ fun <T> ValueMenu(label: String, value: T, values: List<T>, display: (T) -> Stri
     val density = LocalDensity.current
     // The popup matches the field width, so long labels stay readable on phones.
     Box(modifier.onSizeChanged { width = with(density) { it.width.toDp() } }) {
-        SelectField(label, display(value)) { open = true }
+        SelectField(label, display(value), expanded = open) { open = true }
         DropdownMenu(open, { open = false }, modifier = Modifier.width(width).heightIn(max = 360.dp)) {
             values.forEach { v -> DropdownMenuItem(text = { Text(display(v)) }, onClick = { change(v); open = false }) }
         }
@@ -74,7 +76,7 @@ fun MapObjectPicker(project: Project, i18n: Messages, areaId: String, parent: Ob
 /**
  * Quick insertion in one dialog: type (grouped, searchable, with icons), then prefilled menus
  * (name, preset ports, rack height, site when missing) and Add, which saves at once.
- * Types without menus are added with one tap; a single matching type skips the list.
+ * Every type has a visual confirmation; a single matching type skips the list.
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -93,18 +95,14 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
     var values by remember(chosen) { mutableStateOf(preset?.defaults().orEmpty()) }
     var name by remember(chosen) { mutableStateOf(chosen?.let { suggestName(project, it) }.orEmpty()) }
     var height by remember(chosen) { mutableStateOf(start?.rack?.heightU?.toIntOrNull() ?: 42) }
-    var siteId by remember(chosen) { mutableStateOf(start?.takeIf { it.siteId.isBlank() }?.let { project.sites.firstOrNull()?.id }) }
+    var siteId by remember(chosen) { mutableStateOf(start?.takeIf { it.siteId.isBlank() }?.let { project.sites.singleOrNull()?.id }) }
     val draft = start?.let { QuickAdd.draft(it, name, preset?.result(values), height, siteId) }
     val errors = draft?.errors(project, i18n).orEmpty()
 
     fun pick(type: ObjectType) {
         val first = base(type)
         if (type.kind == ObjectKind.CABLE) { onEdit?.invoke(first); return }
-        val site = if (first.siteId.isBlank()) project.sites.firstOrNull()?.id else null
-        val quick = QuickAdd.draft(first, suggestName(project, type), siteId = site)
-        val needs = QuickAdd.needsDetails(quick, DevicePresets.forType(type.id) != null, quick.errors(project, i18n).isNotEmpty()) ||
-            (first.siteId.isBlank() && project.sites.size > 1)
-        if (needs) chosen = type else onAdd(quick)
+        chosen = type
     }
 
     val title = when {
@@ -118,14 +116,20 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
     }, text = {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.heightIn(max = 420.dp).then(if (draft != null || custom) Modifier.verticalScroll(rememberScrollState()) else Modifier), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when {
                 draft != null -> {
+                    val preview = draft.preview(project, i18n)
+                    when (draft.type.kind) {
+                        ObjectKind.DEVICE -> preview.sites.flatMap { it.devices }.find { it.id == draft.id }?.let { com.onlyfield.assetmanager.configurator.DeviceDrawing(preview, it, i18n, showName = false) }
+                        ObjectKind.RACK -> preview.racks.find { it.id == draft.id }?.let { rack -> com.onlyfield.assetmanager.configurator.RackElevation(preview, rack, RackSide.FRONT, i18n, Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) }
+                        ObjectKind.CABLE -> Unit
+                    }
                     OutlinedTextField(name, { name = it }, label = { Text(i18n.text("config.name")) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
                         isError = errors["technicalName"] != null || errors["name"] != null)
                     if (draft.type.kind == ObjectKind.RACK)
                         ValueMenu(i18n.text("config.units"), height, (HardwareConfigurator.rackHeights + height).distinct().sorted(), { "$it U" }, Modifier.fillMaxWidth()) { height = it }
-                    if (askSite) ValueMenu(i18n.text("config.site"), project.sites.find { it.id == siteId }, project.sites, { it?.name.orEmpty() }, Modifier.fillMaxWidth()) { siteId = it?.id }
+                    if (askSite) ValueMenu(i18n.text("config.site"), project.sites.find { it.id == siteId }, project.sites, { it?.name ?: i18n.text("ux.noSelection") }, Modifier.fillMaxWidth()) { siteId = it?.id }
                     preset?.let { p ->
                         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             p.params.forEach { param ->
@@ -138,8 +142,6 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
                     errors.values.distinct().takeIf { it.isNotEmpty() }?.let {
                         Text(it.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                     }
-                    // Secondary path inside the body, so Back and Add always share one row on phones.
-                    if (onEdit != null) OutlinedButton(enabled = errors.isEmpty(), onClick = { onEdit(draft) }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("quick.addAndEdit")) }
                 }
                 custom -> CustomTypeForm(i18n) { customType = it }
                 else -> {
@@ -147,7 +149,7 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
                     val types = allTypes.filter { ObjectCatalog.displayName(it, i18n).contains(query.trim(), true) }
                     val grouped = types.groupBy { if (it.kind == ObjectKind.CABLE) null else ObjectGlyph.of(it).family }
                         .toSortedMap(compareBy(nullsLast()) { it?.ordinal })
-                    LazyColumn(Modifier.heightIn(max = 380.dp)) {
+                    LazyColumn(Modifier.heightIn(max = 260.dp)) {
                         grouped.forEach { (family, list) ->
                             item(key = "h-${family?.name}") {
                                 Text(family?.let { familyLabel(it, i18n) } ?: i18n.text("map.family.CABLE"), style = MaterialTheme.typography.labelLarge,
@@ -173,7 +175,10 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
         }
     }, confirmButton = {
         when {
-            draft != null -> Button(enabled = errors.isEmpty(), onClick = { onAdd(draft) }) { Text(i18n.text("ux.add")) }
+            draft != null -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Button(enabled = errors.isEmpty(), onClick = { onAdd(draft) }) { Text(i18n.text("ux.add")) }
+                if (onEdit != null) OutlinedButton(enabled = errors.isEmpty(), onClick = { onEdit(draft) }) { Text(i18n.text("quick.addAndEdit")) }
+            }
             // A custom type is created together with the object: the draft carries it into the project.
             custom -> Button(enabled = customType != null, onClick = { custom = false; chosen = customType }) { Text(i18n.text("catalog.continue")) }
         }

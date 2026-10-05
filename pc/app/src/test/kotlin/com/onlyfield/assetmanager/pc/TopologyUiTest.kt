@@ -1,6 +1,9 @@
 package com.onlyfield.assetmanager.pc
 
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.asSkiaBitmap
+import org.jetbrains.skia.Image
+import java.io.File
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import com.onlyfield.assetmanager.configurator.map.TopologyDialog
@@ -23,6 +26,9 @@ class TopologyUiTest {
         var opened: Device? = null
         rule.setContent { MaterialTheme { TopologyDialog(project, Messages(), null, null, { opened = it }) {} } }
         rule.onNodeWithText("2 apparati · 1 collegamenti · 0 percorsi aperti (⋯) · +N terminali raccolti").assertExists()
+        val output = File("build/reports/visual-configurator/topology-current.png")
+        output.parentFile.mkdirs()
+        Image.makeFromBitmap(rule.onAllNodes(isRoot()).filterToOne(hasAnyDescendant(isDialog())).captureToImage().asSkiaBitmap()).use { image -> image.encodeToData()!!.use { output.writeBytes(it.bytes) } }
         rule.onNodeWithContentDescription("SW-01, Sede, 1 collegamento").performClick()
         rule.runOnIdle { assertEquals("s", opened?.id) }
     }

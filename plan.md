@@ -16,7 +16,7 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 - I modelli sono separati dalle istanze. Le modifiche dei modelli vengono applicate solo con un'azione esplicita.
 - La mappa usa coordinate normalizzate, contenitori annidati e percorsi cavo; immagini e PDF sono allegati offline.
 - I documenti non esportano credenziali. Il testo utente resta invariato dalla localizzazione.
-- Configuratori: dati essenziali prima, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la sede richiede una scelta esplicita.
+- Configuratori: disegno specifico del tipo prima dei campi, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la sede richiede una scelta esplicita.
 - Navigazione condivisa per gruppi Lavoro, Dati tecnici, Supporto e Progetto. Gli elenchi nominali sono ordinati solo nella presentazione; porte, VLAN e unità rack mantengono il loro ordine tecnico.
 - Titolo operativo, corpo scorrevole e azioni persistenti distinguono gli editor. L'espansione delle sezioni non modifica i dati né il contratto di scambio.
 - Mappa: `MapScene` unica per piano e contenitori; ogni contenitore è un solo oggetto, navigabile fino all'ultimo livello. Una linea per coppia di oggetti, con elenco completo dei cavi al tocco. Pannello dettagli non modale, in basso o laterale da 840 dp. Rack, mensola, armadio e cassetta sono contenitori predefiniti; i tipi predefiniti non vengono più duplicati.
@@ -24,7 +24,16 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 - Tracciamento fisico essenziale: porta → cavo → passanti (patch panel, presa, scatola di giunzione) → porta. Rimossi dorsali (`SharedPathSegment`), `connectedPortId`, tipo e note dei passaggi, connettori A/B, orientamento, caratteristiche nominali e velocità osservata del cavo. Il cavallotto è un cavo tra due porte; la giunta è una scatola passiva con passante fronte/retro.
 - Collegamenti dal disegno dell'apparato: il tocco su una porta apre una scheda rapida (stato, percorso nei due versi, etichetta cavo suggerita, Collega a…, Inserisci passaggio, Scollega, Foto). La pagina porta completa resta in Dettagli porta.
 - La foto è un'azione primaria e sempre presente su apparati, rack, porte e cavi (allegati con destinazione `PORT` inclusa). Nel pannello mappa la sezione Foto compare anche vuota; identificativi e dati tecnici sono in Altri dettagli.
-- Preset hardware e logica delle porte solo nel codice (`DevicePresets`, `PortLogic`): nessun cambio a contratto o Room. Porte in tre passi (tipologia → quantità → etichetta); VLAN e PoE multipli sulle entità esistenti.
+- Preset hardware e logica delle porte nel core (`DevicePresets`, `PortLogic`, `PortArrangement`, `PassiveCabling`). Disposizione e supporto PoE personalizzati nei campi facoltativi del JSON hardware, senza cambio delle tabelle Room o della versione `.ofam`. Porte in tre passi (tipologia → quantità → etichetta); VLAN e PoE multipli sulle entità esistenti.
+
+## Configuratore visivo — 5 ottobre 2026
+
+- Colori per tipo coerenti su mappa, topologia e schede; selezione contrastante, nome completo e canvas contenuto nel riquadro.
+- Inserimento uniforme: tipo → disegno/preset/nome → Aggiungi. Riquadri, menu aperti evidenziati e azioni principali raccolte.
+- Dimensioni e profondità tolte dalla UI, valori precedenti conservati; U solo dove servono per rack e modelli montabili.
+- Disegni Fronte/Retro interattivi; griglie una/due righe riordinabili senza alterare porte o collegamenti; supporto PoE selezionabile.
+- Tratte fisse: selezione dei frontali e collegamento dei retro associati. Cavetti frontali distinti; nessuna deduzione di associazioni ambigue.
+- Configurazione in bozza con Salva; Collega e Foto immediate fuori dagli editor. Evidenze e limiti Android in roadmap e PROJECT_STATUS.
 
 ## Evoluzione: censimento rete (intervista del 5 ottobre 2026)
 

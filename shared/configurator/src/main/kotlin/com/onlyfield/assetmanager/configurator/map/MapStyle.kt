@@ -4,9 +4,43 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import com.onlyfield.assetmanager.core.model.LinkMedium
 import com.onlyfield.assetmanager.core.model.ObjectFamily
+import com.onlyfield.assetmanager.core.model.Glyph
 
 /** Fixed hues dark enough for white glyph text (WCAG AA on 12sp bold); shape and code repeat the meaning. */
 object MapStyle {
+    fun glyph(glyph: Glyph): Color = when (glyph.typeId) {
+        "switch" -> Color(0xFF1565C0)
+        "router" -> Color(0xFF3949AB)
+        "modem" -> Color(0xFF546E7A)
+        "ont" -> Color(0xFF006D77)
+        "access-point" -> Color(0xFF00796B)
+        "radio-bridge" -> Color(0xFF7B1FA2)
+        "wifi-controller" -> Color(0xFF283593)
+        "firewall" -> Color(0xFFC62828)
+        "camera" -> Color(0xFFAD1457)
+        "nvr" -> Color(0xFF9E3B17)
+        "access-control" -> Color(0xFF880E4F)
+        "server" -> Color(0xFF6A1B9A)
+        "nas" -> Color(0xFF512DA8)
+        "san" -> Color(0xFF4527A0)
+        "workstation" -> Color(0xFF2E7D32)
+        "ip-phone" -> Color(0xFF4F812B)
+        "pbx" -> Color(0xFF33691E)
+        "sensor" -> Color(0xFF1B5E20)
+        "ups" -> Color(0xFF795548)
+        "pdu" -> Color(0xFF8D5A00)
+        "power-supply" -> Color(0xFF827717)
+        "patch-panel" -> Color(0xFF00695C)
+        "outlet" -> Color(0xFF00838F)
+        "junction-box" -> Color(0xFF455A64)
+        "blank-panel" -> Color(0xFF616161)
+        "rack" -> Color(0xFF37474F)
+        "shelf" -> Color(0xFF577482)
+        "cabinet" -> Color(0xFF4E6470)
+        "enclosure" -> Color(0xFF5D4037)
+        else -> family(glyph.family)
+    }
+
     fun family(family: ObjectFamily): Color = when (family) {
         ObjectFamily.NETWORK -> Color(0xFF1565C0)
         ObjectFamily.SECURITY -> Color(0xFFC62828)

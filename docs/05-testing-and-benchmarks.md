@@ -176,3 +176,20 @@ Quattro test `ReplacementPasswordTest`: copia chiusa con richiesta, password err
 Suite finale `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 1m 26s`, Core 100, Exchange 62, Desktop 123, Android JVM 35: **320 test**, zero fallimenti/errori/saltati. Pannello Windows e dialoghi di stampa nativi non verificati a vista (RES-23/RES-19); consumi ai limiti restano RES-22.
 
 Verifica dopo la revisione finale con lo stesso comando: `BUILD SUCCESSFUL in 1m 24s`, Core 100, Exchange 63, Desktop 123, Android JVM 35: **321 test**, zero fallimenti/errori/saltati. `git diff --check` superato; 15 documenti UTF-8 senza BOM e 72 collegamenti locali verificati. Il tracker contiene solo AUD-03 e sette residui aperti o parziali.
+
+## Configuratore visivo — 5 ottobre 2026
+
+Baseline mirata: `ObjectMapTest`, `PresetAndPortLogicTest`, `ConfiguratorTest`, `BulkCablingTest`, 40 test superati (`BUILD SUCCESSFUL in 2s`). Verifiche ampliate dopo problemi emersi nei controlli UI.
+
+- `VisualConfigurationTest` (8): riordino senza cambio di ID/cavi, dimensioni conservate, supporto PoE personalizzato, riuso del modello, riconciliazione dei gruppi rinominati, porte aggiunte/rimosse, retro liberi con frontali occupati, serie/continuazione, associazioni sconosciute o duplicate anche sul retro, JSON precedente e nuovo, fasce su larghezze diverse.
+- `VisualHardwareExchangeTest` (1): export/import `.ofam` con disposizione, supporto PoE, porte e dati dimensionali conservati dal serializzatore comune alle due app.
+- `VisualConfiguratorUiTest` (4): Save, annullamento protetto, PoE dal disegno, tratta fissa da frontale occupato. Verifiche preesistenti aggiornate per conferma visiva dell'inserimento e comandi fissi; sezioni rete aperte e identificativi richiudibili.
+- `VisualLayoutTest` (4 combinazioni): switch 24/48 e patch panel 24/48; larghezze 360/560/1024 dp, temi chiaro/scuro, fronti e retro. `MapVisualBoundsTest` (1): 53 oggetti, zoom/trascinamento e assenza di disegno sul pannello esterno. PNG in `pc/app/build/reports/visual-configurator/`, ispezionati insieme ai render dell'editor e del picker in `pc/app/build/reports/ux/`.
+
+Comando completo: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:compileKotlin :mobile:app:compileDebugKotlin --no-parallel --max-workers=1` → `BUILD SUCCESSFUL in 1m 35s`, **339 test** (108/64/132/35), zero fallimenti/errori/saltati. Compilazione delle due app riuscita.
+
+Controllo conclusivo: `ObjectPickerUiTest` verifica anche la scelta esplicita della sede nel flusso reale dall’inventario senza contesto e con più sedi. `:pc:app:test :mobile:app:compileDebugKotlin --no-parallel --max-workers=1`: `BUILD SUCCESSFUL in 36s`, 133 test Desktop; totale verificato **340 test** (108/64/133/35). Render aggiornato della topologia in `visual-configurator/topology-current.png`.
+
+I render Desktop a larghezza telefono non verificano il runtime Android: nuovi flussi, TalkBack, multitouch, trascinamento porte e foto su hardware restano RES-13/RES-19. Il problema Room AUD-03 non è modificato da questo intervento.
+
+Controllo conclusivo delle immagini: `:pc:app:test --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 35s`, 133 test superati. Topologia aggiornata e retro con cavo attestato ispezionati nei PNG `visual-configurator/topology-current.png` e `visual-configurator/rear-560-false.png`. La cattura del dialogo dopo un’interazione non era affidabile nel renderer dei test; per la verifica grafica del retro cablato è stato usato il render isolato delle griglie. Le verifiche funzionali del dialogo restano superate.
