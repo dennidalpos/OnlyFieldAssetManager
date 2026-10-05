@@ -6,7 +6,7 @@ Rack, apparati e cavi possono usare modelli di progetto. Un modello conserva la 
 
 `ConnectionGraph` segue cavi e passaggi interni. Una porta puo essere disponibile, avere un percorso completo, incompleto o un conflitto. Il colore accompagna sempre un testo; il verde indica solo continuita censita, non traffico reale.
 
-Il percorso è solo fisico: cavi e passaggi interni, senza passi logici WAN/VPN (restano nel pannello del dispositivo). `core.forms.PortSummaries` riassume per una porta ciò che serve per etichettare e collegare: stato, cavo, tratte raggiunte via cavo (`PathHop`) e, su un passante, anche quelle dal lato opposto; gli apparati attivi agli estremi di un percorso completo; il numero di foto. `CableLabels.suggest` propone l'etichetta del cavo (`SW-01/P5 – PP-02/P12`), compatibile con la stampa delle etichette PDF.
+Il percorso è solo fisico: cavi e passaggi interni, senza passi logici WAN/VPN (restano nel pannello del dispositivo). `core.forms.PortSummaries` riassume per una porta ciò che serve per etichettare e collegare: stato, cavo e numero di foto della porta e del cavo. `core.forms.PathSchematics` costruisce lo schema del percorso (`PathSchematic`): oggetti attraversati (`PathStation`, con porta di ingresso e di uscita per i passanti) uniti dai cavi (`PathSegment`, con etichetta), su entrambi i lati di un passante; se un solo estremo è attivo il disegno parte da quello; un estremo passivo o senza porta è una fine aperta. `PathSchematicView` (condiviso) lo disegna in verticale: apparati attivi pieni, passivi vuoti, estremo sconosciuto rosso, cavo con etichetta, mezzo, colore e lunghezza; l'oggetto della porta è evidenziato, gli altri hanno Apri. Il modello non dipende da Compose ed è pensato per il PDF (EVO-08). `CableLabels.suggest` propone l'etichetta del cavo (`SW-01/P5 – PP-02/P12`), compatibile con la stampa delle etichette PDF.
 
 Il contratto `.ofam` 1 conserva hardware, modelli e porte; Room 1 li persiste.
 
@@ -81,13 +81,13 @@ Il pannello porte (`PortPanel`) imita il frontale: porte dispari sopra e pari so
 - **Porta libera**: Foto e **Collega a…** → apparato di destinazione (ricerca, Solo questo piano, prima quelli con porte dello stesso connettore; solo apparati con porte libere) → tocco su una porta libera del suo disegno → mezzo dedotto dalla porta ed etichetta cavo proposta → **Collega**.
 - **Cablaggio in blocco** (`core.forms.BulkCabling`): scelta la porta di destinazione, **Porte in serie** collega in un'unica operazione annullabile le porte libere successive dei due apparati, sullo stesso lato (ad esempio fronte del patch panel), saltando quelle occupate; ogni cavo riceve l'etichetta proposta. Con **Poi passa alla porta successiva** la scheda resta aperta sulla porta libera seguente, con l'apparato di destinazione e la sua porta seguente già scelti: un tocco per cavo.
 - **Foto dopo Collega**: subito dopo un collegamento singolo la scheda torna al riepilogo con l'invito «Collegato. Fotografa ora il cavo o la porta.» e **Foto cavo** in evidenza; nella modalità continua la riga «Collegato: etichetta» con Foto cavo resta in alto mentre si sceglie la coppia seguente. I pulsanti foto mostrano il numero di scatti già fatti.
-- **Porta collegata**: etichetta, mezzo, colore e lunghezza del cavo; **Percorso** con le porte raggiunte (← lato opposto del passante, → lato del cavo), gli estremi attivi in grassetto e Apri; **Foto porta**, **Foto cavo**, **Inserisci passaggio**, **Scollega** (rosso, con conferma: elimina il cavo con le sue foto).
+- **Porta collegata**: etichetta, mezzo, colore e lunghezza del cavo; **Percorso** disegnato con `PathSchematicView`; **Foto porta**, **Foto cavo**, **Inserisci passaggio**, **Scollega** (rosso, con conferma: elimina il cavo con le sue foto).
 - **Inserisci passaggio**: elenca i passanti liberi (stesso piano per primi, con il lato) oppure crea una **Nuova scatola di giunzione** accanto all'apparato; il cavo viene diviso in due tratte (`HardwareConfigurator.insertPassage`).
 - **Dettagli porta** apre la pagina completa della porta.
 
 La pagina completa si apre con Torna all'oggetto, il titolo `SW-01 › P5` e lo stato del collegamento; ha tre schede:
 
-- **Collegamento**: sezioni Destinazione (un solo elenco con ricerca e il filtro Solo questo piano, mezzo, Collega), Percorso e, per pannelli, prese e scatole, Passaggio nel pannello (porta passante o sconosciuto); Crea oggetto intermedio è un pulsante con l'elenco dei tipi;
+- **Collegamento**: sezioni Destinazione (un solo elenco con ricerca e il filtro Solo questo piano, mezzo, Collega), Percorso (lo stesso schema) e, per pannelli, prese e scatole, Passaggio nel pannello (porta passante o sconosciuto); Crea oggetto intermedio è un pulsante con l'elenco dei tipi;
 - **VLAN e PoE**;
 - **Hardware**: etichetta, connettore, velocità, modulo e PoE supportato.
 

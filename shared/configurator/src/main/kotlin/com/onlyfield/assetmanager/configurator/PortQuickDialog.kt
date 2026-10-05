@@ -15,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.configurator.map.ValueMenu
@@ -52,6 +51,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     // Continuous cabling moves the card to the next free port without closing it.
     var currentId by remember(portId) { mutableStateOf(portId) }
     val summary = remember(project, currentId) { PortSummaries.of(project, currentId, graph, index) }
+    val path = remember(project, currentId) { PathSchematics.of(project, currentId, graph, index) }
     // The port may disappear (undo, sync): close instead of showing stale data.
     if (summary == null) { LaunchedEffect(currentId) { onClose() }; return }
     val port = summary.port
@@ -81,7 +81,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     }, text = {
         Column(Modifier.heightIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (step) {
-                QuickStep.MAIN -> MainStep(project, summary, index, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
+                QuickStep.MAIN -> MainStep(project, summary, path, index, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
                     onConnect = { justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
                 QuickStep.DEVICE -> DeviceStep(project, device, areaId, sameFloor, { sameFloor = it }, graph, port, i18n) { d ->
                     target = d; targetPort = null; step = QuickStep.PORT
@@ -163,23 +163,17 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MainStep(project: Project, summary: PortSummary, index: ProjectIndex, i18n: Messages, actions: PortQuickActions, fresh: Boolean,
+private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic?, index: ProjectIndex, i18n: Messages, actions: PortQuickActions, fresh: Boolean,
                      onConnect: () -> Unit, onPassage: () -> Unit, onDisconnect: () -> Unit) {
     val cable = summary.cable
     if (cable != null) {
         Text(cable.codeOrLabel ?: CableLabels.suggest(project, cable, index), style = MaterialTheme.typography.titleSmall)
         Text(listOfNotNull(cable.medium.toDisplayString(i18n), cable.color, cable.lengthValue?.let { "$it ${cable.lengthUnit ?: "m"}" }).joinToString(" · "),
             style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SectionTitle(i18n.text("config.traceTitle"))
-        // Pass-through ports show both directions: the far side first (←), then the cabled side (→).
-        (summary.backHops.reversed().map { "← " to it } + summary.hops.map { "→ " to it }).forEach { (arrow, hop) ->
-            val terminal = hop in summary.terminals
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                val side = hop.port?.hardware?.side?.takeIf { hop.device.isPassive() }?.toDisplayString(i18n)
-                Text(arrow + listOfNotNull(hop.port?.let { index.portLabel(it.id) } ?: hop.device.technicalName, side).joinToString(" · "), Modifier.weight(1f),
-                    style = MaterialTheme.typography.bodyMedium, fontWeight = if (terminal) FontWeight.Bold else null, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                actions.openDevice?.let { open -> TextButton(onClick = { open(hop.device) }) { Text(i18n.text("quick.open")) } }
-            }
+        // Whole path, both sides of a pass-through included, from the active end when there is one.
+        path?.takeIf { it.segments.isNotEmpty() }?.let {
+            SectionTitle(i18n.text("config.traceTitle"))
+            PathSchematicView(it, i18n, onOpen = actions.openDevice)
         }
     }
     if (fresh && actions.photo != null) Text(i18n.text("quick.photoPrompt"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)

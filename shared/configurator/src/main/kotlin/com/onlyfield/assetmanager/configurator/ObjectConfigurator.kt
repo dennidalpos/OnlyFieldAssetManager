@@ -648,11 +648,9 @@ private fun PortLink(project: Project, ref: ProjectIndex.PortRef, rootId: String
         Text(i18n.text("config.incompatible"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
     Button(onClick = { stage(HardwareConfigurator.connect(project, port.id, destination, medium, existing?.id)) }, enabled = !graph.occupied(port.id, existing?.id) && (destination == null || !graph.occupied(destination!!, existing?.id))) { Text(i18n.text("config.connect")) }
     destination?.let { id -> index.port(id)?.device?.let { d -> TextButton(onClick = { openDevice(d) }, enabled = d.id != rootId) { Text(i18n.text("config.openDestination")) } } }
-    val trace = graph.trace(port.id, i18n)
-    if (trace.isNotEmpty()) SectionTitle(i18n.text("config.traceTitle"))
-    trace.forEach { step ->
-        Text("${step.stepIndex}. ${step.description}", style = MaterialTheme.typography.bodyMedium)
-        step.currentDevice?.takeIf { it.id != rootId }?.let { d -> TextButton(onClick = { openDevice(d) }) { Text(d.technicalName) } }
+    PathSchematics.of(project, port.id, graph, index)?.takeIf { it.segments.isNotEmpty() }?.let { path ->
+        SectionTitle(i18n.text("config.traceTitle"))
+        PathSchematicView(path, i18n, onOpen = { d -> if (d.id != rootId) openDevice(d) })
     }
     val mapping = project.panelMappings.singleOrNull { it.portAId == port.id || it.portBId == port.id }
     if (ref.device.isPassive() && project.panelMappings.count { it.portAId == port.id || it.portBId == port.id } <= 1) {

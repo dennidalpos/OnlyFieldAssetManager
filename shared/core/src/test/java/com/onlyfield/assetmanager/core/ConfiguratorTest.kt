@@ -262,20 +262,19 @@ class ConfiguratorTest {
         assertEquals(ConnectionState.AVAILABLE, ConnectionGraph(restored).state(restored.panelMappings.single().portAId))
     }
 
-    @Test fun portSummaryListsCableHopsAndTerminal() {
+    @Test fun pathSchematicCrossesTheJunctionFromEitherSide() {
         val a = device("SW"); val b = device("PC")
         val cabled = HardwareConfigurator.connect(project(a, b), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
         val (p, box) = junctionBox(cabled)
         val split = HardwareConfigurator.insertPassage(p, cabled.cables.single().id, p.sites.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.REAR }.id)
-        val summary = requireNotNull(PortSummaries.of(split, a.ports.single().id))
-        assertEquals(listOf("GB-1", "PC"), summary.hops.map { it.device.technicalName })
-        assertEquals(listOf("PC"), summary.terminals.map { it.device.technicalName })
-        // From the junction front port, both directions are listed: back to SW, forward to PC.
+        val path = requireNotNull(PathSchematics.of(split, a.ports.single().id))
+        assertEquals(listOf("SW", "GB-1", "PC"), path.stations.map { it.device?.technicalName })
+        assertEquals(ConnectionState.COMPLETE, path.state)
+        // From the junction front port, both directions are drawn, with the junction in focus.
         val front = split.sites.single().devices.first { it.id == box.id }.ports.single { it.hardware.side == PortSide.FRONT }
-        val both = requireNotNull(PortSummaries.of(split, front.id))
-        assertEquals(listOf("PC"), both.hops.map { it.device.technicalName })
-        assertEquals(listOf("SW"), both.backHops.map { it.device.technicalName })
-        assertEquals(setOf("SW", "PC"), both.terminals.map { it.device.technicalName }.toSet())
+        val both = requireNotNull(PathSchematics.of(split, front.id))
+        assertEquals(setOf("SW", "PC"), setOf(both.stations.first().device?.technicalName, both.stations.last().device?.technicalName))
+        assertEquals("GB-1", both.stations[both.focus].device?.technicalName)
         assertEquals("SW/P1 – GB-1/P1", CableLabels.suggest(split, split.cables.single { it.id == cabled.cables.single().id }))
     }
 }
