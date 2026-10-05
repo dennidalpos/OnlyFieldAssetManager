@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Evoluzione censimento rete: EVO-01…EVO-08 completati (gerarchia Sede → Piano, stato operativo, cablaggio in blocco, ricerca nel progetto, foto più rapide, schema del percorso, topologia fisica, PDF Desktop completo); prossimo EVO-09.",
+  "currentPhase": "Evoluzione censimento rete: EVO-01…EVO-09 completati (gerarchia Sede → Piano, stato operativo, cablaggio in blocco, ricerca nel progetto, foto più rapide, schema del percorso, topologia fisica, PDF Desktop completo, Excel con percorsi); prossimo EVO-10.",
   "activeTask": null,
-  "nextSession": "EVO-09 Excel con percorsi end-to-end. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 e scatto in serie in RES-13. Resta RES-17.",
+  "nextSession": "EVO-10 moduli secondari sintetici. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 e scatto in serie in RES-13. Resta RES-17.",
   "remainingTasks": [
-    {
-      "id": "EVO-09",
-      "title": "Excel con percorsi end-to-end",
-      "status": "TODO",
-      "description": "Foglio Percorsi: apparato/porta A, passanti attraversati, apparato/porta B, etichette cavo, stato (completo/incompleto/conflitto); verificare i fogli esistenti per la consegna al cliente.",
-      "closureCriteria": "XLSX del demo apribile in Excel con foglio Percorsi coerente con `ConnectionGraph`."
-    },
     {
       "id": "EVO-10",
       "title": "Moduli secondari sintetici",

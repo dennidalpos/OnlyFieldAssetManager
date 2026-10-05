@@ -258,3 +258,8 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - `pc.report.PdfReportWriter` con PDFBox sostituisce `SimplePdfWriter` (solo testo) e la stampa Java2D: carattere Unicode di sistema con ripiego Helvetica, tabelle con intestazione ripetuta, piè di pagina, stampa dallo stesso documento con `PDFPageable`.
 - Disegni: planimetrie con sfondo, oggetti e cavi (`MapScene`); elevazioni rack fronte/retro; tabella dei percorsi (`PathSchematics.all`, nuovo); topologia fisica. Nuove voci `ReportSelection`: planimetrie, percorsi, topologia.
 - Verifica: core 100, exchange 47, Desktop 104, Android JVM 24 test superati, test strumentali Android compilati; nuovo `DeliveryPdfTest` (PDF del demo: tutte le sezioni disegnate, nessuna credenziale, pagine renderizzate in `pc/app/build/reports/delivery`); `ReportPdfTest` e `DesktopDocumentAndCartographyTest` leggono il testo con PDFBox. Il PDF del demo ha 80 pagine, la maggior parte per l'elenco dei 600 cavi. PDF Android invariato.
+
+## EVO-09: Excel con percorsi end-to-end — 5 ottobre 2026
+
+- `XlsxExportManager`: nuovo foglio Percorsi (estremi con porta e ubicazione, passanti, etichette, mezzi, lunghezza totale, stato) da `PathSchematics.all`, filtrato sugli apparati esportati; tutti i fogli con intestazione in grassetto, prima riga bloccata e larghezza predefinita 20.
+- Verifica: core 100, exchange 48, Desktop 104, Android JVM 24 test superati, test strumentali Android compilati; nuovo `DemoXlsxPathsTest` (parti XML ben formate, foglio registrato, una riga per percorso). Il file del demo si apre in Excel (Microsoft 365, sola lettura via COM) senza riparazioni: Percorsi 457 righe, intestazione in grassetto e bloccata.

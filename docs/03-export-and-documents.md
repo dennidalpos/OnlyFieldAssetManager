@@ -6,6 +6,10 @@
 
 Gli export descrivono inventario (con sede, gruppo e stato operativo), porte e cablaggio, rete, alimentazione, media e campi documentali. Le credenziali sono escluse. Il testo libero viene esportato come testo, evitando formule XLSX interpretate.
 
+## Excel
+
+Fogli: Inventario apparati, Porte e cablaggio, Rete logica e VLAN, Alimentazione e badge, Note e osservazioni, **Percorsi**. Ogni foglio ha la prima riga in grassetto e bloccata e una larghezza di colonna leggibile. Il foglio Percorsi riporta una riga per percorso (`PathSchematics.all`) che tocca gli apparati esportati: apparato, porta e ubicazione dei due estremi (con fine aperta), passanti attraversati con le porte, etichette dei cavi, mezzi, lunghezza totale quando tutti i cavi ne hanno una, stato.
+
 ## PDF di consegna Desktop
 
 `pc.report.PdfReportWriter` (PDFBox) scrive il PDF A4 e la stessa pagina viene stampata (`PDFPageable`). Usa Arial dal sistema (DejaVu Sans su Linux) con i caratteri Unicode e ripiega su Helvetica, sostituendo i caratteri che il carattere non ha. `ReportContent` produce righe di testo, tabelle (`ReportLine.Row`, intestazione ripetuta a ogni pagina) e disegni (`ReportLine.Figure`). Sezioni scelte nel dialogo Documenti (`ReportSelection`):

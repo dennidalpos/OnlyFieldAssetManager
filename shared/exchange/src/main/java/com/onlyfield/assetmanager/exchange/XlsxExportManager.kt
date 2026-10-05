@@ -67,6 +67,10 @@ object XlsxExportManager {
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet5.xml"))
             zip.write(buildSheet5Xml(project, filterConfig, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
+
+            zip.putNextEntry(ZipEntry("xl/worksheets/sheet6.xml"))
+            zip.write(buildPathsSheetXml(project, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.closeEntry()
         }
     }
 
@@ -81,8 +85,15 @@ object XlsxExportManager {
     }
 
     private fun cellStr(col: String, row: Int, text: String): String {
-        return "<c r=\"$col$row\" t=\"inlineStr\"><is><t>${escapeXml(text)}</t></is></c>"
+        // Row 1 is the header of every sheet: bold (style 1).
+        val style = if (row == 1) " s=\"1\"" else ""
+        return "<c r=\"$col$row\"$style t=\"inlineStr\"><is><t>${escapeXml(text)}</t></is></c>"
     }
+
+    /** Header row frozen while scrolling and a default width that fits names and labels. */
+    private val SHEET_HEAD = """  <sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>
+  <sheetFormatPr defaultRowHeight="15" baseColWidth="10" defaultColWidth="20"/>
+"""
 
     private fun cellNum(col: String, row: Int, num: Number?): String {
         if (num == null) return "<c r=\"$col$row\" t=\"inlineStr\"><is><t>-</t></is></c>"
@@ -101,6 +112,7 @@ object XlsxExportManager {
   <Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/worksheets/sheet4.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
   <Override PartName="/xl/worksheets/sheet5.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
+  <Override PartName="/xl/worksheets/sheet6.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>
 </Types>"""
     }
 
@@ -120,6 +132,7 @@ object XlsxExportManager {
     <sheet name="${escapeXml(i18n.text("text.bb4d35db55dd"))}" sheetId="3" r:id="rId3"/>
     <sheet name="${escapeXml(i18n.text("text.9ec7c611be29"))}" sheetId="4" r:id="rId4"/>
     <sheet name="${escapeXml(i18n.text("text.49fc6d4f4848"))}" sheetId="5" r:id="rId5"/>
+    <sheet name="${escapeXml(i18n.text("report.paths"))}" sheetId="6" r:id="rId7"/>
   </sheets>
 </workbook>"""
     }
@@ -132,6 +145,7 @@ object XlsxExportManager {
   <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/>
   <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet4.xml"/>
   <Relationship Id="rId5" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet5.xml"/>
+  <Relationship Id="rId7" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet6.xml"/>
   <Relationship Id="rId6" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>"""
     }
@@ -139,8 +153,9 @@ object XlsxExportManager {
     private fun buildStylesXml(): String {
         return """<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <fonts count="1">
+  <fonts count="2">
     <font><sz val="11"/><name val="Calibri"/></font>
+    <font><b/><sz val="11"/><name val="Calibri"/></font>
   </fonts>
   <fills count="1">
     <fill><patternFill patternType="none"/></fill>
@@ -151,8 +166,9 @@ object XlsxExportManager {
   <cellStyleXfs count="1">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0"/>
   </cellStyleXfs>
-  <cellXfs count="1">
+  <cellXfs count="2">
     <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>
   </cellXfs>
 </styleSheet>"""
     }
@@ -161,7 +177,7 @@ object XlsxExportManager {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
+$SHEET_HEAD  <sheetData>
 """)
 
         val headers = listOf(i18n.text("text.f163aa3f6310"), i18n.text("site.group"), i18n.text("text.024dc204d7ba"), i18n.text("text.29caae5fe1e7"), i18n.text("text.d5680523de72"), i18n.text("text.b19e02e9502b"), i18n.text("text.ebb396f2d486"), i18n.text("text.8894b359b4e9"), i18n.text("text.54276aa0307f"), "Rack/Posizione", i18n.text("text.90c2d339a9d5"), i18n.text("text.2edfc95a3c46"), i18n.text("text.3b495129c5de"), i18n.text("text.d8da2c49df39")) + listOf(i18n.text("config.width"), i18n.text("config.depth"), i18n.text("config.poeBudget"), i18n.text("config.features"), i18n.text("device.status"))
@@ -212,7 +228,7 @@ object XlsxExportManager {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
+$SHEET_HEAD  <sheetData>
 """)
 
         val headers = listOf(i18n.text("text.9f626fe59e04"), i18n.text("text.f066e83907df"), i18n.text("text.20e26ce71ba4"), i18n.text("text.2de5f6131596"), i18n.text("text.abc0f3511ebf"), i18n.text("text.245eccd84730"), i18n.text("text.13ee8eeebbb8"), i18n.text("text.dcc43f317d0c"), i18n.text("text.55a2c4d86dad"), i18n.text("text.9d3380130243"))
@@ -287,7 +303,7 @@ object XlsxExportManager {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
+$SHEET_HEAD  <sheetData>
 """)
 
         val headers = listOf(i18n.text("text.a5216242ff51"), i18n.text("text.0624cb296793"), i18n.text("text.03cbc24f25f2"), i18n.text("text.dc22b79bc7d6"), i18n.text("text.af7ef649048f"), i18n.text("text.5145534513c2"), i18n.text("text.1314f26ce72a"))
@@ -324,7 +340,7 @@ object XlsxExportManager {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
+$SHEET_HEAD  <sheetData>
 """)
 
         val headers = listOf(i18n.text("text.cf301d95d32c"), i18n.text("text.f57beb90828a"), i18n.text("text.649eace2ae87"), i18n.text("text.f9876f4c6cfa"), i18n.text("text.12873ee7733c"), i18n.text("text.64f63dbe7bbe"), i18n.text("text.af354b531994"))
@@ -371,7 +387,7 @@ object XlsxExportManager {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
-  <sheetData>
+$SHEET_HEAD  <sheetData>
 """)
 
         val headers = listOf(i18n.text("text.486d4aed6f59"), i18n.text("text.83d1dffc1570"), i18n.text("text.57fbd1029ff6"), i18n.text("text.3b495129c5de"), i18n.text("text.b332a1d182ce"))
@@ -413,6 +429,53 @@ object XlsxExportManager {
             }
         }
 
+        sb.append("  </sheetData>\n</worksheet>")
+        return sb.toString()
+    }
+
+    /**
+     * One row per end-to-end path ([PathSchematics.all]) touching the exported devices: both ends,
+     * pass-throughs crossed, cable labels, media, known length and state, as on the map.
+     */
+    private fun buildPathsSheetXml(project: Project, filteredDeviceIds: Set<String>, i18n: Messages = Messages()): String {
+        val sb = StringBuilder()
+        sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+$SHEET_HEAD  <sheetData>
+""")
+        val headers = listOf("paths.deviceA", "paths.portA", "paths.placeA", "paths.through", "paths.deviceB", "paths.portB", "paths.placeB",
+            "paths.cables", "paths.media", "paths.length", "paths.state")
+        sb.append("<row r=\"1\">")
+        headers.forEachIndexed { n, key -> sb.append(cellStr(('A' + n).toString(), 1, i18n.text(key))) }
+        sb.append("</row>\n")
+        val index = com.onlyfield.assetmanager.core.display.ProjectIndex(project)
+        var row = 1
+        com.onlyfield.assetmanager.core.forms.PathSchematics.all(project, index = index)
+            .filter { path -> path.stations.any { it.device?.id in filteredDeviceIds } }
+            .forEach { path ->
+                row++
+                val first = path.stations.first(); val last = path.stations.last()
+                fun place(device: com.onlyfield.assetmanager.core.model.Device?) = device?.let { d ->
+                    listOfNotNull(index.siteOf(d.id)?.name, com.onlyfield.assetmanager.core.model.ObjectMap.areaId(project, d)?.let(index::areaName)).joinToString(" › ")
+                }.orEmpty()
+                fun port(i: Int, station: com.onlyfield.assetmanager.core.forms.PathStation) =
+                    ((if (i == 0) station.ports.firstOrNull() else station.ports.lastOrNull())?.name ?: "-") +
+                        if (path.openEnd(i)) " (${i18n.text("path.openEnd")})" else ""
+                val lengths = path.segments.map { it.cable.lengthValue }
+                val values = listOf(
+                    first.device?.technicalName ?: "?", port(0, first), place(first.device),
+                    path.stations.drop(1).dropLast(1).joinToString(" → ") { s -> "${s.device?.technicalName ?: "?"} ${s.ports.joinToString("→") { it.name }}" }.ifBlank { "-" },
+                    last.device?.technicalName ?: "?", port(path.stations.lastIndex, last), place(last.device),
+                    path.segments.joinToString(", ") { it.label },
+                    path.segments.map { it.cable.medium.toDisplayString(i18n) }.distinct().joinToString(", "),
+                )
+                sb.append("<row r=\"$row\">")
+                values.forEachIndexed { n, value -> sb.append(cellStr(('A' + n).toString(), row, value)) }
+                // Total length only when every cable has one.
+                sb.append(cellNum("J", row, if (lengths.all { it != null }) lengths.sumOf { it!! } else null))
+                sb.append(cellStr("K", row, i18n.text("config.${path.state.name.lowercase()}")))
+                sb.append("</row>\n")
+            }
         sb.append("  </sheetData>\n</worksheet>")
         return sb.toString()
     }
