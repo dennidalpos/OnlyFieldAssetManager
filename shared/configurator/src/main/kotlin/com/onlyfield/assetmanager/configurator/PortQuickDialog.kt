@@ -49,9 +49,11 @@ private enum class QuickStep { MAIN, DEVICE, PORT, PASSAGE }
 fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: PortQuickActions, onClose: () -> Unit, insertPassage: Boolean = false) {
     val index = remember(project) { ProjectIndex(project) }
     val graph = remember(project) { ConnectionGraph(project) }
-    val summary = remember(project, portId) { PortSummaries.of(project, portId, graph, index) }
+    // Continuous cabling moves the card to the next free port without closing it.
+    var currentId by remember(portId) { mutableStateOf(portId) }
+    val summary = remember(project, currentId) { PortSummaries.of(project, currentId, graph, index) }
     // The port may disappear (undo, sync): close instead of showing stale data.
-    if (summary == null) { LaunchedEffect(portId) { onClose() }; return }
+    if (summary == null) { LaunchedEffect(currentId) { onClose() }; return }
     val port = summary.port
     val device = summary.device
     val areaId = remember(project, device.id) { ObjectMap.areaId(project, device) }
@@ -61,6 +63,8 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     var sameFloor by remember(portId) { mutableStateOf(areaId != null) }
     var medium by remember(portId) { mutableStateOf(defaultMedium(port)) }
     var label by remember(portId) { mutableStateOf("") }
+    var count by remember(portId) { mutableStateOf(1) }
+    var continueNext by remember { mutableStateOf(false) }
     var asking by remember { mutableStateOf(false) }
 
     fun done(updated: Project, message: String) { actions.update(updated, message); step = QuickStep.MAIN }
@@ -86,11 +90,23 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
                     PortPanel(cells, i18n, selected = setOfNotNull(targetPort), onClick = { cell ->
                         if (!cell.occupied) {
                             targetPort = cell.port.id
+                            count = 1
                             label = CableLabels.suggest(project, Cable(portAId = port.id, portBId = cell.port.id), index)
                         }
                     })
                     ValueMenu(i18n.text("config.medium"), medium, CableMedium.entries, { it.toDisplayString(i18n) }, Modifier.fillMaxWidth()) { medium = it }
-                    if (targetPort != null) OutlinedTextField(label, { label = it }, label = { Text(i18n.text("quick.cableLabel")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                    targetPort?.let { to ->
+                        val max = remember(project, port.id, to) { BulkCabling.maxCount(project, port.id, to, graph) }
+                        if (max > 1) ValueMenu(i18n.text("quick.series"), count.coerceAtMost(max), seriesOptions(max), { i18n.plural("quick.seriesCount", it) }, Modifier.fillMaxWidth()) { count = it }
+                        if (count > 1) {
+                            val pairs = remember(project, port.id, to, count) { BulkCabling.pairs(project, port.id, to, count, graph) }
+                            Text(i18n.text("quick.seriesPreview", "${pairs.first().first.name} → ${pairs.first().second.name}", "${pairs.last().first.name} → ${pairs.last().second.name}"),
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        } else OutlinedTextField(label, { label = it }, label = { Text(i18n.text("quick.cableLabel")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                        Row(Modifier.fillMaxWidth().toggleable(continueNext, role = Role.Switch, onValueChange = { continueNext = it }), verticalAlignment = Alignment.CenterVertically) {
+                            Text(i18n.text("quick.continueNext"), Modifier.weight(1f)); Switch(continueNext, null)
+                        }
+                    }
                 }
                 QuickStep.PASSAGE -> summary.cable?.let { cable ->
                     PassageStep(project, cable, device, areaId, graph, index, i18n) { updated -> done(updated, i18n.text("quick.insertPassage")) }
@@ -101,10 +117,23 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
         when (step) {
             QuickStep.PORT -> Button(enabled = targetPort != null, onClick = {
                 val to = targetPort ?: return@Button
-                val connected = HardwareConfigurator.connect(project, port.id, to, medium)
-                val cable = connected.cables.first { setOf(it.portAId, it.portBId) == setOf(port.id, to) }
-                done(ProjectEdits.updateCable(connected, cable.copy(codeOrLabel = label.trim().ifBlank { null })), i18n.text("quick.connect"))
-            }) { Text(i18n.text("quick.connect")) }
+                val pairs = BulkCabling.pairs(project, port.id, to, count, graph)
+                val updated = if (count > 1) BulkCabling.connect(project, pairs, medium) else {
+                    val connected = HardwareConfigurator.connect(project, port.id, to, medium)
+                    val cable = connected.cables.first { setOf(it.portAId, it.portBId) == setOf(port.id, to) }
+                    ProjectEdits.updateCable(connected, cable.copy(codeOrLabel = label.trim().ifBlank { null }))
+                }
+                val message = if (count > 1) i18n.plural("quick.seriesDone", pairs.size) else i18n.text("quick.connect")
+                val last = pairs.lastOrNull() ?: (port to null)
+                val nextFrom = if (continueNext) BulkCabling.nextFree(updated, last.first.id) else null
+                val nextTo = if (nextFrom != null) last.second?.let { BulkCabling.nextFree(updated, it.id) } else null
+                if (nextFrom == null) done(updated, message) else {
+                    // Same destination device, next pair already proposed: one tap per cable.
+                    actions.update(updated, message)
+                    currentId = nextFrom; targetPort = nextTo; count = 1
+                    label = nextTo?.let { CableLabels.suggest(updated, Cable(portAId = nextFrom, portBId = it), ProjectIndex(updated)) }.orEmpty()
+                }
+            }) { Text(if (count > 1) i18n.plural("quick.connectSeries", count) else i18n.text("quick.connect")) }
             else -> TextButton(onClick = onClose) { Text(i18n.text("ux.close")) }
         }
     }, dismissButton = {
@@ -217,6 +246,9 @@ private fun withNewJunction(project: Project, cable: Cable, device: Device, area
     val rear = added.sites.flatMap { it.devices }.first { it.id == draft.id }.ports.first { it.hardware.side == PortSide.REAR }
     return HardwareConfigurator.insertPassage(added, cable.id, rear.id)
 }
+
+/** Series lengths offered in the menu: common panel sizes up to [max], plus [max] itself. */
+internal fun seriesOptions(max: Int): List<Int> = (listOf(1, 2, 4, 8, 12, 16, 24, 48).filter { it < max } + max).distinct()
 
 private fun defaultMedium(port: Port): CableMedium = when (port.hardware.mediaType) {
     "Fiber" -> CableMedium.FIBER_OVERALL

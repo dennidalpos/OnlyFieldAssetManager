@@ -220,3 +220,9 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - Export: colonna Stato operativo in XLSX e Markdown (la colonna del rilievo si chiama ora Rilievo); report PDF Desktop con lo stato se diverso da In servizio. Il PDF Android non è stato modificato.
 - Demo rigenerato con un PC spento, un telefono dismesso e una telecamera da verificare.
 - Verifica: core 91, exchange 41, Desktop 95, Android JVM 24 test superati; nuovi controlli `MapSceneTest.switchedOffDeviceIsFaded`, persistenza Room in `ProjectRepositoryTest`, etichette in `DisplayLabelsTest`.
+
+## EVO-03: cablaggio in blocco — 5 ottobre 2026
+
+- `core.forms.BulkCabling`: serie di porte libere sullo stesso apparato e lato in ordine tecnico (`freeRun`), coppie (`pairs`, `maxCount`), collegamento con etichetta proposta (`connect`) e porta libera successiva (`nextFree`).
+- Scheda rapida della porta: dopo la scelta della porta di destinazione compaiono **Porte in serie** (1, 2, 4, 8, 12, 16, 24, 48 fino al massimo disponibile) con anteprima del primo e dell'ultimo accoppiamento, e l'opzione **Poi passa alla porta successiva**, che mantiene l'apparato di destinazione e propone la coppia seguente. Un patch panel da 24 porte si cabla in un'unica operazione annullabile.
+- Verifica: core 93, exchange 41, Desktop 97, Android JVM 24 test superati; nuovi `BulkCablingTest` (porte occupate saltate, lato unico, etichette, porta successiva) e `QuickCablingUiTest` (serie da 4 e modalità continua).
