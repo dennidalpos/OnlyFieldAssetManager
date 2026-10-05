@@ -70,7 +70,7 @@ fun PortPanel(
                                         val cell = block[i]
                                         val isSelected = cell.port.id in selected
                                         val state = i18n.text(if (cell.occupied) "port.occupied" else "port.free")
-                                        val details = listOfNotNull(state, cell.poe?.let { "PoE" }, cell.vlan?.untaggedVlanId?.let { "VLAN $it" }, cell.peer, i18n.text("port.warning").takeIf { cell.warning })
+                                        val details = listOfNotNull(state, cell.poe?.let { "PoE" }, cell.vlan?.untaggedVlanId?.let { "VLAN $it" }, cell.peer, i18n.text("port.warning").takeIf { cell.warning }, i18n.text("port.noPhoto").takeIf { cell.photoMissing })
                                         Surface(
                                             color = if (cell.occupied) occupied else MaterialTheme.colorScheme.surface,
                                             contentColor = if (cell.occupied) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
@@ -87,6 +87,7 @@ fun PortPanel(
                                                 if (cell.poe != null || cell.poeCapable != null) Text("⚡", Modifier.align(Alignment.BottomStart), fontSize = 8.sp,
                                                     color = if (cell.poe != null) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline)
                                                 if (cell.warning) Text("!", Modifier.align(Alignment.TopEnd).padding(end = 2.dp), fontSize = 9.sp, color = warning)
+                                                if (cell.photoMissing && !compact) Text("•", Modifier.align(Alignment.BottomEnd).padding(end = 2.dp), fontSize = 10.sp)
                                             }
                                         }
                                     }

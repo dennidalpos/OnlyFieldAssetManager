@@ -166,6 +166,12 @@ private fun NodeDetails(project: Project, index: ProjectIndex, hierarchy: Hierar
         SectionTitle(i18n.text("ux.ports")) { Text("${node.portsUsed}/${node.portsTotal}", style = MaterialTheme.typography.labelMedium) }
         val cells = remember(project, d.id) { PortLogic.panel(project, d, index = index) }
         PortPanel(cells, i18n, onClick = { quickPort = it.port.id })
+        // Field documentation loop: open the next cabled port still without a photo.
+        val missing = cells.filter { it.photoMissing }
+        if (missing.isNotEmpty() && actions.photo != null) Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(i18n.plural("photo.missing", missing.size), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = { quickPort = missing.first().port.id }) { Text(i18n.text("photo.nextMissing")) }
+        }
     }
     quickPort?.let { id ->
         PortQuickDialog(project, id, i18n, PortQuickActions(update = actions.update, photo = actions.photo,

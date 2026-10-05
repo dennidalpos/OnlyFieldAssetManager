@@ -22,8 +22,10 @@ class QuickCablingUiTest {
     private val b = device("B")
     private val project = mutableStateOf(Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "Sede", devices = listOf(a, b)))))
 
+    private val shots = mutableListOf<Pair<AttachmentTargetType, String>>()
+
     private fun open() {
-        rule.setContent { MaterialTheme { PortQuickDialog(project.value, a.ports.first().id, Messages(), PortQuickActions(update = { p, _ -> project.value = p }), onClose = {}) } }
+        rule.setContent { MaterialTheme { PortQuickDialog(project.value, a.ports.first().id, Messages(), PortQuickActions(update = { p, _ -> project.value = p }, photo = { t, id -> shots += t to id }), onClose = {}) } }
         rule.onNodeWithText("Collega a…").performClick()
         rule.onNodeWithText("B").performClick()
         rule.onAllNodesWithContentDescription("P1: Libera").onLast().performClick()
@@ -52,5 +54,22 @@ class QuickCablingUiTest {
             assertEquals(2, project.value.cables.size)
             assertEquals(ConnectionState.COMPLETE, ConnectionGraph(project.value).state(a.ports[1].id))
         }
+    }
+
+    @Test fun connectingOffersTheCablePhotoAtOnce() {
+        open()
+        rule.onNodeWithText("Collega").performClick()
+        rule.onNodeWithText("Collegato. Fotografa ora il cavo o la porta.").assertExists()
+        rule.onNodeWithText("Foto cavo").performClick()
+        rule.runOnIdle { assertEquals(listOf(AttachmentTargetType.CABLE to project.value.cables.single().id), shots) }
+    }
+
+    @Test fun continuousModeKeepsThePreviousCablePhotoAtHand() {
+        open()
+        rule.onNodeWithText("Poi passa alla porta successiva").performClick()
+        rule.onNodeWithText("Collega").performClick()
+        rule.onNodeWithText("Collegato: A/P1 – B/P1").assertExists()
+        rule.onNodeWithText("Foto cavo").performClick()
+        rule.runOnIdle { assertEquals(AttachmentTargetType.CABLE, shots.single().first) }
     }
 }

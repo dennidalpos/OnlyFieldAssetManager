@@ -1,17 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-05",
-  "currentPhase": "Evoluzione censimento rete: EVO-01…EVO-04 completati (gerarchia Sede → Piano, stato operativo, cablaggio in blocco, ricerca nel progetto); prossimo EVO-05.",
+  "currentPhase": "Evoluzione censimento rete: EVO-01…EVO-05 completati (gerarchia Sede → Piano, stato operativo, cablaggio in blocco, ricerca nel progetto, foto più rapide); prossimo EVO-06.",
   "activeTask": null,
-  "nextSession": "EVO-05 foto più rapide. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 in RES-13. Resta RES-17.",
+  "nextSession": "EVO-06 schema del percorso. Lo schema Room v1 è cambiato (EVO-01): all'aggiornamento il database viene ricreato vuoto, quindi sui dispositivi di prova va reimportato fixtures/demo/onlyfield-demo.ofam («Demo Comune», ora con gruppi Sedi comunali/Scuole). Telefono fisico (moto g86) disconnesso: appena collegato 1) eliminare le cartelle foto orfane files/attachments/7dbbdcb7-… e 895ac485-… (già nella copia build/phone-backup/); 2) installare il nuovo APK debug; 3) importare fixtures/demo/onlyfield-demo.ofam da Download; 4) chiedere se eliminare il vecchio progetto «Demo OnlyField». Poi RES-19 (scheda rapida porta, ponte radio, TalkBack) e FOTO-04 e scatto in serie in RES-13. Resta RES-17.",
   "remainingTasks": [
-    {
-      "id": "EVO-05",
-      "title": "Foto più rapide",
-      "status": "TODO",
-      "description": "Scatto in serie sul medesimo oggetto; proposta di foto dopo Collega; indicatore di foto mancanti su porte/cavi collegati.",
-      "closureCriteria": "Flusso collega → foto senza uscire dalla scheda rapida; contatore foto mancanti nel pannello."
-    },
     {
       "id": "EVO-06",
       "title": "Schema del percorso",
@@ -53,7 +46,7 @@
       "id": "RES-13",
       "title": "Collaudo hardware manuale",
       "status": "OPEN",
-      "description": "Foto (anche porta e cavo dalla scheda rapida, FOTO-04), scanner, multitouch e lettore USB non sono stati verificati su hardware reale.",
+      "description": "Foto (anche porta e cavo dalla scheda rapida, FOTO-04, e scatto in serie di EVO-05), scanner, multitouch e lettore USB non sono stati verificati su hardware reale.",
       "closureCriteria": "Checklist hardware compilata con esiti ed evidenze."
     },
     {

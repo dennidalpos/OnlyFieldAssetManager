@@ -629,21 +629,25 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         return file
     }
 
-    fun onPhotoResult(saved: Boolean) {
-        val (attachment, file) = pendingPhoto ?: return
+    /** True when the shot was kept (the camera may then open again for the same object). */
+    fun onPhotoResult(saved: Boolean): Boolean {
+        val (attachment, file) = pendingPhoto ?: return false
         pendingPhoto = null
         if (!saved || file.length() == 0L) {
             file.parentFile?.deleteRecursively()
-            return
+            return false
         }
         val added = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
         edit(i18n.text("text.ef0af7808f11")) { ProjectEdits.addAttachment(it, added) }
+        return true
     }
 
     private fun formatPhotoTitle() = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ITALY).format(java.util.Date())
 
 
     fun notifyError(text: String) = fail(text)
+
+    fun notifyInfo(text: String) = notify(text)
 
 
     /** Opens a scanned entity or returns an unknown code. */

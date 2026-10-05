@@ -65,6 +65,8 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     var label by remember(portId) { mutableStateOf("") }
     var count by remember(portId) { mutableStateOf(1) }
     var continueNext by remember { mutableStateOf(false) }
+    // Cable connected from this card: its photo is offered right away.
+    var justConnected by remember(portId) { mutableStateOf<String?>(null) }
     var asking by remember { mutableStateOf(false) }
 
     fun done(updated: Project, message: String) { actions.update(updated, message); step = QuickStep.MAIN }
@@ -79,12 +81,21 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     }, text = {
         Column(Modifier.heightIn(max = 480.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (step) {
-                QuickStep.MAIN -> MainStep(project, summary, index, i18n, actions,
-                    onConnect = { step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
+                QuickStep.MAIN -> MainStep(project, summary, index, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
+                    onConnect = { justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
                 QuickStep.DEVICE -> DeviceStep(project, device, areaId, sameFloor, { sameFloor = it }, graph, port, i18n) { d ->
                     target = d; targetPort = null; step = QuickStep.PORT
                 }
                 QuickStep.PORT -> target?.let { d ->
+                    // Continuous cabling: photo of the cable just made without leaving the card.
+                    justConnected?.let { id -> project.cables.find { it.id == id } }?.let { prev ->
+                        val shots = project.attachments.count { it.targetType == AttachmentTargetType.CABLE && it.targetId == prev.id }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(i18n.text("quick.connectedPrev", prev.codeOrLabel ?: CableLabels.suggest(project, prev, index)), Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            actions.photo?.let { photo -> OutlinedButton(onClick = { photo(AttachmentTargetType.CABLE, prev.id) }) { Text(i18n.text("quick.photoCable") + shotCount(shots)) } }
+                        }
+                    }
                     Text(i18n.text("quick.choosePort", d.technicalName), style = MaterialTheme.typography.bodyMedium)
                     val cells = remember(project, d.id) { PortLogic.panel(project, d, graph, index) }
                     PortPanel(cells, i18n, selected = setOfNotNull(targetPort), onClick = { cell ->
@@ -124,6 +135,8 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
                     ProjectEdits.updateCable(connected, cable.copy(codeOrLabel = label.trim().ifBlank { null }))
                 }
                 val message = if (count > 1) i18n.plural("quick.seriesDone", pairs.size) else i18n.text("quick.connect")
+                // A series makes many cables at once: no single photo to offer.
+                justConnected = if (count > 1) null else updated.cables.firstOrNull { setOf(it.portAId, it.portBId) == setOf(port.id, to) }?.id
                 val last = pairs.lastOrNull() ?: (port to null)
                 val nextFrom = if (continueNext) BulkCabling.nextFree(updated, last.first.id) else null
                 val nextTo = if (nextFrom != null) last.second?.let { BulkCabling.nextFree(updated, it.id) } else null
@@ -150,7 +163,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun MainStep(project: Project, summary: PortSummary, index: ProjectIndex, i18n: Messages, actions: PortQuickActions,
+private fun MainStep(project: Project, summary: PortSummary, index: ProjectIndex, i18n: Messages, actions: PortQuickActions, fresh: Boolean,
                      onConnect: () -> Unit, onPassage: () -> Unit, onDisconnect: () -> Unit) {
     val cable = summary.cable
     if (cable != null) {
@@ -169,13 +182,20 @@ private fun MainStep(project: Project, summary: PortSummary, index: ProjectIndex
             }
         }
     }
+    if (fresh && actions.photo != null) Text(i18n.text("quick.photoPrompt"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        // Photos are always available: the port itself and, when present, its cable.
+        // Photos are always available: the port itself and, when present, its cable (first right after connecting).
         actions.photo?.let { photo ->
-            Button(onClick = { photo(AttachmentTargetType.PORT, summary.port.id) }) {
-                Text(i18n.text(if (cable == null) "quick.photo" else "quick.photoPort") + (summary.photos.takeIf { it > 0 }?.let { " ($it)" } ?: ""))
-            }
-            cable?.let { c -> OutlinedButton(onClick = { photo(AttachmentTargetType.CABLE, c.id) }) { Text(i18n.text("quick.photoCable")) } }
+            val cablePhoto: @Composable () -> Unit = { cable?.let { c ->
+                val text = i18n.text("quick.photoCable") + shotCount(summary.cablePhotos)
+                if (fresh) Button(onClick = { photo(AttachmentTargetType.CABLE, c.id) }) { Text(text) }
+                else OutlinedButton(onClick = { photo(AttachmentTargetType.CABLE, c.id) }) { Text(text) }
+            } }
+            if (fresh) cablePhoto()
+            val portText = i18n.text(if (cable == null) "quick.photo" else "quick.photoPort") + shotCount(summary.photos)
+            if (fresh) OutlinedButton(onClick = { photo(AttachmentTargetType.PORT, summary.port.id) }) { Text(portText) }
+            else Button(onClick = { photo(AttachmentTargetType.PORT, summary.port.id) }) { Text(portText) }
+            if (!fresh) cablePhoto()
         }
         if (cable == null) Button(onClick = onConnect) { Text(i18n.text("quick.connectTo")) }
         else {
@@ -246,6 +266,9 @@ private fun withNewJunction(project: Project, cable: Cable, device: Device, area
     val rear = added.sites.flatMap { it.devices }.first { it.id == draft.id }.ports.first { it.hardware.side == PortSide.REAR }
     return HardwareConfigurator.insertPassage(added, cable.id, rear.id)
 }
+
+/** " (n)" after a photo button label; empty without photos. */
+private fun shotCount(photos: Int): String = if (photos > 0) " ($photos)" else ""
 
 /** Series lengths offered in the menu: common panel sizes up to [max], plus [max] itself. */
 internal fun seriesOptions(max: Int): List<Int> = (listOf(1, 2, 4, 8, 12, 16, 24, 48).filter { it < max } + max).distinct()

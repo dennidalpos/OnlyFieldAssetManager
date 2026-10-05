@@ -44,7 +44,7 @@ Per un oggetto l'ordine è sempre lo stesso:
 1. **Intestazione**: simbolo, nome, tipo e chiusura (annunciata come Chiudi).
 2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore come secondarie (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
 3. **Dati primari**: unità del rack, contenuto, posizione nel rack, etichetta fisica e stato operativo se diverso da In servizio.
-4. **Porte**: il disegno dell'apparato con le porte occupate su totali; il tocco su una porta apre la scheda rapida (`PortQuickDialog`, vedi [10-object-configurator.md](10-object-configurator.md)).
+4. **Porte**: il disegno dell'apparato con le porte occupate su totali; il tocco su una porta apre la scheda rapida (`PortQuickDialog`, vedi [10-object-configurator.md](10-object-configurator.md)). Le porte collegate senza foto della porta né del cavo hanno il segno • (`PortCell.photoMissing`, `core.forms.PhotoCoverage`); sotto il disegno il conteggio e **Apri la prima** portano alla scheda rapida della prima porta da fotografare.
 5. **Collegamenti**, con il numero di elementi.
 6. **Foto e allegati**: sempre visibile, con Aggiungi foto e, se vuota, l'invito a documentare oggetto e collegamenti.
 7. **Altri dettagli**, chiuso: profondità, cavi interni, carico PoE, alias, IP, MAC, numero di serie e collegamenti logici.

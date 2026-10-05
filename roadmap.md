@@ -232,3 +232,10 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - `core.display.GlobalSearch`: indice per versione del progetto su apparati (nome, etichetta, alias, IP, MAC, seriale), rack, porte (`APPARATO PORTA` o `APPARATO/PORTA`, oppure etichetta) e cavi (etichetta o proposta); ordine esatto → iniziale → parziale; destinazione sulla mappa e posizione `Sede › Piano › Rack`; recenti per id.
 - `configurator.map.GlobalSearchDialog`, condiviso: Android con l'icona Cerca nella barra della mappa, Windows con il pulsante Cerca e `Ctrl+F`. Il risultato apre il piano con l'oggetto selezionato; senza piano apre l'editor. Recenti di sessione (otto).
 - Verifica: core 97, exchange 41, Desktop 99, Android JVM 24 test superati; nuovi `GlobalSearchTest` e `GlobalSearchUiTest`.
+
+## EVO-05: foto più rapide — 5 ottobre 2026
+
+- Scatto in serie: Android riapre la fotocamera sullo stesso oggetto dopo ogni foto confermata finché non si annulla (`rememberPhotoCapture`); Windows accetta più immagini in una scelta (`DesktopStorageHelper.pickOpenFiles`, `attachPhotos`).
+- Scheda rapida della porta: dopo Collega invito e Foto cavo in evidenza; in modalità continua Foto cavo del collegamento precedente resta a portata; conteggio scatti su Foto porta e Foto cavo (`PortSummary.cablePhotos`).
+- Foto mancanti: `core.forms.PhotoCoverage` (porta collegata documentata dalla foto della porta o del cavo), segno • nel disegno porte, conteggio e Apri la prima nel pannello della mappa.
+- Verifica: core 98, exchange 41, Desktop 101, Android JVM 24 test superati, test strumentali Android compilati; nuovi `PhotoCoverageTest` e due casi in `QuickCablingUiTest`. Serie di scatti su fotocamera reale non provata (RES-13).

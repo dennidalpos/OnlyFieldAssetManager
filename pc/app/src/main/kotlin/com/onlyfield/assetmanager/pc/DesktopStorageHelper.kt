@@ -39,6 +39,16 @@ object DesktopStorageHelper {
         return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
     }
 
+    /** Like [pickOpenFile] with multiple selection; empty when cancelled. */
+    fun pickOpenFiles(title: String, extensionDescription: String, vararg extensions: String): List<File> {
+        val chooser = JFileChooser().apply {
+            dialogTitle = title
+            isMultiSelectionEnabled = true
+            fileFilter = FileNameExtensionFilter(extensionDescription, *extensions)
+        }
+        return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
+    }
+
     fun pickSaveFile(
         title: String = Messages().text("text.505a2a51b914"),
         defaultFileName: String = "progetto.ofam",

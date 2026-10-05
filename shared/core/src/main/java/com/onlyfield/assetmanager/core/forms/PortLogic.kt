@@ -13,6 +13,8 @@ data class PortCell(
     val poe: PoeMapping?,
     val vlan: PortVlanMembership?,
     val peer: String?,
+    /** Cabled, but neither the port nor its cable has a photo. */
+    val photoMissing: Boolean = false,
 )
 
 /** Bulk logical edits on ports, stored in the existing PoE and VLAN entities. */
@@ -20,13 +22,15 @@ object PortLogic {
     fun panel(project: Project, device: Device, graph: ConnectionGraph = ConnectionGraph(project), index: ProjectIndex = ProjectIndex(project)): List<PortCell> {
         val poe = project.poeMappings.associateBy { it.portId }
         val vlans = project.portVlanMemberships.associateBy { it.portId }
+        val photographed = PhotoCoverage.photographed(project)
+        val cables = PhotoCoverage.cablesByPort(project)
         return device.ports.map { port ->
             val state = graph.state(port.id)
-            val cable = project.cables.firstOrNull { it.portAId == port.id || it.portBId == port.id }
+            val cable = cables[port.id]
             val peer = cable?.let { c -> if (c.portAId == port.id) c.portBId?.let(index::portLabel) ?: index.device(c.deviceBId)?.technicalName
                 else c.portAId?.let(index::portLabel) ?: index.device(c.deviceAId)?.technicalName }
             PortCell(port, graph.occupied(port.id), state == ConnectionState.CONFLICT || state == ConnectionState.INCOMPLETE,
-                port.hardware.poeStandard, poe[port.id], vlans[port.id], peer)
+                port.hardware.poeStandard, poe[port.id], vlans[port.id], peer, cable != null && port.id !in photographed && cable.id !in photographed)
         }
     }
 

@@ -13,14 +13,28 @@ import androidx.core.content.FileProvider
 import com.onlyfield.assetmanager.core.model.AttachmentTargetType
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 
-/** Opens the camera and links its output as an attachment. */
+/**
+ * Opens the camera and links its output as an attachment. Shots come in series: after a kept photo
+ * the camera opens again for the same object; cancelling it ends the series.
+ */
 @Composable
 fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) -> Unit {
     val i18n = LocalMessages.current
 
     val context = LocalContext.current
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved -> vm.onPhotoResult(saved) }
-    fun shoot(type: AttachmentTargetType, id: String?) {
+    var series by remember { mutableStateOf<Pair<AttachmentTargetType, String?>?>(null) }
+    var shots by remember { mutableStateOf(0) }
+    lateinit var shoot: (AttachmentTargetType, String?) -> Unit
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
+        val target = series
+        if (vm.onPhotoResult(saved) && target != null) { shots++; shoot(target.first, target.second) }
+        else {
+            if (shots > 1) vm.notifyInfo(i18n.plural("photo.seriesDone", shots))
+            series = null; shots = 0
+        }
+    }
+    shoot = { type, id ->
+        series = type to id
         vm.preparePhoto(type, id)?.let { file ->
             launcher.launch(FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file))
         }

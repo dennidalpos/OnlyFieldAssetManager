@@ -44,7 +44,7 @@ class ConfiguratorUiTest {
         val b = Device(technicalName = "B").let { it.copy(ports = listOf(Port(deviceId = it.id, name = "P1"))) }
         val p = HardwareConfigurator.connect(Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(a, b)))), a.ports.single().id, b.ports.single().id, CableMedium.ETHERNET_COPPER)
         rule.setContent { MaterialTheme { PortPanel(PortLogic.panel(p, a), Messages(), onClick = {}) } }
-        rule.onNodeWithContentDescription("P1: Occupata, B › P1").assertHasClickAction()
+        rule.onNodeWithContentDescription("P1: Occupata, B › P1, senza foto").assertHasClickAction()
     }
 
     @Test fun selectingDestinationStagesConnectionAndSaveKeepsPortIds() {
@@ -70,7 +70,7 @@ class ConfiguratorUiTest {
         rule.onNode(hasText("Etichetta cavo") and hasSetTextAction()).assertExists()
         rule.onNodeWithText("Collega").performClick()
         rule.onNodeWithText("Chiudi").performClick()
-        rule.onNodeWithContentDescription("P1: Occupata, B › P1").assertHasClickAction()
+        rule.onNodeWithContentDescription("P1: Occupata, B › P1, senza foto").assertHasClickAction()
         rule.runOnIdle {
             val saved = draft.value.apply(project)
             assertEquals(1, saved.cables.size)

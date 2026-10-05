@@ -18,6 +18,8 @@ data class PortSummary(
     /** Active devices at the ends of a complete path. */
     val terminals: List<PathHop>,
     val photos: Int,
+    /** Photos of [cable]; zero without a cable. */
+    val cablePhotos: Int = 0,
 )
 
 object PortSummaries {
@@ -29,9 +31,11 @@ object PortSummaries {
         } else null
         val hops = hops(graph, index, portId)
         val back = partner?.let { hops(graph, index, it) }.orEmpty()
-        return PortSummary(ref.port, ref.device, state, project.cables.firstOrNull { it.portAId == portId || it.portBId == portId }, hops, back,
+        val cable = project.cables.firstOrNull { it.portAId == portId || it.portBId == portId }
+        return PortSummary(ref.port, ref.device, state, cable, hops, back,
             listOfNotNull(back.lastOrNull(), hops.lastOrNull()).filter { state == ConnectionState.COMPLETE && !it.device.isPassive() },
-            project.attachments.count { it.targetType == AttachmentTargetType.PORT && it.targetId == portId })
+            project.attachments.count { it.targetType == AttachmentTargetType.PORT && it.targetId == portId },
+            cable?.let { c -> project.attachments.count { it.targetType == AttachmentTargetType.CABLE && it.targetId == c.id } } ?: 0)
     }
 
     private fun hops(graph: ConnectionGraph, index: ProjectIndex, portId: String): List<PathHop> =
@@ -42,6 +46,25 @@ object PortSummaries {
             val farDevice = far?.let(index::port)?.device ?: index.device(if (cable.portAId == from) cable.deviceBId else cable.deviceAId) ?: return@mapNotNull null
             PathHop(farDevice, far?.let(index::port)?.port, cable)
         }
+}
+
+/** A cabled port is documented by a photo of the port or of its cable. */
+object PhotoCoverage {
+    /** Ids of ports and cables with at least one photo. */
+    fun photographed(project: Project): Set<String> = project.attachments
+        .filter { it.targetType == AttachmentTargetType.PORT || it.targetType == AttachmentTargetType.CABLE }
+        .mapNotNullTo(HashSet()) { it.targetId }
+
+    /** Cabled ports of [device] without a photo of the port or of its cable, in device order. */
+    fun missing(project: Project, device: Device, photographed: Set<String> = photographed(project)): List<Port> {
+        val cableOf = cablesByPort(project)
+        return device.ports.filter { p -> cableOf[p.id]?.let { c -> p.id !in photographed && c.id !in photographed } ?: false }
+    }
+
+    internal fun cablesByPort(project: Project): Map<String, Cable> = buildMap {
+        // First cable wins, as in [PortSummaries.of] (a second one is a conflict).
+        project.cables.forEach { c -> listOfNotNull(c.portAId, c.portBId).forEach { getOrPut(it) { c } } }
+    }
 }
 
 object CableLabels {
