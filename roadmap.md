@@ -226,3 +226,9 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 - `core.forms.BulkCabling`: serie di porte libere sullo stesso apparato e lato in ordine tecnico (`freeRun`), coppie (`pairs`, `maxCount`), collegamento con etichetta proposta (`connect`) e porta libera successiva (`nextFree`).
 - Scheda rapida della porta: dopo la scelta della porta di destinazione compaiono **Porte in serie** (1, 2, 4, 8, 12, 16, 24, 48 fino al massimo disponibile) con anteprima del primo e dell'ultimo accoppiamento, e l'opzione **Poi passa alla porta successiva**, che mantiene l'apparato di destinazione e propone la coppia seguente. Un patch panel da 24 porte si cabla in un'unica operazione annullabile.
 - Verifica: core 93, exchange 41, Desktop 97, Android JVM 24 test superati; nuovi `BulkCablingTest` (porte occupate saltate, lato unico, etichette, porta successiva) e `QuickCablingUiTest` (serie da 4 e modalità continua).
+
+## EVO-04: ricerca nel progetto e Vai a — 5 ottobre 2026
+
+- `core.display.GlobalSearch`: indice per versione del progetto su apparati (nome, etichetta, alias, IP, MAC, seriale), rack, porte (`APPARATO PORTA` o `APPARATO/PORTA`, oppure etichetta) e cavi (etichetta o proposta); ordine esatto → iniziale → parziale; destinazione sulla mappa e posizione `Sede › Piano › Rack`; recenti per id.
+- `configurator.map.GlobalSearchDialog`, condiviso: Android con l'icona Cerca nella barra della mappa, Windows con il pulsante Cerca e `Ctrl+F`. Il risultato apre il piano con l'oggetto selezionato; senza piano apre l'editor. Recenti di sessione (otto).
+- Verifica: core 97, exchange 41, Desktop 99, Android JVM 24 test superati; nuovi `GlobalSearchTest` e `GlobalSearchUiTest`.

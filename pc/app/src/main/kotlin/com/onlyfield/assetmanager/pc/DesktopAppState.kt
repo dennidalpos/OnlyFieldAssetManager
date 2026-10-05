@@ -89,6 +89,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     val undoLabel: String? get() = history.lastOrNull()?.third
     var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
+    /** Ids opened from the project search, most recent first (session only). */
+    var recentSearch by mutableStateOf<List<String>>(emptyList())
     val detailSlot = com.onlyfield.assetmanager.pc.ui.components.DetailSlot()
     private var currentSection by mutableStateOf(AppSection.PROJECT)
     var section: AppSection

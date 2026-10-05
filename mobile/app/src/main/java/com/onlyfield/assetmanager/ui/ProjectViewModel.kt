@@ -94,6 +94,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
+    /** Ids opened from the project search, most recent first (session only). */
+    var recentSearch by mutableStateOf<List<String>>(emptyList())
 
     var busy by mutableStateOf<String?>(null)
         private set

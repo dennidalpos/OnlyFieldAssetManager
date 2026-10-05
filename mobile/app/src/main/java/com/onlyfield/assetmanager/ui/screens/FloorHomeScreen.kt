@@ -18,6 +18,7 @@ import com.onlyfield.assetmanager.core.display.sitesForDisplay
 import com.onlyfield.assetmanager.core.display.displayName
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -49,9 +50,17 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var selectingPlan by remember { mutableStateOf(false) }
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
     val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
+    fun openHit(hit: com.onlyfield.assetmanager.core.display.SearchHit) {
+        searching = false
+        vm.recentSearch = withRecent(vm.recentSearch, hit.id)
+        val target = hit.areaId
+        if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = searchEditDraft(project, hit) }
+        else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = hit.focus }
+    }
     fun back() { when { area != null -> vm.selectedAreaId = null; site != null -> vm.selectedSiteId = null; else -> vm.back() } }
     BackHandler(enabled = site != null) { back() }
     LaunchedEffect(attachment?.id, area?.floorplanPageIndex) {
@@ -69,7 +78,8 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             } else newPlanId = a.id
         }
     }
-    AppScaffold(project.name, subtitle = listOfNotNull(site?.name, area?.let { it.name }).joinToString(" / "), onBack = ::back, snackbarHost = snackbar, busy = vm.busy) { padding ->
+    AppScaffold(project.name, subtitle = listOfNotNull(site?.name, area?.let { it.name }).joinToString(" / "), onBack = ::back, snackbarHost = snackbar, busy = vm.busy,
+        actions = { IconButton(onClick = { searching = true }) { Icon(androidx.compose.material.icons.Icons.Default.Search, i18n.text("search.action")) } }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (area == null) {
                 Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)
@@ -108,6 +118,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             }
         }
     }
+    if (searching) GlobalSearchDialog(project, i18n, vm.recentSearch, ::openHit) { searching = false }
     if (addingStructure) {
         var name by remember { mutableStateOf("") }
         EditScreen(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { addingStructure = false }, {

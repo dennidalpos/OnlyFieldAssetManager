@@ -57,6 +57,12 @@ Per un dispositivo la sezione **Collegamenti logici**, in Altri dettagli, elenca
 
 L'inserimento è rapido e usa un'unica finestra (`ObjectPickerDialog`, descritto in [10-object-configurator.md](10-object-configurator.md)). Il sottotitolo dice dove andrà l'oggetto (Sul piano Terra, In RACK-A). Aggiungi salva subito; Aggiungi e modifica apre l'editor completo. La pressione prolungata su un punto vuoto del piano posiziona lì il nuovo oggetto; senza punto scelto va nella posizione libera più vicina al centro, mai sul bordo. Nel passo porte i menu del preset occupano tutta la riga disponibile e l'elenco aperto ha la larghezza del campo.
 
+## Ricerca nel progetto
+
+**Cerca** (icona nella barra della mappa su Android; pulsante e `Ctrl+F` su Windows) apre `GlobalSearchDialog`, basato su `core.display.GlobalSearch`. La ricerca copre nome, etichetta, alias, IP, MAC e seriale degli apparati, nomi dei rack, porte ed etichette dei cavi (anche quelle proposte). Una porta si cerca insieme all'apparato (`SW-01 P5` o `SW-01/P5`), così un nome breve come `P1` non riempie l'elenco. I risultati sono ordinati per corrispondenza esatta, iniziale e parziale; ognuno indica tipo e posizione (`Sede › Piano › Rack`).
+
+Il risultato scelto apre la mappa sul suo piano, anche di un'altra sede, con i contenitori aperti e l'oggetto selezionato (lo stesso arrivo di Vai a). Porte e cavi selezionano l'apparato a cui appartengono. Un oggetto senza piano si apre nell'editor. Con il campo vuoto la finestra elenca gli ultimi otto elementi aperti nella sessione.
+
 ## Planimetrie
 
 Un piano può usare un'immagine o una pagina PDF scelta da un allegato. Android usa `PdfRenderer`, Desktop PDFBox; il rendering avviene fuori dal thread UI. Un file illeggibile lascia disponibile la mappa senza sfondo. La vista interna dei contenitori non usa lo sfondo.

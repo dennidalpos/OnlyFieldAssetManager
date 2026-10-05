@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import com.onlyfield.assetmanager.core.display.sitesForDisplay
 import com.onlyfield.assetmanager.core.display.displayName
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.*
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.model.*
@@ -46,6 +48,7 @@ fun FloorHomeSection(state: DesktopAppState) {
     var selectingPlan by remember { mutableStateOf(false) }
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
     val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
@@ -56,11 +59,23 @@ fun FloorHomeSection(state: DesktopAppState) {
             catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; imageError = i18n.text("text.04e6695ec9e8", e.message) }
         }
     }
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+    fun openHit(hit: com.onlyfield.assetmanager.core.display.SearchHit) {
+        searching = false
+        state.recentSearch = withRecent(state.recentSearch, hit.id)
+        val target = hit.areaId
+        if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = searchEditDraft(project, hit) }
+        else { state.selectedSiteId = ObjectMap.floorSite(project, target); state.selectedAreaId = target; focus = hit.focus }
+    }
+    Column(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
+        // Ctrl+F opens the project search from the map.
+        if (e.type == KeyEventType.KeyDown && e.isCtrlPressed && e.key == Key.F) { searching = true; true } else false
+    }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { state.selectedSiteId = null; state.selectedAreaId = null }) { Text(project.name) }
             site?.let { TextButton(onClick = { state.selectedAreaId = null }) { Text("› ${it.name}") } }
-            area?.let { Text("› ${it.name}", Modifier.padding(top = 12.dp)) }
+            area?.let { Text("› ${it.name}") }
+            Spacer(Modifier.weight(1f))
+            OutlinedButton(onClick = { searching = true }) { Text(i18n.text("search.action")) }
         }
         if (area == null) {
             Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.headlineSmall)
@@ -115,6 +130,7 @@ fun FloorHomeSection(state: DesktopAppState) {
         onAdd = { draft -> adding = null; state.update(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
         onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft, editorPage) { editor = null } } }
+    if (searching) GlobalSearchDialog(project, i18n, state.recentSearch, ::openHit) { searching = false }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentFile, {
         DesktopStorageHelper.pickOpenFile(i18n.text("text.04458b820c0e"), i18n.text("text.0c7a70a251fc"), "pdf", "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { file ->
             state.importFloorplan(file, area.id)?.let { a ->
