@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.configurator.SecondaryModule
+import com.onlyfield.assetmanager.configurator.shown
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
 
@@ -66,7 +68,7 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
                     leadingContent = { Icon(SymbolIcons.description, null, tint = if (errors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) },
                     modifier = Modifier.fillMaxWidth().clickable { vm.navigate(Screen.Issues) })
             }
-            ProjectDestination.entries.filterNot { it.primary }.groupBy { it.groupKey }.forEach { (group, destinations) ->
+            ProjectDestination.entries.filterNot { it.primary }.filter { it.shown(project, vm.showSecondary) }.groupBy { it.groupKey }.forEach { (group, destinations) ->
                 item { GroupHeader(i18n.text(group)) }
                 items(destinations) { destination ->
                     val screen = when (destination) {
@@ -83,6 +85,14 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
                     ListItem(headlineContent = { Text(destination.title(i18n)) }, leadingContent = { Icon(destination.icon, null) },
                         modifier = Modifier.fillMaxWidth().clickable { vm.navigate(screen) })
                 }
+            }
+            // Unused optional modules stay behind one entry.
+            val hidden = SecondaryModule.hidden(project)
+            if (hidden.isNotEmpty()) item {
+                ListItem(headlineContent = { Text(i18n.text(if (vm.showSecondary) "nav.lessModules" else "nav.moreModules")) },
+                    supportingContent = { Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }) },
+                    leadingContent = { Icon(SymbolIcons.category, null) },
+                    modifier = Modifier.fillMaxWidth().clickable { vm.showSecondary = !vm.showSecondary })
             }
             item { GroupHeader(i18n.text("ux.nav.actions")) }
             item { ActionItem(i18n.text("text.2c4c51a93ca7"), ::startExport) }

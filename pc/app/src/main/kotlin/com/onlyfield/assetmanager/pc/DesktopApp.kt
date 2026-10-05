@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.pc
 
+import com.onlyfield.assetmanager.configurator.SecondaryModule
+import com.onlyfield.assetmanager.configurator.SymbolIcons
+import com.onlyfield.assetmanager.configurator.shown
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -83,7 +86,8 @@ private fun ProjectSidebar(state: DesktopAppState) {
     val i18n = LocalMessages.current
     Surface(Modifier.width(208.dp).fillMaxHeight(), tonalElevation = 1.dp) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, entries) ->
+            val project = state.project
+            ProjectDestination.entries.filter { project == null || it.shown(project, state.showSecondary) }.groupBy { it.groupKey }.forEach { (group, entries) ->
                 Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp))
                 entries.forEach { destination ->
                     NavigationDrawerItem(label = { Text(destination.title(i18n)) }, selected = destination.appSection() == state.section,
@@ -91,6 +95,15 @@ private fun ProjectSidebar(state: DesktopAppState) {
                         shape = MaterialTheme.shapes.small, modifier = Modifier.heightIn(min = 44.dp))
                 }
             }
+            // Unused optional modules stay behind one entry.
+            val hidden = project?.let { SecondaryModule.hidden(it) }.orEmpty()
+            if (hidden.isNotEmpty()) NavigationDrawerItem(
+                label = { Column {
+                    Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules"))
+                    Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                } },
+                selected = false, onClick = { state.showSecondary = !state.showSecondary }, icon = { Icon(SymbolIcons.category, null, Modifier.size(20.dp)) },
+                shape = MaterialTheme.shapes.small, modifier = Modifier.heightIn(min = 44.dp))
         }
     }
 }
@@ -116,7 +129,7 @@ private fun ProjectToolbar(state: DesktopAppState, sidebarVisible: Boolean) {
                     Box {
                         OutlinedButton(onClick = { sections = true }) { Text(i18n.text("ux.nav.sections")) }
                         DropdownMenu(sections, { sections = false }, modifier = Modifier.heightIn(max = 560.dp)) {
-                            ProjectDestination.entries.groupBy { it.groupKey }.forEach { (group, entries) ->
+                            ProjectDestination.entries.filter { it.shown(project, state.showSecondary) }.groupBy { it.groupKey }.forEach { (group, entries) ->
                                 Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp))
                                 entries.forEach { destination -> DropdownMenuItem(text = { Text(destination.title(i18n)) }, leadingIcon = { Icon(destination.icon, null, Modifier.size(20.dp)) },
                                     onClick = { sections = false; state.navigate(destination) }) }
@@ -208,8 +221,8 @@ private fun SectionContent(state: DesktopAppState) {
         AppSection.CREDENTIALS -> CredentialsSection(project, update)
         AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentFile, state::addMapSnapshot)
         AppSection.CABLING -> CablingSection(project, update)
-        AppSection.NETWORK -> NetworkLogicalSection(project, update)
-        AppSection.POWER -> PowerBadgeSection(project, update)
+        AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary)
+        AppSection.POWER -> PowerBadgeSection(project, update, state.showSecondary)
         AppSection.TRASH -> TrashBatchSection(project, state.trash, state::restoreTrash) { state.trash = it }
         AppSection.PROJECT -> EmptyState("")
     }

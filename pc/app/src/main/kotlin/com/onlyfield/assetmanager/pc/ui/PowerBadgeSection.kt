@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.configurator.SecondaryModule
+import com.onlyfield.assetmanager.configurator.visibleTabs
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -21,16 +23,17 @@ import com.onlyfield.assetmanager.core.forms.PoeForm
 import com.onlyfield.assetmanager.core.forms.PowerFeedForm
 
 @Composable
-fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> Unit, showSecondary: Boolean = false) {
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
     var tab by remember { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SubTabs(
-            listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.605ad6ef80b0", project.documentBadges.size)),
-            tab
-        ) { tab = it }
+        val labels = listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.605ad6ef80b0", project.documentBadges.size))
+        // Badges are an optional module: no tab until used or "Other modules" is open.
+        val shown = visibleTabs(labels.size, project, showSecondary, mapOf(2 to SecondaryModule.BADGES))
+        if (tab !in shown) tab = shown.first()
+        SubTabs(shown.map(labels::get), shown.indexOf(tab)) { tab = shown[it] }
         when (tab) {
             0 -> FeedsTab(project, index, onProjectUpdated)
             1 -> PoeTab(project, index, onProjectUpdated)

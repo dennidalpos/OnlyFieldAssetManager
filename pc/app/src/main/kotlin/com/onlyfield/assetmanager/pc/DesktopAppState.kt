@@ -91,6 +91,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     var selectedAreaId by mutableStateOf<String?>(null)
     /** Ids opened from the project search, most recent first (session only). */
     var recentSearch by mutableStateOf<List<String>>(emptyList())
+    /** "Other modules" opened: unused optional modules are listed too (session only). */
+    var showSecondary by mutableStateOf(false)
     val detailSlot = com.onlyfield.assetmanager.pc.ui.components.DetailSlot()
     private var currentSection by mutableStateOf(AppSection.PROJECT)
     var section: AppSection

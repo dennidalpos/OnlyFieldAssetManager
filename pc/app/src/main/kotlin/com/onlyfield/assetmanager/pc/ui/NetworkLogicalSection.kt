@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
+import com.onlyfield.assetmanager.configurator.SecondaryModule
+import com.onlyfield.assetmanager.configurator.visibleTabs
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.core.i18n.Messages
@@ -21,23 +23,24 @@ import com.onlyfield.assetmanager.pc.ui.components.*
 import com.onlyfield.assetmanager.core.forms.*
 
 @Composable
-fun NetworkLogicalSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+fun NetworkLogicalSection(project: Project, onProjectUpdated: (Project, String) -> Unit, showSecondary: Boolean = false) {
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
     var tab by remember { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        SubTabs(
-            listOf(
-                i18n.text("text.474ee27d6727", project.vlans.size),
-                i18n.text("text.348cff30ff92", project.subnets.size),
-                i18n.text("text.56518f5f56d4", project.logicalInterfaces.size),
-                i18n.text("text.05845d50b58c", project.wanVpnConnections.size),
-                i18n.text("text.469e8a3048fe", project.deviceConfigurations.size),
-                i18n.text("text.36d5a76a9cc7", project.customExtraFields.size)
-            ),
-            tab
-        ) { tab = it }
+        val labels = listOf(
+            i18n.text("text.474ee27d6727", project.vlans.size),
+            i18n.text("text.348cff30ff92", project.subnets.size),
+            i18n.text("text.56518f5f56d4", project.logicalInterfaces.size),
+            i18n.text("text.05845d50b58c", project.wanVpnConnections.size),
+            i18n.text("text.469e8a3048fe", project.deviceConfigurations.size),
+            i18n.text("text.36d5a76a9cc7", project.customExtraFields.size)
+        )
+        // Configurations are an optional module: no tab until used or "Other modules" is open.
+        val shown = visibleTabs(labels.size, project, showSecondary, mapOf(4 to SecondaryModule.CONFIGURATIONS))
+        if (tab !in shown) tab = shown.first()
+        SubTabs(shown.map(labels::get), shown.indexOf(tab)) { tab = shown[it] }
         when (tab) {
             0 -> VlanTab(project, onProjectUpdated)
             1 -> SubnetTab(project, onProjectUpdated)

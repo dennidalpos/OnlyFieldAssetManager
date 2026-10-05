@@ -263,3 +263,8 @@ Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](P
 
 - `XlsxExportManager`: nuovo foglio Percorsi (estremi con porta e ubicazione, passanti, etichette, mezzi, lunghezza totale, stato) da `PathSchematics.all`, filtrato sugli apparati esportati; tutti i fogli con intestazione in grassetto, prima riga bloccata e larghezza predefinita 20.
 - Verifica: core 100, exchange 48, Desktop 104, Android JVM 24 test superati, test strumentali Android compilati; nuovo `DemoXlsxPathsTest` (parti XML ben formate, foglio registrato, una riga per percorso). Il file del demo si apre in Excel (Microsoft 365, sola lettura via COM) senza riparazioni: Percorsi 457 righe, intestazione in grassetto e bloccata.
+
+## EVO-10: moduli secondari sintetici — 5 ottobre 2026
+
+- `configurator.SecondaryModule` (Credenziali, Configurazioni apparati, Badge documentali): visibili solo se usati; voce Altri moduli con l'elenco dei moduli nascosti (barra laterale e menu Sezioni su Windows, Altro su Android) e stato di sessione `showSecondary`; schede Configurazioni (Rete) e Badge (Alimentazione) filtrate con `visibleTabs`. Modello, export e `Ctrl+5` invariati; la videosorveglianza resta solo nel modello.
+- Verifica: core 100, exchange 48, Desktop 106, Android JVM 24 test superati, test strumentali Android compilati; nuovo `SecondaryModulesUiTest` (moduli assenti dalla navigazione su un progetto vuoto, raggiungibili da Altri moduli; un modulo usato resta visibile). Android non verificato a vista (RES-19).

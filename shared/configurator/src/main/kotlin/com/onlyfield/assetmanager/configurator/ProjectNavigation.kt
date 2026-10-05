@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.configurator
 
 import com.onlyfield.assetmanager.core.i18n.Messages
+import com.onlyfield.assetmanager.core.model.Project
 
 enum class ProjectDestination(val labelKey: String, val groupKey: String) {
     MAP("ux.nav.map", "ux.nav.work"),
@@ -36,3 +37,34 @@ enum class ProjectDestination(val labelKey: String, val groupKey: String) {
         TRASH -> SymbolIcons.delete
     }
 }
+
+/**
+ * Optional modules: always kept in the model and in exports, but out of the way until a project uses
+ * them or the user opens "Other modules" (session only). Video surveillance has no screen of its own.
+ */
+enum class SecondaryModule(val labelKey: String) {
+    CREDENTIALS("text.52f7e6721e97"),
+    CONFIGURATIONS("text.acac03d2f58d"),
+    BADGES("text.af354b531994");
+
+    fun used(project: Project): Boolean = when (this) {
+        CREDENTIALS -> project.credentials.isNotEmpty()
+        CONFIGURATIONS -> project.deviceConfigurations.isNotEmpty()
+        BADGES -> project.documentBadges.isNotEmpty()
+    }
+
+    fun shown(project: Project, showAll: Boolean) = showAll || used(project)
+
+    companion object {
+        /** Unused modules, listed under "Other modules". */
+        fun hidden(project: Project): List<SecondaryModule> = entries.filterNot { it.used(project) }
+    }
+}
+
+/** Navigation entries for [project]: Credentials only when used or [showAll]. */
+fun ProjectDestination.shown(project: Project, showAll: Boolean) =
+    this != ProjectDestination.CREDENTIALS || SecondaryModule.CREDENTIALS.shown(project, showAll)
+
+/** Indexes of the sub-tabs to show; [optional] maps a tab index to its module. */
+fun visibleTabs(count: Int, project: Project, showAll: Boolean, optional: Map<Int, SecondaryModule>): List<Int> =
+    (0 until count).filter { i -> optional[i]?.shown(project, showAll) ?: true }

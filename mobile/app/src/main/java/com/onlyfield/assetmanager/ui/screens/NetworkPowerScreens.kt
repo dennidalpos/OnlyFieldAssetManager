@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.configurator.SecondaryModule
+import com.onlyfield.assetmanager.configurator.visibleTabs
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.ui.LocalMessages
 
@@ -64,7 +66,10 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         }
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            SubTabs(tabs, tab) { tab = it }
+            // Configurations are an optional module: no tab until used or "Other modules" is open.
+            val shown = visibleTabs(tabs.size, project, vm.showSecondary, mapOf(4 to SecondaryModule.CONFIGURATIONS))
+            if (tab !in shown) tab = shown.first()
+            SubTabs(shown.map(tabs::get), shown.indexOf(tab)) { tab = shown[it] }
             LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (tab) {
                     0 -> entityItems(project.vlans.sortedBy { it.vlanId }, i18n.text("text.7de621e87842"), { it.id }) { v ->
@@ -233,7 +238,11 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         }
     ) { padding ->
         Column(Modifier.padding(padding)) {
-            SubTabs(listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.196b8d6896ac", project.documentBadges.size)), tab) { tab = it }
+            val labels = listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.196b8d6896ac", project.documentBadges.size))
+            // Badges are an optional module: no tab until used or "Other modules" is open.
+            val shown = visibleTabs(labels.size, project, vm.showSecondary, mapOf(2 to SecondaryModule.BADGES))
+            if (tab !in shown) tab = shown.first()
+            SubTabs(shown.map(labels::get), shown.indexOf(tab)) { tab = shown[it] }
             LazyColumn(contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 when (tab) {
                     0 -> entityItems(project.powerFeeds.sortedForDisplay(i18n) { "${index.deviceName(it.deviceId, i18n = i18n)} ${it.feedName}" }, i18n.text("text.90bbe6100ed6"), { it.id }) { f ->

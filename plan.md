@@ -56,6 +56,8 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 4. Consegna: EVO-08 PDF Desktop con planimetrie, rack, percorsi e topologia; EVO-09 Excel con foglio dei percorsi end-to-end.
 5. EVO-10 moduli secondari sintetici.
 
+Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](roadmap.md).
+
 ## Stato
 
 Le funzionalita Android, Desktop e configuratore presenti nel codice sono completate. I residui operativi sono mantenuti esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile e in [roadmap.md](roadmap.md).
