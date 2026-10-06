@@ -178,7 +178,12 @@ object ObjectHierarchy {
             device == ref || ref in ancestors(project, device)
         }.map { MountSnapshot(it.id, it.rackId, it.positionU, it.rackSide, it.mountingType) },
         containmentPlacements = project.floorplanPlacements.filter { it.targetId == ref.id && it.targetType == ref.type },
-        originalSiteId = project.sites.find { b -> b.devices.any { it.id == ref.id } }?.id
+        originalSiteId = when (ref.type) {
+            PlacementTargetType.DEVICE -> project.sites.find { b -> b.devices.any { it.id == ref.id } }?.id
+            PlacementTargetType.RACK -> project.racks.find { it.id == ref.id }?.areaId?.let { areaId ->
+                project.sites.find { site -> site.areas.any { it.id == areaId } }?.id
+            }
+        }
     )
 
     fun afterDeletion(before: Project, after: Project, ref: ObjectRef): Project {

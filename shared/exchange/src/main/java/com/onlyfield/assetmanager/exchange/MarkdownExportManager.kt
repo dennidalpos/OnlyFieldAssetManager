@@ -8,6 +8,7 @@ import com.onlyfield.assetmanager.core.model.AttachmentClassification
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.ObservationStatus
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.model.effectiveStatus
 import java.io.OutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -51,7 +52,7 @@ object MarkdownExportManager {
         sb.append(i18n.text("text.d4fb508e5005", selectedProject.cables.size))
         sb.append(i18n.text("text.1676ecf6cdbe", selectedProject.vlans.size, selectedProject.subnets.size))
 
-        val openIssues = filteredDevices.count { it.observation?.status == ObservationStatus.TO_VERIFY || it.observation?.status == ObservationStatus.CONFLICT }
+        val openIssues = filteredDevices.count { it.observation.effectiveStatus() == ObservationStatus.TO_VERIFY || it.observation.effectiveStatus() == ObservationStatus.CONFLICT }
         sb.append(i18n.text("text.46d91c6ab242", openIssues))
 
         sb.append("---\n\n")
@@ -63,7 +64,7 @@ object MarkdownExportManager {
         for (dev in filteredDevices) {
             val rackName = selectedProject.racks.find { it.id == dev.rackId }?.name ?: i18n.text("text.3f03be4817b0")
             val rackLoc = if (dev.rackId != null) i18n.text("text.6a25a1235a6f", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
-            val statusStr = (dev.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n)
+            val statusStr = dev.observation.effectiveStatus().toDisplayString(i18n)
 
             sb.append("| **${dev.technicalName}** | `${dev.ipAddress ?: "-"}` | ${dev.category.toDisplayString(i18n)} | $rackLoc | ${dev.ports.size} | ${dev.operationalStatus.toDisplayString(i18n)} | `$statusStr` |\n")
         }
@@ -79,7 +80,8 @@ object MarkdownExportManager {
             sb.append("| " + keys.joinToString(" | ") { i18n.text("config.$it") } + " |\n")
             sb.append("| " + keys.joinToString(" | ") { "---" } + " |\n")
             device.ports.forEach { port ->
-                val values = listOf(port.name, port.hardware.side?.toDisplayString(i18n).orEmpty(), port.hardware.connector.orEmpty(), port.hardware.speed.orEmpty(), port.hardware.opticalModule.orEmpty(), i18n.text("config.${graph.state(port.id).name.lowercase()}"))
+                val values = listOf(port.name, port.hardware.side?.toDisplayString(i18n).orEmpty(), port.hardware.connector.orEmpty(), port.hardware.speed.orEmpty(), port.hardware.opticalModule.orEmpty(),
+                    i18n.text("config.${graph.state(port.id).name.lowercase()}") + " · " + port.observation.effectiveStatus().toDisplayString(i18n))
                 sb.append("| " + values.joinToString(" | ", transform = ::escaped) + " |\n")
             }
             sb.append("\n")
@@ -128,7 +130,7 @@ object MarkdownExportManager {
                     else -> i18n.text("text.ba7cc7a170dd")
                 }
 
-                sb.append("| ${cable.codeOrLabel ?: cable.id.take(8)} | $endpointAStr | ${cable.medium.toDisplayString(i18n)} | ${cable.color ?: "-"} | $endpointBStr | `${(portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)}` |\n")
+                sb.append("| ${cable.codeOrLabel ?: cable.id.take(8)} | $endpointAStr | ${cable.medium.toDisplayString(i18n)} | ${cable.color ?: "-"} | $endpointBStr | `${(portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)} · ${cable.observation.effectiveStatus().toDisplayString(i18n)}` |\n")
             }
             sb.append("\n")
         }
@@ -178,6 +180,17 @@ object MarkdownExportManager {
             }
             val attrNote = if (!att.attributionText.isNullOrBlank()) i18n.text("text.8e1a6699510b", att.attributionText) else ""
             sb.append("- **${att.name}** $classBadge (`${att.originalFileName}`)$attrNote\n")
+        }
+
+        val notes = scope.observations.filter { !it.observation?.notes.isNullOrBlank() }
+        if (notes.isNotEmpty()) {
+            sb.append("\n## ${i18n.text("config.observation")}\n\n")
+            notes.forEach { sb.append("- ${escaped(it.label)} · ${it.observation.effectiveStatus().toDisplayString(i18n)}: ${escaped(it.observation?.notes.orEmpty())}\n") }
+        }
+        val warnings = scope.warnings(i18n)
+        if (warnings.isNotEmpty()) {
+            sb.append("\n## ${i18n.text("document.warnings")}\n\n")
+            warnings.forEach { sb.append("- ${escaped(it.message)}\n") }
         }
 
         outputStream.use { stream ->

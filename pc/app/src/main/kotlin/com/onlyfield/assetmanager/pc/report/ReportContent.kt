@@ -12,6 +12,7 @@ import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.OperationalStatus
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
+import com.onlyfield.assetmanager.core.model.effectiveStatus
 import java.text.SimpleDateFormat
 import java.util.Date
 
@@ -68,6 +69,7 @@ object ReportContent {
                     devices.sortedBy { it.technicalName }.forEach { d ->
                         val extra = listOfNotNull(
                             d.category.toDisplayString(i18n = i18n),
+                            d.observation.effectiveStatus().toDisplayString(i18n),
                             d.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.toDisplayString(i18n),
                             d.ipAddress,
                             d.rackId?.let { i18n.text("text.4d2d924e8402", index.rackName(it)) + (d.positionU?.let { u -> i18n.text("text.bf28e779d560", u) } ?: "") },
@@ -97,8 +99,10 @@ object ReportContent {
                 val mounted = index.devices.filter { it.rackId == rack.id }
                 if (mounted.isEmpty()) { lines += ReportLine.SubHeading(caption); item(i18n.text("text.4a1ac9701d21"), 1); continue }
                 lines += ReportLine.Figure(caption, ReportFigure.RackElevation(rack.id))
-                // Devices without a U position are not in the drawing: list them.
-                mounted.filter { it.positionU == null }.forEach { d -> item("${i18n.text("text.3fc3745f990b")}: ${d.technicalName}", 1) }
+                mounted.forEach { d ->
+                    val position = d.positionU?.let { "U$it" } ?: i18n.text("text.3fc3745f990b")
+                    item("$position: ${d.technicalName} · ${d.observation.effectiveStatus().toDisplayString(i18n)}", 1)
+                }
             }
         }
 
@@ -129,10 +133,13 @@ object ReportContent {
                 filter.selectedSiteId == null && filter.selectedAreaId == null && filter.selectedCategory == null))
         }
 
-        if (selection.includeCablingAndPorts && (selectedProject.cables.isNotEmpty() || selectedProject.panelMappings.isNotEmpty())) {
+        if (selection.includeCablingAndPorts && (index.ports.isNotEmpty() || selectedProject.cables.isNotEmpty() || selectedProject.panelMappings.isNotEmpty())) {
             heading(i18n.text("text.3b40d8bd6081"))
+            index.devices.forEach { device -> device.ports.forEach { port ->
+                item("${device.technicalName} › ${port.name}: ${port.endpointStatus.toDisplayString(i18n)} · ${port.observation.effectiveStatus().toDisplayString(i18n)}")
+            } }
             selectedProject.cables.forEach { c ->
-                val details = listOfNotNull(c.medium.toDisplayString(i18n = i18n), c.lengthValue?.let { "$it ${c.lengthUnit ?: "m"}" }, c.color)
+                val details = listOfNotNull(c.medium.toDisplayString(i18n = i18n), c.observation.effectiveStatus().toDisplayString(i18n), c.lengthValue?.let { "$it ${c.lengthUnit ?: "m"}" }, c.color)
                 item("${c.codeOrLabel ?: i18n.text("text.89dbe18e8407")}: ${index.portLabel(c.portAId, "libero")} <-> ${index.portLabel(c.portBId, "libero")} (${details.joinToString(", ")})")
             }
             if (selectedProject.panelMappings.isNotEmpty()) {
@@ -167,11 +174,18 @@ object ReportContent {
         if (selection.includeNotesAndAttachments) {
             val attachments = selectedProject.attachments
             val fields = selectedProject.customExtraFields
-            if (attachments.isNotEmpty() || fields.isNotEmpty()) {
+            val notes = scope.observations.filter { !it.observation?.notes.isNullOrBlank() }
+            if (attachments.isNotEmpty() || fields.isNotEmpty() || notes.isNotEmpty()) {
                 heading(i18n.text("text.1d02ed0f43ac"))
+                notes.forEach { item("${it.label} · ${it.observation.effectiveStatus().toDisplayString(i18n)}: ${it.observation?.notes}") }
                 attachments.forEach { a -> item(i18n.text("text.17e998f7cad2", a.name, a.fileType.toDisplayString(i18n = i18n), a.originalFileName)) }
                 fields.forEach { f -> item("${EntityTypeLabels.of(f.targetType, i18n = i18n)} ${index.targetLabel(f.targetType, f.targetId, i18n = i18n).substringAfter(": ")} — ${f.fieldKey}: ${f.fieldValue}") }
             }
+        }
+        val warnings = scope.warnings(i18n, selection)
+        if (warnings.isNotEmpty()) {
+            heading(i18n.text("document.warnings"))
+            warnings.forEach { item(it.message) }
         }
         return lines
     }

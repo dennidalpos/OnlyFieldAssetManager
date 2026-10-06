@@ -87,8 +87,13 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         set(value) {
             val p = project ?: return
             try {
-                runIo { storage.saveProjectLocally(p, password, trashItems = value) }
+                val removed = trashState.filterNot { item -> value.any { it.id == item.id } }
+                val updated = ProjectEdits.purgeTrashAttachments(p, removed)
+                runIo { storage.saveProjectLocally(updated, password, trashItems = value) }
+                project = updated
                 trashState = value
+                clearHistory()
+                issues = runIo { ModelValidator.validateProject(updated, i18n = i18n).issues }
                 error = null
             } catch (e: Exception) { error = i18n.text("trash.saveFailed", e.message) }
         }
@@ -137,37 +142,62 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     // Portable settings live beside project data.
     private val settingsFile get() = File(storage.dataDir, "settings.properties")
+    private val initialSettings = try { runIo { loadSettings() } }
+    catch (e: java.io.IOException) {
+        error = Messages().text("settings.loadFailed", e.message)
+        java.util.Properties()
+    } catch (e: IllegalArgumentException) {
+        error = Messages().text("settings.loadFailed", e.message)
+        java.util.Properties()
+    }
 
-    var darkTheme by mutableStateOf(loadSettings().getProperty("theme") == "dark")
+    var darkTheme by mutableStateOf(initialSettings.getProperty("theme") == "dark")
         private set
 
     fun toggleDarkTheme() {
         if (busy) return
-        darkTheme = !darkTheme
         try {
-            val props = loadSettings().apply { setProperty("theme", if (darkTheme) "dark" else "light") }
-            settingsFile.outputStream().use { props.store(it, null) }
-        } catch (_: Exception) {
+            val next = !darkTheme
+            val cleanup = runIo { saveSettings("theme", if (next) "dark" else "light") }
+            darkTheme = next
+            error = settingsCleanupWarning(cleanup)
+        } catch (e: java.io.IOException) {
+            error = i18n.text("settings.saveFailed", e.message)
+        } catch (e: IllegalArgumentException) {
+            error = i18n.text("settings.saveFailed", e.message)
         }
     }
 
     private fun loadSettings() = java.util.Properties().apply {
-        try { if (settingsFile.isFile) settingsFile.inputStream().use { load(it) } } catch (_: Exception) {}
+        if (settingsFile.exists()) settingsFile.inputStream().use { load(it) }
     }
 
-    var language by mutableStateOf(AppLanguage.entries.firstOrNull { it.tag == loadSettings().getProperty("language", "") } ?: AppLanguage.SYSTEM)
+    private fun saveSettings(key: String, value: String): List<Exception> {
+        val props = loadSettings().apply { setProperty(key, value) }
+        return com.onlyfield.assetmanager.exchange.ReversibleFiles().use { files ->
+            files.replace(settingsFile) { props.store(it, null) }
+            files.apply()
+            files.commit()
+        }
+    }
+
+    private fun settingsCleanupWarning(errors: List<Exception>): String? = errors.takeIf { it.isNotEmpty() }
+        ?.let { i18n.text("settings.cleanupFailed", it.joinToString("; ") { e -> e.message.orEmpty() }) }
+
+    var language by mutableStateOf(AppLanguage.entries.firstOrNull { it.tag == initialSettings.getProperty("language", "") } ?: AppLanguage.SYSTEM)
         private set
     val i18n: Messages get() = Messages(language.resolve())
 
     fun changeLanguage(value: AppLanguage) = requestChange {
         try {
-            val props = loadSettings().apply { setProperty("language", value.tag) }
-            settingsFile.outputStream().use { props.store(it, null) }
+            val cleanup = runIo { saveSettings("language", value.tag) }
             language = value
             storage.i18n = i18n
             status = i18n.text("status.ready")
             issues = project?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
-        } catch (e: Exception) { error = e.message }
+            error = settingsCleanupWarning(cleanup)
+        } catch (e: java.io.IOException) { error = i18n.text("settings.saveFailed", e.message) }
+        catch (e: IllegalArgumentException) { error = i18n.text("settings.saveFailed", e.message) }
     }
 
     init { storage.i18n = i18n; status = i18n.text("status.ready") }
@@ -182,7 +212,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     private fun update(updated: Project, message: String, persist: Boolean) {
         val previousTrash = trashBeforeEdit ?: trashState
         if (persist) {
-            try { runIo { storage.saveProjectLocally(updated, password, trashItems = trashState) } } catch (e: Exception) {
+            try { runIo { storage.saveProjectLocally(updated, password, trashItems = trashState,
+                recoverableAttachments = retainedForEdit()) } } catch (e: Exception) {
                 trashState = previousTrash
                 trashBeforeEdit = null
                 error = i18n.text("text.4d26209b4111", e.message)
@@ -201,6 +232,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         error = null
         refreshStoredList()
     }
+
+    private fun retainedForEdit(): List<Attachment> =
+        (history.takeLast(MAX_UNDO - 1).flatMap { it.first.attachments } + project?.attachments.orEmpty()).distinctBy { it.id }
 
     fun saveMapObject(draft: com.onlyfield.assetmanager.core.forms.MapObjectDraft, photos: List<File>, removed: Set<String>): Boolean =
         saveMapEdit(photos, draft.targetType, draft.id) { p -> draft.apply(p, i18n = i18n).let { it.copy(attachments = it.attachments.filterNot { a -> a.id in removed }) } } != null
@@ -223,7 +257,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         val previousProtection = storage.mediaProtected(before.id)
         var committed = false
         return try {
-            val saved = runIo { build().also { storage.saveProjectLocally(it, password, trashItems = trashState) } }
+            val saved = runIo { build().also { storage.saveProjectLocally(it, password, trashItems = trashState,
+                recoverableAttachments = retainedForEdit()) } }
             committed = true
             update(saved, message, persist = false)
             true
@@ -339,7 +374,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     private fun undoNow() {
         val (previous, previousTrash, message) = history.lastOrNull() ?: return
-        try { runIo { storage.saveProjectLocally(previous, password, trashItems = previousTrash) } } catch (e: Exception) {
+        try { runIo { storage.saveProjectLocally(previous, password, trashItems = previousTrash,
+            recoverableAttachments = history.dropLast(1).flatMap { it.first.attachments }) } } catch (e: Exception) {
             error = i18n.text("text.1bf1df0e9d53", e.message)
             return
         }
@@ -370,9 +406,14 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     fun restoreTrash(item: TrashItem) {
         val p = project ?: return
+        val restored = try {
+            check(item in trashState) { i18n.text("trash.invalidEntry") }
+            ProjectEdits.restoreFromTrash(p, item, i18n = i18n)
+        }
+        catch (e: Exception) { error = e.message; return }
         trashBeforeEdit = trashState
         trashState = trashState.filterNot { it.id == item.id }
-        update(ProjectEdits.restoreFromTrash(p, item, i18n = i18n), i18n.text("text.57a18cfa77e6", item.displayName))
+        update(restored, i18n.text("text.57a18cfa77e6", item.displayName))
     }
 
     fun refreshStoredList() {
@@ -382,38 +423,47 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     }
 
     private fun open(newProject: Project, newManifest: PackageManifest?, newPassword: String?, message: String, incoming: ProjectPackage? = null, releaseLockOnFailure: Boolean = !storage.ownsProjectLock(newProject.id), localPackage: Boolean = false, localPassword: String? = newPassword, localPasswordAttempt: Boolean = false): Boolean {
+        val previousProject = project
+        val previousPassword = password
+        val previousTrash = trashState
         val previousId = project?.id
         val previousMedia = storage.mediaSnapshot(newProject.id)
         val previousMediaProtected = storage.mediaProtected(newProject.id)
         var committed = false
         var loadedTrash = emptyList<TrashItem>()
+        var openedProject = newProject
         try {
-            val newIssues = runIo { ModelValidator.validateProject(newProject, i18n = i18n).issues }
             runIo {
                 storage.acquireProjectLock(newProject.id)
-                val localState = if (previousId == newProject.id) LocalProjectState(trashState, storage.mediaSnapshot(newProject.id).orEmpty())
+                val localState = if (previousId == newProject.id) LocalProjectState(trashState, storage.mediaSnapshot(newProject.id).orEmpty(), project)
                     else storage.loadLocalState(newProject.id, localPassword)
                 try {
-                    storage.prepareMedia(newProject, incoming, newPassword != null, local = localPackage || incoming == null, retainedMedia = localState.media)
+                    localState.project?.let { openedProject = ProjectEdits.retainTrashAttachments(newProject, it, localState.trash) }
+                    storage.prepareMedia(openedProject, incoming, newPassword != null, local = localPackage || incoming == null, retainedMedia = localState.media)
                     loadedTrash = localState.trash
                     if (previousId != newProject.id) localState.close()
-                    storage.saveProjectLocally(newProject, newPassword, trashItems = localState.trash,
+                    storage.saveProjectLocally(openedProject, newPassword, trashItems = localState.trash,
                         syncBase = incoming?.project?.takeUnless { localPackage })
                     committed = true
                 } finally { if (previousId != newProject.id) localState.close() }
             }
-            project = newProject
+            project = openedProject
             manifest = newManifest
             password = newPassword
             clearHistory()
             trashState = loadedTrash
-            issues = newIssues
+            issues = runIo { ModelValidator.validateProject(openedProject, i18n = i18n).issues }
             selectedSiteId = null
             selectedAreaId = null
             currentSection = AppSection.FLOORPLANS
             status = message
             error = storage.saveCleanupErrors.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.message.orEmpty() }
-            if (previousId != newProject.id) previousId?.let(storage::releaseProjectLock)
+            if (previousId != newProject.id && previousProject != null) {
+                try { runIo { if (storage.hasRecoveryMedia(previousProject, previousTrash))
+                    storage.saveProjectLocally(previousProject, previousPassword, trashItems = previousTrash) } }
+                catch (e: Exception) { error = e.message }
+                finally { storage.releaseProjectLock(previousProject.id) }
+            }
             refreshStoredList()
             if (previousMedia !== storage.mediaSnapshot(newProject.id)) (previousMedia as? AutoCloseable)?.close()
             return true
@@ -446,6 +496,10 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     fun closeProject() = requestChange { closeProjectNow() }
 
     private fun closeProjectNow() {
+        val current = project
+        if (current != null) try {
+            runIo { if (storage.hasRecoveryMedia(current, trashState)) storage.saveProjectLocally(current, password, trashItems = trashState) }
+        } catch (e: Exception) { error = e.message; return }
         project?.let { storage.releaseProjectLock(it.id) }
         project = null
         manifest = null
@@ -582,10 +636,13 @@ class DesktopAppState(val storage: DesktopStorageManager) {
                         localPassword = merge.localPassword)
                 return
             }
-            val resolved = runIo { merge.result.resolve(merge.choices, i18n = i18n) }.copy(isPasswordProtected = password != null)
+            val resolved = runIo { ProjectEdits.retainTrashAttachments(
+                merge.result.resolve(merge.choices, i18n = i18n).copy(isPasswordProtected = password != null),
+                requireNotNull(project), trashState) }
             runIo {
                 storage.prepareMedia(resolved, merge.pkg, password != null, local = true)
-                storage.saveProjectLocally(resolved, password, trashItems = trashState, syncBase = merge.pkg.project)
+                storage.saveProjectLocally(resolved, password, trashItems = trashState, syncBase = merge.pkg.project,
+                    recoverableAttachments = retainedForEdit())
                 committed = true
             }
             update(resolved, i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size), persist = false)
@@ -605,8 +662,9 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             i18n = i18n) ?: return
         try {
             val missing = runIo {
-                storage.exportPackageToFile(p, file, password)
-                storage.saveSyncBase(p, password)
+                val exported = ProjectEdits.purgeTrashAttachments(p, trashState).copy(updatedEpochMs = p.updatedEpochMs)
+                storage.exportPackageToFile(exported, file, password)
+                storage.saveSyncBase(exported, password)
                 storage.missingAttachments(p)
             }
             error = if (missing.isEmpty()) null
@@ -644,6 +702,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     fun shutdown() {
         dismissDialog()
+        if (project != null && storage.ownsProjectLock(project!!.id)) closeProjectNow()
         runIo { storage.releaseAllLocks() }
         io.close()
     }

@@ -2,7 +2,7 @@
 
 Revisione conclusa il 6 ottobre 2026; il nome del report conserva la data di avvio.
 
-Revisione del checkout `82fe4e2`, successiva all’audit e alle correzioni registrate in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato **11 nuovi rilievi** e **4 collaudi/pulizie preesistenti**, inizialmente **4 P1, 9 P2, 2 P3**. Nessun P0 identificato. Aggiornamento 6 ottobre: AUD-12/13/14/15/20 chiusi, 12 attività aperte/parziali (10 P2, 2 P3), compresi AUD-23 e AUD-24. I dettagli descrivono lo stato rilevato; chiusure successive in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
+Revisione del checkout `82fe4e2`, successiva all’audit e alle correzioni registrate in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato **11 nuovi rilievi** e **4 collaudi/pulizie preesistenti**, inizialmente **4 P1, 9 P2, 2 P3**. Nessun P0 identificato. Aggiornamento 6 ottobre: AUD-12/13/14/15/16/17/18/19/20/21 chiusi, AUD-23 chiuso per scelta del limite prudenziale; AUD-26 chiuso con politica confermata; 8 attività aperte/parziali (6 P2, 2 P3), compresi AUD-24, AUD-25 e nuovo AUD-27. I dettagli descrivono lo stato rilevato; chiusure successive in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
 
 ## Perimetro, fonti e limiti
 
@@ -29,16 +29,20 @@ P1: integrità dei dati o blocco del flusso operativo; intervenire prima dell’
 | P1 | AUD-13 | Limiti e rollback di tutti gli ingressi media | Chiuso 6 ottobre; evidenza iniziale conservata |
 | P1 | AUD-14 | Atomicità di import/fusione, media e base | Chiuso 6 ottobre; rollback verificato |
 | P1 | AUD-15 | Modifiche, undo e letture coerenti Android | Chiuso 6 ottobre; ordinamento e letture verificati |
-| P2 | AUD-16 | Sostituzione/fusione Android tramite regole condivise | Da codice |
-| P2 | AUD-17 | Incertezze e stati di rilievo nei documenti | Riprodotto Markdown; altri export da codice |
-| P2 | AUD-18 | Annullamento e proprietà dei pacchetti durante import Android | Da codice |
-| P2 | AUD-19 | Media eliminati esclusi dall’export e pulizia dei file di proprietà | Riprodotto export Windows; Android da codice |
+| P2 | AUD-16 | Sostituzione/fusione Android tramite regole condivise | Chiuso 6 ottobre; parità e rollback verificati |
+| P2 | AUD-17 | Incertezze e stati di rilievo nei documenti | Chiuso 6 ottobre; regressioni JVM e PDF nativi |
+| P2 | AUD-18 | Annullamento e proprietà dei pacchetti durante import Android | Chiuso 6 ottobre; lettura/KDF e proprietà verificate |
+| P2 | AUD-19 | Media eliminati esclusi dall’export e pulizia dei file di proprietà | Chiuso 6 ottobre; hash, raccolta e rollback verificati |
 | P2 | AUD-20 | I/O residuo e disponibilità media senza decodifica sulla UI | Chiuso 6 ottobre |
-| P2 | AUD-21 | Errori e cancellazione nei comandi scoperti | Da codice |
-| P2 | AUD-23 | Capacità esatta Android protetta al limite ZIP | Margine conservativo riprodotto con limite ridotto |
+| P2 | AUD-21 | Errori e cancellazione nei comandi scoperti | Chiuso 6 ottobre; callback, rollback e preferenze verificati |
+| P2 | AUD-23 | Capacità esatta Android protetta al limite ZIP | Chiuso 6 ottobre per decisione: mantenere limite prudenziale |
 | P2 | RES-13 | Collaudo hardware reale | Aperto, conservato |
 | P2 | RES-19 | Matrice Android/accessibilità e nuovi flussi | Parziale, conservata |
 | P2 | RES-23 | Comandi/focus Windows ed errore nativo di stampa | Parziale, conservato |
+| P2 | AUD-24 | Recupero dopo arresto improvviso o rollback fallito | Da codice; aperto |
+| P2 | AUD-25 | Opzioni di fusione dei dati associati | Ricerca dei chiamanti; aperto |
+| P2 | AUD-26 | Ripristino senza contesto originale o con tipo non supportato | Chiuso 6 ottobre; politica, credenziali e rifiuti verificati |
+| P2 | AUD-27 | Riferimenti secondari durante ripristino | Da codice; non riprodotti su persistenza |
 | P3 | AUD-22 | Scaffolding, helper di test nel runtime e commenti obsoleti | Ricerca dei chiamanti |
 | P3 | RES-24 | Risorse locali delle prove precedenti | Directory ancora presenti; nessuna rimozione tentata |
 
@@ -108,11 +112,15 @@ Riferimenti: [MarkdownExportManager.kt](../shared/exchange/src/main/java/com/onl
 
 ### AUD-18 — Annullamento import Android senza annullamento del lavoro
 
+**Chiuso il 6 ottobre.** Review tardiva riprodotta sul sorgente precedente e corretta con Job/identità e trasferimento della proprietà. Otto regressioni permanenti includono lettura, PBKDF2 reale, ritorno del worker, doppio import, chiusura e conferma/fusione. Il testo seguente conserva il rilievo iniziale; comandi ed evidenze nella roadmap.
+
 `startImport` non conserva il `Job`; `cancelImport` pulisce soltanto lo stato già pubblicato. Un worker ancora in lettura può tornare dopo l’annullamento o dopo un nuovo import, sostituire Review e perdere la proprietà del pacchetto precedente. `onCleared` e la consegna del risultato hanno un ulteriore confine di proprietà; la conferma non imposta `busy`.
 
 Da codice, nessuna race provocata. Riferimenti: [ProjectViewModel.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt), `startImport/cancelImport/onCleared/confirmImport`, e [PackageExchange.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/PackageExchange.kt). Chiudere con doppio import, annullamento in lettura/KDF, chiusura ViewModel e controllo dello staging.
 
 ### AUD-19 — Media rimossi ancora esportati
+
+**Chiuso il 6 ottobre.** Export attivo distinto dalla working copy con media di undo/cestino; raccolta di proprietà e rollback su guasto, metadati del cestino conservati durante sostituzione e scadenza delle 50 revisioni Windows verificata. Diciassette prove media nuove e suite completa di 406 test verde, APK compilato; ultima verifica mirata di 40 test verde. Il testo seguente conserva la riproduzione iniziale. AUD-26 ha chiuso sito originale e tipi non supportati; AUD-27 conserva i riferimenti secondari. Recupero da arresto ancora in AUD-24.
 
 **Riprodotto su Windows.** Aggiungere un piccolo allegato, rimuoverlo tramite `ProjectEdits.deleteAttachment`, esportare il progetto. Il catalogo è vuoto, ma la entry canonica e i suoi byte rimangono nel pacchetto: `exportPackageToFile` usa tutto `localMedia`. Non occorre modificare direttamente il JSON.
 
@@ -129,6 +137,8 @@ Android `addAttachment` esegue query e copia dello stream su `viewModelScope`; s
 Da codice; ANR, blocco UI e picchi heap non misurati. Riferimenti: [ProjectViewModel.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt), [FloorplanMediaSection.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/FloorplanMediaSection.kt) e [DesktopStorageManager.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopStorageManager.kt). Chiudere con verifiche del thread e misure ai limiti, evitando di materializzare media per un controllo di disponibilità.
 
 ### AUD-21 — Errori e cancellazione non gestiti uniformemente
+
+**Chiuso il 6 ottobre 2026.** Callback password Android completa e vincolata alla sessione; cancellazione rilanciata. Errori apertura/cestino, riprova e rollback verificati. Preferenze Windows con errori visibili, commit prima del cambio tema/lingua, proprietà e file precedenti conservati. Suite completa 415 test e APK; evidenze nella roadmap. Descrizione seguente storica.
 
 `openProject`, `renameProject`, `changePassword`, `deleteFromTrash`, `emptyTrash` Android non gestiscono gli errori del repository dentro la coroutine. Altri catch generici, compresi edit e cestino, non rilanciano la cancellazione. Windows ignora gli errori di lettura impostazioni e salvataggio tema. Non tutti i comandi hanno le garanzie già verificate per import/export.
 
@@ -182,10 +192,38 @@ I sorgenti temporanei e l’init sono rimossi dopo aver conservato i soli report
 
 ## AUD-23 — Capacità esatta Android protetta vicino al limite ZIP
 
-Il budget preventivo di `MediaCapacity` usa dimensioni effettive e un limite superiore per GCM, compressione e header ZIP, senza conservare la password. Il margine evita commit non esportabili ma può rifiutare un’aggiunta ancora ammissibile. `protectedPreflightKeepsAConservativeMarginNearTheArchiveLimit` lo dimostra con limite ridotto e un pacchetto cifrato reale; la prova reale a 256 MiB non è stata eseguita. P2 nel tracker per definire la verifica esatta, mantenendo la protezione della password. Fonti del budget: [zlib compressBound](https://github.com/madler/zlib/blob/master/compress.c), [specifica ZIP PKWARE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT), consultate il 6 ottobre 2026.
+**Chiuso per decisione il 6 ottobre 2026.** Confermato il budget prudenziale senza password aggiuntiva, con possibile rifiuto vicino al limite. Requisito aggiornato in plan.md/contratto/workflow; nessuna verifica esatta a 256 MiB dichiarata. Le quattro regressioni MediaCapacityTest passano nella suite AUD-21.
+
+Il budget preventivo di `MediaCapacity` usa dimensioni effettive e un limite superiore per GCM, compressione e header ZIP, senza conservare la password. Il margine evita commit non esportabili ma può rifiutare un’aggiunta ancora ammissibile. `protectedPreflightKeepsAConservativeMarginNearTheArchiveLimit` lo dimostra con limite ridotto e un pacchetto cifrato reale; la prova reale a 256 MiB non è stata eseguita. La verifica esatta proposta inizialmente è stata esclusa dal requisito corrente per decisione esplicita. Fonti del budget: [zlib compressBound](https://github.com/madler/zlib/blob/master/compress.c), [specifica ZIP PKWARE](https://pkware.cachefly.net/webdocs/casestudies/APPNOTE.TXT), consultate il 6 ottobre 2026.
 
 ## Chiusure AUD-14/15 e nuovo AUD-24 — 6 ottobre
 
-I paragrafi precedenti conservano i rilievi iniziali. AUD-14 chiuso con import/fusione reversibili e progetto/base coerenti su guasto; AUD-15 chiuso con comandi Android ordinati, undo protetto e letture Room transazionali. Evidenze e comandi nella roadmap. AUD-18 ha ora busy/ordinamento ma conserva race di annullamento/proprietà; AUD-21 ha gestione centrale Android ma conserva callback password, prove e impostazioni Windows. Nessun collaudo nativo implicito.
+I paragrafi precedenti conservano i rilievi iniziali. AUD-14 chiuso con import/fusione reversibili e progetto/base coerenti su guasto; AUD-15 chiuso con comandi Android ordinati, undo protetto e letture Room transazionali. Evidenze e comandi nella roadmap. AUD-18 e AUD-21 sono stati chiusi successivamente con proprietà/cancellazione import, callback password e preferenze Windows verificati. Nessun collaudo nativo implicito.
 
 AUD-24 P2: il rollback è gestito nel processo, senza journal durevole per un arresto tra file e database/base. Restano prove di arresto/riavvio e secondo guasto durante rollback; gli errori di pulizia dopo commit sono segnalati, senza recupero guidato delle risorse. Riferimenti: ReversibleFiles, PackageExchange, DesktopStorageManager. Nessuna protezione aggiuntiva da crash viene dichiarata verificata.
+
+## Aggiornamento AUD-16 — 6 ottobre 2026
+
+AUD-16 chiuso: regole condivise, transazione unica e regressioni di parità/rollback, evidenze in roadmap e documentazione di verifica. Restano 12 attività (10 P2, 2 P3) dopo l'aggiunta di AUD-25.
+
+### AUD-25 — Opzioni di fusione dei dati associati senza implementazione
+
+Ricerca dei chiamanti: mergeCredentials, mergeConfigurations, mergePowerFeeds e mergeExtraFields compaiono soltanto nella dichiarazione di MergeDataChoices; ProjectEdits.mergeDevices non le applica. Definire il trasferimento dei record associati, i conflitti e il recupero prima di cambiare la semantica. Riferimenti: [Models.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/model/Models.kt) e [ProjectEdits.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/ProjectEdits.kt). P2, da codice; non riprodotto come flusso UI.
+
+## Chiusura AUD-17 — 6 ottobre 2026
+
+Regola condivisa per dato assente e stati espliciti; note e avvisi filtrati nei documenti, senza credenziali. Sette prove native PDF passano su Pixel 9 API 37 dopo aver corretto l'omissione dello stato nella lista rack; suite JVM finale 381 test verdi. Le evidenze iniziali sopra restano storiche. Tracker: 11 attività aperte/parziali (9 P2, 2 P3), prossimo AUD-18; AUD-25 conserva le opzioni di fusione senza implementazione. Nessuna chiusura dei collaudi manuali.
+
+## AUD-26 — Ripristino senza contesto originale — 6 ottobre 2026
+
+**Chiuso il 6 ottobre 2026.** Politica confermata e implementata; dettagli e nuovo residuo AUD-27 nella sezione successiva. Il testo seguente conserva il rilievo iniziale.
+
+La nuova prova di sostituzione con un progetto senza siti ha raggiunto restoreTrash senza ricreare l'apparato: NoSuchElementException nell'assertion sulla presenza dell'apparato, nessun errore UI, voce rimossa. Il core restituiva il progetto invariato e i chiamanti proseguivano come dopo un successo. Corretto durante AUD-19: errore localizzato senza siti, transazione Android e stato Windows conservano cestino e media. Le due regressioni mancato ripristino verificano l'errore e tutti i dati precedenti, mentre le prove con sito esistente verificano anche l'apparato ricreato.
+
+Restano da definire la scelta del sito quando quello originale manca ma ne esiste un altro (fallback implicito al primo) e la gestione dei tipi fuori dai rami DEVICE/RACK del core. Il ramo else può ancora restituire il progetto invariato; Android/Windows possono eliminare la voce. ATTACHMENT è presente nelle fixture storiche, senza ingresso runtime individuato; Android gestisce CREDENTIAL nella propria facade, il core Desktop no. Riferimenti: [ProjectEdits.restoreFromTrash](../shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/ProjectEdits.kt), [facade Android](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/TrashOperations.kt), [stato Windows](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopAppState.kt). Politica e criteri di chiusura in PROJECT_STATUS.json; nessuna ricollocazione automatica aggiunta in AUD-19.
+
+## Chiusura AUD-26 e nuovo AUD-27 — 6 ottobre 2026
+
+AUD-26 chiuso: sito originale richiesto per gli apparati, contesto sito/piano dei rack conservato; credenziali condivise Android/Windows. Tipo non supportato, ID attivo, progetto/ID serializzato incoerente o voce non presente producono errore senza rimuovere dati/cestino. 68 prove mirate e 425 test completi verdi, APK compilato; esiti e comandi nella roadmap. Decisione utente: bloccare e conservare quando manca il sito originale. Il paragrafo AUD-26 precedente conserva il rilievo iniziale.
+
+AUD-27 P2, da codice: ObjectHierarchy.restore riaggiunge containmentPlacements senza verificare il piano; un DEVICE può mantenere areaId verso un piano rimosso anche con sito originale presente. Gli ID delle porte non sono controllati contro quelli degli apparati attivi; Room insertPorts usa REPLACE. Restano da riprodurre sostituzione/ripristino con stesso sito e piani/porte diversi e da definire rifiuto/recupero senza sovrascrittura o ricollocazione implicita. Le collisioni degli ID delle sole entità DEVICE/RACK/CREDENTIAL sono già bloccate da AUD-26. Riferimenti: ObjectContainment.restore, ProjectEdits.restoreFromTrash, ProjectStore.save e InventoryDao.insertPorts. Nessuna copertura globale dei riferimenti dichiarata.

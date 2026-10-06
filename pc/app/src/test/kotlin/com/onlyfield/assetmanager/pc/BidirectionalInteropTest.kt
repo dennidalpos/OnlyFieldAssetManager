@@ -222,7 +222,12 @@ class BidirectionalInteropTest {
 
         assertEquals(3, androidRestoredProj.sites[0].devices.size)
         assertNotNull(androidRestoredProj.sites[0].devices.find { it.technicalName == "SRV-WIN-01" })
-        assertEquals(3, androidRestoredPkg.attachments.size)
+        assertEquals(originalProject.attachments.map { it.relativePath }.toSet(), androidRestoredPkg.attachments.keys)
+        val activePath = originalProject.attachments.single().relativePath
+        assertEquals(PackageSerializer.calculateSha256(attachments.getValue(activePath)),
+            PackageSerializer.calculateSha256(androidRestoredPkg.attachments.getValue(activePath)))
+        assertFalse(androidRestoredPkg.attachments.containsKey("attachments/rack_elevation.png"))
+        assertFalse(androidRestoredPkg.attachments.containsKey("attachments/device_notes.txt"))
 
         val comparison = ProjectComparisonEvaluator.evaluate(originalProject, importedPkg.manifest, androidRestoredPkg)
         assertEquals("Re-imported project should be NEWER_REVISION relative to original", ComparisonStatus.NEWER_REVISION, comparison.status)

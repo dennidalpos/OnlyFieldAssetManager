@@ -4,11 +4,15 @@ import com.onlyfield.assetmanager.core.i18n.Messages
 
 import com.onlyfield.assetmanager.data.repository.mappers.*
 import androidx.room.withTransaction
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.Device
+import com.onlyfield.assetmanager.core.model.DeviceCategory
+import com.onlyfield.assetmanager.core.model.MergeDataChoices
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.model.TrashItem
 import com.onlyfield.assetmanager.data.local.AppDatabase
 
-/** Trash, device replacement, duplicate merge and batch edit, written row by row. */
+/** Persists shared device edits and their trash in one transaction. */
 internal class TrashOperations(private val db: AppDatabase, private val load: suspend (String) -> Project?, private val save: suspend (Project) -> Unit) {
     private val inventoryDao = db.inventoryDao()
     private val jsonSerializer = kotlinx.serialization.json.Json { ignoreUnknownKeys = true; encodeDefaults = true }
@@ -63,117 +67,47 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         return trashItem
     }
 
-    suspend fun restoreFromTrash(projectId: String, trashId: String, i18n: Messages = Messages()): Boolean {
-        val trashEntity = inventoryDao.getTrashItemById(trashId) ?: return false
-        val trashItem = toTrashItem(trashEntity)
-
-        db.withTransaction {
-            when (trashItem.itemType.uppercase()) {
-                "DEVICE", "RACK" -> {
-                    val project = getProjectById(projectId) ?: return@withTransaction
-                    save(com.onlyfield.assetmanager.core.edit.ProjectEdits.restoreFromTrash(project, trashItem, i18n = i18n))
-                    inventoryDao.deleteTrashItemById(trashId)
-                }
-                "CREDENTIAL" -> {
-                    val cred = jsonSerializer.decodeFromString(com.onlyfield.assetmanager.core.model.Credential.serializer(), trashItem.serializedJson)
-                    inventoryDao.insertCredentials(listOf(toCredentialEntity(projectId, cred)))
-                    inventoryDao.deleteTrashItemById(trashId)
-                }
-            }
-        }
-        return true
+    suspend fun restoreFromTrash(projectId: String, trashId: String, i18n: Messages = Messages()): Boolean = db.withTransaction {
+        val trashEntity = inventoryDao.getTrashItemById(trashId) ?: return@withTransaction false
+        val project = getProjectById(projectId) ?: throw IllegalStateException(i18n.text("trash.invalidEntry"))
+        val restored = ProjectEdits.restoreFromTrash(project, toTrashItem(trashEntity), i18n = i18n)
+        save(restored)
+        inventoryDao.deleteTrashItemById(trashId)
+        true
     }
 
     suspend fun replaceDevice(
         projectId: String,
         oldDeviceId: String,
         newTechnicalName: String,
-        newCategory: com.onlyfield.assetmanager.core.model.DeviceCategory,
-        i18n: Messages = Messages()): Pair<com.onlyfield.assetmanager.core.model.TrashItem?, com.onlyfield.assetmanager.core.model.Device> {
+        newCategory: DeviceCategory,
+        i18n: Messages = Messages()
+    ): Pair<TrashItem?, Device> = db.withTransaction {
         val project = getProjectById(projectId) ?: throw IllegalArgumentException(i18n.text("text.758e8416eb8a"))
         val site = project.sites.find { site -> site.devices.any { it.id == oldDeviceId } }
             ?: throw IllegalArgumentException(i18n.text("text.4ac20cd01b41", oldDeviceId))
-        val oldDevice = site.devices.find { it.id == oldDeviceId }!!
-
-        val trashItem = moveToTrash(projectId, "DEVICE", oldDeviceId, i18n = i18n)
-
-        val newDevice = com.onlyfield.assetmanager.core.model.Device(
-            id = java.util.UUID.randomUUID().toString(),
-            technicalName = newTechnicalName,
-            category = newCategory,
-            areaId = oldDevice.areaId,
-            rackId = oldDevice.rackId,
-            ports = emptyList()
-        )
-
-        db.withTransaction {
-            inventoryDao.insertDevices(listOf(toDeviceEntity(site.id, newDevice)))
-        }
-
-        return Pair(trashItem, newDevice)
+        val (updated, item) = ProjectEdits.replaceDevice(project, oldDeviceId, newTechnicalName, newCategory, i18n)
+        val previousIds = site.devices.map { it.id }.toSet()
+        val replacement = updated.sites.first { it.id == site.id }.devices.single { it.id !in previousIds }
+        save(updated)
+        inventoryDao.insertTrashItems(listOf(toTrashItemEntity(requireNotNull(item))))
+        item to replacement
     }
 
     suspend fun mergeDevices(
         projectId: String,
         survivingDeviceId: String,
         duplicateDeviceId: String,
-        choices: com.onlyfield.assetmanager.core.model.MergeDataChoices,
-        i18n: Messages = Messages()): com.onlyfield.assetmanager.core.model.Device? {
-        if (survivingDeviceId == duplicateDeviceId) return null
-        val project = getProjectById(projectId) ?: return null
-
-        var survivingSiteId: String? = null
-        var survivingDev: com.onlyfield.assetmanager.core.model.Device? = null
-        var duplicateDev: com.onlyfield.assetmanager.core.model.Device? = null
-
-        for (site in project.sites) {
-            for (dev in site.devices) {
-                if (dev.id == survivingDeviceId) {
-                    survivingDev = dev
-                    survivingSiteId = site.id
-                }
-                if (dev.id == duplicateDeviceId) {
-                    duplicateDev = dev
-                }
-            }
-        }
-
-        if (survivingDev == null || duplicateDev == null || survivingSiteId == null) return null
-
-        val mergedTechnicalName = if (choices.useTechnicalNameFromDuplicate) duplicateDev.technicalName else survivingDev.technicalName
-        val mergedPhysicalLabel = if (choices.usePhysicalLabelFromDuplicate) duplicateDev.physicalLabel else survivingDev.physicalLabel
-        val mergedAlias = if (choices.useAliasFromDuplicate) duplicateDev.alias else survivingDev.alias
-        val mergedIp = if (choices.useIpFromDuplicate) duplicateDev.ipAddress else survivingDev.ipAddress
-        val mergedMac = if (choices.useMacFromDuplicate) duplicateDev.macAddress else survivingDev.macAddress
-        val mergedAreaId = if (choices.useLocationFromDuplicate) duplicateDev.areaId else survivingDev.areaId
-
-        val mergedPorts = survivingDev.ports.toMutableList()
-        if (choices.mergePorts) {
-            for (dupPort in duplicateDev.ports) {
-                mergedPorts.add(dupPort.copy(id = java.util.UUID.randomUUID().toString(), deviceId = survivingDeviceId))
-            }
-        }
-
-        val updatedSurvivingDevice = survivingDev.copy(
-            technicalName = mergedTechnicalName,
-            physicalLabel = mergedPhysicalLabel,
-            alias = mergedAlias,
-            ipAddress = mergedIp,
-            macAddress = mergedMac,
-            areaId = mergedAreaId,
-            ports = mergedPorts
-        )
-
-        db.withTransaction {
-            inventoryDao.insertDevices(listOf(toDeviceEntity(survivingSiteId, updatedSurvivingDevice)))
-            if (updatedSurvivingDevice.ports.isNotEmpty()) {
-                inventoryDao.insertPorts(updatedSurvivingDevice.ports.map { toPortEntity(it) })
-            }
-
-            moveToTrash(projectId, "DEVICE", duplicateDeviceId, i18n = i18n)
-        }
-
-        return updatedSurvivingDevice
+        choices: MergeDataChoices,
+        i18n: Messages = Messages()
+    ): Device? = db.withTransaction {
+        if (survivingDeviceId == duplicateDeviceId) return@withTransaction null
+        val project = getProjectById(projectId) ?: return@withTransaction null
+        val (updated, item) = ProjectEdits.mergeDevices(project, survivingDeviceId, duplicateDeviceId, choices, i18n)
+        if (item == null) return@withTransaction null
+        save(updated)
+        inventoryDao.insertTrashItems(listOf(toTrashItemEntity(item)))
+        updated.sites.flatMap { it.devices }.first { it.id == survivingDeviceId }
     }
 
     suspend fun batchEditDevices(

@@ -97,7 +97,7 @@ data class DeviceForm(
                 rackSide = it.rackSide,
                 mountingType = it.mountingType,
                 deviceModelId = it.deviceModelId,
-                observationStatus = it.observation?.status ?: ObservationStatus.TO_VERIFY,
+                observationStatus = it.observation.effectiveStatus(),
                 notes = it.observation?.notes.orEmpty(),
                 hardware = it.hardware,
                 operationalStatus = it.operationalStatus,

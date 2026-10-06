@@ -6,6 +6,8 @@ import com.onlyfield.assetmanager.core.i18n.Messages
 
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.model.effectiveStatus
+import com.onlyfield.assetmanager.core.validation.ValidationIssue
 import java.io.OutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -62,7 +64,7 @@ object XlsxExportManager {
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet5.xml"))
-            zip.write(buildSheet5Xml(selectedProject, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet5Xml(selectedProject, scope.observations, scope.warnings(i18n), i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet6.xml"))
@@ -206,7 +208,7 @@ $SHEET_HEAD  <sheetData>
             sb.append(cellStr("J", rowIdx, rackPos))
             sb.append(cellStr("K", rowIdx, modelName))
             sb.append(cellNum("L", rowIdx, dev.ports.size))
-            sb.append(cellStr("M", rowIdx, (dev.observation?.status ?: com.onlyfield.assetmanager.core.model.ObservationStatus.VERIFIED).toDisplayString(i18n)))
+            sb.append(cellStr("M", rowIdx, dev.observation.effectiveStatus().toDisplayString(i18n)))
             sb.append(cellStr("N", rowIdx, dev.observation?.notes ?: "-"))
             sb.append(cellNum("O", rowIdx, dev.hardware.widthMm))
             sb.append(cellNum("P", rowIdx, dev.hardware.depthMm))
@@ -267,7 +269,7 @@ $SHEET_HEAD  <sheetData>
             sb.append(cellStr("F", rowIdx, cable.color ?: "-"))
             sb.append(cellStr("G", rowIdx, devBName))
             sb.append(cellStr("H", rowIdx, portBName))
-            sb.append(cellStr("I", rowIdx, (portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)))
+            sb.append(cellStr("I", rowIdx, (portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n) + " · " + cable.observation.effectiveStatus().toDisplayString(i18n)))
             sb.append(cellStr("J", rowIdx, cable.notes ?: "-"))
             sb.append("</row>\n")
             rowIdx++
@@ -285,7 +287,7 @@ $SHEET_HEAD  <sheetData>
             val cable = project.cables.find { it.portAId == port.id || it.portBId == port.id }
             fun endpoint(id: String?) = id?.let { allPorts[it]?.let { p -> "${allDevices[p.deviceId]?.technicalName} › ${p.name}" } }.orEmpty()
             val values = listOf(device.technicalName, port.name, port.hardware.side?.toDisplayString(i18n).orEmpty(), port.hardware.connector.orEmpty(), port.hardware.speed.orEmpty(),
-                listOfNotNull(port.hardware.role, port.hardware.poeStandard?.name).joinToString(" / "), port.hardware.opticalModule.orEmpty(), i18n.text("config.${graph.state(port.id).name.lowercase()}"),
+                listOfNotNull(port.hardware.role, port.hardware.poeStandard?.name).joinToString(" / "), port.hardware.opticalModule.orEmpty(), i18n.text("config.${graph.state(port.id).name.lowercase()}") + " · " + port.observation.effectiveStatus().toDisplayString(i18n),
                 endpoint(cable?.let { if (it.portAId == port.id) it.portBId else it.portAId }), endpoint(mapping?.let { if (it.portAId == port.id) it.portBId else it.portAId }))
             sb.append("<row r=\"$rowIdx\">")
             values.forEachIndexed { n, value -> sb.append(cellStr(('A' + n).toString(), rowIdx, value)) }
@@ -380,7 +382,7 @@ $SHEET_HEAD  <sheetData>
         return sb.toString()
     }
 
-    private fun buildSheet5Xml(project: Project, filteredDeviceIds: Set<String>, i18n: Messages = Messages()): String {
+    private fun buildSheet5Xml(project: Project, observations: List<DocumentObservation>, warnings: List<ValidationIssue>, i18n: Messages): String {
         val sb = StringBuilder()
         sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
@@ -409,18 +411,26 @@ $SHEET_HEAD  <sheetData>
             rowIdx++
         }
 
-        for (dev in project.sites.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }) {
-            val obs = dev.observation
-            if (obs != null) {
-                sb.append("<row r=\"$rowIdx\">")
-                sb.append(cellStr("A", rowIdx, i18n.text("text.cf301d95d32c")))
-                sb.append(cellStr("B", rowIdx, dev.technicalName))
-                sb.append(cellStr("C", rowIdx, "SHAREABLE"))
-                sb.append(cellStr("D", rowIdx, obs.status.toDisplayString(i18n)))
-                sb.append(cellStr("E", rowIdx, obs.notes ?: "-"))
-                sb.append("</row>\n")
-                rowIdx++
-            }
+        for (entry in observations) {
+            val obs = entry.observation
+            sb.append("<row r=\"$rowIdx\">")
+            sb.append(cellStr("A", rowIdx, i18n.text("config.observation")))
+            sb.append(cellStr("B", rowIdx, entry.label))
+            sb.append(cellStr("C", rowIdx, "SHAREABLE"))
+            sb.append(cellStr("D", rowIdx, obs.effectiveStatus().toDisplayString(i18n)))
+            sb.append(cellStr("E", rowIdx, obs?.notes ?: "-"))
+            sb.append("</row>\n")
+            rowIdx++
+        }
+        for (warning in warnings) {
+            sb.append("<row r=\"$rowIdx\">")
+            sb.append(cellStr("A", rowIdx, i18n.text("document.warnings")))
+            sb.append(cellStr("B", rowIdx, warning.code))
+            sb.append(cellStr("C", rowIdx, "SHAREABLE"))
+            sb.append(cellStr("D", rowIdx, "-"))
+            sb.append(cellStr("E", rowIdx, warning.message))
+            sb.append("</row>\n")
+            rowIdx++
         }
 
         sb.append("  </sheetData>\n</worksheet>")

@@ -40,3 +40,11 @@ Vedi [localizzazione](09-localization.md) e [mappa](08-floor-map.md).
 ## Generazione e stampa in background
 
 Android e Windows generano documenti fuori dal thread UI. Android mantiene le callback di stampa sul Main e distingue cancellazione ed errore; Windows conserva l’esito sincrono mantenendo attivo l’event loop. Un errore di stampa Windows è visibile, distinto dall’annullamento. La prova dei dialoghi nativi resta nei residui RES-19 e RES-23.
+
+## Rilievi, note e avvisi — AUD-17
+
+Observation.effectiveStatus considera il rilievo assente Da verificare; gli stati espliciti Verificato, Da verificare, In conflitto e Non rilevato restano distinti dallo stato operativo. Form, validazione, Markdown, XLSX e PDF Android/Windows condividono la regola. Anche le schede rack riportano il rilievo quando l'inventario è disattivato. Il riepilogo Markdown conta assenza, Da verificare e In conflitto fra le criticità.
+
+Le note del rilievo di apparati, porte e cavi sono conservate; XLSX le presenta nel foglio Note e osservazioni, PDF nella sezione note quando selezionata. Markdown e XLSX includono gli avvisi documentali; nei PDF gli avvisi seguono le sezioni scelte. DocumentSelection valida i riferimenti del progetto originale e filtra gli avvisi per oggetti, sezioni e classificazioni esportati: escludere un estremo dal filtro non crea un falso avviso di cavo scollegato. I percorsi Desktop conservano gli avvisi dei segmenti esterni necessari al contesto. Credenziali e avvisi delle credenziali restano esclusi; un allegato da rivedere escluso con reviewRequiredConfirmed=false non compare nemmeno negli avvisi.
+
+Regressioni it/en/es su rilievo assente, stati espliciti, note, filtri e sezioni disattivate. Il PDF Android reale è stato generato e il testo estratto su Pixel 9 API 37; questo non verifica la stampa fisica o la matrice UX. Fonti primarie consultate il 6 ottobre 2026: [PdfDocument](https://developer.android.com/reference/android/graphics/pdf/PdfDocument), [PdfRenderer.Page e getTextContents](https://developer.android.com/reference/android/graphics/pdf/PdfRenderer.Page). Evidenze e comandi in [verifica](05-testing-and-benchmarks.md).

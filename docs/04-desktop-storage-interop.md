@@ -1,5 +1,23 @@
 # Storage desktop e interoperabilita
 
+## Ripristino dal cestino — AUD-26
+
+Ripristino AUD-26: applicate le stesse regole core di Android, incluse le credenziali. Senza sito originale, con tipo non supportato, ID attivo o voce non più presente, progetto e cestino non cambiano. Le prove conservano byte della copia locale e payload del cestino sia in chiaro sia protetti. La convalida dei riferimenti secondari dopo modifiche di contesto è tracciata in AUD-27.
+
+## Preferenze locali — AUD-21
+
+Tema e lingua restano in `data/settings.properties`, senza cambi di formato. Lettura I/O sul worker; file assente usa i valori predefiniti. File illeggibile, directory al suo posto o sintassi non valida mostrano un errore all'avvio e conservano l'originale. Il successivo cambio preferenza rilegge il file: un guasto non viene sostituito silenziosamente con valori vuoti. La scrittura usa il blocco reversibile esistente, conservando le altre proprietà. Lo stato visibile cambia soltanto dopo commit; un errore di pulizia dopo commit è un avviso distinto. Dopo aver risolto il guasto si può riprovare. Verificati file malformato, percorso occupato e blocco reale Windows della sostituzione. [Properties Java 21](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/Properties.html), consultata il 6 ottobre 2026.
+
+## Media attivi e recuperabili — AUD-19
+
+L'export contiene soltanto catalogo e payload attivi: esclude media rimossi, foto di oggetti nel cestino e metadati locali del cestino. La selezione dei nomi precede la lettura dei byte, quindi un orfano storico oltre 32 MiB non blocca lo scambio. Gli alias supportati restano leggibili. La data della revisione non cambia per il solo export; la base di scambio rappresenta il progetto effettivamente inviato.
+
+La copia locale conserva i media necessari all'undo e al cestino, compresi gli allegati serializzati nel cestino storico. Android conserva il solo snapshot di undo ancora valido e raccoglie i file scaduti alla fine del comando o alla riapertura; Windows conserva le ultime 50 revisioni, raccoglie al limite della storia e quando questa scade per chiusura, cambio progetto o password. Chiusura e cambio copia non riscrivono pacchetti privi di media da raccogliere. Dopo un arresto, l'apertura successiva raccoglie gli orfani di proprietà: recupero del commit interrotto ancora in AUD-24.
+
+Import e fusione mantengono anche i metadati e i byte delle foto del cestino locale omessi dal pacchetto incoming; la base resta quella incoming. Eliminazione definitiva rimuove foto dell'oggetto e delle sue porte, lasciando i riferimenti ancora attivi. Android elimina anche la directory del progetto soltanto dopo il commit: media e righe/base vengono ripristinati se il database fallisce. I backup grandi sono cifrati; nessuna eliminazione dei file sorgente scelti dall'utente o degli altri progetti. Le directory dei media non possono essere collegamenti simbolici; la raccolta accetta soltanto l'ID UUID della directory di proprietà.
+
+Fonti consultate il 6 ottobre 2026: [Java Files: percorsi, collegamenti, walk e cancellazione](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/file/Files.html), [confinamento dei percorsi Android](https://developer.android.com/privacy-and-security/risks/path-traversal). Prove ed evidenze in [verifica](05-testing-and-benchmarks.md).
+
 Desktop conserva dati e impostazioni in `data/` accanto all'eseguibile portable. `DesktopStorageManager` usa una working copy, sostituzione atomica e `.lock` per evitare aperture concorrenti.
 
 Android memorizza il progetto in Room cifrato; `EncryptedDatabase` protegge la chiave con Android Keystore. Lo schema è alla versione 2 senza migrazioni: una versione diversa viene ricreata vuota, secondo la decisione sui dati di prova. Si usa soltanto `fallbackToDestructiveMigration(dropAllTables = true)`, che copre anche il downgrade; aggiungere il fallback per solo downgrade riattiva l'obbligo di migrazione in upgrade. Non cambiare l'identità senza incrementare la versione. Il backup grezzo locale dipende dal Keystore del dispositivo e non sostituisce l'export `.ofam` per trasferire un progetto.

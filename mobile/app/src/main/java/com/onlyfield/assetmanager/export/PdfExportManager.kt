@@ -34,6 +34,16 @@ object PdfExportManager {
                 report.heading(i18n.text("text.3f03be4817b0"))
                 unmountedDevices.forEach { report.device(it) }
             }
+            val devices = devicesInRack + unmountedDevices
+            devices.filter { !it.observation?.notes.isNullOrBlank() }.forEach {
+                report.text("${it.technicalName} · ${it.observation.effectiveStatus().toDisplayString(i18n)}: ${it.observation?.notes}")
+            }
+            val ids = devices.map { it.id }.toSet() + rack.id
+            val warnings = DocumentSelection(project, ExportFilterConfig()).warnings(i18n).filter { it.targetEntityId in ids }
+            if (warnings.isNotEmpty()) {
+                report.heading(i18n.text("document.warnings"))
+                warnings.forEach { report.text(it.message) }
+            }
             report.write(outputStream)
         }
     }
@@ -46,7 +56,8 @@ object PdfExportManager {
         outputStream: OutputStream,
         i18n: Messages = Messages(),
     ) {
-        val selected = DocumentSelection(project, filterConfig).project
+        val scope = DocumentSelection(project, filterConfig)
+        val selected = scope.project
         val index = ProjectIndex(selected)
         PagedReport(i18n).use { report ->
             report.heading(filterConfig.titleOverride?.ifBlank { null } ?: i18n.text("text.40ceb13eaea5"), 18f)
@@ -79,12 +90,12 @@ object PdfExportManager {
                     device.ports.forEach { port ->
                         report.text(listOfNotNull(port.name, port.label, port.hardware.side?.toDisplayString(i18n),
                             port.hardware.connector, port.hardware.speed, port.hardware.opticalModule,
-                            port.endpointStatus.toDisplayString(i18n)).joinToString(" · "), indent = 12)
+                            port.endpointStatus.toDisplayString(i18n), port.observation.effectiveStatus().toDisplayString(i18n)).joinToString(" · "), indent = 12)
                     }
                 }
                 selected.cables.forEach { cable ->
                     report.text("${cable.codeOrLabel ?: cable.id}: ${index.portLabel(cable.portAId)} ↔ ${index.portLabel(cable.portBId)} · " +
-                        listOfNotNull(cable.medium.toDisplayString(i18n), cable.color, cable.lengthValue?.let { "$it ${cable.lengthUnit ?: "m"}" }).joinToString(" · "))
+                        listOfNotNull(cable.medium.toDisplayString(i18n), cable.observation.effectiveStatus().toDisplayString(i18n), cable.color, cable.lengthValue?.let { "$it ${cable.lengthUnit ?: "m"}" }).joinToString(" · "))
                 }
                 selected.panelMappings.forEach { report.text("${index.portLabel(it.portAId)} ↔ ${index.portLabel(it.portBId)}") }
             }
@@ -115,9 +126,11 @@ object PdfExportManager {
                 report.heading(i18n.text("text.1d02ed0f43ac"), newPage = true)
                 fun note(label: String, value: String?) { if (!value.isNullOrBlank()) report.text("$label: $value") }
                 selected.description?.let(report::text)
-                index.devices.forEach { device -> note(device.technicalName, device.observation?.notes); device.ports.forEach { note(index.portLabel(it.id), it.observation?.notes) } }
+                scope.observations.filter { !it.observation?.notes.isNullOrBlank() }.forEach {
+                    note("${it.label} · ${it.observation.effectiveStatus().toDisplayString(i18n)}", it.observation?.notes)
+                }
                 selected.racks.forEach { note(it.name, it.notes) }
-                selected.cables.forEach { note(it.codeOrLabel ?: it.id, it.notes); note(it.codeOrLabel ?: it.id, it.observation?.notes) }
+                selected.cables.forEach { note(it.codeOrLabel ?: it.id, it.notes) }
                 selected.logicalInterfaces.forEach { note(it.name, it.notes) }
                 selected.portVlanMemberships.forEach { note(index.portLabel(it.portId), it.notes) }
                 selected.lagGroups.forEach { note(it.name, it.notes) }
@@ -130,6 +143,11 @@ object PdfExportManager {
                     report.text(i18n.text("text.17e998f7cad2", attachment.name, attachment.fileType.toDisplayString(i18n), attachment.originalFileName))
                     attachment.attributionText?.let { report.text(it, indent = 12) }
                 }
+            }
+            val warnings = scope.warnings(i18n, selection.copy(includeFloorPlans = false, includePaths = false, includeTopology = false))
+            if (warnings.isNotEmpty()) {
+                report.heading(i18n.text("document.warnings"), newPage = true)
+                warnings.forEach { report.text(it.message) }
             }
             report.write(outputStream)
         }
@@ -197,7 +215,7 @@ object PdfExportManager {
 
         fun device(device: Device, location: String = "") {
             text("${device.technicalName} · ${device.category.toDisplayString(i18n)} · ${device.operationalStatus.toDisplayString(i18n)} · " +
-                (device.observation?.status ?: ObservationStatus.VERIFIED).toDisplayString(i18n) +
+                device.observation.effectiveStatus().toDisplayString(i18n) +
                 location.takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty())
         }
 
@@ -233,7 +251,7 @@ object PdfExportManager {
             }
             y = top + height + 12f
             devices.sortedByDescending { it.positionU ?: 0 }.forEach { device ->
-                text("${device.positionU?.let { "U$it" } ?: i18n.text("text.3fc3745f990b")} · ${device.rackSide.toDisplayString(i18n)} · ${device.technicalName} · " +
+                device(device, "${device.positionU?.let { "U$it" } ?: i18n.text("text.3fc3745f990b")} · ${device.rackSide.toDisplayString(i18n)} · " +
                     i18n.plural("text.53a2e3b94696", device.ports.size))
             }
         }

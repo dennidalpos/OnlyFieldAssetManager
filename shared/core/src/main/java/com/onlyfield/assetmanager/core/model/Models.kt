@@ -19,6 +19,9 @@ data class Observation(
     val notes: String? = null,
 )
 
+/** Missing survey data still needs verification. */
+fun Observation?.effectiveStatus(): ObservationStatus = this?.status ?: ObservationStatus.TO_VERIFY
+
 @Serializable
 enum class EndpointStatus {
     CONNECTED,

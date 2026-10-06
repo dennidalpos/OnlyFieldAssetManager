@@ -266,3 +266,118 @@ AUD-15: ProjectCommandTest usa un executor Room controllato per edit ravvicinati
 Verifica conclusiva AUD-14/15: .\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1 → BUILD SUCCESSFUL in 2m 3s. Report: 373 test (108 Core, 76 Exchange, 144 Desktop, 45 Android), zero fallimenti/errori/saltati. Matrice Windows estesa a 16 combinazioni di copia aperta/chiusa, replace/merge, lock progetto/base, con/senza password; cestino e byte verificati prima/dopo e dopo retry. Nessun collaudo hardware, installazione, commit o push. Tracker: 12 attività (10 P2, 2 P3), ID e dipendenze validi; git diff --check superato.
 
 Ultima verifica dopo il controllo dell'export accodato: ProjectCommandTest aggiunge password cambiata prima dell'export, rifiuto senza password prima di creare il file e export cifrato della versione corretta. Quattro test mirati verdi in 12s. Comando ordinario dei quattro moduli rieseguito: BUILD SUCCESSFUL in 32s (Android rieseguito, altri aggiornati); report finali 374 test (108/76/144/46), zero fallimenti/errori/saltati. Documenti senza riferimenti correnti ad AUD-14/15 aperti; tracker invariato a 12 attività, prossimo AUD-16. Validati 18 Markdown UTF-8 senza BOM e 130 collegamenti locali.
+
+## AUD-16 — Parità e rollback apparati — 6 ottobre 2026
+
+Baseline ProjectRepositoryTest: BUILD SUCCESSFUL in 1m 13s. La nuova regressione ha riprodotto positionU=null, heightU=1 e OUT_OF_RACK dopo sostituzione Android, invece di U12, altezza 3 e SHELF_MOUNT. DeviceOperationsTest verifica parità con ProjectEdits, figli del contenitore, cestino/ripristino, porte con e senza fusione, cavi da verificare e campi nascosti. Errori SQL iniettati durante inserimento del nuovo apparato e del cestino per sostituzione/fusione: intero progetto e verifier invariati, retry riuscito. Comando: .\gradlew.bat :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.DeviceOperationsTest --tests com.onlyfield.assetmanager.ProjectRepositoryTest --no-parallel --max-workers=1 → BUILD SUCCESSFUL in 27s. Collaudi nativi invariati; AUD-25 registra le opzioni di fusione non implementate nel core.
+
+## AUD-17 — Stati, note e avvisi dei documenti — 6 ottobre 2026
+
+Baseline mirata LocalizedExportsTest/DocumentSelectionTest/FilteredReportTest verde in 7s. DocumentSurveyTest ha riprodotto il falso Verificato nel Markdown prima della correzione. DocumentSurveyTest e SurveyReportTest coprono tutti gli stati, note di apparati/porte/cavi, conteggio criticità, filtri/classificazione, credenziali escluse, avvisi delle sole sezioni stampate, riferimenti originali ed estremi esterni dei percorsi; le schede rack Desktop conservano gli stati anche senza inventario. Un nuovo scenario ha richiesto reviewRequiredConfirmed=false esplicito perché il valore predefinito è true; assertion di esclusione conservate.
+
+La prima esecuzione nativa ha rilevato l'assenza del rilievo nell'elenco rack Android. Corretto il generatore usando la stessa riga apparato dell'inventario. Emulatore Pixel_9 avviato da questa sessione sulla porta 5580, API 37, senza finestra né salvataggio snapshot; installati soltanto APK di test su questo emulatore. Progetti sintetici e database in memoria, nessuna apertura/modifica della demo o del telefono collegato.
+
+Comandi eseguiti:
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1
+$adbPath = 'C:\Users\Utente\AppData\Local\Android\Sdk\platform-tools\adb.exe'
+& $adbPath -s emulator-5580 install -r mobile/app/build/outputs/apk/debug/app-debug.apk
+& $adbPath -s emulator-5580 install -r mobile/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+& $adbPath -s emulator-5580 shell am instrument -w -r -e class 'com.onlyfield.assetmanager.SurveyPdfTest,com.onlyfield.assetmanager.LocalizedPdfTest,com.onlyfield.assetmanager.CompositePdfTest' com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1
+```
+
+Esiti: build APK e test APK riuscita; dopo l'ultima correzione APK ricompilato in 4s. Esecuzione nativa finale OK (7 tests), 1,889s, zero fallimenti: due nuove prove e cinque regressioni esistenti, incluse paginazione e sezioni indipendenti. Lo script controlla esplicitamente OK (7 tests), perché adb può uscire con codice zero anche quando JUnit fallisce. Fonti: [PdfDocument](https://developer.android.com/reference/android/graphics/pdf/PdfDocument) e [estrazione testo PdfRenderer.Page](https://developer.android.com/reference/android/graphics/pdf/PdfRenderer.Page), consultate il 6 ottobre 2026.
+
+Suite JVM finale: BUILD SUCCESSFUL in 2m 13s; 381 test nei report (108 Core, 78 Exchange, 146 Desktop, 49 Android), zero fallimenti/errori/saltati. Nel comando finale Core riusa il risultato verde eseguito in questa sessione; gli altri tre moduli rieseguiti. Nessuna assertion disattivata, nessun nuovo mock o dipendenza. RES-13/19/23 restano collaudi hardware/UX/stampa distinti. AUD-16/17 rimossi dal tracker; nuovo residuo AUD-25 conservato. Nessun commit o push.
+
+## AUD-18 — Ciclo di vita import Android — 6 ottobre 2026
+
+Job conservato e identità per richiesta; annullamento/nuova richiesta/chiusura ViewModel cancellano lettura e fusione. Pacchetto posseduto dal worker fino al trasferimento alla Review, quindi dal comando di conferma/fusione fino al completamento. Risultati scartati al ritorno dal dispatcher vengono chiusi; il busy si libera anche se il comando viene cancellato prima di iniziare. Conferma e fusione consumano lo stato prima dell'avvio, impedendo doppi salvataggi e riuso di pacchetti chiusi. Il commit già iniziato resta non cancellabile, come in AUD-14.
+
+Baseline Android BUILD SUCCESSFUL in 2s (risultati aggiornati). La nuova prova cancelledWorkerReturnClosesThePackageBeforeReviewReceivesOwnership sul ViewModel precedente riproduce una Review dopo cancelImport (fallimento atteso); sorgente corrente ripristinato subito dopo. Otto nuove prove permanenti: cancellazione lettura e PBKDF2 reale, doppio import protetto, chiusura durante confronto, ritorno worker prima della Review, conferma lenta/doppia, cancellazione prima del commit, fusione annullata/ripetuta. Payload e rimozione dello staging cifrato verificati; nessun mock della cifratura o dipendenza nuova.
+
+Comando: .\gradlew.bat :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.ImportLifecycleTest --tests com.onlyfield.assetmanager.ImportAtomicityTest --tests com.onlyfield.assetmanager.ProjectCommandTest --no-parallel --max-workers=1 → BUILD SUCCESSFUL in 14s; 13 test, zero fallimenti/errori/saltati. Fonti consultate il 6 ottobre: [withContext e risorse restituite](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/with-context.html), [lifecycle ViewModel](https://developer.android.com/topic/libraries/architecture/viewmodel/viewmodel-apis). Documenti architettura/flussi/verifica aggiornati; AUD-18 rimosso con dipendenze. Restano 10 attività (8 P2, 2 P3). Nessun collaudo nativo, commit/push o modifica ai progetti reali.
+
+## AUD-19 — Media attivi, undo/cestino e raccolta di proprietà — 6 ottobre 2026
+
+Export selezionato prima della lettura: soli media attivi, esclusi orfani, foto degli oggetti nel cestino e metadati locali. Alias supportati conservati; date di revisione stabili e base del progetto inviato. Copia locale con undo Android a un passo e storia Windows a 50 revisioni; byte raccolti alla scadenza, chiusura/cambio/password o riapertura. Foto del cestino conservate con metadati anche nella sostituzione/fusione; allegati serializzati nel cestino storico mantenuti. Rimozione definitiva elimina foto di apparati/porte e invalida undo; cancellazione Android del progetto comprende base, righe e directory di proprietà. Backup di rollback grandi cifrati, UUID e percorsi confinati, nessun collegamento seguito verso sorgenti/altre copie. Cambio password Windows riusa il blocco reversibile esistente: rimosso il rollback manuale duplicato.
+
+Baseline Windows media/protezione/cestino verde in 8s. Tre prove nuove hanno riprodotto payload rimosso esportato, lettura dell'orfano da 33 MiB e entry non catalogate. La precedente assertion interop che pretendeva tre payload a fronte di un solo record attivo è stata sostituita da catalogo esatto, hash del payload attivo ed esclusione esplicita dei due orfani. Nessuna assertion di integrità eliminata.
+
+Diciassette nuove prove media (9 Windows, 8 Android): hash/undo/export, scadenza a 50 revisioni, chiusura, cestino/ripristino/eliminazione, metadati e byte attraverso sostituzione chiusa, nessun sito, allegato serializzato storico, orfani oltre limite, sorgenti e altri progetti intatti, SQL abort e file Windows NOSHARE_DELETE con rollback/retry. Corrette due fixture di prova: import con avvisi attraversa la conferma reale; allegati di progetti diversi hanno UUID distinti. La suite completa ha poi trovato quattro regressioni Windows, corrette preservando tombstone ATTACHMENT e evitando riscritture al cambio di copia quando non c'è recupero da raccogliere.
+
+Il ripristino senza siti perdeva la voce senza ricreare l'apparato: ora errore localizzato it/en/es, cestino e media conservati su entrambe le app. AUD-26 registra scelta del sito quando quello originale manca e tipi non supportati; senza siti esistono regressioni esplicite, con sito esistente si verifica anche la presenza dell'apparato ripristinato. Nessuna ricostruzione o ricollocazione automatica aggiunta.
+
+Verifica completa:
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 2m 40s: 406 test (108 Core, 78 Exchange, 155 Windows, 65 Android), zero fallimenti/errori/saltati; APK compilato. XML conservati in build/reports/aud18-19-full. Ultima verifica mirata dopo la conservazione della data di revisione nell'export e della base selezionata:
+
+```powershell
+.\gradlew.bat :pc:app:test --tests com.onlyfield.assetmanager.pc.MediaLifecycleTest --tests com.onlyfield.assetmanager.pc.ReplacementPasswordTest --tests com.onlyfield.assetmanager.pc.LocalImportComparisonTest --tests com.onlyfield.assetmanager.pc.BidirectionalInteropTest :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.MediaLifecycleTest --tests com.onlyfield.assetmanager.ProjectCommandTest --tests com.onlyfield.assetmanager.ImportLifecycleTest :mobile:app:assembleDebug --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 27s, 40 test (20/20), APK finale ricompilato; nessun test aggiuntivo per i soli documenti. Fonti ufficiali Java Files e Android path traversal nella documentazione storage. AUD-18/19 rimossi dal tracker e dalle dipendenze; AUD-26 aggiunto. Restano 10 attività (8 P2, 2 P3), prossimo AUD-21. Recupero dopo arresto/secondo guasto ancora AUD-24; collaudi nativi RES-13/19/23 e risorse storiche RES-24 invariati. Nessuna installazione, modifica a demo/dati utente, commit o push.
+
+Controllo conclusivo AUD-18/19: 10 ID aperti univoci e dipendenze valide; 18 Markdown UTF-8 senza BOM, 137 collegamenti locali validi e fine riga senza duplicazioni. git diff --check superato. Pulizia respinta due volte dal controllo automatico: blocked by policy, nessun dettaglio ulteriore; secondo tentativo limitato alla rimozione non ricorsiva delle sole cartelle vuote. Il compilatore ha eliminato autonomamente il marker; restano .kotlin e .kotlin/sessions vuote, registrate in RES-24. Tentativi interrotti; nessun processo terminato, risorse storiche e report conservati. Nessun commit/push.
+
+## AUD-21 — Errori, callback e preferenze — 6 ottobre 2026
+
+Cambio password Android: errori di scrittura/rimozione restituiti una sola volta al dialogo e segnalati, cancellazione rilanciata; chiusura/cambio progetto impedisce callback e successo tardivi. Verificati apertura con JSON danneggiato, password errata, riprova dopo errore, rollback di ripristino/rimozione/svuotamento cestino, cancellazione di comandi in coda e chiusura durante cambio password. Nessuna modifica di schema Room/API UI.
+
+Windows: preferenze lette una volta all'avvio sul worker. Errore I/O o sintassi Properties non valida visibili, file conservato e valori predefiniti solo per avviare l'app. Tema e lingua cambiano dopo scrittura reversibile; proprietà estranee conservate. Errore di pulizia post-commit distinto da save fallito. Tre regressioni su file malformato, directory al posto del file e reale blocco Windows NOSHARE_DELETE con riprova e byte invariati. Messaggi it/en/es. Le nuove prove hanno fallito sul codice precedente: callback password assente (1/8 Android), errore tema/lettura invisibile (3/3 Windows). Corrette le cause; nessuna asserzione rimossa.
+
+Baseline: `:mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.ProjectCommandTest :pc:app:test --tests com.onlyfield.assetmanager.pc.PasswordRotationTest --no-parallel --max-workers=1`, BUILD SUCCESSFUL in 11s. Prima correzione: 15 prove mirate verdi in 16s; aggiunte poi prove per rimozione password, cancellazione in coda, chiusura e apertura protetta.
+
+Verifica finale:
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 2m 28s: **415 test** (108 core, 78 exchange, 158 Windows, 71 Android), zero fallimenti/errori/saltati; APK compilato. XML completi conservati in `build/reports/aud21-full`. Fonti ufficiali Kotlin Cancellation e Java 21 Properties consultate il 6 ottobre e collegate nella documentazione architettura/storage. AUD-21 rimosso dal tracker e dalle dipendenze; collaudo messaggi/focus nativi esplicitato in RES-19/23. Nessuna installazione, modifica dati/demo/backup o pulizia di risorse storiche; nessun commit/push.
+
+## AUD-23 — Capacità protetta prudenziale confermata — 6 ottobre 2026
+
+Decisione esplicita dell'utente: mantenere il limite prudenziale e documentarlo. Nessuna richiesta o persistenza aggiuntiva della password, nessuna modifica al budget o al formato. Un'aggiunta vicino al limite ZIP può essere rifiutata anche se il pacchetto effettivo sarebbe ammissibile; il rollback conserva dati/media precedenti. Non viene promessa capacità esatta al confine. Decisione consolidata in plan.md, contratto e workflow; AUD-23 rimosso dal tracker.
+
+Le quattro prove MediaCapacityTest sono comprese nella suite exchange di AUD-21 (78 test, zero errori): inclusi rifiuto file da 33 MiB, limiti aggregati, export/reimport protetto e margine prudenziale con limite ridotto e ZIP cifrato reale. Non eseguita una nuova prova reale a 256 MiB. La chiusura è per scelta del requisito, senza presentarla come verifica esatta. Fonti del budget: zlib compressBound e specifica ZIP PKWARE, collegate nel report residui e consultate il 6 ottobre. Nessun test ripetuto per i soli documenti.
+
+## AUD-26 — Ripristino senza ricollocazione implicita — 6 ottobre 2026
+
+Decisione esplicita: bloccare il ripristino se manca il sito originale e conservare nel cestino. DEVICE non usa più il primo sito disponibile; null/ID originale assente generano errore. RACK registra il sito del piano nelle nuove voci usando originalSiteId esistente e richiede contesto ancora disponibile; rack senza piano resta valido. Nessuna modifica Room v2 o formato .ofam v1.
+
+DEVICE/RACK/CREDENTIAL condividono ProjectEdits.restoreFromTrash: controllo progetto/ID serializzato, rifiuto di ID dell'entità già presente nello stesso catalogo, nessuna sovrascrittura. Credenziali ripristinate integralmente anche su Windows. ATTACHMENT storico e tipi sconosciuti generano errore prima di rimuovere la voce, byte conservati. Android legge voce/progetto, salva e rimuove nella stessa transazione; voce assente restituisce false e la UI segnala errore. Windows verifica la presenza nel cestino e calcola il risultato prima di cambiare stato; salvataggio reversibile preesistente conservato.
+
+Cinque regressioni core hanno fallito sul codice precedente: sito diverso, tipi non supportati, credenziale non ricreata, ID duplicato e metadati incoerenti. Aggiunta prova sul contesto rack. Le prove Android e Windows verificano sito assente/diverso, conservazione progetto/cestino/media e riprova quando torna il sito originale, ATTACHMENT storico conservato, credenziali/collisioni senza perdita di segreti. Windows copre anche copie protette e byte della working copy invariati. Una chiamata errata openStored(file, password) nelle nuove prove non compilava: corretta usando importFile(file, password, compare=false), ingresso reale già esistente; nessuna modifica delle API produttive.
+
+Verifica mirata:
+
+```powershell
+.\gradlew.bat :shared:core:test --tests com.onlyfield.assetmanager.core.TrashRestoreTest --tests com.onlyfield.assetmanager.core.ObjectHierarchyTest --tests com.onlyfield.assetmanager.core.ConfiguratorTest :pc:app:test --tests com.onlyfield.assetmanager.pc.MediaLifecycleTest --tests com.onlyfield.assetmanager.pc.ProtectedTrashTest :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.MediaLifecycleTest --tests com.onlyfield.assetmanager.DeviceOperationsTest --tests com.onlyfield.assetmanager.ProjectCommandTest --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 48s, **68 test** (32 core, 13 Windows, 23 Android). Verifica completa:
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 2m 24s: **425 test** (114/78/160/73), zero fallimenti/errori/saltati; APK compilato. XML conservati in build/reports/aud26-full. Fonte primaria consultata il 6 ottobre: [Room withTransaction](https://developer.android.com/reference/androidx/room/RoomDatabaseKt); gli esiti di rollback sono evidenze dei test del repository. AUD-26 rimosso dal tracker e dalle dipendenze. AUD-27 registra da codice i riferimenti secondari: piani/collocazioni mancanti e porte con ID riutilizzati, non riprodotti su persistenza. Nessuna chiusura implicita di questi casi o dei collaudi nativi. Nessuna installazione, modifica dati/demo/backup o pulizia delle risorse storiche; nessun commit/push.
+
+Controllo conclusivo AUD-21/23/26: tracker con 8 ID aperti univoci, dipendenze valide e nessuno dei tre task completati; 18 Markdown UTF-8 senza BOM, 137 collegamenti locali validi e nessun CRLF duplicato. git diff --check superato. .kotlin e .kotlin/sessions rimangono vuote come già tracciato in RES-24; nessun nuovo tentativo di rimozione o processo terminato. Evidenze conservate, modifiche preesistenti preservate; nessun commit/push.
+
+## Checkpoint per cambio sessione — 6 ottobre 2026
+
+Su richiesta esplicita, salvare con commit e push su main il lavoro presente di AUD-16/17/18/19/21/23/26, inclusi documenti e regressioni. Prima del commit main è il branch predefinito, allineato a origin/main dopo fetch. Il punto di ripresa è AUD-27; tracker con 8 attività aperte/parziali (6 P2, 2 P3), completamenti conservati nella roadmap.
+
+Decisioni confermate: AUD-23 mantiene il limite prudenziale senza password aggiuntiva; AUD-26 blocca il ripristino quando manca il sito originale, conservando cestino/media. AUD-27 deve convalidare riferimenti secondari e collisioni degli ID delle porte; i suoi casi restano da riprodurre. AUD-24/25 richiedono politica di recupero/fusione; AUD-22 è pulizia runtime/test. RES-13/19/23 conservano i collaudi hardware/UX/stampa incompleti, RES-24 le risorse storiche e le cartelle vuote già tracciate.
+
+Evidenze finali conservate: 425 test (114/78/160/73) senza fallimenti/errori/saltati e APK compilato, BUILD SUCCESSFUL in 2m 24s; 68 prove mirate verdi. Nessuna suite ripetuta per il checkpoint, che modifica solo documentazione/tracker. I report XML in build/reports/aud26-full, aud21-full e aud18-19-full e gli artefatti locali sono ignorati: non vengono inclusi nel commit e non sono disponibili automaticamente in un altro checkout. Dati, demo, backup e risorse delle prove conservati; nessuna nuova installazione o rimozione.
+
+Alla ripresa leggere README.md, PROJECT_STATUS.json, plan.md, questa roadmap e docs/repo-residuals-2026-10-05.md; verificare git status e HEAD/origin/main. Il commit effettivo si ricava da git log, senza ID autoreferenziale nel tracker. Non ritentare alla cieca le pulizie bloccate o terminare processi di altre sessioni.

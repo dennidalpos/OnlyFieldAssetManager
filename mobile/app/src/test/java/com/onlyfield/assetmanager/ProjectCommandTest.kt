@@ -166,4 +166,113 @@ class ProjectCommandTest {
             assertTrue(it.manifest.isEncrypted)
         }
     }
+
+    @Test fun passwordDatabaseFailureReturnsOneErrorAndKeepsProtectionUnchanged() {
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_password BEFORE UPDATE ON projects BEGIN SELECT RAISE(ABORT, 'password write denied'); END")
+        val results = mutableListOf<String?>()
+        vm.changePassword("", "new-password") { results += it }
+        await { vm.busy == null }
+        assertEquals(1, results.size)
+        assertNotNull(results.single())
+        assertEquals(initial, vm.project.value)
+        runBlocking { assertFalse(repository.getProjectById(initial.id)!!.isPasswordProtected) }
+        db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_password")
+        vm.changePassword("", "new-password") { results += it }
+        await { vm.busy == null }
+        assertNull(results.last())
+        assertTrue(vm.project.value!!.isPasswordProtected)
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_password BEFORE UPDATE ON projects BEGIN SELECT RAISE(ABORT, 'password removal denied'); END")
+        vm.changePassword("new-password", "") { results += it }
+        await { vm.busy == null }
+        assertEquals(3, results.size)
+        assertNotNull(results.last())
+        assertTrue(vm.project.value!!.isPasswordProtected)
+        runBlocking { assertTrue(repository.verifyProjectPassword(initial.id, "new-password")) }
+    }
+
+    @Test fun malformedProjectDoesNotReplaceTheOpenProjectOrPreventRetry() {
+        db.openHelper.writableDatabase.execSQL("UPDATE projects SET objectTypesJson = 'broken'")
+        vm.openProject(initial.id)
+        await { vm.busy == null }
+        assertEquals(initial, vm.project.value)
+        assertTrue(messages.any { it.isError })
+        db.openHelper.writableDatabase.execSQL("UPDATE projects SET objectTypesJson = '[]'")
+        vm.openProject(initial.id)
+        await { vm.busy == null }
+        assertEquals(initial, vm.project.value)
+    }
+
+    @Test fun failedTrashCommandsPreserveItemsAndPublishOnlyErrors() {
+        vm.moveToTrash("DEVICE", device.id, device.technicalName)
+        await { vm.busy == null }
+        val item = vm.trash.value.single()
+        val before = vm.project.value
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_trash BEFORE DELETE ON trash_items BEGIN SELECT RAISE(ABORT, 'trash delete denied'); END")
+        messages.clear()
+        vm.restoreFromTrash(item.id)
+        vm.deleteFromTrash(item.id)
+        vm.emptyTrash()
+        await { vm.busy == null }
+        assertEquals(3, messages.size)
+        assertTrue(messages.all { it.isError })
+        assertEquals(before, vm.project.value)
+        assertEquals(listOf(item), vm.trash.value)
+        runBlocking { assertEquals(before, repository.getProjectById(initial.id)) }
+        db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_trash")
+        vm.restoreFromTrash(item.id)
+        await { vm.busy == null }
+        assertEquals(device, vm.project.value!!.sites.single().devices.single())
+        assertTrue(vm.trash.value.isEmpty())
+    }
+
+    @Test fun cancelledQueuedPasswordDoesNotCallTheDialogOrPublishSuccess() {
+        val release = holdTransactions()
+        var callbacks = 0
+        try {
+            vm.edit("Queued edit") { it.copy(description = "Cancelled edit") }
+            vm.changePassword("", "new-password") { callbacks++ }
+            shadowOf(Looper.getMainLooper()).idle()
+            owner.clear()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertEquals(0, callbacks)
+        assertTrue(messages.isEmpty())
+        runBlocking { assertFalse(repository.getProjectById(initial.id)!!.isPasswordProtected) }
+    }
+
+    @Test fun closingBeforeQueuedPasswordCompletesDoesNotCallTheOldDialog() {
+        val release = holdTransactions()
+        var callbacks = 0
+        try {
+            vm.edit("Before password") { it.copy(description = "Kept") }
+            vm.changePassword("", "new-password") { callbacks++ }
+            shadowOf(Looper.getMainLooper()).idle()
+            vm.closeProject()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertEquals(0, callbacks)
+        assertNull(vm.project.value)
+        runBlocking { assertTrue(repository.verifyProjectPassword(initial.id, "new-password")) }
+    }
+
+    @Test fun protectedOpenReadFailureIsVisibleAndWrongPasswordDoesNotOpenTheProject() {
+        runBlocking { assertTrue(repository.setProjectPassword(initial.id, null, "new-password")) }
+        vm.closeProject()
+        await { vm.busy == null }
+        var wrong = 0
+        vm.openProtectedProject(initial.id, "wrong") { wrong++ }
+        await { vm.busy == null }
+        assertEquals(1, wrong)
+        assertNull(vm.project.value)
+        db.openHelper.writableDatabase.execSQL("UPDATE projects SET objectTypesJson = 'broken'")
+        vm.openProtectedProject(initial.id, "new-password") { wrong++ }
+        await { vm.busy == null }
+        assertEquals(1, wrong)
+        assertNull(vm.project.value)
+        assertTrue(messages.any { it.isError })
+        db.openHelper.writableDatabase.execSQL("UPDATE projects SET objectTypesJson = '[]'")
+        vm.openProtectedProject(initial.id, "new-password") { wrong++ }
+        await { vm.busy == null }
+        assertTrue(vm.project.value!!.isPasswordProtected)
+    }
 }

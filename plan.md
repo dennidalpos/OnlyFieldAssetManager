@@ -77,4 +77,16 @@ PDF Android: le sei sezioni offerte sono complete e paginate, inclusi inventario
 
 ## Decisione limiti pacchetti — 5 ottobre 2026
 
-Confermati: allegato 32 MiB, pacchetto 256 MiB, totale decompresso 512 MiB, 10.000 entry e costo PBKDF2 massimo 1.000.000. Rifiuto strutturale durante la lettura e prima della derivazione; stessa politica di dimensione sui pacchetti generati. Misure ai limiti concluse e registrate nel [report import grandi](docs/testing/import-benchmark-2026-10-05.md). AUD-13 chiuso: verifica prima del commit e rollback negli ingressi media locali. Android protetto verifica un budget conservativo senza conservare la password; verifica esatta vicino a 256 MiB ancora in AUD-23. AUD-14/15 chiusi: import/fusione reversibili, base coerente e comandi/letture Android ordinati; arresto improvviso e secondo guasto di rollback restano in AUD-24.
+Confermati: allegato 32 MiB, pacchetto 256 MiB, totale decompresso 512 MiB, 10.000 entry e costo PBKDF2 massimo 1.000.000. Rifiuto strutturale durante la lettura e prima della derivazione; stessa politica di dimensione sui pacchetti generati. Misure ai limiti concluse e registrate nel [report import grandi](docs/testing/import-benchmark-2026-10-05.md). AUD-13 chiuso: verifica prima del commit e rollback negli ingressi media locali. Decisione confermata il 6 ottobre (AUD-23 chiuso): Android protetto mantiene il budget prudenziale, senza richiesta o persistenza aggiuntiva della password; accettato il possibile rifiuto vicino a 256 MiB anche se il ZIP effettivo entrerebbe nel limite. Verifica esatta esclusa dal requisito corrente. AUD-14/15 chiusi: import/fusione reversibili, base coerente e comandi/letture Android ordinati; arresto improvviso e secondo guasto di rollback restano in AUD-24.
+
+## Correzioni audit — 6 ottobre 2026
+
+AUD-16/17 completati: operazioni apparati Android delegate alle regole comuni e salvate con cestino in una transazione; rilievo assente documentato come Da verificare, con stati, note e avvisi pertinenti nei formati di consegna. Decisioni e limiti di prodotto invariati. AUD-25 registra la semantica ancora da definire per quattro opzioni di fusione dei dati associati. Evidenze in roadmap; solo lavoro aperto nel tracker.
+
+AUD-18 completato: cancellazione e proprietà dei pacchetti importati Android verificati durante lettura/KDF, confronto, ritorno dal worker, conferma e fusione. Import obsoleti non pubblicano stato; commit già iniziato termina senza UI tardiva. Restano invariati schema, formato e collaudi nativi.
+
+AUD-19 completato: scambio dei soli media attivi, conservazione locale per undo/cestino e raccolta dei soli file di proprietà quando scadono. Media del cestino conservati anche nella sostituzione; rimozione definitiva/progetto con rollback su guasto. AUD-26 completato successivamente: ripristino bloccato se manca il sito originale; tipi non supportati conservati nel cestino con media, credenziali ripristinate tramite regole condivise. AUD-27 conserva i riferimenti secondari da convalidare.
+
+AUD-21 completato il 6 ottobre: callback password e cancellazione Android, errore e persistenza reversibile delle preferenze Windows; 415 test e APK verificati. Collaudo nativo messaggi/focus in RES-19/23.
+
+Decisione AUD-26 del 6 ottobre: bloccare e conservare nel cestino quando manca il sito originale, senza scelta implicita di un altro sito. Applicata su entrambe le app; ID delle entità già attivi non vengono sovrascritti. 425 test e APK verificati; riferimenti secondari (piani/collocazioni/porte) in AUD-27.

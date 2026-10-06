@@ -454,6 +454,43 @@ object ProjectEdits {
         )
     }
 
+    /** Permanent trash deletion also drops photos of the item and its ports. */
+    fun purgeTrashAttachments(project: Project, removed: List<TrashItem>): Project {
+        val targets = trashTargets(project, removed)
+        return project.attachments.filter { it.targetType to it.targetId in targets || removed.any { item ->
+            item.itemType.equals("ATTACHMENT", ignoreCase = true) && item.itemId == it.id
+        } }.fold(project) { result, att -> deleteAttachment(result, att.id) }
+    }
+
+    fun retainTrashAttachments(incoming: Project, local: Project, trash: List<TrashItem>): Project {
+        val targets = trashTargets(incoming, trash, local.attachments)
+        val retained = local.attachments.filter { it.targetType to it.targetId in targets }
+        return incoming.copy(attachments = (incoming.attachments + retained).distinctBy { it.id })
+    }
+
+    fun trashAttachments(items: List<TrashItem>): List<Attachment> = items
+        .filter { it.itemType.equals("ATTACHMENT", ignoreCase = true) }
+        .map { jsonSerializer.decodeFromString(Attachment.serializer(), it.serializedJson) }
+
+    private fun trashTargets(project: Project, items: List<TrashItem>, attachments: List<Attachment> = project.attachments): Set<Pair<AttachmentTargetType, String?>> {
+        val index = com.onlyfield.assetmanager.core.display.ProjectIndex(project)
+        return items.flatMap { item ->
+            val direct = AttachmentTargetType.entries.firstOrNull { it.name == item.itemType.uppercase() }
+                ?.let { listOf(it to item.itemId) }.orEmpty()
+            val ports = if (item.itemType.equals("DEVICE", ignoreCase = true) && attachments.any { it.targetType == AttachmentTargetType.PORT })
+                jsonSerializer.decodeFromString(Device.serializer(), item.serializedJson).ports.map { AttachmentTargetType.PORT to it.id }
+            else emptyList()
+            direct + ports
+        }.filterNot { (type, id) -> when (type) {
+            AttachmentTargetType.DEVICE -> index.device(id) != null
+            AttachmentTargetType.PORT -> index.port(id) != null
+            AttachmentTargetType.RACK -> index.rack(id) != null
+            AttachmentTargetType.AREA -> index.area(id) != null
+            AttachmentTargetType.CABLE -> project.cables.any { it.id == id }
+            AttachmentTargetType.PROJECT -> project.id == id
+        } }.toSet()
+    }
+
     fun setAreaFloorplan(project: Project, areaId: String, attachmentId: String?, pageIndex: Int = 0, pageCount: Int? = null): Project {
         require(pageIndex >= 0)
         require(pageCount == null || attachmentId == null || pageIndex < pageCount)
@@ -515,17 +552,31 @@ object ProjectEdits {
 
 
     fun restoreFromTrash(project: Project, trashItem: TrashItem, i18n: Messages = Messages()): Project {
+        check(trashItem.projectId == project.id) { i18n.text("trash.invalidEntry") }
         val restored = when (trashItem.itemType.uppercase()) {
             "DEVICE" -> {
                 val device = jsonSerializer.decodeFromString(Device.serializer(), trashItem.serializedJson)
-                val targetSite = project.sites.find { it.id == trashItem.originalSiteId } ?: project.sites.firstOrNull() ?: return project
+                check(device.id == trashItem.itemId) { i18n.text("trash.invalidEntry") }
+                check(project.sites.none { site -> site.devices.any { it.id == device.id } }) { i18n.text("trash.alreadyExists") }
+                val targetSite = project.sites.find { it.id == trashItem.originalSiteId }
+                    ?: throw IllegalStateException(i18n.text("trash.siteMissing"))
                 withInternalPassages(addDevice(project, targetSite.id, device), device.ports)
             }
             "RACK" -> {
                 val rack = jsonSerializer.decodeFromString(Rack.serializer(), trashItem.serializedJson)
+                check(rack.id == trashItem.itemId) { i18n.text("trash.invalidEntry") }
+                check(project.racks.none { it.id == rack.id }) { i18n.text("trash.alreadyExists") }
+                check(trashItem.originalSiteId == null || project.sites.any { it.id == trashItem.originalSiteId }) { i18n.text("trash.siteMissing") }
+                check(rack.areaId == null || project.sites.any { site -> site.areas.any { it.id == rack.areaId } }) { i18n.text("trash.siteMissing") }
                 addRack(project, rack)
             }
-            else -> project
+            "CREDENTIAL" -> {
+                val credential = jsonSerializer.decodeFromString(Credential.serializer(), trashItem.serializedJson)
+                check(credential.id == trashItem.itemId) { i18n.text("trash.invalidEntry") }
+                check(project.credentials.none { it.id == credential.id }) { i18n.text("trash.alreadyExists") }
+                return project.copy(credentials = project.credentials + credential, updatedEpochMs = System.currentTimeMillis())
+            }
+            else -> throw IllegalStateException(i18n.text("trash.unsupportedType"))
         }
         return ObjectHierarchy.restore(restored, trashItem, i18n = i18n)
     }

@@ -1,7 +1,13 @@
 package com.onlyfield.assetmanager.exchange
 
 import com.onlyfield.assetmanager.core.forms.PathSchematics
+import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.validation.ModelValidator
+import com.onlyfield.assetmanager.core.validation.ValidationIssue
+import com.onlyfield.assetmanager.core.validation.ValidationSeverity
+
+data class DocumentObservation(val label: String, val observation: Observation?)
 
 /** One document scope for all formats; complete physical paths provide external context. */
 class DocumentSelection(val source: Project, val filter: ExportFilterConfig) {
@@ -100,6 +106,44 @@ class DocumentSelection(val source: Project, val filter: ExportFilterConfig) {
     )
 
     val paths by lazy { PathSchematics.all(source).filter { path -> path.stations.any { it.device?.id in deviceIds } } }
+
+    val observations: List<DocumentObservation> by lazy {
+        devices.flatMap { device -> listOf(DocumentObservation(device.technicalName, device.observation)) +
+            device.ports.map { DocumentObservation("${device.technicalName} › ${it.name}", it.observation) } } +
+            cables.map { DocumentObservation(it.codeOrLabel ?: it.id, it.observation) }
+    }
+
+    /** Validate original references, then retain only warnings belonging to printed sections. */
+    fun warnings(i18n: Messages, selection: ReportSelection = ReportSelection()): List<ValidationIssue> {
+        val ids = buildSet {
+            add(source.id)
+            if (selection.includeInventoryTable) addAll(deviceIds)
+            if (selection.includeRackCards) { addAll(rackIds); addAll(devices.filter { it.rackId in rackIds }.map { it.id }) }
+            if (selection.includeCablingAndPorts) { addAll(portIds); addAll(cableIds); addAll(project.panelMappings.map { it.id }) }
+            if (selection.includeLogicalNetwork) {
+                addAll(vlanIds); addAll(project.subnets.map { it.id }); addAll(project.portVlanMemberships.map { it.id })
+                addAll(project.logicalInterfaces.map { it.id }); addAll(project.lagGroups.map { it.id }); addAll(project.wanVpnConnections.map { it.id })
+            }
+            if (selection.includePowerAndBadges) {
+                addAll(project.powerFeeds.map { it.id }); addAll(project.powerFeeds.map { it.deviceId })
+                addAll(project.poeMappings.map { it.id }); addAll(project.documentBadges.map { it.id })
+            }
+            if (selection.includeNotesAndAttachments) { addAll(attachmentIds); addAll(project.customExtraFields.map { it.id }) }
+            if (selection.includeFloorPlans) { addAll(areaIds); addAll(project.floorplanPlacements.map { it.id }); addAll(project.annotations.map { it.id }) }
+            if (selection.includePaths || selection.includeTopology) {
+                addAll(physicalContext.sites.flatMap { it.devices }.flatMap { it.ports }.map { it.id })
+                addAll(physicalContext.cables.map { it.id })
+            }
+        }
+        return ModelValidator.validateProject(source.copy(credentials = emptyList()), i18n).issues.filter {
+            val sectionIncluded = when (it.code) {
+                "SINGLE_FEED_PARTIAL_COVERAGE_WARNING" -> selection.includePowerAndBadges
+                "UNVERIFIED_DEVICE_OBSERVATION" -> selection.includeInventoryTable || selection.includeRackCards
+                else -> true
+            }
+            sectionIncluded && it.severity == ValidationSeverity.DOCUMENTARY_WARNING && (it.targetEntityId == null || it.targetEntityId in ids)
+        }
+    }
 
     /** Only selected devices and stations needed by their complete paths. */
     val physicalContext: Project by lazy {

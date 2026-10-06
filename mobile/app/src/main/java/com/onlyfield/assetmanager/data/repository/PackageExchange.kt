@@ -25,12 +25,15 @@ internal class PackageExchange(
     private val saveImported: suspend (Project, String?) -> Unit,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val transaction: suspend (suspend () -> Unit) -> Unit = { it() },
+    private val loadTrash: suspend (String) -> List<com.onlyfield.assetmanager.core.model.TrashItem> = { emptyList() },
 ) {
     private suspend fun getProjectById(projectId: String) = load(projectId)
     private suspend fun saveProject(project: Project) = save(project)
 
     suspend fun exportProjectPackage(projectId: String, password: String? = null, i18n: Messages = Messages()): ByteArray? = withContext(ioDispatcher) {
-        val project = getProjectById(projectId) ?: return@withContext null
+        val stored = getProjectById(projectId) ?: return@withContext null
+        val project = com.onlyfield.assetmanager.core.edit.ProjectEdits.purgeTrashAttachments(stored, loadTrash(projectId))
+            .copy(updatedEpochMs = stored.updatedEpochMs)
         val files = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
         return@withContext PackageSerializer.exportPackage(project, attachments = files, password = password, i18n = i18n).also { saveBase(project) }
     }
@@ -50,7 +53,9 @@ internal class PackageExchange(
         outputStream: OutputStream,
         password: String? = null,
         i18n: Messages = Messages()): Boolean = withContext(ioDispatcher) {
-        val project = getProjectById(projectId) ?: return@withContext false
+        val stored = getProjectById(projectId) ?: return@withContext false
+        val project = com.onlyfield.assetmanager.core.edit.ProjectEdits.purgeTrashAttachments(stored, loadTrash(projectId))
+            .copy(updatedEpochMs = stored.updatedEpochMs)
         val files = AttachmentFiles.collect(project) { attachmentFile(project.id, it) }
         outputStream.use { stream ->
             PackageSerializer.exportPackageToStream(stream, project, files, password, i18n = i18n)
@@ -90,7 +95,7 @@ internal class PackageExchange(
 
     suspend fun importProjectPackage(pkg: ProjectPackage, password: String?): Boolean = withContext(ioDispatcher) {
         require(!pkg.project.isPasswordProtected || !password.isNullOrBlank()) { "A protected import requires its package password" }
-        commitImport(pkg, pkg.project) { saveImported(pkg.project, password) }
+        commitImport(pkg, pkg.project) { saveImported(it, password) }
         return@withContext true
     }
 
@@ -98,17 +103,19 @@ internal class PackageExchange(
     suspend fun importMerged(pkg: ProjectPackage, merged: Project) = withContext(ioDispatcher) {
         val local = requireNotNull(getProjectById(merged.id)) { "A merge requires a local project" }
         val selected = merged.copy(isPasswordProtected = local.isPasswordProtected)
-        commitImport(pkg, selected) { saveProject(selected) }
+        commitImport(pkg, selected) { saveProject(it) }
     }
 
-    private suspend fun commitImport(pkg: ProjectPackage, selected: Project, persist: suspend () -> Unit) {
+    private suspend fun commitImport(pkg: ProjectPackage, incoming: Project, persist: suspend (Project) -> Unit) {
+        val local = getProjectById(incoming.id)
+        val selected = if (local == null) incoming else com.onlyfield.assetmanager.core.edit.ProjectEdits.retainTrashAttachments(incoming, local, loadTrash(incoming.id))
         require(selected.id == pkg.project.id)
         com.onlyfield.assetmanager.exchange.ReversibleFiles(attachmentsRoot).use { files ->
             attachmentsRoot?.let { AttachmentFiles.stage(pkg, it, selected, files) }
             currentCoroutineContext().ensureActive()
             // The commit outcome must survive cancellation at the Room return boundary.
             withContext(kotlinx.coroutines.NonCancellable) {
-                transaction { files.apply(); persist(); saveBase(pkg.project) }
+                transaction { files.apply(); persist(selected); saveBase(pkg.project) }
                 val cleanupErrors = files.commit()
                 if (cleanupErrors.isNotEmpty()) android.util.Log.w("PackageExchange", "Import committed; staging cleanup failed", cleanupErrors.first())
             }

@@ -119,13 +119,13 @@ object ModelValidator {
                     }
                 }
 
-                if (device.observation?.status == ObservationStatus.TO_VERIFY ||
-                    device.observation?.status == ObservationStatus.CONFLICT
+                if (device.observation.effectiveStatus() == ObservationStatus.TO_VERIFY ||
+                    device.observation.effectiveStatus() == ObservationStatus.CONFLICT
                 ) {
                     issues.add(
                         ValidationIssue(
                             code = "UNVERIFIED_DEVICE_OBSERVATION",
-                            message = i18n.text("text.9c2ca030d9f5", device.technicalName, device.observation.status.toDisplayString(i18n = i18n).lowercase()),
+                            message = i18n.text("text.9c2ca030d9f5", device.technicalName, device.observation.effectiveStatus().toDisplayString(i18n = i18n).lowercase(i18n.locale)),
                             severity = ValidationSeverity.DOCUMENTARY_WARNING,
                             targetEntityId = device.id
                         )

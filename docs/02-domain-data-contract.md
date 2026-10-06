@@ -1,5 +1,7 @@
 # Dominio e contratto `.ofam`
 
+AUD-19: schema Room v2 e formato `.ofam` v1 invariati. Il pacchetto scambiato esclude media recuperabili solo localmente e metadati del cestino; la working copy Windows conserva i payload dell'undo/cestino, protetti dalla stessa password. La base rappresenta il catalogo realmente inviato, con data di revisione invariata per il solo export. Import/sostituzione conservano i riferimenti delle foto del cestino locale.
+
 ## Modello
 
 Un progetto contiene sedi, piani, apparati e porte, rack, cavi e percorsi disegnati, passaggi interni, rete logica, alimentazione, media, campi extra, badge, modelli e cestino locale. Il contenimento associa un solo genitore a un apparato o rack; cavi e cicli non sono ammessi.
@@ -44,6 +46,10 @@ Android e Windows leggono il pacchetto da stream e verificano i limiti durante l
 
 ## Protezione e fusione
 
+Ripristino AUD-26: DEVICE/RACK/CREDENTIAL condividono le regole core. La voce deve appartenere al progetto, il suo ID deve corrispondere al JSON e l'ID dell'entità non deve essere già attivo nello stesso catalogo. Sito originale richiesto per DEVICE; per RACK restano richiesti sito originale registrato e piano associato, quando presenti. Le nuove voci rack registrano originalSiteId nel campo opzionale esistente, senza cambiare Room v2 o `.ofam` v1. Tipo non supportato genera errore prima di rimuovere il cestino. Android salva risultato e rimozione nella stessa transazione; Windows aggiorna il cestino dopo il calcolo riuscito e conserva il rollback di persistenza. Riferimenti secondari/ID delle porte: AUD-27.
+
+Decisione AUD-23 del 6 ottobre 2026: capacità preventiva Android protetta mantenuta prudenziale, senza ulteriore richiesta o persistenza della password. Il budget superiore comprende cifratura, compressione e metadati ZIP; può rifiutare contenuto ancora esportabile vicino a 256 MiB. Limiti e formato restano invariati. La verifica esatta al confine non è un requisito corrente; prova del margine con limite ridotto e pacchetto cifrato reale, nessun nuovo collaudo reale a 256 MiB.
+
 Un export protetto usa PBKDF2-HMAC-SHA256, AES-256-GCM e IV casuali; anche gli allegati sono cifrati. La verifica della password di progetto supporta gli hash legacy e li aggiorna al formato PBKDF2 dopo uno sblocco valido.
 
 La fusione a tre vie confronta gli elementi per ID contro la base dell'ultimo scambio. Modifiche concorrenti restano conflitti da scegliere; non esiste una fusione automatica silenziosa.
@@ -53,3 +59,5 @@ Riferimenti implementativi: `PackageSerializer`, `PasswordHasher`, `ProjectMerge
 ## Fonte
 
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
+
+AUD-17: Observation.effectiveStatus risolve null come TO_VERIFY senza creare un rilievo fittizio o modificare il dato persistito. ModelValidator segnala anche l'apparato senza rilievo con UNVERIFIED_DEVICE_OBSERVATION, sempre DOCUMENTARY_WARNING e non bloccante. Gli stati espliciti restano invariati. Nessuna modifica a schema Room, versione del pacchetto o serializzazione.

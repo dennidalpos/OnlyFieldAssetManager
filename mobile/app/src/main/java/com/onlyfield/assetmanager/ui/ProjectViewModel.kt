@@ -45,6 +45,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -96,6 +97,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private val _importState = MutableStateFlow<ImportState?>(null)
     val importState: StateFlow<ImportState?> = _importState.asStateFlow()
     private var importPassword: String? = null
+    private var importJob: kotlinx.coroutines.Job? = null
+    private var importRequest = 0L
 
     var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
@@ -111,6 +114,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private var session = 0L
     private var commandSession: Long? = null
     private var revision = 0L
+    private var undoSnapshot: Project? = null
+    private val mediaCleanup = mutableSetOf<String>()
 
     /** One command owns persistence; navigation invalidates only its UI publication. */
     private fun launchCommand(block: suspend CoroutineScope.() -> Unit): kotlinx.coroutines.Job {
@@ -120,12 +125,20 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             try {
                 commands.withLock {
                     commandSession = requestedSession
-                    try { block() } finally { commandSession = null; operationBusy = null }
+                    try {
+                        block()
+                        _project.value?.id?.let(mediaCleanup::add)
+                        for (id in mediaCleanup.toList()) {
+                            val recoverable = undoSnapshot?.takeIf { it.id == id }?.attachments.orEmpty() +
+                                listOfNotNull(pendingPhoto?.takeIf { it.first == id }?.second)
+                            repository.collectMedia(id, recoverable)
+                            mediaCleanup.remove(id)
+                        }
+                    } finally { commandSession = null; operationBusy = null }
                 }
             } catch (e: kotlinx.coroutines.CancellationException) { throw e }
             catch (e: Exception) { fail(i18n.text("text.9b6ca71eb272"), e) }
-            finally { pendingCommands-- }
-        }
+        }.also { job -> job.invokeOnCompletion { pendingCommands-- } }
     }
 
     /** Navigation retained across rotation. */
@@ -167,6 +180,9 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private fun setProject(p: Project?) {
         if (commandSession != null && commandSession != session) return
         revision++
+        undoSnapshot = null
+        _project.value?.id?.let(mediaCleanup::add)
+        p?.id?.let(mediaCleanup::add)
         _project.value = p
         _issues.value = p?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
     }
@@ -199,6 +215,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     fun closeProject() {
+        _project.value?.id?.let(mediaCleanup::add)
+        undoSnapshot = null
         session++
         revision++
         _project.value = null
@@ -206,6 +224,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         _trash.value = emptyList()
         backStack.clear()
         backStack.add(Screen.Projects)
+        launchCommand { }
     }
 
     /** Wizard state retained across rotation. */
@@ -288,6 +307,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     private fun snapshotUndo(snapshot: Project): () -> Unit {
+        undoSnapshot = snapshot
         val expectedSession = session
         val expectedRevision = revision
         return { restoreSnapshot(snapshot, expectedSession, expectedRevision) }
@@ -341,7 +361,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val projectId = _project.value?.id ?: return
         launchCommand {
             try {
-                repository.restoreFromTrash(projectId, trashId, i18n = i18n)
+                check(repository.restoreFromTrash(projectId, trashId, i18n = i18n)) { i18n.text("trash.invalidEntry") }
                 reload(projectId)
                 notify(i18n.text("text.5d47acb0a3de"))
             } catch (e: Exception) {
@@ -354,7 +374,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun deleteFromTrash(trashId: String) {
         launchCommand {
             repository.deleteTrashItemPermanently(trashId)
-            refreshTrash()
+            _project.value?.id?.let { reload(it) }
             notify(i18n.text("text.af6b7821ed8a"))
         }
     }
@@ -363,7 +383,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val projectId = _project.value?.id ?: return
         launchCommand {
             repository.emptyTrash(projectId)
-            refreshTrash()
+            reload(projectId)
             notify(i18n.text("text.9259b5bf717b"))
         }
     }
@@ -400,15 +420,21 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun changePassword(current: String, newPassword: String, onResult: (String?) -> Unit) {
         val p = _project.value ?: return
         launchCommand {
-            val ok = if (newPassword.isEmpty()) repository.removeProjectPassword(p.id, current)
-            else repository.setProjectPassword(p.id, current.ifEmpty { null }, newPassword)
-            if (!ok) {
-                onResult(i18n.text("text.0ab6e626d98f"))
-                return@launchCommand
+            val result = try {
+                val ok = if (newPassword.isEmpty()) repository.removeProjectPassword(p.id, current)
+                else repository.setProjectPassword(p.id, current.ifEmpty { null }, newPassword)
+                if (ok) {
+                    setProject(repository.getProjectById(p.id))
+                    null
+                } else i18n.text("text.0ab6e626d98f")
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) {
+                fail(i18n.text("text.9b6ca71eb272"), e)
+                i18n.text("text.9b6ca71eb272") + (e.message?.let { " ($it)" } ?: "")
             }
-            setProject(repository.getProjectById(p.id))
-            onResult(null)
-            notify(if (newPassword.isEmpty()) i18n.text("text.666e96d6fcf0") else i18n.text("text.85a2bd406195"))
+            if (commandSession != session || _project.value?.id != p.id) return@launchCommand
+            onResult(result)
+            if (result == null) notify(if (newPassword.isEmpty()) i18n.text("text.666e96d6fcf0") else i18n.text("text.85a2bd406195"))
         }
     }
 
@@ -442,13 +468,19 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun startImport(resolver: ContentResolver, uri: Uri, password: String? = null) {
         cancelImport()
-        launchCommand {
+        val request = importRequest
+        val messages = i18n
+        importJob = launchCommand {
             operationBusy = i18n.text("text.e73a6312c02c")
+            var pending: PackageImportEvaluation? = null
             try {
                 val evaluation = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val stream = resolver.openInputStream(uri) ?: error(i18n.text("text.fb0c10a218fc"))
-                    repository.evaluateImportPackage(stream, password, i18n = i18n)
+                    val stream = resolver.openInputStream(uri) ?: error(messages.text("text.fb0c10a218fc"))
+                    stream.use { repository.evaluateImportPackage(it, password, i18n = messages) }
+                        .also { pending = it }
                 }
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                if (request != importRequest) return@launchCommand
                 val codes = evaluation.importResult.validationResult.issues.map { it.code }
                 when {
                     "PASSWORD_REQUIRED" in codes || "INVALID_PACKAGE_PASSWORD" in codes ->
@@ -456,6 +488,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                     evaluation.importResult.pkg != null && evaluation.comparison != null -> {
                         importPassword = password
                         _importState.value = ImportState.Review(evaluation)
+                        pending = null
                     }
                     else -> {
                         _importState.value = null
@@ -465,9 +498,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
+                if (request != importRequest) return@launchCommand
                 _importState.value = null
                 fail(i18n.text("text.a503d881af39"), e)
             } finally {
+                // The worker owns the package until Review accepts it, including cancelled returns.
+                pending?.importResult?.pkg?.close()
                 operationBusy = null
             }
         }
@@ -477,21 +513,27 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
         val password = importPassword
+        val request = importRequest
         _importState.value = null
         importPassword = null
-        launchCommand {
+        importJob = launchCommand {
             try {
                 repository.importProjectPackage(pkg, password)
-                if (commandSession == session) openProject(pkg.project.id)
-                notify(i18n.text("text.66f7b7ff42d4", pkg.project.name))
+                if (request == importRequest && commandSession == session) {
+                    openProject(pkg.project.id)
+                    notify(i18n.text("text.66f7b7ff42d4", pkg.project.name))
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.7b94ff9ddb10"), e)
             }
-        }.invokeOnCompletion { pkg.close() }
+        }.also { job -> job.invokeOnCompletion { pkg.close() } }
     }
 
     fun cancelImport() {
+        importRequest++
+        importJob?.cancel()
+        importJob = null
         when (val state = _importState.value) {
             is ImportState.Review -> state.evaluation.importResult.pkg?.close()
             is ImportState.Merging -> state.pkg.close()
@@ -510,21 +552,28 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun startMerge() {
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
+        val request = importRequest
+        var transferred = false
+        _importState.value = null
         importPassword = null
-        launchCommand {
+        importJob = launchCommand {
             try {
                 val local = repository.getProjectById(pkg.project.id) ?: error(i18n.text("text.03d3a4092bb0"))
                 val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
                     ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project, i18n = i18n)
                 }
-                if (result.conflicts.isEmpty()) applyMerge(ImportState.Merging(pkg, result))
-                else _importState.value = ImportState.Merging(pkg, result)
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                if (request != importRequest) return@launchCommand
+                if (result.conflicts.isEmpty()) saveMerge(ImportState.Merging(pkg, result), request)
+                else {
+                    _importState.value = ImportState.Merging(pkg, result)
+                    transferred = true
+                }
             } catch (e: Exception) {
-                cancelImport()
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.932f8500aa16"), e)
+                if (request == importRequest) fail(i18n.text("text.932f8500aa16"), e)
             }
-        }
+        }.also { job -> job.invokeOnCompletion { if (!transferred) pkg.close() } }
     }
 
     fun chooseMergeSide(side: MergeSide) {
@@ -535,18 +584,27 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     private fun applyMerge(merging: ImportState.Merging) {
+        val request = importRequest
         _importState.value = null
-        launchCommand {
+        importJob = launchCommand {
             try {
-                val merged = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { merging.result.resolve(merging.choices, i18n = i18n) }
-                repository.importMergedPackage(merging.pkg, merged)
-                if (commandSession == session) openProject(merging.pkg.project.id)
-                notify(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size))
+                saveMerge(merging, request)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.932f8500aa16"), e)
             }
-        }.invokeOnCompletion { merging.pkg.close() }
+        }.also { job -> job.invokeOnCompletion { merging.pkg.close() } }
+    }
+
+    private suspend fun saveMerge(merging: ImportState.Merging, request: Long) {
+        val merged = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { merging.result.resolve(merging.choices, i18n = i18n) }
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        if (request != importRequest) return
+        repository.importMergedPackage(merging.pkg, merged)
+        if (request == importRequest && commandSession == session) {
+            openProject(merging.pkg.project.id)
+            notify(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size))
+        }
     }
 
 
