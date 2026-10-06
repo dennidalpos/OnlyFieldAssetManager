@@ -21,8 +21,8 @@ internal class ProjectStore(private val db: AppDatabase) {
     private val projectDao = db.projectDao()
     private val inventoryDao = db.inventoryDao()
 
-    suspend fun load(projectId: String): Project? {
-        val projEntity = projectDao.getProjectById(projectId) ?: return null
+    suspend fun load(projectId: String): Project? = db.withTransaction {
+        val projEntity = projectDao.getProjectById(projectId) ?: return@withTransaction null
         val siteEntities = inventoryDao.getSitesByProjectId(projectId)
         val siteIds = siteEntities.map { it.id }
 
@@ -51,7 +51,7 @@ internal class ProjectStore(private val db: AppDatabase) {
         val poeMappingEntities = inventoryDao.getPoeMappingsByProjectId(projectId)
         val documentBadgeEntities = inventoryDao.getDocumentBadgesByProjectId(projectId)
 
-        return toProject(
+        toProject(
             entity = projEntity,
             siteEntities = siteEntities,
             areaEntities = areaEntities,

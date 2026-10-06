@@ -44,6 +44,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import java.io.OutputStream
 
@@ -100,8 +104,29 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     /** "Other modules" opened: unused optional modules are listed too (session only). */
     var showSecondary by mutableStateOf(false)
 
-    var busy by mutableStateOf<String?>(null)
-        private set
+    private var operationBusy by mutableStateOf<String?>(null)
+    private var pendingCommands by mutableStateOf(0)
+    val busy: String? get() = operationBusy ?: if (pendingCommands > 0) i18n.text("text.e02d15067dea") else null
+    private val commands = Mutex()
+    private var session = 0L
+    private var commandSession: Long? = null
+    private var revision = 0L
+
+    /** One command owns persistence; navigation invalidates only its UI publication. */
+    private fun launchCommand(block: suspend CoroutineScope.() -> Unit): kotlinx.coroutines.Job {
+        val requestedSession = session
+        pendingCommands++
+        return viewModelScope.launch {
+            try {
+                commands.withLock {
+                    commandSession = requestedSession
+                    try { block() } finally { commandSession = null; operationBusy = null }
+                }
+            } catch (e: kotlinx.coroutines.CancellationException) { throw e }
+            catch (e: Exception) { fail(i18n.text("text.9b6ca71eb272"), e) }
+            finally { pendingCommands-- }
+        }
+    }
 
     /** Navigation retained across rotation. */
     val backStack = mutableStateListOf<Screen>(Screen.Projects)
@@ -140,35 +165,44 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     private fun setProject(p: Project?) {
+        if (commandSession != null && commandSession != session) return
+        revision++
         _project.value = p
         _issues.value = p?.let { ModelValidator.validateProject(it, i18n = i18n).issues } ?: emptyList()
     }
 
 
     fun openProject(projectId: String) {
-        viewModelScope.launch {
+        session++
+        launchCommand {
             val p = repository.getProjectById(projectId)
+            if (commandSession != session) return@launchCommand
             if (p == null) {
                 fail(i18n.text("text.05065b58f085"))
-                return@launch
+                return@launchCommand
             }
             selectedSiteId = null
             selectedAreaId = null
             setProject(p)
             refreshTrash()
+            if (commandSession != session) return@launchCommand
             backStack.clear()
             backStack.addAll(listOf(Screen.Projects, Screen.Home))
         }
     }
 
     fun openProtectedProject(projectId: String, password: String, onWrongPassword: () -> Unit) {
-        viewModelScope.launch {
-            if (repository.verifyProjectPassword(projectId, password)) openProject(projectId) else onWrongPassword()
+        launchCommand {
+            val verified = repository.verifyProjectPassword(projectId, password)
+            if (commandSession == session) { if (verified) openProject(projectId) else onWrongPassword() }
         }
     }
 
     fun closeProject() {
-        setProject(null)
+        session++
+        revision++
+        _project.value = null
+        _issues.value = emptyList()
         _trash.value = emptyList()
         backStack.clear()
         backStack.add(Screen.Projects)
@@ -185,24 +219,25 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun finishNewSite() {
         val wizard = newSite
         if (!wizard.canProceed) return
-        viewModelScope.launch {
-            busy = i18n.text("text.e02d15067dea")
+        launchCommand {
+            operationBusy = i18n.text("text.e02d15067dea")
             try {
                 val p = wizard.buildProject()
                 repository.saveProject(p)
                 wizard.password?.let { repository.setProjectPassword(p.id, currentPassword = null, newPassword = it) }
-                openProject(p.id)
+                if (commandSession == session) openProject(p.id)
                 notify(i18n.text("text.b0656bad125d", p.name))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.cae20309d41d"), e)
             } finally {
-                busy = null
+                operationBusy = null
             }
         }
     }
 
     fun renameProject(projectId: String, newName: String) {
-        viewModelScope.launch {
+        launchCommand {
             repository.renameProject(projectId, newName.trim())
             if (_project.value?.id == projectId) setProject(repository.getProjectById(projectId))
             notify(i18n.text("text.7aec8adfe336"))
@@ -210,12 +245,13 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     fun deleteProject(projectId: String) {
-        viewModelScope.launch {
+        launchCommand {
             try {
                 repository.deleteProject(projectId)
                 if (_project.value?.id == projectId) closeProject()
                 notify(i18n.text("text.070c3a74ee96"))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.5d8f97c003c8"), e)
             }
         }
@@ -223,47 +259,56 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
 
     /** Applies and saves [transform], then offers undo. */
-    fun editMap(updated: Project, message: String) = edit(message) { current ->
-        require(current.id == updated.id)
-        updated
+    fun editMap(updated: Project, message: String) {
+        val expected = _project.value ?: return
+        edit(message) { current ->
+            require(current.id == updated.id)
+            require(current == expected) { "The map changed while this edit was pending" }
+            updated
+        }
     }
 
     fun edit(message: String, transform: (Project) -> Project) {
-        val before = _project.value ?: return
-        val after = try {
-            transform(before)
-        } catch (e: Exception) {
-            fail(i18n.text("text.8921cbfc9370"), e)
-            return
-        }
-        if (after == before) return
-        val saved = after.copy(updatedEpochMs = System.currentTimeMillis())
-        setProject(saved)
-        viewModelScope.launch {
+        val projectId = _project.value?.id ?: return
+        launchCommand {
             try {
+                val before = repository.getProjectById(projectId) ?: return@launchCommand
+                val after = transform(before)
+                require(after.id == projectId)
+                if (after == before) return@launchCommand
+                val saved = after.copy(updatedEpochMs = System.currentTimeMillis())
                 repository.saveProject(saved)
-                notify(message, undo = { restoreSnapshot(before) })
+                setProject(saved)
+                if (commandSession == session) notify(message, undo = snapshotUndo(before))
             } catch (e: Exception) {
-                setProject(before)
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.9b6ca71eb272"), e)
             }
         }
     }
 
-    private fun restoreSnapshot(snapshot: Project) {
-        viewModelScope.launch {
+    private fun snapshotUndo(snapshot: Project): () -> Unit {
+        val expectedSession = session
+        val expectedRevision = revision
+        return { restoreSnapshot(snapshot, expectedSession, expectedRevision) }
+    }
+
+    private fun restoreSnapshot(snapshot: Project, expectedSession: Long, expectedRevision: Long) {
+        launchCommand {
             try {
+                if (session != expectedSession || revision != expectedRevision || _project.value?.id != snapshot.id) return@launchCommand
                 repository.saveProject(snapshot)
                 setProject(snapshot)
                 notify(i18n.text("text.1e7b4fb4b88a"))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.80eba573acd4"), e)
             }
         }
     }
 
-    private suspend fun reload() {
-        val id = _project.value?.id ?: return
+    private suspend fun reload(id: String) {
+        if (commandSession != session || _project.value?.id != id) return
         setProject(repository.getProjectById(id))
         refreshTrash()
     }
@@ -271,17 +316,22 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     private suspend fun refreshTrash() {
         val id = _project.value?.id ?: return
-        _trash.value = repository.getTrashItems(id)
+        val items = repository.getTrashItems(id)
+        if (commandSession == session && _project.value?.id == id) _trash.value = items
     }
 
     fun moveToTrash(itemType: String, itemId: String, name: String) {
         val projectId = _project.value?.id ?: return
-        viewModelScope.launch {
+        val requestedSession = session
+        launchCommand {
             try {
                 val item = repository.moveToTrash(projectId, itemType, itemId, i18n = i18n)
-                reload()
-                if (item != null) notify(i18n.text("text.4e2629d50c9b", name), undo = { restoreFromTrash(item.id) })
+                reload(projectId)
+                if (item != null && commandSession == session) notify(i18n.text("text.4e2629d50c9b", name), undo = {
+                    if (session == requestedSession && _project.value?.id == projectId) restoreFromTrash(item.id)
+                })
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.ce9e7fe8c973"), e)
             }
         }
@@ -289,19 +339,20 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun restoreFromTrash(trashId: String) {
         val projectId = _project.value?.id ?: return
-        viewModelScope.launch {
+        launchCommand {
             try {
                 repository.restoreFromTrash(projectId, trashId, i18n = i18n)
-                reload()
+                reload(projectId)
                 notify(i18n.text("text.5d47acb0a3de"))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.23d93971ed41"), e)
             }
         }
     }
 
     fun deleteFromTrash(trashId: String) {
-        viewModelScope.launch {
+        launchCommand {
             repository.deleteTrashItemPermanently(trashId)
             refreshTrash()
             notify(i18n.text("text.af6b7821ed8a"))
@@ -310,7 +361,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun emptyTrash() {
         val projectId = _project.value?.id ?: return
-        viewModelScope.launch {
+        launchCommand {
             repository.emptyTrash(projectId)
             refreshTrash()
             notify(i18n.text("text.9259b5bf717b"))
@@ -319,12 +370,13 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun replaceDevice(oldDeviceId: String, newName: String, category: DeviceCategory) {
         val projectId = _project.value?.id ?: return
-        viewModelScope.launch {
+        launchCommand {
             try {
                 val (_, newDevice) = repository.replaceDevice(projectId, oldDeviceId, newName, category, i18n = i18n)
-                reload()
+                reload(projectId)
                 notify(i18n.text("text.f033a5d0dac5", newDevice.technicalName))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.a86610be9d16"), e)
             }
         }
@@ -332,12 +384,13 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun mergeDevices(survivorId: String, duplicateId: String, choices: MergeDataChoices) {
         val projectId = _project.value?.id ?: return
-        viewModelScope.launch {
+        launchCommand {
             try {
                 val merged = repository.mergeDevices(projectId, survivorId, duplicateId, choices, i18n = i18n)
-                reload()
+                reload(projectId)
                 if (merged != null) notify(i18n.text("text.fc7aa94c3fb8", merged.technicalName)) else fail(i18n.text("text.03f600b15086"))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.932f8500aa16"), e)
             }
         }
@@ -346,12 +399,12 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun changePassword(current: String, newPassword: String, onResult: (String?) -> Unit) {
         val p = _project.value ?: return
-        viewModelScope.launch {
+        launchCommand {
             val ok = if (newPassword.isEmpty()) repository.removeProjectPassword(p.id, current)
             else repository.setProjectPassword(p.id, current.ifEmpty { null }, newPassword)
             if (!ok) {
                 onResult(i18n.text("text.0ab6e626d98f"))
-                return@launch
+                return@launchCommand
             }
             setProject(repository.getProjectById(p.id))
             onResult(null)
@@ -362,38 +415,39 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     fun exportPackage(resolver: ContentResolver, uri: Uri, password: String?) {
         val p = _project.value ?: return
-        viewModelScope.launch {
-            busy = i18n.text("text.263e01561fa7")
+        launchCommand {
+            operationBusy = i18n.text("text.263e01561fa7")
             try {
-                if (p.isPasswordProtected && (password == null || !repository.verifyProjectPassword(p.id, password))) {
+                val current = repository.getProjectById(p.id) ?: return@launchCommand
+                if (current.isPasswordProtected && (password == null || !repository.verifyProjectPassword(p.id, password))) {
                     fail(i18n.text("text.ec4889ca63e4"))
-                    return@launch
+                    return@launchCommand
                 }
                 kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     resolver.openOutputStream(uri)?.use { output ->
                         check(repository.exportProjectPackageToStream(p.id, output, password, i18n = i18n)) { i18n.text("text.8ad65d90f29b") }
                     } ?: error(i18n.text("text.f9b9a0075030"))
                 }
-                val missing = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.missingAttachments(p) }
+                val missing = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { repository.missingAttachments(current) }
                 if (missing.isEmpty()) notify(if (password != null) i18n.text("text.b73d46f629a2") else i18n.text("text.5814b1d61f28"))
                 else fail(i18n.text("text.56a129cb0f6c", missing.size))
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.ad15389bdede"), e)
             } finally {
-                busy = null
+                operationBusy = null
             }
         }
     }
 
     fun startImport(resolver: ContentResolver, uri: Uri, password: String? = null) {
         cancelImport()
-        viewModelScope.launch {
-            busy = i18n.text("text.e73a6312c02c")
+        launchCommand {
+            operationBusy = i18n.text("text.e73a6312c02c")
             try {
                 val evaluation = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     val stream = resolver.openInputStream(uri) ?: error(i18n.text("text.fb0c10a218fc"))
-                    repository.evaluateImportPackage(stream, password, _project.value?.id, i18n = i18n)
+                    repository.evaluateImportPackage(stream, password, i18n = i18n)
                 }
                 val codes = evaluation.importResult.validationResult.issues.map { it.code }
                 when {
@@ -414,7 +468,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 _importState.value = null
                 fail(i18n.text("text.a503d881af39"), e)
             } finally {
-                busy = null
+                operationBusy = null
             }
         }
     }
@@ -425,10 +479,10 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val password = importPassword
         _importState.value = null
         importPassword = null
-        viewModelScope.launch {
+        launchCommand {
             try {
                 repository.importProjectPackage(pkg, password)
-                openProject(pkg.project.id)
+                if (commandSession == session) openProject(pkg.project.id)
                 notify(i18n.text("text.66f7b7ff42d4", pkg.project.name))
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -457,7 +511,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
         val review = _importState.value as? ImportState.Review ?: return
         val pkg = review.evaluation.importResult.pkg ?: return
         importPassword = null
-        viewModelScope.launch {
+        launchCommand {
             try {
                 val local = repository.getProjectById(pkg.project.id) ?: error(i18n.text("text.03d3a4092bb0"))
                 val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
@@ -482,11 +536,11 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     private fun applyMerge(merging: ImportState.Merging) {
         _importState.value = null
-        viewModelScope.launch {
+        launchCommand {
             try {
                 val merged = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) { merging.result.resolve(merging.choices, i18n = i18n) }
                 repository.importMergedPackage(merging.pkg, merged)
-                openProject(merging.pkg.project.id)
+                if (commandSession == session) openProject(merging.pkg.project.id)
                 notify(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size))
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
@@ -498,8 +552,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     private fun writeDocument(resolver: ContentResolver, uri: Uri, label: String, block: suspend (String, OutputStream) -> Boolean) {
         val p = _project.value ?: return
-        viewModelScope.launch {
-            busy = i18n.text("text.7e484517449f", label)
+        launchCommand {
+            operationBusy = i18n.text("text.7e484517449f", label)
             try {
                 val ok = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     resolver.openOutputStream(uri)?.use { block(p.id, it) } ?: false
@@ -509,7 +563,7 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.41b538bf4cba", label), e)
             } finally {
-                busy = null
+                operationBusy = null
             }
         }
     }
@@ -528,8 +582,8 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     /** QR labels for devices, racks and labelled cables. */
     fun exportLabels(resolver: ContentResolver, uri: Uri) = i18n.let { i18n ->
-        writeDocument(resolver, uri, i18n.text("text.601ccac1ac2a")) { _, out ->
-            _project.value?.let { LabelSheetPdf.write(LabelSheetPdf.labelsFor(it, i18n = i18n), out); true } ?: false
+        writeDocument(resolver, uri, i18n.text("text.601ccac1ac2a")) { id, out ->
+            repository.getProjectById(id)?.let { LabelSheetPdf.write(LabelSheetPdf.labelsFor(it, i18n = i18n), out); true } ?: false
         }
     }
 
@@ -540,13 +594,13 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     fun print(context: Context, filter: ExportFilterConfig, selection: ReportSelection) {
         val p = _project.value ?: return
         val i18n = this.i18n
-        viewModelScope.launch {
+        launchCommand {
             val ok = try {
                 repository.printProjectDocument(context, p.id, filter, selection, i18n = i18n)
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.103f48541a86"), e)
-                return@launch
+                return@launchCommand
             }
             if (!ok) fail(i18n.text("text.103f48541a86"))
         }
@@ -563,27 +617,37 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     private fun saveMediaEdit(context: Context, sources: List<Uri>, type: AttachmentTargetType?, targetId: String?, classification: AttachmentClassification,
-        transform: (Project) -> Project, onSaved: (List<Attachment>) -> Unit) {
+        transform: (Project) -> Project, mediaOnly: Boolean = true, title: String? = null, onSaved: (List<Attachment>) -> Unit) {
         if (busy != null) return
         val initial = _project.value ?: return
-        viewModelScope.launch {
-            busy = i18n.text("text.c4f57f0165aa")
+        launchCommand {
+            operationBusy = i18n.text("text.c4f57f0165aa")
             val created = mutableListOf<File>()
             var committed = false
             try {
                 val attachments = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     sources.map { uri ->
                         val resolver = context.contentResolver
-                        val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: "foto.jpg"
-                        val mime = resolver.getType(uri) ?: "image/jpeg"
-                        require(mime.startsWith("image/") || mime == "application/pdf") { i18n.text("text.2f0112e6d87f") }
-                        val att = Attachment(name = name.substringBeforeLast('.'), originalFileName = name, relativePath = "", mimeType = mime,
-                            fileType = if (mime == "application/pdf") AttachmentType.PDF else AttachmentType.IMAGE, classification = classification, targetType = type, targetId = targetId)
+                        val name = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null }
+                            ?: if (mediaOnly) "foto.jpg" else "allegato"
+                        val mime = resolver.getType(uri) ?: if (mediaOnly) "image/jpeg" else "application/octet-stream"
+                        require(!mediaOnly || mime.startsWith("image/") || mime == "application/pdf") { i18n.text("text.2f0112e6d87f") }
+                        val att = Attachment(name = title?.trim()?.takeIf { it.isNotBlank() } ?: name.substringBeforeLast('.'), originalFileName = name, relativePath = "", mimeType = mime,
+                            fileType = when {
+                                mime == "application/pdf" -> AttachmentType.PDF
+                                mime.startsWith("image/") -> AttachmentType.IMAGE
+                                mime.startsWith("text/") || mime.contains("document") || mime.contains("sheet") -> AttachmentType.DOCUMENT
+                                else -> AttachmentType.OTHER
+                            }, classification = classification, targetType = type, targetId = targetId)
                         val root = repository.attachmentsRoot() ?: error(i18n.text("text.333abdb13e5a"))
                         val file = AttachmentFiles.localFile(root, initial.id, att)
                         file.parentFile?.mkdirs(); created += file
-                        resolver.openInputStream(uri)?.use { input -> file.outputStream().use { input.copyTo(it) } } ?: error(i18n.text("text.2af75627a512"))
-                        val pages = if (att.fileType == AttachmentType.PDF) PlanMedia.pageCount(file, i18n = i18n) else { PlanMedia.image(file, false, 0, 256, i18n = i18n); 1 }
+                        resolver.openInputStream(uri)?.use { input -> file.outputStream().use { AttachmentFiles.copyBounded(input, it, i18n) } } ?: error(i18n.text("text.2af75627a512"))
+                        val pages = when (att.fileType) {
+                            AttachmentType.PDF -> PlanMedia.pageCount(file, i18n = i18n)
+                            AttachmentType.IMAGE -> { PlanMedia.image(file, false, 0, 256, i18n = i18n); 1 }
+                            else -> 1
+                        }
                         require(pages > 0) { i18n.text("text.4acdb5acf0b0") }
                         att.copy(relativePath = AttachmentFiles.entryName(att), pageCount = pages)
                     }
@@ -591,65 +655,35 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 val before = _project.value?.takeIf { it.id == initial.id } ?: error(i18n.text("text.2af4c267c11f"))
                 val edited = transform(before)
                 val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
-                repository.saveProject(saved)
-                committed = true
-                setProject(saved)
-                notify(i18n.text("text.b1b5983f51f1"), undo = { restoreSnapshot(before) })
-                onSaved(attachments)
+                repository.saveMediaProject(saved, i18n) { committed = true }
+                if (commandSession == session && _project.value?.id == initial.id) {
+                    setProject(saved)
+                    notify(i18n.text("text.b1b5983f51f1"), undo = snapshotUndo(before))
+                    onSaved(attachments)
+                }
             } catch (e: Exception) {
-                if (!committed) created.forEach { it.delete() }
+                if (!committed) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
+                    created.forEach { java.nio.file.Files.deleteIfExists(it.toPath()) }
+                }
                 if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.9b6ca71eb272"), e)
-            } finally { busy = null }
+            } finally { operationBusy = null }
         }
     }
 
 
     /** Copies a picked file into app storage. */
     fun addAttachment(context: Context, uri: Uri, name: String, classification: AttachmentClassification) {
-        val p = _project.value ?: return
-        viewModelScope.launch {
-            busy = i18n.text("text.83c96a43520b")
-            try {
-                val resolver = context.contentResolver
-                val original = resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c ->
-                    if (c.moveToFirst()) c.getString(0) else null
-                } ?: "allegato"
-                val mime = resolver.getType(uri) ?: "application/octet-stream"
-                val attachment = Attachment(
-                    name = name.trim().ifBlank { original.substringBeforeLast('.') },
-                    originalFileName = original,
-                    fileType = when {
-                        mime.startsWith("image/") -> AttachmentType.IMAGE
-                        mime == "application/pdf" -> AttachmentType.PDF
-                        mime.startsWith("text/") || mime.contains("document") || mime.contains("sheet") -> AttachmentType.DOCUMENT
-                        else -> AttachmentType.OTHER
-                    },
-                    mimeType = mime,
-                    relativePath = "",
-                    classification = classification
-                )
-                val root = repository.attachmentsRoot() ?: error(i18n.text("text.01d086263d55"))
-                val target = AttachmentFiles.localFile(root, p.id, attachment)
-                target.parentFile?.mkdirs()
-                resolver.openInputStream(uri)?.use { input -> target.outputStream().use { input.copyTo(it) } }
-                    ?: error(i18n.text("text.fb0c10a218fc"))
-                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment), pageCount = if (attachment.fileType == AttachmentType.PDF) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PlanMedia.pageCount(target, i18n = i18n) } else 1)
-                edit(i18n.text("text.5d5df1229dea", saved.name)) { ProjectEdits.addAttachment(it, saved) }
-            } catch (e: Exception) {
-                fail(i18n.text("text.314974424a12"), e)
-            } finally {
-                busy = null
-            }
-        }
+        saveMediaEdit(context, listOf(uri), null, null, classification, { it }, mediaOnly = false, title = name, onSaved = {})
     }
 
 
     /** Pending camera attachment and target file. */
-    private var pendingPhoto: Pair<Attachment, File>? = null
+    private var pendingPhoto: Triple<String, Attachment, File>? = null
 
     /** Creates a photo target for [type]/[targetId]. */
     fun preparePhoto(type: AttachmentTargetType, targetId: String?): File? {
+        if (busy != null || pendingPhoto != null) return null
         val p = _project.value ?: return null
         val root = repository.attachmentsRoot() ?: return null
         val stamp = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.ROOT).format(java.util.Date())
@@ -663,21 +697,39 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
             targetId = targetId,
         )
         val file = AttachmentFiles.localFile(root, p.id, attachment).apply { parentFile?.mkdirs() }
-        pendingPhoto = attachment to file
+        pendingPhoto = Triple(p.id, attachment, file)
         return file
     }
 
-    /** True when the shot was kept (the camera may then open again for the same object). */
-    fun onPhotoResult(saved: Boolean): Boolean {
-        val (attachment, file) = pendingPhoto ?: return false
+    /** Continues the series only after validation and persistence succeed. */
+    fun onPhotoResult(saved: Boolean, onSaved: (Boolean) -> Unit) {
+        val (projectId, attachment, file) = pendingPhoto ?: run { onSaved(false); return }
         pendingPhoto = null
-        if (!saved || file.length() == 0L) {
-            file.parentFile?.deleteRecursively()
-            return false
+        val available = busy == null
+        if (available) operationBusy = i18n.text("text.c4f57f0165aa")
+        launchCommand {
+            var committed = false
+            try {
+                if (!available || !saved || file.length() == 0L) return@launchCommand
+                val before = _project.value?.takeIf { it.id == projectId } ?: return@launchCommand
+                val added = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
+                val updated = ProjectEdits.addAttachment(before, added)
+                repository.saveMediaProject(updated, i18n) { committed = true }
+                if (commandSession == session && _project.value?.id == projectId) {
+                    setProject(updated)
+                    notify(i18n.text("text.ef0af7808f11"), undo = snapshotUndo(before))
+                }
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                fail(i18n.text("text.9b6ca71eb272"), e)
+            } finally {
+                if (!committed) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
+                    java.nio.file.Files.deleteIfExists(file.toPath())
+                }
+                if (available) operationBusy = null
+                onSaved(committed && kotlinx.coroutines.currentCoroutineContext().isActive && commandSession == session && _project.value?.id == projectId)
+            }
         }
-        val added = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
-        edit(i18n.text("text.ef0af7808f11")) { ProjectEdits.addAttachment(it, added) }
-        return true
     }
 
     private fun formatPhotoTitle() = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.ITALY).format(java.util.Date())
@@ -705,31 +757,48 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     /** Downloads and stores the requested 3x3 tile map. */
     fun downloadMap(request: MapSnapshotRequest, name: String) {
+        if (busy != null) return
         val p = _project.value ?: return
-        viewModelScope.launch {
-            busy = i18n.text("text.4618bc8c688e")
+        launchCommand {
+            operationBusy = i18n.text("text.4618bc8c688e")
+            var target: File? = null
+            var committed = false
             try {
-                val snapshot = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { CartographicMapManager.acquireMapSnapshot(request, i18n = i18n) }
-                val attachment = Attachment(
-                    name = name.trim().ifBlank { i18n.text("text.67c7c6400b1f", request.centerLatitude, request.centerLongitude) },
-                    originalFileName = "mappa_z${request.zoomLevel}.png",
-                    fileType = AttachmentType.IMAGE,
-                    mimeType = snapshot.mimeType,
-                    relativePath = "",
-                    attributionText = snapshot.attributionText,
-                )
-                val root = repository.attachmentsRoot() ?: error(i18n.text("text.01d086263d55"))
-                AttachmentFiles.localFile(root, p.id, attachment).apply { parentFile?.mkdirs() }.writeBytes(snapshot.imageBytes)
-                val saved = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
-                edit(i18n.text("text.9c32fd33c6a0", saved.name)) { ProjectEdits.addAttachment(it, saved) }
+                val attachment = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    val snapshot = CartographicMapManager.acquireMapSnapshot(request, i18n = i18n)
+                    AttachmentFiles.validateSize(snapshot.imageBytes.size.toLong(), i18n)
+                    val attachment = Attachment(
+                        name = name.trim().ifBlank { i18n.text("text.67c7c6400b1f", request.centerLatitude, request.centerLongitude) },
+                        originalFileName = "mappa_z${request.zoomLevel}.png", fileType = AttachmentType.IMAGE,
+                        mimeType = snapshot.mimeType, relativePath = "", attributionText = snapshot.attributionText,
+                    )
+                    val root = repository.attachmentsRoot() ?: error(i18n.text("text.01d086263d55"))
+                    val file = AttachmentFiles.localFile(root, p.id, attachment)
+                    target = file
+                    java.nio.file.Files.createDirectories(checkNotNull(file.parentFile).toPath())
+                    file.writeBytes(snapshot.imageBytes)
+                    attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
+                }
+                val before = _project.value?.takeIf { it.id == p.id } ?: error(i18n.text("text.2af4c267c11f"))
+                val updated = ProjectEdits.addAttachment(before, attachment)
+                repository.saveMediaProject(updated, i18n) { committed = true }
+                if (commandSession == session && _project.value?.id == p.id) {
+                    setProject(updated)
+                    notify(i18n.text("text.9c32fd33c6a0", attachment.name), undo = snapshotUndo(before))
+                }
             } catch (e: OfflineMapException) {
                 fail(e.message ?: i18n.text("map.network.android"))
             } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
                 fail(i18n.text("text.d96c472cc255"), e)
             } finally {
-                busy = null
+                if (!committed) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
+                    target?.let { java.nio.file.Files.deleteIfExists(it.toPath()) }
+                }
+                operationBusy = null
             }
         }
     }
+
 
 }

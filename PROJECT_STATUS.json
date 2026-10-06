@@ -1,38 +1,193 @@
 {
   "projectName": "OnlyFieldAssetManager",
-  "lastUpdated": "2026-10-05",
-  "currentPhase": "Checkpoint per cambio sessione su main; AUD-10/AUD-11 e RES-20/RES-22 completati, quattro residui tracciati.",
-  "activeTask": "RES-24",
-  "nextSession": "Riprendere dal checkpoint su main/origin/main nel checkout D:\\GITHUB\\OnlyFieldAssetManager: build/reports e phone-backup sono locali e ignorati, non inclusi nel commit. Prima RES-24: pulizia telefono/emulatore conclusa; pulizia locale respinta due volte con blocked by policy. Rimuovere soltanto build/import-benchmark, build/native-window-app, build/native-window-exports e i sei helper Python elencati in roadmap.md; conservare report e backup. Chiudere emulator-5554 manualmente o dalla sessione originaria per liberare i due log in build/task-verification. Poi RES-19 (matrice Android) e RES-23 (comandi/focus ed errore stampa). Solo prove autonome autorizzate: foto/scanner/USB/TalkBack fisici RES-13 restano non eseguiti. AUD-10/AUD-11 e RES-20/RES-22 chiusi: 345 test JVM, 14 test nativi per dispositivo, sette fixture telefono/Windows e hash della persistenza superati. APK sul moto g86 e portable aggiornati. Commit e push su main richiesti per questo checkpoint.",
+  "lastUpdated": "2026-10-06",
+  "currentPhase": "Sessione conclusa: AUD-12/13/14/15/20 completati. Restano 12 attività aperte/parziali: 10 P2 e 2 P3; prossimo AUD-16.",
+  "activeTask": "AUD-16",
+  "nextSession": "Riprendere dal commit corrente su main. Primo task AUD-16: delegare sostituzione/fusione Android a ProjectEdits, persistenza unica con cestino e prove di parità/rollback; poi AUD-17 (stati e incertezze nei documenti), rispettando priorità e dipendenze. Baseline finale: 374 test JVM verdi (108 Core, 76 Exchange, 144 Desktop, 46 Android); comando verificato: .\\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1. AUD-18 conserva cancellazione/identità/proprietà dei pacchetti; AUD-21 conserva callback password, prove Android e impostazioni Windows. AUD-23: capacità Android protetta esatta vicino a 256 MiB; AUD-24: recupero dopo arresto improvviso o secondo guasto di rollback. RES-13/19/23 richiedono collaudi nativi/hardware, non chiusi dai test JVM. RES-24 riguarda risorse precedenti: conservare build/reports, build/phone-backup, app e Demo Comune; non terminare processi di altre sessioni. Aggiornare documenti a ogni task e rimuovere dal tracker solo attività concluse; evidenze in roadmap.md e docs/repo-residuals-2026-10-05.md.",
   "remainingTasks": [],
   "residuals": [
+    {
+      "id": "AUD-16",
+      "priority": "P2",
+      "title": "Eliminare la duplicazione Android nelle operazioni sugli apparati",
+      "status": "OPEN",
+      "description": "TrashOperations.replaceDevice e mergeDevices mantengono logica separata da ProjectEdits usato da Windows. La sostituzione Android conserva rackId/areaId ma perde positionU, heightU e mountingType, mantenuti dalla versione condivisa; eliminazione e inserimento del nuovo apparato sono in transazioni distinte. La fusione duplica campi e porte invece di delegare alle regole comuni.",
+      "closureCriteria": "Delegare le modifiche di dominio al core e persisterle con cestino in una sola transazione; parità Android/Windows su posizione rack, contenimenti, porte, collegamenti e campi nascosti. Rimuovere l’implementazione sostituita; failure injection conserva l’apparato precedente.",
+      "evidenceLevel": "CODE; NOT_REPRODUCED",
+      "references": [
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/TrashOperations.kt:84 (replaceDevice/mergeDevices)",
+        "shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/ProjectEdits.kt:194 (replaceDevice/mergeDevices)"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-17",
+      "priority": "P2",
+      "title": "Conservare incertezze e avvisi nei documenti",
+      "status": "OPEN",
+      "description": "Markdown, XLSX e PDF Android trattano observation=null come VERIFIED, mentre DeviceForm interpreta il dato assente come TO_VERIFY. Riprodotto il Markdown di un apparato appena creato: riga Verificato senza rilievo e conteggio criticità che lo esclude. Il PDF Desktop non include lo stato Observation nell’inventario. Non assumere che un documento sia completo perché le sezioni sono paginate.",
+      "closureCriteria": "Regola comune coerente per dato assente e stati espliciti; Markdown/XLSX/PDF Android e Windows conservano stato, avvisi e incertezze pertinenti alla selezione. Regressioni su apparato senza rilievo, conflitto e dato verificato, con filtri e tre lingue.",
+      "evidenceLevel": "REPRODUCED_MARKDOWN; CODE_OTHER_EXPORTS",
+      "references": [
+        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/MarkdownExportManager.kt:54 (openIssues/statusStr)",
+        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/XlsxExportManager.kt:209 (observation status)",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/export/PdfExportManager.kt:200 (device)",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/report/ReportContent.kt:59 (inventory)",
+        "shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/EntityForms.kt:99 (DeviceForm.from)"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-18",
+      "priority": "P2",
+      "title": "Completare il ciclo di vita dell’import Android",
+      "status": "OPEN",
+      "description": "startImport avvia una coroutine senza conservarne il Job; cancelImport chiude soltanto il pacchetto già presente nello stato. Un’importazione ancora in lettura può pubblicare Review dopo l’annullamento o sovrascrivere una successiva richiesta. La pulizia dello stato in onCleared non copre esplicitamente il pacchetto restituito dal worker ma non ancora trasferito allo stato; verificare quel confine di proprietà durante la cancellazione. AUD-15 ordina i comandi e rende busy anche la conferma; restano identità, cancellazione e proprietà dei pacchetti.",
+      "closureCriteria": "Annullamento durante lettura/KDF, doppio import, chiusura ViewModel e conferma lenta: nessuna Review tardiva, nessun secondo salvataggio, pacchetti e staging sempre chiusi. Conservare Job/identità della richiesta e trasferimento esplicito della proprietà del pacchetto.",
+      "evidenceLevel": "CODE; NOT_REPRODUCED",
+      "references": [
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt:389 (startImport/cancelImport/onCleared/confirmImport)",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/PackageExchange.kt:61 (evaluateImportPackage)"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-19",
+      "priority": "P2",
+      "title": "Separare media attivi, recuperabili e definitivamente eliminati",
+      "status": "OPEN",
+      "description": "Riprodotto su Windows: dopo deleteAttachment il catalogo è vuoto ma exportPackageToFile include ancora il payload cancellato, perché esporta localMedia integralmente. Anche il salvataggio conserva questi payload. Android deleteProject elimina righe/base ma non la directory attachments/<projectId>; rimozione allegati e undo non hanno una politica di raccolta dei file. Evitare che la conservazione per undo/cestino si trasformi in export di dati rimossi. Includere nel recupero gli eventuali file oltre limite lasciati dagli ingressi media precedenti ad AUD-13; la prevenzione ora corregge le nuove aggiunte senza eliminare automaticamente payload storici.",
+      "closureCriteria": "Export solo dei payload attivi richiesti dal catalogo; media recuperabili locali conservati per undo/cestino secondo regole esplicite; eliminazione definitiva/progetto rimuove solo i file di proprietà. Prove hash su pacchetto esportato e sulla conservazione/rimozione dei media, senza cancellare sorgenti utente.",
+      "evidenceLevel": "REPRODUCED_DESKTOP_EXPORT; CODE_ANDROID",
+      "references": [
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopStorageManager.kt:449 (exportPackageToFile/localMedia)",
+        "shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/ProjectEdits.kt:442 (deleteAttachment)",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectRepository.kt:60 (deleteProject)"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-21",
+      "priority": "P2",
+      "title": "Gestire errori e cancellazione nei comandi ancora scoperti",
+      "status": "OPEN",
+      "description": "AUD-15 segnala gli errori dei comandi Android e rilancia CancellationException. Restano: changePassword non restituisce onResult in caso di eccezione del repository; prove mirate sui comandi di apertura/password/cestino ancora mancanti. Windows toggleDarkTheme/loadSettings ignorano gli errori senza esito visibile.",
+      "closureCriteria": "Errori I/O/database restituiti alla UI senza crash o successo apparente; cancellazione rilanciata; stato e callback coerenti. Prove mirate di errore/apertura/password/cestino e impostazioni, senza broad catch che nascondono il guasto.",
+      "evidenceLevel": "CODE; NOT_REPRODUCED",
+      "references": [
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt:148 (openProject/renameProject/changePassword/deleteFromTrash/emptyTrash/edit)",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopAppState.kt:140 (toggleDarkTheme/loadSettings)"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-23",
+      "priority": "P2",
+      "title": "Verificare esattamente la capacità Android protetta al limite ZIP",
+      "status": "OPEN",
+      "description": "Il controllo MediaCapacity senza password usa un limite superiore conservativo per cifratura, compressione e metadati ZIP. Può rifiutare media che entrerebbero ancora nei 256 MiB del pacchetto effettivo. Riprodotto con limite ridotto in MediaCapacityTest; evita progetti non esportabili ma restringe il margine vicino al limite. Nessuna password locale viene conservata.",
+      "closureCriteria": "Definire e verificare la capacità esatta vicino al limite per progetto protetto, con conferma esplicita se occorre la password; nessuna persistenza aggiuntiva della password e nessuna cifratura fittizia. Coprire pacchetti sotto/sopra 256 MiB e rollback su rifiuto.",
+      "evidenceLevel": "REPRODUCED_SCALED_BOUNDARY; REAL_256_MIB_NOT_RUN",
+      "references": [
+        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/MediaCapacity.kt:25 (budget protetto)",
+        "shared/exchange/src/test/java/com/onlyfield/assetmanager/exchange/MediaCapacityTest.kt:52 (margine conservativo)"
+      ],
+      "dependsOn": []
+    },
     {
       "id": "RES-13",
       "title": "Collaudo hardware manuale",
       "status": "OPEN",
       "description": "Foto (anche porta e cavo dalla scheda rapida, FOTO-04, e scatto in serie di EVO-05), scanner, multitouch e lettore USB non sono stati verificati su hardware reale.",
-      "closureCriteria": "Checklist hardware compilata con esiti ed evidenze."
+      "closureCriteria": "Checklist hardware compilata con esiti ed evidenze.",
+      "priority": "P2",
+      "evidenceLevel": "NOT_VERIFIED_ON_HARDWARE",
+      "references": [
+        "docs/testing/hardware-checklist.md",
+        "roadmap.md"
+      ],
+      "dependsOn": []
     },
     {
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, schema del percorso (EVO-06), topologia (EVO-07), Altri moduli (EVO-10), 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 chiuso: suite nativa di 13 test verde su Pixel 9 API 37 e moto g86 API 36, inclusi localizzazione e tocco/trascinamento della mappa. Room v2 installato e Demo Comune reimportato; la matrice UX completa resta da eseguire. Verificare anche la conferma import con molti avvisi di allegati mancanti; elenco scorrevole compilato, resa Android non verificata. Stampa Android spostata in background e compilata: collaudare annullamento e callback su dispositivo. Configuratore visivo del 5 ottobre: disegni specifici, Fronte/Retro, griglie 24/48 porte e comandi fissi verificati con Compose Desktop a 360/560/1024 dp, temi chiaro/scuro; mappa da 53 oggetti verificata durante zoom e trascinamento. Da ripetere su Android nativo: nuovi flussi, selezione PoE, riordino tramite trascinamento, Salva/Annulla, tratte posteriori e ridimensionamento; la compilazione e i test JVM non sostituiscono questa prova. Aggiornamento corrente: 14 test nativi superati su ciascun dispositivo; APK finale installato sul moto g86, schermata iniziale con Demo Comune presente. Import ai limiti misurati e persistiti in database isolato, senza modificare la demo.",
-      "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili."
+      "description": "Prova su moto g86 (4 ottobre) prima del restyling: vedi roadmap. Dopo il restyling, emulatore Pixel 9 API 37 (411 dp chiaro testo 1,0; 360 dp scuro testo 1,3): UX-01, 02, 03, 05, 06 superati, UX-04 non eseguito. Il 5 ottobre il pannello mappa e la scheda dispositivo sono stati riorganizzati (porte toccabili, Foto sempre presente, Altri dettagli) e si è aggiunta la scheda rapida della porta, verificata solo nel renderer Desktop. Restano: TalkBack, schema del percorso (EVO-06), topologia (EVO-07), Altri moduli (EVO-10), 360 dp chiaro e 411 dp scuro, zoom a due dita, moncone e Vai a, Collegamenti logici in Altri dettagli, scheda rapida della porta, ponti radio e demo «Demo Comune» (mappa densa da 53 oggetti per piano), prova sul moto g86. RES-17 chiuso: suite nativa di 13 test verde su Pixel 9 API 37 e moto g86 API 36, inclusi localizzazione e tocco/trascinamento della mappa. Room v2 installato e Demo Comune reimportato; la matrice UX completa resta da eseguire. Verificare anche la conferma import con molti avvisi di allegati mancanti; elenco scorrevole compilato, resa Android non verificata. Stampa Android spostata in background e compilata: collaudare annullamento e callback su dispositivo. Configuratore visivo del 5 ottobre: disegni specifici, Fronte/Retro, griglie 24/48 porte e comandi fissi verificati con Compose Desktop a 360/560/1024 dp, temi chiaro/scuro; mappa da 53 oggetti verificata durante zoom e trascinamento. Da ripetere su Android nativo: nuovi flussi, selezione PoE, riordino tramite trascinamento, Salva/Annulla, tratte posteriori e ridimensionamento; la compilazione e i test JVM non sostituiscono questa prova. Aggiornamento corrente: 14 test nativi superati su ciascun dispositivo; APK finale installato sul moto g86, schermata iniziale con Demo Comune presente. Import ai limiti misurati e persistiti in database isolato, senza modificare la demo. AUD-15: dialogo occupato per tutti i comandi compilato; verificare focus, blocco input e TalkBack anche con dialoghi di form/import già aperti.",
+      "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili.",
+      "priority": "P2",
+      "evidenceLevel": "PARTIAL_VERIFICATION",
+      "references": [
+        "docs/testing/hardware-checklist.md",
+        "roadmap.md"
+      ],
+      "dependsOn": [
+        "AUD-16",
+        "AUD-18",
+        "AUD-21"
+      ]
     },
     {
       "id": "RES-23",
       "title": "Collaudo visivo Windows delle operazioni in background",
       "status": "PARTIAL",
       "description": "Worker, event loop AWT, blocco modifiche, salvataggio protetto di 500 apparati ed errore atomico verificati automaticamente. EXE reale del 5 ottobre: pannello occupato leggibile durante import da 511 MiB; picker media, apertura PNG/PDF e ritorno dai viewer verificati. Dialogo nativo di stampa aperto e annullato dal suo pulsante: pannello rilasciato, stato Stampa annullata, hash locali invariati e nessun lavoro nella coda. Restano matrice completa mouse/tastiera/focus durante salvataggio e prova di errore nativo della stampa; nessuna stampa fisica eseguita.",
-      "closureCriteria": "Verifiche manuali Windows registrate; pannello leggibile, nessuna modifica durante il salvataggio, dialoghi e stampa annullabili senza perdita dei dati."
+      "closureCriteria": "Verifiche manuali Windows registrate; pannello leggibile, nessuna modifica durante il salvataggio, dialoghi e stampa annullabili senza perdita dei dati.",
+      "priority": "P2",
+      "evidenceLevel": "PARTIAL_VERIFICATION",
+      "references": [
+        "docs/05-testing-and-benchmarks.md",
+        "roadmap.md"
+      ],
+      "dependsOn": [
+        "AUD-19"
+      ]
+    },
+    {
+      "id": "AUD-24",
+      "priority": "P2",
+      "title": "Recupero dopo arresto improvviso durante import e rollback fallito",
+      "status": "OPEN",
+      "description": "Il rollback AUD-14 gestisce eccezioni nel processo. Arresto tra applicazione dei file e commit Room/working copy/base non ha ancora un journal durevole; un secondo guasto durante ripristino viene segnalato con eccezioni soppresse ma non ha recupero guidato. Pulizia post-commit avvisa, ma non offre un comando di recupero delle risorse residue.",
+      "closureCriteria": "Definire recupero durevole senza plaintext di media protetti; prove di arresto nei confini file/progetto/base, riavvio e secondo errore I/O durante rollback. Eliminare solo staging di proprietà, preservando dati e backup.",
+      "evidenceLevel": "CODE; CRASH_RECOVERY_NOT_VERIFIED",
+      "references": [
+        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/ReversibleFiles.kt",
+        "docs/04-desktop-storage-interop.md"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-22",
+      "priority": "P3",
+      "title": "Rimuovere scaffolding e API utilizzate solo dai vecchi test",
+      "status": "OPEN",
+      "description": "CoreModule/ExchangeModule sono segnaposto verificati soltanto da test di nome/dipendenza; ExampleUnitTest controlla 2+2 e ExampleInstrumentedTest il package name. DesktopStorageManager.loadAndroidFixtureFile porta fixture di test nel runtime; cleanTempFolder non ha chiamanti. Alcuni metodi della facade Android (saveAttachment/updateAreaFloorplan/searchInventory/traceCableChain/batchEditDevices) hanno solo chiamanti nei test. Commenti BU_ID e contratti 1.8/1.11 sopravvivono alla ripartenza greenfield.",
+      "closureCriteria": "Verificare chiamanti e spostare fixture/helper nei test; rimuovere simboli senza uso e prove tautologiche; aggiornare commenti obsoleti senza perdere regressioni reali. Conservare schema storico SQLCipher, fixture versioni rifiutate e alias/hash legacy effettivamente supportati, salvo decisione esplicita diversa.",
+      "evidenceLevel": "REPOSITORY_REFERENCE_SCAN",
+      "references": [
+        "shared/core/src/main/java/com/onlyfield/assetmanager/core/CoreModule.kt",
+        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/ExchangeModule.kt",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopStorageManager.kt:463 (loadAndroidFixtureFile/cleanTempFolder)",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectRepository.kt:157 (test-only facade helpers)",
+        "mobile/app/src/test/java/com/onlyfield/assetmanager/ExampleUnitTest.kt",
+        "shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/DevicePresets.kt:24",
+        "shared/core/src/main/java/com/onlyfield/assetmanager/core/model/Models.kt:160"
+      ],
+      "dependsOn": []
     },
     {
       "id": "RES-24",
       "title": "Pulizia finale delle risorse di collaudo",
       "status": "PARTIAL",
       "description": "Evidenze iniziali e nuove conservate in build/reports; hash delle sette fixture sul telefono e dei PDF copiati verificati. Rimossi dal moto g86 e dall’emulatore sette PDF ciascuno e APK test; sette fixture del telefono eliminate. App principale, Demo Comune e backup pre-Room-v2 conservati; SHA-256 del backup invariato. App Windows e viewer avviati per il collaudo chiusi; staging vuoto. Pulizia locale respinta due volte dal controllo automatico (blocked by policy): restano build/import-benchmark, build/native-window-app, build/native-window-exports e sei script Python nel solo build/. Restano anche build/task-verification/emulator.log ed emulator-error.log, aperti dall’emulatore avviato nella sessione precedente; non terminato.",
-      "closureCriteria": "Rimuovere le tre cartelle locali delle prove e i sei helper in build/ quando il controllo automatico lo consente o manualmente. Chiudere emulator-5554 dalla sessione originaria o manualmente, poi rimuovere i due log e build/task-verification. Conservare app, demo, media, backup ed evidenze in build/reports."
+      "closureCriteria": "Rimuovere le tre cartelle locali delle prove e i sei helper in build/ quando il controllo automatico lo consente o manualmente. Chiudere emulator-5554 dalla sessione originaria o manualmente, poi rimuovere i due log e build/task-verification. Conservare app, demo, media, backup ed evidenze in build/reports.",
+      "priority": "P3",
+      "evidenceLevel": "PARTIAL_VERIFICATION",
+      "references": [
+        "docs/05-testing-and-benchmarks.md",
+        "roadmap.md"
+      ],
+      "dependsOn": []
     }
   ]
 }

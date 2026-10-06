@@ -53,7 +53,7 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
         }
     }
 
-    BackHandler { if (!vm.back()) onExit() }
+    BackHandler(enabled = vm.busy == null) { if (!vm.back()) onExit() }
 
     OnlyFieldTheme(isSystemInDarkTheme()) {
         ConfirmHost {
@@ -99,6 +99,14 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
             }
             ImportDialogs(vm, importState)
         }
+        vm.busy?.let { message ->
+            AlertDialog(
+                onDismissRequest = {},
+                confirmButton = {},
+                text = { Column { Text(message); LinearProgressIndicator() } },
+                properties = androidx.compose.ui.window.DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
+            )
+        }
     }
 }
 
@@ -134,7 +142,7 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
         is ImportState.Review -> {
             val pkg = state.evaluation.importResult.pkg ?: return
             val comparison = state.evaluation.comparison
-            val sameProjectExists = comparison?.currentProjectId != null
+            val sameProjectExists = comparison?.currentProjectId == pkg.project.id
             AlertDialog(
                 onDismissRequest = vm::cancelImport,
                 title = { Text(if (sameProjectExists) i18n.text("text.bce1e2ff7206") else i18n.text("text.6a8f2c033f77")) },

@@ -24,12 +24,20 @@ import java.io.File
 
 @Composable
 internal fun MediaThumbnail(file: File?, pdf: Boolean = false, page: Int = 0, modifier: Modifier = Modifier) {
-    MediaThumbnailSource(file, { file?.readBytes() }, pdf, page, modifier)
+    val i18n = LocalMessages.current
+    MediaThumbnailSource(file, {
+        file?.let { source ->
+            com.onlyfield.assetmanager.exchange.AttachmentFiles.validateSize(source.length(), i18n)
+            source.inputStream().use { input -> java.io.ByteArrayOutputStream().also {
+                com.onlyfield.assetmanager.exchange.AttachmentFiles.copyBounded(input, it, i18n)
+            }.toByteArray() }
+        }
+    }, pdf, page, modifier)
 }
 
 @Composable
-internal fun MediaThumbnail(bytes: ByteArray?, pdf: Boolean = false, page: Int = 0, modifier: Modifier = Modifier, key: Any? = bytes) {
-    MediaThumbnailSource(key, { bytes }, pdf, page, modifier)
+internal fun MediaThumbnail(key: Any?, read: () -> ByteArray?, pdf: Boolean = false, page: Int = 0, modifier: Modifier = Modifier) {
+    MediaThumbnailSource(key, read, pdf, page, modifier)
 }
 
 @Composable
@@ -71,7 +79,7 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, byte
                     items((0 until pages).toList()) { index ->
                         Card(Modifier.fillMaxWidth().padding(bottom = 6.dp).clickable { page = index }, colors = CardDefaults.cardColors(containerColor = if (index == page) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
                             Text(i18n.text("text.c192249f9066", index + 1), Modifier.padding(8.dp))
-                            MediaThumbnail(bytes(selected), true, index, Modifier.fillMaxWidth(), key = selected.id)
+                            MediaThumbnail(selected.id, { bytes(selected) }, true, index, Modifier.fillMaxWidth())
                         }
                     }
                 }

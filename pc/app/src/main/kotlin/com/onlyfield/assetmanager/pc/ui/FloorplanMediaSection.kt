@@ -38,6 +38,7 @@ fun FloorplanMediaSection(
     onProjectUpdated: (Project, String) -> Unit,
     onAddAttachment: (File, String, AttachmentClassification) -> Unit,
     attachmentBytes: (Attachment) -> ByteArray?,
+    hasAttachment: (Attachment) -> Boolean,
     onOpenAttachment: (Attachment) -> Unit,
     protected: Boolean,
     onAddMapSnapshot: (DesktopMapSnapshot, String) -> Boolean,
@@ -49,7 +50,7 @@ fun FloorplanMediaSection(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SubTabs(listOf(i18n.text("text.690325ff1b4c", project.attachments.size), i18n.text("text.2ebfe0133d0c")), tab) { tab = it }
         when (tab) {
-            0 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentBytes, onOpenAttachment, protected)
+            0 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentBytes, hasAttachment, onOpenAttachment, protected)
             1 -> key(project.id) { CartographyTab(onAddMapSnapshot) }
         }
     }
@@ -62,6 +63,7 @@ private fun AttachmentsTab(
     onProjectUpdated: (Project, String) -> Unit,
     onAddAttachment: (File, String, AttachmentClassification) -> Unit,
     attachmentBytes: (Attachment) -> ByteArray?,
+    hasAttachment: (Attachment) -> Boolean,
     onOpenAttachment: (Attachment) -> Unit,
     protected: Boolean,
 ) {
@@ -79,17 +81,18 @@ private fun AttachmentsTab(
         if (project.attachments.isEmpty()) EmptyState(i18n.text("text.4bb26fa604b4"), actionLabel = i18n.text("text.eb6a4870f326"), onAction = { adding = true })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.attachments.sortedForDisplay(i18n) { it.name }, key = { it.id }) { att ->
+                val available = hasAttachment(att)
                 val usedBy = index.areas.filter { it.floorplanAttachmentId == att.id }.map { it.name }
                 ItemCard(
                     title = att.name,
                     badge = att.classification.toDisplayString(i18n = i18n),
                     details = listOf(
-                        "${att.fileType.toDisplayString(i18n = i18n)} · ${att.originalFileName}" + if (attachmentBytes(att) == null) i18n.text("text.17abaf4534d2") else "",
+                        "${att.fileType.toDisplayString(i18n = i18n)} · ${att.originalFileName}" + if (!available) i18n.text("text.17abaf4534d2") else "",
                         index.attachmentTarget(att, i18n = i18n).orEmpty(),
                         usedBy.takeIf { it.isNotEmpty() }?.let { i18n.text("text.a63270a10e72", it.joinToString()) }.orEmpty()
                     )
                 ) {
-                    if (attachmentBytes(att) != null) {
+                    if (available) {
                         TextButton(onClick = { onOpenAttachment(att) }) { Text(i18n.text(if (protected) "media.exportAndOpen" else "text.12abcf9ee7d6")) }
                     }
                     TextButton(onClick = { changeDetail { floorplanFor = att } }, enabled = index.areas.isNotEmpty()) { Text(i18n.text("text.fa7e72cbd571")) }

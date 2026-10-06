@@ -1,6 +1,6 @@
 # Piano prodotto
 
-Aggiornato al 5 ottobre 2026 dopo confronto con il codice.
+Aggiornato al 6 ottobre 2026 dopo confronto con il codice.
 
 ## Obiettivo e limiti
 
@@ -69,10 +69,12 @@ Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](ro
 
 ## Stato
 
-Le funzionalita Android, Desktop e configuratore presenti nel codice sono completate. I residui operativi sono mantenuti esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile e in [roadmap.md](roadmap.md).
+L’audit completo del repository del 5 ottobre identifica 11 nuovi rilievi oltre ai quattro collaudi/pulizie già aperti. Priorità, dipendenze e criteri di chiusura nel [tracker](PROJECT_STATUS.json); evidenze e limiti nel [report dei residui](docs/repo-residuals-2026-10-05.md). Le funzionalità dichiarate implementate restano distinte dalle correzioni e dai collaudi da eseguire.
+
+Le funzionalità previste sono implementate; l’audit ha rilevato difetti e flussi da completare nei confini di persistenza, scambio e media. Lo stato aperto è mantenuto esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile è in [roadmap.md](roadmap.md).
 
 PDF Android: le sei sezioni offerte sono complete e paginate, inclusi inventario, rack e tutti gli allegati selezionati; RES-21 chiuso con prove native API 37. La stampa fisica resta un collaudo distinto.
 
 ## Decisione limiti pacchetti — 5 ottobre 2026
 
-Confermati: allegato 32 MiB, pacchetto 256 MiB, totale decompresso 512 MiB, 10.000 entry e costo PBKDF2 massimo 1.000.000. Rifiuto strutturale durante la lettura e prima della derivazione; stessa politica di dimensione sui pacchetti generati. Misure ai limiti su hardware da eseguire (RES-22).
+Confermati: allegato 32 MiB, pacchetto 256 MiB, totale decompresso 512 MiB, 10.000 entry e costo PBKDF2 massimo 1.000.000. Rifiuto strutturale durante la lettura e prima della derivazione; stessa politica di dimensione sui pacchetti generati. Misure ai limiti concluse e registrate nel [report import grandi](docs/testing/import-benchmark-2026-10-05.md). AUD-13 chiuso: verifica prima del commit e rollback negli ingressi media locali. Android protetto verifica un budget conservativo senza conservare la password; verifica esatta vicino a 256 MiB ancora in AUD-23. AUD-14/15 chiusi: import/fusione reversibili, base coerente e comandi/letture Android ordinati; arresto improvviso e secondo guasto di rollback restano in AUD-24.

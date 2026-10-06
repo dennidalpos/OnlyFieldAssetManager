@@ -19,6 +19,8 @@ import java.io.InputStream
 import java.io.OutputStream
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.ensureActive
+import androidx.room.withTransaction
 
 data class SearchResult(
     val device: Device,
@@ -42,7 +44,8 @@ class ProjectRepository(
     private val inventoryDao = db.inventoryDao()
     private val store = ProjectStore(db)
     private val documents = DocumentExports(store::load)
-    private val exchange = PackageExchange(attachmentsRoot, store::load, { store.save(it) }, store::saveBase, store::saveImported)
+    private val exchange = PackageExchange(attachmentsRoot, store::load, { store.save(it) }, store::saveBase, store::saveImported,
+        transaction = { db.withTransaction { it() } })
     private val search = InventorySearch(db)
     private val trash = TrashOperations(db, store::load, { store.save(it) })
 
@@ -55,6 +58,14 @@ class ProjectRepository(
     suspend fun getProjectById(projectId: String): Project? = store.load(projectId)
 
     suspend fun saveProject(project: Project) = store.save(project)
+
+    /** Media additions must remain exportable before committing their catalog. */
+    suspend fun saveMediaProject(project: Project, i18n: Messages = Messages(), onCommitted: () -> Unit = {}) = withContext(Dispatchers.IO) {
+        com.onlyfield.assetmanager.exchange.AttachmentFiles.validateCapacity(project, { exchange.attachmentFile(project.id, it) }, i18n)
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        // A cancelled dispatcher return must not trigger deletion after a durable commit.
+        withContext(kotlinx.coroutines.NonCancellable) { store.save(project); onCommitted() }
+    }
 
     /** Deletes the project and, through cascading foreign keys, everything it contains. */
     suspend fun deleteProject(projectId: String) {
@@ -138,8 +149,8 @@ class ProjectRepository(
     suspend fun exportProjectPackageToStream(projectId: String, outputStream: OutputStream, password: String? = null, i18n: Messages = Messages()) =
         exchange.exportProjectPackageToStream(projectId, outputStream, password, i18n = i18n)
 
-    suspend fun evaluateImportPackage(inputStream: InputStream, password: String? = null, currentProjectId: String? = null, i18n: Messages = Messages()) =
-        exchange.evaluateImportPackage(inputStream, password, currentProjectId, i18n = i18n)
+    suspend fun evaluateImportPackage(inputStream: InputStream, password: String? = null, i18n: Messages = Messages()) =
+        exchange.evaluateImportPackage(inputStream, password, i18n = i18n)
 
     suspend fun importProjectPackage(pkg: ProjectPackage, password: String? = null) = exchange.importProjectPackage(pkg, password)
 

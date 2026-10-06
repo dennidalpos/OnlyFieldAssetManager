@@ -2,12 +2,24 @@ package com.onlyfield.assetmanager.exchange
 
 import com.onlyfield.assetmanager.core.model.Attachment
 import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.i18n.Messages
 import java.io.File
-import java.nio.file.Files
-import java.nio.file.StandardCopyOption
 
 /** Shared attachment paths for packages and local storage. */
 object AttachmentFiles {
+
+    fun validateSize(bytes: Long, i18n: Messages = Messages()) {
+        require(bytes in 0..PackageImportLimits().fileBytes) { i18n.text("package.importLimit") }
+    }
+
+    /** Enforces the file limit even when the provider omits or changes its size. */
+    fun copyBounded(input: java.io.InputStream, output: java.io.OutputStream, i18n: Messages = Messages()) {
+        try { PackageInput(input, PackageImportLimits().fileBytes).copyTo(output) }
+        catch (e: PackageLimitExceeded) { throw IllegalArgumentException(i18n.text("package.importLimit"), e) }
+    }
+
+    fun validateCapacity(project: Project, locate: (Attachment) -> File?, i18n: Messages = Messages()) =
+        MediaCapacity.validate(project, locate, i18n)
 
     fun safeName(name: String): String =
         name.replace(Regex("[^A-Za-z0-9._-]"), "_").trim('_').ifBlank { "file" }
@@ -40,18 +52,23 @@ object AttachmentFiles {
 
     /** Writes imported files under [root]. */
     fun extract(pkg: ProjectPackage, root: File): Int {
-        var written = 0
-        for (att in pkg.project.attachments) {
-            val path = pathIn(pkg, att) ?: continue
-            val target = localFile(root, pkg.project.id, att)
-            Files.createDirectories(target.parentFile.toPath())
-            val temp = Files.createTempFile(target.parentFile.toPath(), ".import-", ".tmp")
-            try {
-                Files.newOutputStream(temp).buffered().use { pkg.writePayload(path, it) }
-                Files.move(temp, target.toPath(), StandardCopyOption.REPLACE_EXISTING)
-            } finally { Files.deleteIfExists(temp) }
-            written++
+        ReversibleFiles().use { files ->
+            val count = stage(pkg, root, pkg.project, files)
+            files.apply()
+            val errors = files.commit()
+            if (errors.isNotEmpty()) throw errors.first()
+            return count
         }
-        return written
+    }
+
+    fun stage(pkg: ProjectPackage, root: File, selected: Project, files: ReversibleFiles): Int {
+        var count = 0
+        for (att in selected.attachments) {
+            if (att !in pkg.project.attachments) continue
+            val path = pathIn(pkg, att) ?: continue
+            files.replace(localFile(root, selected.id, att)) { pkg.writePayload(path, it) }
+            count++
+        }
+        return count
     }
 }

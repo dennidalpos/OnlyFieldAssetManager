@@ -243,7 +243,7 @@ private fun SectionContent(state: DesktopAppState) {
         AppSection.MODELS -> DeviceModelsSection(project, update)
         AppSection.FLOORPLANS -> FloorHomeSection(state)
         AppSection.CREDENTIALS -> CredentialsSection(project, update)
-        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::openAttachment, state.hasPassword, state::addMapSnapshot)
+        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::hasAttachment, state::openAttachment, state.hasPassword, state::addMapSnapshot)
         AppSection.CABLING -> CablingSection(project, update)
         AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary)
         AppSection.POWER -> PowerBadgeSection(project, update, state.showSecondary)

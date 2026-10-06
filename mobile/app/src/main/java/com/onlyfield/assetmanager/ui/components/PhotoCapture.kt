@@ -27,10 +27,12 @@ fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) 
     lateinit var shoot: (AttachmentTargetType, String?) -> Unit
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
         val target = series
-        if (vm.onPhotoResult(saved) && target != null) { shots++; shoot(target.first, target.second) }
-        else {
-            if (shots > 1) vm.notifyInfo(i18n.plural("photo.seriesDone", shots))
-            series = null; shots = 0
+        vm.onPhotoResult(saved) { kept ->
+            if (kept && target != null) { shots++; shoot(target.first, target.second) }
+            else {
+                if (shots > 1) vm.notifyInfo(i18n.plural("photo.seriesDone", shots))
+                series = null; shots = 0
+            }
         }
     }
     shoot = { type, id ->

@@ -119,7 +119,7 @@ fun FloorHomeSection(state: DesktopAppState) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
                         Column(Modifier.width(120.dp)) {
-                            MediaThumbnail(state.attachmentBytes(a), a.fileType == AttachmentType.PDF, key = a.id)
+                            MediaThumbnail(a.id, { state.attachmentBytes(a) }, a.fileType == AttachmentType.PDF)
                             Text(a.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                     }

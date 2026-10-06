@@ -8,9 +8,13 @@ Android usa editor a pagina intera; Desktop usa elenco e pannello laterale con `
 
 ## Operazioni
 
+**Confronto prima dell’import.** Il pacchetto viene confrontato con la copia locale dello stesso ID, anche se è chiusa o è aperto un altro progetto. Una versione precedente mostra un avviso; la sostituzione richiede conferma e annullare conserva la copia locale. Fusione disponibile solo per lo stesso progetto. Su Windows, se la copia chiusa usa una password diversa, occorre sbloccarla prima del confronto; la fusione conserva la password locale.
+
 **Import Android.** Creazione e sostituzione usano la password del pacchetto ricevuto per le successive riaperture. Se il pacchetto non è protetto, la copia sostituita diventa non protetta. La fusione mantiene la password e lo stato di protezione locali.
 
 **Allegati mancanti.** Entrambe le app mostrano gli avvisi del pacchetto prima della conferma, in un elenco scorrevole. Su Windows anche un nuovo progetto o un pacchetto identico con avvisi passa dalla conferma. Annullare lascia la copia locale invariata; confermare conserva i riferimenti documentali e importa solo i payload disponibili.
+
+**Aggiunta media.** Picker, foto, planimetrie e mappe verificano il limite di 32 MiB per file prima di accettare il catalogo; le copie da provider interrompono anche stream senza dimensione dichiarata. Un errore di copia, capacità o persistenza lascia invariati progetto e media precedenti e rimuove i soli file appena creati. Su Android la fotocamera si riapre dopo il commit riuscito; foto rifiutata o annullata termina la serie. La verifica dei progetti Android protetti usa un budget conservativo vicino al limite ZIP, senza conservare la password locale (residuo AUD-23).
 
 Inventario, rack, cablaggio, rete, alimentazione, media e documenti sono strumenti del progetto. Scanner e lettore USB aprono il codice trovato; un codice sconosciuto non modifica dati. Eliminazione e cambio di elemento richiedono conferma. L'eliminazione non sta mai nel menu ⋮: è un pulsante cestino rosso visibile su schede, dettagli e pannello mappa.
 
@@ -61,4 +65,8 @@ Riferimenti: [barra di navigazione Compose](https://developer.android.com/develo
 
 ## Sostituire una copia Windows con password diversa
 
-Decifrare il pacchetto con la password ricevuta e confermare la sostituzione. Se la copia locale chiusa usa un’altra password, inserire anche quella locale nel dialogo dedicato per conservare il cestino e i suoi media. Annullare lascia la vecchia copia; un errore non avvia una sostituzione parziale. Dopo il successo usare la password del pacchetto ricevuto.
+Decifrare il pacchetto con la password ricevuta. Se la copia locale chiusa usa un’altra password, inserirla nel dialogo dedicato prima del confronto. Esaminare versione e avvisi, poi scegliere sostituzione o fusione. Annullare lascia la vecchia copia. Dopo la sostituzione usare la password del pacchetto ricevuto; la fusione mantiene quella locale. AUD-14 verifica il rollback del flusso completo media/progetto/base su errore; recupero dopo arresto improvviso ancora in AUD-24.
+
+AUD-15: modifiche Android confermate dopo persistenza riuscita, comandi ravvicinati ordinati con cestino/password/media/import/export. Undo vale soltanto per la stessa sessione e revisione: dopo una modifica successiva o chiusura non sostituisce lo stato corrente. Una richiesta di chiusura/cambio progetto invalida solo la pubblicazione UI, senza annullare le modifiche già richieste. Durante il lavoro il dialogo occupato blocca gli input; verifica visiva nativa in RES-19. Gli errori mappa su snapshot obsoleto vengono mostrati e richiedono la riapertura dell'editor.
+
+L'export Android accodato dopo un cambio password verifica la protezione persistita al momento del comando, prima di aprire il file di destinazione. Le etichette leggono il progetto richiesto, anche se la navigazione cambia durante l'attesa.

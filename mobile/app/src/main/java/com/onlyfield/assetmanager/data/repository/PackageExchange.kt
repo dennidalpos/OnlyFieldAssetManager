@@ -24,6 +24,7 @@ internal class PackageExchange(
     private val saveBase: suspend (Project) -> Unit,
     private val saveImported: suspend (Project, String?) -> Unit,
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val transaction: suspend (suspend () -> Unit) -> Unit = { it() },
 ) {
     private suspend fun getProjectById(projectId: String) = load(projectId)
     private suspend fun saveProject(project: Project) = save(project)
@@ -61,7 +62,6 @@ internal class PackageExchange(
     suspend fun evaluateImportPackage(
         inputStream: InputStream,
         password: String? = null,
-        currentProjectId: String? = null,
         i18n: Messages = Messages()): PackageImportEvaluation {
         var imported: com.onlyfield.assetmanager.exchange.PackageImportResult? = null
         try {
@@ -75,7 +75,7 @@ internal class PackageExchange(
                     return@withContext PackageImportEvaluation(importResult = importResult, comparison = null)
                 }
                 val comparison = ProjectComparisonEvaluator.evaluate(
-                    currentProject = getProjectById(currentProjectId ?: pkg.project.id),
+                    currentProject = getProjectById(pkg.project.id),
                     currentManifest = null,
                     incomingPackage = pkg,
                     i18n = i18n,
@@ -90,17 +90,28 @@ internal class PackageExchange(
 
     suspend fun importProjectPackage(pkg: ProjectPackage, password: String?): Boolean = withContext(ioDispatcher) {
         require(!pkg.project.isPasswordProtected || !password.isNullOrBlank()) { "A protected import requires its package password" }
-        attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
-        saveImported(pkg.project, password)
-        saveBase(pkg.project)
+        commitImport(pkg, pkg.project) { saveImported(pkg.project, password) }
         return@withContext true
     }
 
     /** Saves the result of a merge; the base becomes the package, i.e. what the other device has. */
     suspend fun importMerged(pkg: ProjectPackage, merged: Project) = withContext(ioDispatcher) {
         val local = requireNotNull(getProjectById(merged.id)) { "A merge requires a local project" }
-        attachmentsRoot?.let { AttachmentFiles.extract(pkg, it) }
-        saveProject(merged.copy(isPasswordProtected = local.isPasswordProtected))
-        saveBase(pkg.project)
+        val selected = merged.copy(isPasswordProtected = local.isPasswordProtected)
+        commitImport(pkg, selected) { saveProject(selected) }
+    }
+
+    private suspend fun commitImport(pkg: ProjectPackage, selected: Project, persist: suspend () -> Unit) {
+        require(selected.id == pkg.project.id)
+        com.onlyfield.assetmanager.exchange.ReversibleFiles(attachmentsRoot).use { files ->
+            attachmentsRoot?.let { AttachmentFiles.stage(pkg, it, selected, files) }
+            currentCoroutineContext().ensureActive()
+            // The commit outcome must survive cancellation at the Room return boundary.
+            withContext(kotlinx.coroutines.NonCancellable) {
+                transaction { files.apply(); persist(); saveBase(pkg.project) }
+                val cleanupErrors = files.commit()
+                if (cleanupErrors.isNotEmpty()) android.util.Log.w("PackageExchange", "Import committed; staging cleanup failed", cleanupErrors.first())
+            }
+        }
     }
 }

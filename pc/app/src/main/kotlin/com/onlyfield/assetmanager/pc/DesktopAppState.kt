@@ -16,7 +16,6 @@ import com.onlyfield.assetmanager.core.validation.ValidationIssue
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.exchange.AttachmentFiles
-import com.onlyfield.assetmanager.exchange.ComparisonStatus
 import com.onlyfield.assetmanager.exchange.PackageManifest
 import com.onlyfield.assetmanager.exchange.ProjectComparison
 import com.onlyfield.assetmanager.exchange.ProjectComparisonEvaluator
@@ -48,11 +47,14 @@ enum class AppSection(private val titleKey: String, val icon: ImageVector, val n
 sealed interface AppDialog {
     data object NewProject : AppDialog
     data class ImportPassword(val file: File, val error: String? = null) : AppDialog
-    data class LocalReplacementPassword(val pkg: ProjectPackage, val incomingPassword: String?, val wrongPassword: Boolean = false) : AppDialog
+    data class LocalReplacementPassword(val pkg: ProjectPackage, val incomingPassword: String?, val wrongPassword: Boolean = false,
+        val compareBeforeReplace: Boolean = false, val warnings: List<ValidationIssue> = emptyList()) : AppDialog
     data object ManagePassword : AppDialog
-    data class Compare(val comparison: ProjectComparison, val pkg: ProjectPackage, val password: String?, val warnings: List<ValidationIssue> = emptyList()) : AppDialog
+    data class Compare(val comparison: ProjectComparison, val pkg: ProjectPackage, val password: String?, val warnings: List<ValidationIssue> = emptyList(),
+        val localProject: Project? = null, val localPassword: String? = null) : AppDialog
     /** Merge conflicts resolved one at a time. */
-    data class Merge(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap()) : AppDialog {
+    data class Merge(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap(),
+        val replaceClosedCopy: Boolean = false, val localPassword: String? = null) : AppDialog {
         val current: MergeConflict? get() = result.conflicts.getOrNull(choices.size)
     }
     data object Documents : AppDialog
@@ -209,54 +211,53 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     fun importFloorplan(file: File, areaId: String): Attachment? =
         saveMapEdit(listOf(file), AttachmentTargetType.AREA, areaId, { it })?.singleOrNull()
 
-    private fun saveMapEdit(files: List<File>, type: AttachmentTargetType, targetId: String, transform: (Project) -> Project): List<Attachment>? {
-        val before = project ?: return null
-        val created = mutableListOf<File>()
+    private fun saveMediaChange(message: String, created: MutableList<File>, build: () -> Project): Boolean {
+        val before = project ?: return false
         val previousMedia = try { runIo {
             storage.mediaSnapshot(before.id)?.let { source ->
                 com.onlyfield.assetmanager.exchange.PackagePayloads(storage.getTempFolder()).also { snapshot ->
                     try { snapshot.copyFrom(source) } catch (e: Exception) { snapshot.close(); throw e }
                 }
             }
-        } } catch (e: Exception) {
-            error = i18n.text("text.48b913a738e1", e.message)
-            return null
-        }
+        } } catch (e: Exception) { error = i18n.text("text.48b913a738e1", e.message); return false }
         val previousProtection = storage.mediaProtected(before.id)
         var committed = false
         return try {
-            val (attachments, saved) = runIo {
-                val attachments = files.map { source ->
-                    val pdf = source.extension.equals("pdf", true)
-                    val pages = if (pdf) PlanMedia.pageCount(source, i18n = i18n) else { PlanMedia.validateImage(source, i18n = i18n); 1 }
-                    require(pages > 0) { i18n.text("text.4acdb5acf0b0") }
-                    val att = Attachment(name = source.nameWithoutExtension, originalFileName = source.name, relativePath = "", pageCount = pages,
-                        fileType = if (pdf) AttachmentType.PDF else AttachmentType.IMAGE, mimeType = if (pdf) "application/pdf" else java.nio.file.Files.probeContentType(source.toPath()) ?: "image/jpeg",
-                        targetType = type, targetId = targetId)
-                    created += storage.attachmentFile(before.id, att)
-                    storage.storeAttachmentFile(before.id, att, source)
-                    att.copy(relativePath = AttachmentFiles.entryName(att))
-                }
-                val edited = transform(before)
-                val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
-                storage.saveProjectLocally(saved, password, trashItems = trashState)
-                attachments to saved
-            }
+            val saved = runIo { build().also { storage.saveProjectLocally(it, password, trashItems = trashState) } }
             committed = true
-            update(saved, i18n.text("text.b1b5983f51f1"), persist = false)
-            error = null
-            refreshStoredList()
-            attachments
+            update(saved, message, persist = false)
+            true
         } catch (e: Exception) {
             if (!committed) runIo {
                 storage.restoreMedia(before.id, previousMedia, previousProtection)
                 created.forEach { java.nio.file.Files.deleteIfExists(it.toPath()) }
             }
             error = i18n.text("text.48b913a738e1", e.message)
-            null
-        } finally {
-            if (committed) previousMedia?.let { runIo { it.close() } }
+            false
+        } finally { if (committed) previousMedia?.let { runIo { it.close() } } }
+    }
+
+    private fun saveMapEdit(files: List<File>, type: AttachmentTargetType, targetId: String, transform: (Project) -> Project): List<Attachment>? {
+        val before = project ?: return null
+        val created = mutableListOf<File>()
+        var attachments = emptyList<Attachment>()
+        val saved = saveMediaChange(i18n.text("text.b1b5983f51f1"), created) {
+            files.forEach { AttachmentFiles.validateSize(it.length(), i18n) }
+            attachments = files.map { source ->
+                val pdf = source.extension.equals("pdf", true)
+                val pages = if (pdf) PlanMedia.pageCount(source, i18n = i18n) else { PlanMedia.validateImage(source, i18n = i18n); 1 }
+                require(pages > 0) { i18n.text("text.4acdb5acf0b0") }
+                val att = Attachment(name = source.nameWithoutExtension, originalFileName = source.name, relativePath = "", pageCount = pages,
+                    fileType = if (pdf) AttachmentType.PDF else AttachmentType.IMAGE, mimeType = if (pdf) "application/pdf" else java.nio.file.Files.probeContentType(source.toPath()) ?: "image/jpeg",
+                    targetType = type, targetId = targetId)
+                created += storage.attachmentFile(before.id, att)
+                storage.storeAttachmentFile(before.id, att, source)
+                att.copy(relativePath = AttachmentFiles.entryName(att))
+            }
+            val edited = transform(before)
+            edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
         }
+        return attachments.takeIf { saved }
     }
 
     /** Copies [file] into project attachments. */
@@ -275,15 +276,13 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             relativePath = "",
             classification = classification
         )
-        try {
-            val saved = runIo {
-                val checked = attachment.copy(pageCount = if (attachment.fileType == AttachmentType.PDF) PlanMedia.pageCount(file, i18n = i18n) else 1)
-                storage.storeAttachmentFile(p.id, checked, file)
-                checked.copy(relativePath = AttachmentFiles.entryName(checked))
-            }
-            update(ProjectEdits.addAttachment(p, saved), i18n.text("text.5d5df1229dea", saved.name))
-        } catch (e: Exception) {
-            error = i18n.text("text.0fceb31dcb80", file.name, e.message)
+        val created = mutableListOf<File>()
+        saveMediaChange(i18n.text("text.5d5df1229dea", attachment.name), created) {
+            AttachmentFiles.validateSize(file.length(), i18n)
+            val checked = attachment.copy(pageCount = if (attachment.fileType == AttachmentType.PDF) PlanMedia.pageCount(file, i18n = i18n) else 1)
+            created += storage.attachmentFile(p.id, checked)
+            storage.storeAttachmentFile(p.id, checked, file)
+            ProjectEdits.addAttachment(p, checked.copy(relativePath = AttachmentFiles.entryName(checked)))
         }
     }
 
@@ -295,6 +294,8 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     }
 
     fun attachmentBytes(attachment: Attachment): ByteArray? = project?.let { storage.attachmentBytes(it.id, attachment) }
+
+    fun hasAttachment(attachment: Attachment): Boolean = project?.let { storage.hasAttachment(it.id, attachment) } == true
 
     fun openAttachment(attachment: Attachment) {
         try {
@@ -325,13 +326,11 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             targetType = AttachmentTargetType.PROJECT, targetId = p.id,
             attributionText = snapshot.attributionText,
         ).let { it.copy(relativePath = AttachmentFiles.entryName(it)) }
-        return try {
-            runIo { storage.storeAttachmentBytes(p.id, attachment, snapshot.imageBytes) }
-            update(ProjectEdits.addAttachment(p, attachment), i18n.text("text.18c905e167a3", attachment.name))
-            error == null
-        } catch (e: java.io.IOException) {
-            error = i18n.text("text.def5b23c35ea", e.message)
-            false
+        val created = mutableListOf<File>()
+        return saveMediaChange(i18n.text("text.18c905e167a3", attachment.name), created) {
+            created += storage.attachmentFile(p.id, attachment)
+            storage.storeAttachmentBytes(p.id, attachment, snapshot.imageBytes)
+            ProjectEdits.addAttachment(p, attachment)
         }
     }
 
@@ -386,33 +385,43 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         val previousId = project?.id
         val previousMedia = storage.mediaSnapshot(newProject.id)
         val previousMediaProtected = storage.mediaProtected(newProject.id)
+        var committed = false
+        var loadedTrash = emptyList<TrashItem>()
         try {
-            val loadedTrash = runIo {
+            val newIssues = runIo { ModelValidator.validateProject(newProject, i18n = i18n).issues }
+            runIo {
                 storage.acquireProjectLock(newProject.id)
                 val localState = if (previousId == newProject.id) LocalProjectState(trashState, storage.mediaSnapshot(newProject.id).orEmpty())
                     else storage.loadLocalState(newProject.id, localPassword)
                 try {
                     storage.prepareMedia(newProject, incoming, newPassword != null, local = localPackage || incoming == null, retainedMedia = localState.media)
-                    storage.saveProjectLocally(newProject, newPassword, trashItems = localState.trash)
-                    localState.trash
+                    loadedTrash = localState.trash
+                    if (previousId != newProject.id) localState.close()
+                    storage.saveProjectLocally(newProject, newPassword, trashItems = localState.trash,
+                        syncBase = incoming?.project?.takeUnless { localPackage })
+                    committed = true
                 } finally { if (previousId != newProject.id) localState.close() }
             }
-            if (previousId != newProject.id) previousId?.let(storage::releaseProjectLock)
             project = newProject
             manifest = newManifest
             password = newPassword
             clearHistory()
             trashState = loadedTrash
-            issues = runIo { ModelValidator.validateProject(newProject, i18n = i18n).issues }
+            issues = newIssues
             selectedSiteId = null
             selectedAreaId = null
             currentSection = AppSection.FLOORPLANS
             status = message
-            error = null
+            error = storage.saveCleanupErrors.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.message.orEmpty() }
+            if (previousId != newProject.id) previousId?.let(storage::releaseProjectLock)
             refreshStoredList()
             if (previousMedia !== storage.mediaSnapshot(newProject.id)) (previousMedia as? AutoCloseable)?.close()
             return true
         } catch (e: Exception) {
+            if (committed) {
+                error = e.message
+                return true
+            }
             if (releaseLockOnFailure) storage.releaseProjectLock(newProject.id)
             storage.restoreMedia(newProject.id, previousMedia, previousMediaProtected)
             if (e is LocalPasswordRequired && incoming != null && !localPackage) {
@@ -474,44 +483,79 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             error = i18n.text("text.953ce2808a1f", file.name) + issuesFound.joinToString("; ") { it.message }
             return
         }
-        val current = project
         val warnings = issuesFound.filter { it.severity == ValidationSeverity.DOCUMENTARY_WARNING }
-        if (compare && !storage.isLocalProjectFile(file) && (current != null || warnings.isNotEmpty())) {
-            val comparison = runIo { ProjectComparisonEvaluator.evaluate(current, manifest, pkg, i18n = i18n) }
-            if (comparison.status != ComparisonStatus.IDENTICAL || warnings.isNotEmpty()) {
-                dialog = AppDialog.Compare(comparison, pkg, password, warnings)
-                return
-            }
+        if (compare && !storage.isLocalProjectFile(file)) {
+            reviewIncoming(pkg, password, warnings)
+            return
         }
         dialog = null
-        if (open(pkg.project, pkg.manifest, password, i18n.text("text.644b750a4abb", pkg.project.name, pkg.project.sites.sumOf { it.devices.size }), pkg, if (storage.isLocalProjectFile(file)) releaseLockOnFailure else !storage.ownsProjectLock(pkg.project.id), localPackage = storage.isLocalProjectFile(file)) && !storage.isLocalProjectFile(file)) rememberSyncBase(pkg.project, password)
+        open(pkg.project, pkg.manifest, password, i18n.text("text.644b750a4abb", pkg.project.name, pkg.project.sites.sumOf { it.devices.size }), pkg, if (storage.isLocalProjectFile(file)) releaseLockOnFailure else !storage.ownsProjectLock(pkg.project.id), localPackage = storage.isLocalProjectFile(file))
     }
 
     fun acceptIncoming(pkg: ProjectPackage, incomingPassword: String?) {
+        val review = (dialog as? AppDialog.Compare)?.takeIf { it.pkg === pkg }
         dialog = null
-        if (open(pkg.project, pkg.manifest, incomingPassword, i18n.text("text.8e68c1630b23", pkg.project.name), pkg)) rememberSyncBase(pkg.project, incomingPassword)
+        open(pkg.project, pkg.manifest, incomingPassword, i18n.text("text.8e68c1630b23", pkg.project.name), pkg,
+                localPassword = review?.localPassword ?: incomingPassword)
     }
 
     fun acceptIncomingWithLocalPassword(pkg: ProjectPackage, incomingPassword: String?, localPassword: String) {
+        val prompt = dialog as? AppDialog.LocalReplacementPassword
+        if (prompt?.pkg === pkg && prompt.compareBeforeReplace) {
+            reviewIncoming(pkg, incomingPassword, prompt.warnings, localPassword, passwordAttempt = true)
+            return
+        }
         dialog = null
-        if (open(pkg.project, pkg.manifest, incomingPassword, i18n.text("text.8e68c1630b23", pkg.project.name), pkg,
-                localPassword = localPassword, localPasswordAttempt = true)) rememberSyncBase(pkg.project, incomingPassword)
+        open(pkg.project, pkg.manifest, incomingPassword, i18n.text("text.8e68c1630b23", pkg.project.name), pkg,
+                localPassword = localPassword, localPasswordAttempt = true)
     }
 
-    private fun rememberSyncBase(snapshot: Project, snapshotPassword: String?) {
-        try { runIo { storage.saveSyncBase(snapshot, snapshotPassword) } } catch (e: Exception) {
-            error = i18n.text("text.468c516c68a8", e.message)
+    private fun reviewIncoming(pkg: ProjectPackage, incomingPassword: String?, warnings: List<ValidationIssue>,
+        localPassword: String? = incomingPassword, passwordAttempt: Boolean = false) {
+        try {
+            val current = project?.takeIf { it.id == pkg.project.id }
+            val localFile = File(storage.getProjectsFolder(), "${pkg.project.id}.ofam")
+            val review = if (current != null) {
+                AppDialog.Compare(runIo { ProjectComparisonEvaluator.evaluate(current, manifest, pkg, i18n) },
+                    pkg, incomingPassword, warnings, current, password)
+            } else if (localFile.exists()) {
+                runIo {
+                    val result = storage.importPackageFromFile(localFile, localPassword)
+                    if (result.validationResult.issues.any { it.code in setOf("PASSWORD_REQUIRED", "INVALID_PACKAGE_PASSWORD") }) {
+                        return@runIo null
+                    }
+                    val local = requireNotNull(result.pkg) { result.validationResult.issues.joinToString("; ") { it.message } }
+                    local.use {
+                        AppDialog.Compare(ProjectComparisonEvaluator.evaluate(it.project, it.manifest, pkg, i18n),
+                            pkg, incomingPassword, warnings, it.project, localPassword.takeIf { _ -> it.manifest.isEncrypted })
+                    }
+                } ?: run {
+                    dialog = AppDialog.LocalReplacementPassword(pkg, incomingPassword, passwordAttempt, true, warnings)
+                    return
+                }
+            } else {
+                AppDialog.Compare(runIo { ProjectComparisonEvaluator.evaluate(null, null, pkg, i18n) }, pkg, incomingPassword, warnings)
+            }
+            dialog = review
+            if (review.localProject == null && project == null && warnings.isEmpty()) acceptIncoming(pkg, incomingPassword)
+        } catch (e: Exception) {
+            dialog = null
+            runIo { pkg.close() }
+            error = i18n.text("text.34b2135f1370", pkg.project.name, e.message)
         }
     }
 
-    /** Merges a package into the open project. */
+    /** Merges only the incoming project's local copy. */
     fun startMerge(pkg: ProjectPackage) {
-        val current = project ?: return
+        val review = (dialog as? AppDialog.Compare)?.takeIf { it.pkg === pkg }
+        val current = review?.localProject ?: project?.takeIf { it.id == pkg.project.id } ?: return
+        if (current.id != pkg.project.id) return
+        val localPassword = if (review != null) review.localPassword else password
         var baseError: String? = null
-        val base = try { runIo { storage.loadSyncBase(current.id, password) } } catch (e: Exception) { baseError = e.message; null }
+        val base = try { runIo { storage.loadSyncBase(current.id, localPassword) } } catch (e: Exception) { baseError = e.message; null }
         if (base == null && baseError == null) baseError = i18n.text("merge.baseUnavailable")
         val result = runIo { ProjectMerger.merge(base, current, pkg.project, i18n = i18n) }
-        val merge = AppDialog.Merge(pkg, result)
+        val merge = AppDialog.Merge(pkg, result, replaceClosedCopy = project?.id != current.id, localPassword = localPassword)
         if (result.conflicts.isEmpty()) applyMerge(merge) else dialog = merge
         if (baseError != null) error = baseError
     }
@@ -525,10 +569,31 @@ class DesktopAppState(val storage: DesktopStorageManager) {
 
     private fun applyMerge(merge: AppDialog.Merge) {
         dialog = null
+        val id = merge.pkg.project.id
+        val previousMedia = storage.mediaSnapshot(id)
+        val previousProtected = storage.mediaProtected(id)
+        var committed = false
         try {
-            runIo { storage.extractAttachments(merge.pkg) }
-            update(runIo { merge.result.resolve(merge.choices, i18n = i18n) }, i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size))
-            rememberSyncBase(merge.pkg.project, password)
+            if (merge.replaceClosedCopy) {
+                val resolved = runIo { merge.result.resolve(merge.choices, i18n = i18n) }
+                    .copy(isPasswordProtected = merge.localPassword != null)
+                open(resolved, merge.pkg.manifest, merge.localPassword,
+                        i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size), merge.pkg,
+                        localPassword = merge.localPassword)
+                return
+            }
+            val resolved = runIo { merge.result.resolve(merge.choices, i18n = i18n) }.copy(isPasswordProtected = password != null)
+            runIo {
+                storage.prepareMedia(resolved, merge.pkg, password != null, local = true)
+                storage.saveProjectLocally(resolved, password, trashItems = trashState, syncBase = merge.pkg.project)
+                committed = true
+            }
+            update(resolved, i18n.text("text.123fb31b11bf", merge.result.autoApplied, merge.choices.size), persist = false)
+            error = storage.saveCleanupErrors.takeIf { it.isNotEmpty() }?.joinToString("; ") { it.message.orEmpty() }
+            if (previousMedia !== storage.mediaSnapshot(id)) (previousMedia as? AutoCloseable)?.close()
+        } catch (e: Exception) {
+            if (!committed) storage.restoreMedia(id, previousMedia, previousProtected)
+            error = i18n.text("text.4d26209b4111", e.message)
         } finally { runIo { merge.pkg.close() } }
     }
 

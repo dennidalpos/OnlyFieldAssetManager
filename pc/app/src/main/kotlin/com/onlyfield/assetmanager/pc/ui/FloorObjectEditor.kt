@@ -48,7 +48,7 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
         ObjectFields(project, draft, initialSection, extraSections = {
             ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n, summary = (project.attachments.count { it.targetId == draft.id && it.id !in removed } + photos.size).takeIf { it > 0 }?.let { i18n.text("config.attachmentsCount", it) }) {
                 project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->
-                    Text(a.name); MediaThumbnail(state.attachmentBytes(a), a.fileType == AttachmentType.PDF, key = a.id)
+                    Text(a.name); MediaThumbnail(a.id, { state.attachmentBytes(a) }, a.fileType == AttachmentType.PDF)
                     TextButton(onClick = { removed = removed + a.id }) { Text(i18n.text("text.960630ee842c")) }
                 }
                 photos.toList().forEach { file ->

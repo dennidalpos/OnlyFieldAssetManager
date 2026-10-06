@@ -361,7 +361,7 @@ class ProjectRepositoryTest {
         repository.saveProject(original)
 
         val badBytes = "corrupted byte stream".toByteArray()
-        val eval = repository.evaluateImportPackage(ByteArrayInputStream(badBytes), currentProjectId = projId)
+        val eval = repository.evaluateImportPackage(ByteArrayInputStream(badBytes))
 
         assertFalse(eval.importResult.validationResult.isValid)
         assertNull(eval.importResult.pkg)
