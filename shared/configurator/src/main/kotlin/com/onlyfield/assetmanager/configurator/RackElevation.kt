@@ -94,8 +94,8 @@ private fun DeviceBlock(project: Project, device: Device, span: Int, i18n: Messa
 /** Quick insertion of a device into a free unit of [rack]. */
 @Composable
 fun RackUnitPicker(project: Project, rack: Rack, unit: Int, side: RackSide, i18n: Messages, onClose: () -> Unit,
-                   onAdd: (com.onlyfield.assetmanager.core.forms.MapObjectDraft) -> Unit, onEdit: ((com.onlyfield.assetmanager.core.forms.MapObjectDraft) -> Unit)? = null) {
+                   onAdd: (com.onlyfield.assetmanager.core.forms.MapObjectDraft) -> Unit, onEdit: ((com.onlyfield.assetmanager.core.forms.MapObjectDraft) -> Unit)? = null, error: String? = null) {
     com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog(project, i18n, "${rack.name} › U$unit", onClose,
         base = { com.onlyfield.assetmanager.core.forms.QuickAdd.inRack(project, rack, it, unit, side) }, onAdd = onAdd, onEdit = onEdit,
-        filter = { it.kind == ObjectKind.DEVICE })
+        filter = { it.kind == ObjectKind.DEVICE }, error = error)
 }

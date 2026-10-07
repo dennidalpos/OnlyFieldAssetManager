@@ -104,8 +104,8 @@ private fun ProjectInfoCard(project: Project, state: DesktopAppState) {
             title = i18n.text("text.bb9b7a5f351a"),
             onDismiss = { editing = false },
             onConfirm = {
-                editing = false
                 state.update(project.copy(name = name.trim(), description = description.trim().ifBlank { null }, updatedEpochMs = System.currentTimeMillis()), i18n.text("text.e3442afb1525"))
+                if (state.error == null) editing = false
             },
             confirmEnabled = name.isNotBlank()
         ) {
@@ -182,8 +182,8 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
                 val a = address.trim().ifBlank { null }
                 val updated = if (site == null) ProjectEdits.addSite(project, name.trim(), g, a)
                 else ProjectEdits.updateSite(project, site.copy(name = name.trim(), group = g, address = a))
-                newSite = false; editSite = null
                 state.update(updated, i18n.text("text.0a195dba51c9", name.trim()))
+                if (state.error == null) { newSite = false; editSite = null }
             },
             confirmEnabled = name.isNotBlank(),
             width = 440.dp
@@ -206,8 +206,8 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
                     name = name.trim(), floor = floor.trim().ifBlank { null }, description = description.trim().ifBlank { null }
                 )
                 val updated = if (area == null) ProjectEdits.addArea(project, site.id, edited) else ProjectEdits.updateArea(project, edited)
-                areaTarget = null
                 state.update(updated, i18n.text("text.b0e1d3b2c943", edited.name))
+                if (state.error == null) areaTarget = null
             },
             confirmEnabled = name.isNotBlank(),
             width = 460.dp

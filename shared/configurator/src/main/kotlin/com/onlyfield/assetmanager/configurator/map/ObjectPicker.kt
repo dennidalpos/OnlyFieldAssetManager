@@ -67,10 +67,10 @@ fun placementLabel(project: Project, areaId: String, parent: ObjectRef?, i18n: M
  */
 @Composable
 fun MapObjectPicker(project: Project, i18n: Messages, areaId: String, parent: ObjectRef?, point: MapPoint?, onClose: () -> Unit,
-                    onAdd: (MapObjectDraft) -> Unit, onEdit: (MapObjectDraft) -> Unit) {
+                    onAdd: (MapObjectDraft) -> Unit, onEdit: (MapObjectDraft) -> Unit, error: String? = null) {
     val subtitle = remember(project, areaId, parent) { placementLabel(project, areaId, parent, i18n) }
     ObjectPickerDialog(project, i18n, subtitle, onClose, base = { newObjectDraft(project, it, null, areaId, parent, point) }, onAdd = onAdd, onEdit = onEdit,
-        filter = { parent == null || it.kind != ObjectKind.CABLE })
+        filter = { parent == null || it.kind != ObjectKind.CABLE }, error = error)
 }
 
 /**
@@ -82,7 +82,7 @@ fun MapObjectPicker(project: Project, i18n: Messages, areaId: String, parent: Ob
 @Composable
 fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onClose: () -> Unit,
                        base: (ObjectType) -> MapObjectDraft, onAdd: (MapObjectDraft) -> Unit, onEdit: ((MapObjectDraft) -> Unit)? = null,
-                       filter: (ObjectType) -> Boolean = { true }) {
+                       filter: (ObjectType) -> Boolean = { true }, error: String? = null) {
     val allTypes = remember(project) { ObjectCatalog.types(project).filter(filter) }
     var query by remember { mutableStateOf("") }
     var custom by remember { mutableStateOf(false) }
@@ -114,6 +114,7 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
         Column {
             Text(title, modifier = Modifier.semantics { heading() })
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
         }
     }, text = {
         Column(Modifier.heightIn(max = 420.dp).then(if (draft != null || custom) Modifier.verticalScroll(rememberScrollState()) else Modifier), verticalArrangement = Arrangement.spacedBy(8.dp)) {

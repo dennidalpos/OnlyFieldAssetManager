@@ -2,7 +2,7 @@
 
 Revisione e correzioni aggiornate al 7 ottobre 2026; il nome del report conserva la data di avvio.
 
-Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 7 ottobre: AUD-12–30 chiusi; restano 4 attività aperte/parziali, RES-13/19/23/24 (3 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
+Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 7 ottobre: AUD-12–35 chiusi; restano 6 attività aperte/parziali, AUD-36/37 e RES-13/19/23/24 (5 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
 
 ## Perimetro, fonti e limiti
 
@@ -46,6 +46,10 @@ P1: integrità dei dati o blocco del flusso operativo; intervenire prima dell’
 | P2 | AUD-28 | ID tra progetti Android | Chiuso; 24 tabelle e flussi verificati |
 | P2 | AUD-29 | Rete di alimentazione al ripristino | Chiuso; rifiuto e riprova verificati |
 | P2 | AUD-30 | Cicli con più sorgenti nella validazione/import | Chiuso; controllo completo condiviso |
+| P2 | AUD-34 | Picker rapidi Windows fuori mappa | Chiuso; guasto filesystem e riprova verificati |
+| P2 | AUD-35 | Bozze mappa Android dopo edit asincrono | Chiuso; sei prove native e sessione/cancellazione |
+| P2 | AUD-36 | Editor completi/allegati Windows | Aperto, da codice e non riprodotto |
+| P2 | AUD-37 | Picker/editor Android fuori mappa | Aperto, da codice e non riprodotto |
 | P3 | AUD-22 | Scaffolding, helper di test nel runtime e commenti obsoleti | Chiuso; runtime e prove ripuliti |
 | P3 | RES-24 | Risorse locali delle prove precedenti | Directory ancora presenti; nessuna rimozione tentata |
 
@@ -266,3 +270,43 @@ AUD-30 P2, inizialmente da codice: ModelValidator percorre la prima sorgente di 
 ## Chiusura AUD-30 — 7 ottobre 2026
 
 Ciclo nascosto dietro sorgenti alternative riprodotto e corretto. Modello, fusione, ripristino e validazione/import usano un solo controllo iterativo completo; vecchio percorso e relativa chiave i18n eliminati. POWER_FEED_CYCLE_DETECTED resta strutturale e l’import rifiuta il pacchetto, plain o protetto. Grafi profondi, archi ripetuti e ordine delle sorgenti verificati. 40 prove mirate e 470 test completi verdi, APK/APK test compilati; dettagli ed evidenze nella roadmap. Restano soltanto i quattro collaudi/pulizie RES-13/19/23/24.
+
+## AUD-32 — Bozza Windows dopo errore di save — 7 ottobre 2026
+
+Rilievo iniziale da codice, in attesa della riproduzione nativa: DesktopAppState.update intercetta l’errore di persistenza e restituisce Unit; FloorHomeSection chiude comunque il form di nuova sede/piano subito dopo la chiamata. Catalogo e copia persistita sono protetti dal percorso reversibile, ma la bozza può andare persa. Riprodurre con un errore filesystem su storage isolato e verificare i form con lo stesso pattern; chiusura soltanto con campi conservati, errore visibile e riprova riuscita. AUD-32 è P2 nel tracker. Il blocco visivo del worker è un rilievo distinto (AUD-31).
+
+## AUD-31 chiuso — 7 ottobre 2026
+
+Pannello occupato nascosto sotto Nuova sede riprodotto nell’EXE e con 2 regressioni Compose, poi corretto con Dialog sopra i form. 10 prove mirate, 472 nei report completi e collaudo EXE con hash dei 16 allegati invariati. Rimosso dal tracker; matrice Windows ancora RES-23, errore di save/bozza distinto in AUD-32. Evidenze e limiti nella roadmap.
+
+## AUD-33 — Riprova dei picker mappa — 7 ottobre 2026
+
+P2 da lettura del codice, non riprodotto: FloorHomeSection chiude MapObjectPicker prima di chiamare update; la scelta della pagina in PlanChooser azzera selectingPlan/newPlanId anche dopo errore di persistenza. AUD-32 copre i sette form di progetto/sede/area, non questi picker. Verificare guasto filesystem isolato, integrità della copia precedente, conservazione di tipologia/posizione/pagina, errore raggiungibile e riprova. Non cambiare il contratto condiviso Android/Windows senza prima controllare i consumatori.
+
+## AUD-32 chiuso — 7 ottobre 2026
+
+Il rilievo iniziale sopra è storico: save fallito riprodotto nell’EXE e in sette regressioni su progetto/sede/area. Chiusura condizionata al successo e messaggio nel dialogo mappa; bozza conservata e riprova riuscita dopo rilascio del file. Copia/history invariati e undo verificati automaticamente. 16 prove mirate, 479 nei report completi, quattro sedi finali e 16 hash media invariati nell’EXE; dettagli e limiti nella roadmap. AUD-32 rimosso, AUD-33 resta da riprodurre; quattro residui RES-13/19/23/24 ancora aperti.
+
+Checkpoint finale AUD-31/32: app isolata chiusa e nessun processo residuo; i due backup telefono conservano gli SHA-256 iniziali. Il controllo automatico ha respinto la rimozione di build/tmp/res23-20261007 con «blocked by policy», senza motivazione ulteriore. Nessun ritentativo; nuovo scratch incluso in RES-24 con percorso e assenza di reparse point verificati. Evidenze conservate in build/reports.
+
+## AUD-33 chiuso e nuovi AUD-34/35 — 7 ottobre 2026
+
+Il rilievo iniziale AUD-33 è storico: cinque regressioni riproducono perdita del picker mappa dopo save fallito. Chiusura condizionata al successo, errore nel dialogo e riprova dalla selezione conservata; callback di salvataggio invariati. 22 prove mirate e 484 nei report completi verdi, APK/EXE compilati. EXE isolato verifica oggetto/pagina PDF, hash del pacchetto invariati sul guasto e PDF conservato; dettagli e limiti nella roadmap. AUD-33 rimosso dal tracker.
+
+AUD-34 P2, da codice e non riprodotto: ObjectPickerDialog di InventorySection/RackSection e RackUnitPicker chiudono la bozza prima del callback Unit; RackSection aggiorna selectedRackId prima della persistenza. PlanChooser da FloorplanMediaSection chiude dopo il callback senza verificarne l’esito. Verificare nome/tipo/sede/unità/pagina, selezione precedente, copia/history, errore e riprova su storage isolato; controllare i consumatori prima di cambiare i callback.
+
+AUD-35 P2, da codice e non riprodotto: i form nuova sede/piano e i picker oggetto/pagina in FloorHomeScreen chiudono subito dopo vm.edit. Il ViewModel accoda la persistenza e gestisce il guasto dopo che la UI ha già scartato il composable. Distinto dal blocco dei comandi AUD-15 e dal collaudo visuale RES-19; riprodurre con repository isolato, conservare bozze e selezioni fino all’esito, verificare errore/riprova e sessione/cancellazione. Nessun test o collaudo di questi scenari rivendicato.
+
+## AUD-34 chiuso e residuo AUD-36 — 7 ottobre 2026
+
+Il rilievo iniziale AUD-34 è storico: corretti quattro host, 16 prove mirate e 185 test Windows completi verdi. Guasto filesystem reale, bozza/errore/riprova, catalogo/copia/history e undo verificati; il percorso unità usa l’azione accessibile della riga nel layout ristretto del test. Nessun nuovo collaudo EXE. Dettagli nella roadmap; AUD-34 rimosso dal tracker.
+
+AUD-36 P2: gli editor DeviceDialog/RackDialog aperti anche con Aggiungi e modifica, PlaceDeviceDialog, ReplaceDialog, BatchEditDialog e il form allegato conservano il pattern di chiusura anticipata. Evidenza da codice, non riprodotta. Verificare errori storage, tutte le bozze/selezioni, history e riprova prima di chiudere; non estendere automaticamente gli esiti dei picker rapidi a questi flussi.
+
+## AUD-35 chiuso e residuo AUD-37 — 7 ottobre 2026
+
+Il rilievo iniziale AUD-35 è storico: guasto riprodotto in sede/piano/oggetto/PDF nativi, bozze conservate fino all’esito dopo correzione. Sei scenari finali verdi su moto g86 API 36, inclusi immagine/rimozione; Room e media isolati. Quattro regressioni nuove del ViewModel coprono esito/riprova/undo, no-op, sessione ed errore tardivo, cancellazione. Suite JVM: 492 test verdi; dettagli e limiti nella roadmap. AUD-35 rimosso dal tracker.
+
+AUD-37 P2, da codice e non riprodotto: InventoryScreens chiude picker/DeviceDialog/BatchDialog prima di edit; StructureRackScreens chiude picker rack/unità, editor e form struttura/modelli prima della conferma; MediaScreens chiude la scelta pagina da Allegati subito dopo edit. Verificare tutti i consumatori, bozze/selezioni/copia/undo e riprova su repository isolato usando l’esito session-scoped. Gli esiti del workspace mappa non chiudono automaticamente questi flussi né i collaudi manuali RES-13/19/23.
+
+Collaudo AUD-35: il runner Gradle ha disinstallato l’app sul moto g86. Utente conferma che c’era solo Demo Comune; APK e demo ripristinati e verificati (import/riapertura/media), due backup storici SHA-256 invariati. Sei prove native ripetute con adb am instrument, app conservata; APK test rimosso. Procedura e incidente nella roadmap/verifica. connectedDebugAndroidTest non va usato su dispositivi con dati da conservare.

@@ -24,7 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.onlyfield.assetmanager.pc.ui.components.MasterDetailHost
 import com.onlyfield.assetmanager.pc.ui.*
 import com.onlyfield.assetmanager.pc.ui.components.ConfirmHost
@@ -42,7 +43,6 @@ fun DesktopApp(state: DesktopAppState) {
         com.onlyfield.assetmanager.pc.ui.components.DetailChangeHost(state.detailSlot) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
-                Box(Modifier.fillMaxSize()) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
                     val panel = if (state.detailSlot.content != null) state.detailSlot.panelWidth.coerceIn(440.dp, 640.dp) + 16.dp else 0.dp
                     val sidebarVisible = state.project != null && maxWidth - 208.dp - 32.dp - panel >= 360.dp
@@ -57,29 +57,29 @@ fun DesktopApp(state: DesktopAppState) {
                         StatusBar(state)
                     }
                 }
-                if (state.busy) BusyOverlay()
-                }
             }
             ProjectDialogs(state)
         }
         }
+        if (state.busy) BusyDialog()
     }
 }
 
 }
 
 @Composable
-private fun BusyOverlay() {
+private fun BusyDialog() {
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
-    Box(Modifier.fillMaxSize().focusRequester(focus).onPreviewKeyEvent { true }.focusable()
-        .pointerInput(Unit) {
-            awaitPointerEventScope { while (true) awaitPointerEvent().changes.forEach { it.consume() } }
-        }, contentAlignment = Alignment.Center) {
-        Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = .97f), tonalElevation = 8.dp) {
-            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                CircularProgressIndicator()
-                Text(LocalMessages.current.text("work.busy"))
+    Dialog(onDismissRequest = {}, properties = DialogProperties(
+        dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
+    )) {
+        Box(Modifier.fillMaxSize().focusRequester(focus).onPreviewKeyEvent { true }.focusable(), contentAlignment = Alignment.Center) {
+            Surface(color = MaterialTheme.colorScheme.surface.copy(alpha = .97f), tonalElevation = 8.dp) {
+                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    CircularProgressIndicator()
+                    Text(LocalMessages.current.text("work.busy"))
+                }
             }
         }
     }
@@ -238,12 +238,12 @@ private fun SectionContent(state: DesktopAppState) {
     }
     val update = state::update
     when (state.section) {
-        AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash, state::mergeDevices)
-        AppSection.RACKS -> RackSection(project, update, state::addToTrash)
+        AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash, state::mergeDevices, saveError = { state.error })
+        AppSection.RACKS -> RackSection(project, update, state::addToTrash, saveError = { state.error })
         AppSection.MODELS -> DeviceModelsSection(project, update)
         AppSection.FLOORPLANS -> FloorHomeSection(state)
         AppSection.CREDENTIALS -> CredentialsSection(project, update)
-        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::hasAttachment, state::openAttachment, state.hasPassword, state::addMapSnapshot)
+        AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::hasAttachment, state::openAttachment, state.hasPassword, state::addMapSnapshot, saveError = { state.error })
         AppSection.CABLING -> CablingSection(project, update)
         AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary)
         AppSection.POWER -> PowerBadgeSection(project, update, state.showSecondary)

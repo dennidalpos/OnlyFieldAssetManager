@@ -55,7 +55,7 @@ private fun MediaThumbnailSource(key: Any?, read: () -> ByteArray?, pdf: Boolean
 }
 
 @Composable
-internal fun PlanChooser(project: Project, area: Area, importedId: String?, bytes: (Attachment) -> ByteArray?, onPick: () -> Unit, onAssign: (String?, Int, Int) -> Unit, onClose: () -> Unit) {
+internal fun PlanChooser(project: Project, area: Area, importedId: String?, bytes: (Attachment) -> ByteArray?, onPick: () -> Unit, onAssign: (String?, Int, Int) -> Unit, onClose: () -> Unit, error: String? = null) {
     val i18n = LocalMessages.current
 
     var selectedId by remember(importedId) { mutableStateOf(importedId) }
@@ -72,6 +72,7 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, byte
     AlertDialog(onDismissRequest = onClose, title = { Text(i18n.text("text.f3e846ee8611", area.name)) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onPick) { Text(i18n.text("text.5784dc5eaf9c")) }
+            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (selected?.fileType == AttachmentType.PDF) {
                 Text(i18n.text("text.0d63c434f784", selected.name))

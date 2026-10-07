@@ -16,7 +16,6 @@ import com.onlyfield.assetmanager.configurator.RackElevation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
@@ -26,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.*
@@ -38,7 +36,8 @@ import com.onlyfield.assetmanager.core.forms.RackLayout
 fun RackSection(
     project: Project,
     onProjectUpdated: (Project, String) -> Unit,
-    onTrashItemCreated: (TrashItem) -> Unit
+    onTrashItemCreated: (TrashItem) -> Unit,
+    saveError: () -> String? = { null },
 ) {
     val i18n = LocalMessages.current
 
@@ -179,10 +178,16 @@ fun RackSection(
     }
 
     selected?.let { rack -> addingAt?.let { u -> RackUnitPicker(project, rack, u, side, i18n, onClose = { addingAt = null },
-        onAdd = { draft -> addingAt = null; onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) }) } }
+        onAdd = { draft ->
+            onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft)))
+            if (saveError() == null) addingAt = null
+        }, error = saveError()) } }
     if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { MapObjectDraft.forRack(project, null) },
-        onAdd = { draft -> creating = false; selectedRackId = draft.id; onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
-        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK })
+        onAdd = { draft ->
+            onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft)))
+            if (saveError() == null) { creating = false; selectedRackId = draft.id }
+        },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK }, error = saveError())
     if (editingNew != null || editing != null) {
         RackDialog(index, editing, editingNew, onDismiss = { editingNew = null; editing = null }) { updated, saved, isNew ->
             editingNew = null; editing = null

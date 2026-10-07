@@ -31,6 +31,7 @@ import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.ui.*
 import com.onlyfield.assetmanager.ui.components.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -54,6 +55,17 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var topology by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    fun save(message: String, onSaved: () -> Unit, transform: (Project) -> Project) {
+        saveError = null
+        vm.edit(message, { error ->
+            if (scope.isActive) {
+                saveError = error
+                if (error == null) onSaved()
+            }
+        }, transform)
+    }
     val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
     fun openHit(hit: com.onlyfield.assetmanager.core.display.SearchHit) {
         searching = false
@@ -81,7 +93,8 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null && area != null) vm.importFloorplan(context, uri, area.id) { a ->
             if (a.fileType == AttachmentType.IMAGE) {
-                vm.edit(i18n.text("text.fcd1cc58f46b")) { ProjectEdits.setAreaFloorplan(it, area.id, a.id) }; selectingPlan = false
+                newPlanId = a.id
+                save(i18n.text("text.fcd1cc58f46b"), { selectingPlan = false; newPlanId = null }) { ProjectEdits.setAreaFloorplan(it, area.id, a.id) }
             } else newPlanId = a.id
         }
     }
@@ -91,7 +104,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             if (area == null) {
                 Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { addingStructure = true }) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
+                    Button(onClick = { saveError = null; addingStructure = true }, enabled = vm.busy == null) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
                     OutlinedButton(onClick = { topology = true }) { Text(i18n.text("topology.title")) }
                 }
                 LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -107,13 +120,13 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     update = vm::editMap,
                     goTo = { target, ref -> vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ref },
                     edit = { draft, page -> editorPage = page; editor = draft },
-                    add = { parent, point -> if (vm.busy == null) adding = parent to point },
+                    add = { parent, point -> if (vm.busy == null) { saveError = null; adding = parent to point } },
                     trash = { ref -> vm.moveToTrash(if (ref.type == PlacementTargetType.RACK) "RACK" else "DEVICE", ref.id, ObjectHierarchy.name(project, ref, i18n)) },
                     photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
                 ), Modifier.weight(1f), tools = listOf(
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("topology.title")) { topology = true },
-                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { if (vm.busy == null) selectingPlan = true },
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { if (vm.busy == null) { saveError = null; selectingPlan = true } },
                 ), focus = focus, media = { ref ->
                     val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
                     // Thumbnails wrap so the pane never scrolls sideways.
@@ -133,18 +146,20 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
     if (addingStructure) {
         var name by remember { mutableStateOf("") }
-        EditScreen(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { addingStructure = false }, {
-            vm.edit(i18n.text("text.ad31ce615e92")) { if (site == null) ProjectEdits.addSite(it, name.trim()) else ProjectEdits.addArea(it, site.id, Area(name = name.trim())) }
-            addingStructure = false
-        }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
+        EditScreen(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { if (vm.busy == null) addingStructure = false }, {
+            save(i18n.text("text.ad31ce615e92"), { addingStructure = false }) { if (site == null) ProjectEdits.addSite(it, name.trim()) else ProjectEdits.addArea(it, site.id, Area(name = name.trim())) }
+        }, confirmEnabled = name.isNotBlank() && vm.busy == null) {
+            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
+            saveError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
-    adding?.let { (parent, point) -> if (area != null) MapObjectPicker(project, i18n, area.id, parent, point, onClose = { adding = null },
-        onAdd = { draft -> adding = null; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
-        onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }) }
+    adding?.let { (parent, point) -> if (area != null) MapObjectPicker(project, i18n, area.id, parent, point, onClose = { if (vm.busy == null) adding = null },
+        onAdd = { draft -> if (vm.busy == null) save(i18n.text("quick.added", QuickAdd.name(draft)), { adding = null }) { draft.apply(it, i18n) } },
+        onEdit = { draft -> if (vm.busy == null) { adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft } }, error = saveError) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(vm, project, draft, editorPage) { editor = null } } }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, vm::attachmentFile, { picker.launch(arrayOf("image/*", "application/pdf")) }, { id, page, pages ->
-        vm.edit(i18n.text("text.fcd1cc58f46b")) { ProjectEdits.setAreaFloorplan(it, area.id, id, page, pages) }; selectingPlan = false; newPlanId = null
-    }, { selectingPlan = false; newPlanId = null })
+        if (vm.busy == null) save(i18n.text("text.fcd1cc58f46b"), { selectingPlan = false; newPlanId = null }) { ProjectEdits.setAreaFloorplan(it, area.id, id, page, pages) }
+    }, { if (vm.busy == null) { selectingPlan = false; newPlanId = null } }, error = saveError)
     if (scanning) BarcodeScanner(onCode = { code ->
         scanning = false
         val unknown = vm.openScannedCode(code)

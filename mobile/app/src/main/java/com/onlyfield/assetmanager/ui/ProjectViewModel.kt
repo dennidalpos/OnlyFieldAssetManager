@@ -292,21 +292,33 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     fun edit(message: String, transform: (Project) -> Project) {
+        edit(message, {}, transform)
+    }
+
+    /** Reports the save outcome only to the originating project session. */
+    fun edit(message: String, onResult: (String?) -> Unit, transform: (Project) -> Project) {
         val projectId = _project.value?.id ?: return
         launchCommand {
-            try {
-                val before = repository.getProjectById(projectId) ?: return@launchCommand
+            val result = try {
+                val before = repository.getProjectById(projectId) ?: error(i18n.text("text.05065b58f085"))
                 val after = transform(before)
                 require(after.id == projectId)
-                if (after == before) return@launchCommand
-                val saved = after.copy(updatedEpochMs = System.currentTimeMillis())
-                repository.saveProject(saved)
-                setProject(saved)
-                if (commandSession == session) notify(message, undo = snapshotUndo(before))
+                if (after != before) {
+                    val saved = after.copy(updatedEpochMs = System.currentTimeMillis())
+                    repository.saveProject(saved)
+                    coroutineContext.ensureActive()
+                    setProject(saved)
+                    if (commandSession == session) notify(message, undo = snapshotUndo(before))
+                }
+                null
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.9b6ca71eb272"), e)
+                val error = i18n.text("text.9b6ca71eb272") + (e.message?.let { " ($it)" } ?: "")
+                if (commandSession == session) fail(error)
+                error
             }
+            coroutineContext.ensureActive()
+            if (commandSession == session && _project.value?.id == projectId) onResult(result)
         }
     }
 

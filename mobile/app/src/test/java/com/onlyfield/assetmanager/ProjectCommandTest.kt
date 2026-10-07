@@ -275,4 +275,65 @@ class ProjectCommandTest {
         await { vm.busy == null }
         assertTrue(vm.project.value!!.isPasswordProtected)
     }
+
+    @Test fun editOutcomeReportsFailureThenOneCommittedRetryWithUndo() {
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_edit BEFORE UPDATE ON projects BEGIN SELECT RAISE(ABORT, 'edit save denied'); END")
+        val outcomes = mutableListOf<String?>()
+        vm.edit("Retried edit", { outcomes += it }) { it.copy(description = "Retained draft") }
+        await { vm.busy == null }
+        assertEquals(1, outcomes.size)
+        assertTrue(outcomes.single()!!.contains("edit save denied"))
+        assertEquals(initial, vm.project.value)
+        runBlocking { assertEquals(initial, repository.getProjectById(initial.id)) }
+        assertTrue(messages.none { it.undo != null })
+        db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_edit")
+        vm.edit("Retried edit", { outcomes += it }) { it.copy(description = "Retained draft") }
+        await { vm.busy == null }
+        assertEquals(2, outcomes.size)
+        assertNull(outcomes.last())
+        assertEquals("Retained draft", vm.project.value!!.description)
+        messages.single { it.undo != null }.undo!!.invoke()
+        await { vm.busy == null }
+        assertEquals(initial, vm.project.value)
+    }
+
+    @Test fun unchangedEditAcknowledgesOnceWithoutAddingUndo() {
+        val outcomes = mutableListOf<String?>()
+        vm.edit("Unchanged", { outcomes += it }) { it }
+        await { vm.busy == null }
+        assertEquals(listOf<String?>(null), outcomes)
+        assertEquals(initial, vm.project.value)
+        assertTrue(messages.isEmpty())
+    }
+
+    @Test fun closingProjectSuppressesBothOldEditOutcomesAndErrors() {
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_edit BEFORE UPDATE ON projects WHEN NEW.description = 'Fail' BEGIN SELECT RAISE(ABORT, 'late edit failure'); END")
+        val release = holdTransactions()
+        var callbacks = 0
+        try {
+            vm.edit("Old success", { callbacks++ }) { it.copy(description = "Saved") }
+            vm.edit("Old failure", { callbacks++ }) { it.copy(description = "Fail") }
+            shadowOf(Looper.getMainLooper()).idle()
+            vm.closeProject()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertEquals(0, callbacks)
+        assertTrue(messages.isEmpty())
+        assertNull(vm.project.value)
+        runBlocking { assertEquals("Saved", repository.getProjectById(initial.id)!!.description) }
+    }
+
+    @Test fun cancelledEditDoesNotReportAnOutcomeOrPublishSuccess() {
+        val release = holdTransactions()
+        var callbacks = 0
+        try {
+            vm.edit("Cancelled edit", { callbacks++ }) { it.copy(description = "Cancelled") }
+            shadowOf(Looper.getMainLooper()).idle()
+            owner.clear()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertEquals(0, callbacks)
+        assertTrue(messages.isEmpty())
+        runBlocking { assertEquals(initial, repository.getProjectById(initial.id)) }
+    }
 }

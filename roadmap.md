@@ -700,3 +700,101 @@ Punto di ripresa: nessun task software aperto; RES-13/19/23 per collaudi hardwar
 470 test finali verdi e APK/APK test compilati; report XML in build/reports/aud30-full e verifiche intermedie conservati, ignorati e non trasportati dal commit. Dati, app, Demo Comune, media e backup preservati. Non ritentare le pulizie già respinte e non terminare processi di altre sessioni; .kotlin/sessions è vuota dopo la rimozione automatica del marker da parte del compilatore.
 
 Corretto anche il testo del tracker rimasto con codifica Windows durante uno script: i quattro residui originali sono preservati, aggiunte le nuove evidenze e riscritto in UTF-8 senza BOM. Prima di riprendere leggere README.md, tracker, plan.md, questa roadmap e report residui; verificare git status, HEAD/origin/main e disponibilità locale delle evidenze.
+
+## AUD-31 — Pannello occupato sopra i form Windows — 7 ottobre 2026
+
+Durante RES-23, l’EXE aggiornato su Windows 11 Pro (10.0.26300), in storage isolato con fixture sintetica da 511 MiB, mostrava il form Nuova sede sopra BusyOverlay: menu disabilitati, progresso nascosto. Nessuna modifica concorrente o corruzione riprodotta. Il pannello usa ora Dialog non chiudibile durante l’operazione, composto dopo form e conferme; eliminati l’overlay precedente, il loop pointerInput e il Box ridondante. Nessuna modifica a schema, formato, preferenze o dipendenze.
+
+Baseline DesktopIoTest/DesktopUxLayoutTest/MediaUiDispatchTest: 8 test verdi, BUILD SUCCESSFUL in 11s. BusyDialogTest ha riprodotto il difetto con 2 assertion fallite sull’assenza del dialogo occupato; corretto prima il setup della fixture che non soddisfaceva il wizard. Ultima mirata: 10 prove verdi, BUILD SUCCESSFUL in 14s; worker riuscito/fallito, Escape/Tab/Invio/clic e bozza conservata mentre il pannello si apre/chiude. Questa prova non sostituisce il save fallito del form, distinto in AUD-32.
+
+Verifica completa: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:createDistributable --no-parallel --max-workers=1` → BUILD SUCCESSFUL in 3m 9s. Report: **472 test** (128/91/169/84), zero fallimenti/errori/saltati; 169 Windows rieseguiti, altri moduli UP-TO-DATE sul codice invariato. XML in build/reports/aud31-full, mirata in aud31-targeted e regressione iniziale in aud31-red.
+
+EXE corretto: pannello visibile sopra Nuova sede, Escape e clic su Annulla modifiche bloccati; salvataggio riuscito, comandi disponibili dopo commit. Ctrl+N finale ha aperto il wizard dopo il completamento e non costituisce prova di blocco durante quel save. Tre sedi persistite e 16 SHA-256 degli allegati verificati; catture e JSON in build/reports/res23-20261007. Fonte ufficiale [Compose Dialog](https://developer.android.com/develop/ui/compose/components/dialog), consultata il 7 ottobre. AUD-31 rimosso dal tracker, RES-23 resta parziale. Nessuna stampa fisica o modifica a dati/demo/backup reali.
+
+## AUD-32 — Bozze Windows conservate sul save fallito — 7 ottobre 2026
+
+Riprodotto nell’EXE con file .ofam isolato aperto senza condivisione della cancellazione: Nuova sede chiudeva la bozza sul save fallito. Sette regressioni hanno confermato lo stesso comportamento nei form di sede/piano della mappa e progetto/nuova sede/modifica sede/nuova area/modifica area nel pannello Progetto. I form ora chiudono soltanto quando update termina senza errore; nella mappa l’errore compare anche dentro il dialogo. Nessuna modifica al contratto di DesktopAppState.update, allo schema, al formato o alle dipendenze.
+
+Le sette prove iniziali fallivano tutte per il campo della bozza scomparso (build/reports/aud32-red). Mirata con BusyDialogTest/DesktopIoTest/MasterDetailTest e le sette nuove regressioni: 16 test verdi, BUILD SUCCESSFUL in 16s (aud32-targeted). La verifica completa include anche le assertion successive su stato dirty e un solo elemento di history: errore filesystem reale, copia/progetto/history invariati, bozza conservata, rilascio del file, riprova persistita e undo.
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :pc:app:createDistributable --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 3m 1s: **479 test** nei report (128 core, 91 exchange, 176 Windows, 84 Android), zero fallimenti/errori/saltati. I 176 Windows sono rieseguiti; core/exchange/Android UP-TO-DATE sul codice invariato. EXE rigenerato; XML in build/reports/aud32-full.
+
+EXE finale su Windows 11 Pro (10.0.26300), fixture sintetica da 511 MiB e storage separato: save fallito con bozza «Retried native draft» ancora aperta ed errore leggibile nel dialogo; dopo rilascio del file la stessa bozza salva correttamente. Tre sedi precedenti conservate, quarta sede persistita una sola volta e 16 SHA-256 degli allegati uguali alla fixture sorgente. Catture e JSON in build/reports/res23-20261007. Il vecchio hash del pacchetto rilevato prima della riapertura non era una baseline immediata del guasto finale: nessuna equivalenza byte nativa dedotta da quel confronto; le sette regressioni automatiche la verificano prima/dopo il guasto.
+
+AUD-32 rimosso dal tracker. AUD-33 P2 traccia il pattern nei picker di oggetto/pagina, letto da codice e ancora da riprodurre. RES-13/19 restano aperti senza dispositivi ADB; RES-23 resta parziale per focus/password/recupero/fusione/stampa. Pulizia storica RES-24 non ritentata in attesa della risposta; inventario di 296 file, 1.291.597.555 byte, senza reparse point. Nessun commit/push e nessun processo di altre sessioni terminato.
+
+Checkpoint finale AUD-31/32: app isolata chiusa e nessun processo residuo; i due backup telefono conservano gli SHA-256 iniziali. Il controllo automatico ha respinto la rimozione di build/tmp/res23-20261007 con «blocked by policy», senza motivazione ulteriore. Nessun ritentativo; nuovo scratch incluso in RES-24 con percorso e assenza di reparse point verificati. Evidenze conservate in build/reports.
+
+## AUD-33 — Picker Windows della mappa dopo save fallito — 7 ottobre 2026
+
+Cinque regressioni con .ofam isolato bloccato tramite NOSHARE_DELETE riproducono la perdita del picker: posizione da pressione lunga sulla mappa, inserimento nel rack, seconda pagina PDF, immagine e rimozione dello sfondo. Copia, progetto e history restavano integri ma il dialogo veniva chiuso dal chiamante. FloorHomeSection chiude ora soltanto se update termina senza errore; l’ID dell’allegato appena importato resta disponibile sul rifiuto. MapObjectPicker/ObjectPickerDialog e PlanChooser ricevono un messaggio error facoltativo e lo mostrano dentro il dialogo; callback di salvataggio invariati, default null per gli altri consumatori. Nessun nuovo schema, formato o dipendenza.
+
+Baseline ObjectPickerUiTest/FloorMediaTest: 8 prove verdi, BUILD SUCCESSFUL in 11s (build/reports/aud33-baseline). Corretto il setup della nuova fixture (Rack senza siteId e posizione esplicita prima di aprire il contenitore), poi tutte le cinque regressioni fallivano sulla selezione scomparsa (aud33-red). Mirata finale: 22 prove verdi, BUILD SUCCESSFUL in 29s (aud33-targeted), inclusi AUD-31/32. Le prove verificano bozza/errore/preset/posizione/contenitore/pagina, copia e history invariati, riprova persistita e una sola modifica annullabile.
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :pc:app:createDistributable --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 6m: **484 test** nei report (128 core, 91 exchange, 181 Windows, 84 Android), zero fallimenti/errori/saltati; 181 Windows e 84 Android rieseguiti, core/exchange UP-TO-DATE sul codice invariato. APK ed EXE rigenerati; XML in build/reports/aud33-full. Nessuna installazione o prova hardware Android: ADB non rileva dispositivi.
+
+EXE su Windows 11 Pro (10.0.26300), piccolo pacchetto sintetico importato nel precedente storage isolato: picker Switch conserva nome/preset ed errore dopo guasto; dopo rilascio del file Aggiungi persiste un solo switch con 24 porte RJ45 e 4 SFP+. PlanChooser conserva la seconda pagina selezionata e l’errore; la stessa conferma dopo rilascio assegna la pagina corretta di un PDF da tre pagine. Per entrambi i guasti SHA-256 dell’intero .ofam invariato rispetto alla baseline rilevata subito prima; PDF finale uguale alla sorgente. Catture, fixture e verification.json in build/reports/aud33-native. Posizione/contenitore/immagine/rimozione dello sfondo coperti in Compose; la matrice nativa completa resta RES-23.
+
+AUD-33 rimosso dal tracker; AUD-34/35 registrano separatamente i picker Windows fuori mappa e le bozze Android chiuse prima dell’esito asincrono, ancora da riprodurre. Fonti ufficiali [stato e remember in Compose](https://developer.android.com/develop/ui/compose/state) e [Dialog](https://developer.android.com/develop/ui/compose/components/dialog), consultate il 7 ottobre: lo stato remember viene perso quando il composable esce dalla composizione. Gli esiti di persistenza qui indicati derivano dai test del repository.
+
+App isolata chiusa, nessun lock della sessione mantenuto; due backup telefono SHA-256 invariati. Riusato build/tmp/res23-20261007, già incluso in RES-24: pulizie precedentemente respinte non ritentate. Dati/demo/evidenze conservati, nessun processo altrui terminato e nessun commit/push.
+
+## AUD-34 — Picker Windows fuori dalla mappa — 7 ottobre 2026
+
+Completato: inventario, nuovo rack, inserimento in unità rack e pagina PDF da Allegati restano aperti sul salvataggio fallito. L’errore è nel picker, la selezione rack cambia solo dopo il successo e la riprova conserva la bozza. I callback Unit esistenti restano invariati; i soli host interni ricevono un lettore dell’errore corrente. RackUnitPicker inoltra il parametro opzionale di errore, come ObjectPickerDialog.
+
+Baseline delle regressioni precedenti verde (12 test). Tre nuove prove iniziali riproducono la scomparsa della bozza/comando; il selettore della riga rack è stato corretto per usare l’azione accessibile, poiché il clic nel layout ristretto non apriva il picker. Finale: 4 regressioni nuove e 12 precedenti, BUILD SUCCESSFUL in 17s, zero fallimenti/errori/saltati. Guasto reale tramite NOSHARE_DELETE sul pacchetto locale; copia byte per byte, catalogo e history precedenti invariati, riprova dalla stessa schermata, lettura del pacchetto persistito e undo verificati.
+
+Suite Windows completa e baseline Android ProjectCommandTest: BUILD SUCCESSFUL in 3m 32s, 185 test Windows e 10 Android senza fallimenti/errori/saltati. XML in build/reports/aud34-targeted e aud34-full; riproduzione iniziale in aud34-red. Nessun nuovo collaudo EXE: la matrice nativa resta RES-23. AUD-34 rimosso dal tracker; AUD-36 registra gli editor completi e il form allegato letti da codice, non riprodotti.
+
+Fonte ufficiale [stato Compose](https://developer.android.com/develop/ui/compose/state), consultata il 7 ottobre: remember perde lo stato quando il composable esce dalla composizione. Le garanzie di persistenza qui riportate derivano dalle prove del repository.
+
+## AUD-35 — Bozze mappa Android dopo esito asincrono — 7 ottobre 2026
+
+Completato: nuova sede/piano, picker oggetto e scelta PDF/immagine/rimozione dello sfondo attendono l’esito del save. Sul guasto la bozza e la selezione restano composte e l’errore è nello stesso form/picker. La riprova usa i dati conservati. Anche un’immagine appena importata mantiene il riferimento al media fino all’esito dell’assegnazione.
+
+ProjectViewModel.edit conserva la firma precedente e aggiunge un overload interno con onResult(String?): null indica successo, una stringa il guasto. Una modifica senza variazioni conferma il successo senza aggiungere undo. Dopo chiusura/cambio progetto non pubblica esiti o errori della vecchia sessione; ensureActive propaga la cancellazione prima delle pubblicazioni. La UI applica il callback solo se il suo scope Compose è ancora attivo. Nessun cambio di schema Room v2, formato .ofam v1 o dipendenze.
+
+Baseline Android ProjectCommandTest: 10 test verdi prima della correzione. La prova nativa iniziale riproduce la scomparsa di tre bozze; il PDF inizialmente richiedeva scorrimento alla seconda pagina, poi riproduce separatamente la scomparsa del comando di conferma. Durante la verifica sono stati adattati i selettori alla tastiera, alla lista lazy e al menu ⋮ delle finestre strette, senza bypass del save o sostituzione del repository.
+
+Finale mirato: 14 ProjectCommandTest e quattro prove native principali, BUILD SUCCESSFUL in 1m 3s. Ulteriori immagine/rimozione portano a **sei test nativi** su moto g86 Android 16/API 36: BUILD SUCCESSFUL in 59s, zero fallimenti/errori/saltati. Trigger SQLite BEFORE UPDATE su database Room in memoria, media sintetici in una cartella UUID nel cacheDir e renderer PDF Android reale. Integrità del catalogo persistito, nome/tipo/posizione/pagina, errore raggiungibile, riprova, chiusura dopo successo e una sola offerta undo verificati. Tastiera chiusa prima di Salva; campi/errori raggiunti con scorrimento. Il test non verifica la matrice TalkBack/focus completa o SQLCipher/Keystore: RES-13/19 restano aperti. Scratch nativo rimosso in finally; nessun accesso al database della demo. APK principale aggiornato dal runner; EXE non rigenerato.
+
+Suite completa JVM/Compose: **492 test** (128 core, 91 exchange, 185 Windows, 88 Android), zero fallimenti/errori/saltati. Windows eseguito nel passaggio AUD-34, Android rieseguito integralmente in AUD-35, core/exchange UP-TO-DATE. Il comando combinato con le sei prove native era fallito soltanto per due selettori del menu adattivo; dopo la correzione la suite nativa è verde. Conferma finale:
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1
+```
+
+BUILD SUCCESSFUL in 1s (43 task UP-TO-DATE). Prova nativa eseguita con ANDROID_SERIAL=ZY32LNCB8C e `:mobile:app:connectedDebugAndroidTest '-Pandroid.testInstrumentationRunnerArguments.class=com.onlyfield.assetmanager.FailedMapSaveNativeTest' --no-parallel --max-workers=1`. XML/log conservati in build/reports/aud35-native, aud35-targeted, aud35-full; riproduzioni iniziali in aud35-native-red e aud35-native-red-pdf. AUD-35 rimosso dal tracker; AUD-37 registra i picker/editor Android fuori mappa letti da codice, non riprodotti. Nessun commit/push o pulizia delle risorse storiche.
+
+Fonti ufficiali consultate il 7 ottobre: [stato Compose](https://developer.android.com/develop/ui/compose/state), [eventi UI e responsabilità di ViewModel/UI](https://developer.android.com/topic/architecture/ui-layer/events), [cancellazione ensureActive](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/ensure-active.html). Le garanzie specifiche dell’app derivano dalle regressioni del repository.
+
+## Stato telefono dopo collaudo e procedura conservativa — 7 ottobre 2026
+
+Il controllo finale ha trovato com.onlyfield.assetmanager assente dopo connectedDebugAndroidTest. Reinstallando l’APK con -r, files/databases/shared_prefs erano assenti. La sessione non aveva verificato lo stato installato prima del primo test: errore del collaudo, distinto dalle regressioni di codice. L’utente ha confermato che sul moto g86 c’era soltanto Demo Comune. APK reinstallato manualmente, demo ripristinato dalla fixture canonica tramite EncryptedSchemaUpgradeTest#demoPackageIsImportedOnDisk con seedApplicationDemo=true: database vuoto richiesto, import SQLCipher su disco, riapertura e media verificati, **OK (1 test)** in 5,389s. Nessun backup grezzo sovrascritto: entrambi SHA-256 corrispondono a build/reports/res23-backup-before-20261007.json; confronto in build/reports/aud35-native/backup-integrity.json.
+
+Le sei prove AUD-35 sono state rieseguite tramite installazione manuale e am instrument: **OK (6 tests)** in 48,663s; pacchetto principale ancora presente dopo la suite. Rimosso solo com.onlyfield.assetmanager.test (Success), app principale riavviata e presente. Questa procedura evita la disinstallazione automatica del runner Gradle. Non eseguire connectedDebugAndroidTest su un dispositivo che contiene dati da conservare. La sola separazione del database di prova non protegge dalla pulizia dei pacchetti eseguita dal runner.
+
+Comandi verificati sul moto g86; installazioni con -r, senza uninstall del pacchetto principale:
+
+```powershell
+adb -s ZY32LNCB8C install -r mobile/app/build/outputs/apk/debug/app-debug.apk
+adb -s ZY32LNCB8C install -r mobile/app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+adb -s ZY32LNCB8C shell am instrument -w -r -e class com.onlyfield.assetmanager.FailedMapSaveNativeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner
+```
+
+Verificare prima pacchetto/dati e backup esportabile; controllare il pacchetto principale dopo la prova. Il seedApplicationDemo è stato usato solo per questo recupero concordato e non deve essere incluso nei collaudi ordinari. I backup grezzi cifrati dipendono dal Keystore e non sono garanzia di recupero dopo una disinstallazione. Fonti primarie: [implementazione ufficiale del plugin APK installer UTP](https://android.googlesource.com/platform/tools/base/+/445534e2a5188fca7990ed6455fb83f9aa5bba2a/utp/android-test-plugin-host-apk-installer/src/main/java/com/android/tools/utp/plugins/host/apkinstaller/AndroidTestApkInstallerPlugin.kt), consultata il 7 ottobre: afterAll disinstalla i pacchetti con uninstallAfterTest. Rimozione e ripristino qui descritti sono osservazioni della sessione.
+
+Chiusura documentale AUD-34/35: tracker con sei sole voci aperte/parziali e riferimenti/dipendenze validi; 18 Markdown UTF-8 senza BOM e 143 link locali validi; git diff --check superato. Rimossi quattro import inutilizzati nel solo scope Windows modificato; :pc:app:compileKotlin --no-parallel --max-workers=1, BUILD SUCCESSFUL in 2s. Nessun nuovo test ripetuto per la sola rimozione degli import.
+
+## Passaggio di sessione — 7 ottobre 2026
+
+Su richiesta esplicita dell’utente, salvataggio del lavoro con commit e push sul ramo principale main. Prima del commit, fetch di origin/main riuscito e confronto HEAD...origin/main pari a 0/0; diff e nuovi test rivisti. Il checkpoint comprende AUD-31–35, documentazione e regressioni. Riprendere da AUD-36, poi AUD-37; restano RES-13/19/23/24. I report locali confermano 492 test JVM e sei prove native verdi; nessuna nuova esecuzione richiesta dalle sole modifiche di consegna. Report, APK/EXE, fixture, dati e backup sono ignorati da Git e restano su questa macchina. Controllare presenza delle evidenze prima di usarle in un altro checkout. Preservare Demo Comune ripristinato sul moto g86 e usare la procedura manuale ADB documentata. Nessuna pulizia storica ritentata.

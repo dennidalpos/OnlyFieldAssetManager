@@ -100,3 +100,15 @@ AUD-29: se nuove alimentazioni tra gli apparati rimasti rendono ciclici i record
 Validazione del catalogo, fusione e ripristino usano un unico controllo del grafo nel modello condiviso. Ogni sorgente concorre al controllo, indipendentemente dall’ordine; nessuna ricorsione e nessuna deduplicazione dei record. Più alimentazioni verso la stessa sorgente non costituiscono da sole un ciclo. Il controllo riguarda tutti i collegamenti, compresi auto-riferimenti e cicli nascosti dietro sorgenti alternative.
 
 Un catalogo ciclico genera POWER_FEED_CYCLE_DETECTED come STRUCTURAL_ERROR, con un messaggio sul grafo del progetto; l’import non restituisce un pacchetto utilizzabile. Fusione e ripristino conservano progetto/cestino sul rifiuto e permettono riprova dopo correzione. Eliminato il precedente percorso che seguiva la sola prima sorgente; nessuna modifica allo schema Room v2 o allo scambio .ofam v1.
+
+## Save fallito nei form Windows — AUD-32
+
+Nei form di progetto, sede e area, un errore di salvataggio conserva i dati inseriti e lascia l’editor aperto. Nella mappa l’errore compare nel dialogo; nel pannello Progetto resta raggiungibile il messaggio globale. Correggere il guasto e premere nuovamente Salva, oppure annullare esplicitamente la bozza. Il dialogo occupato copre temporaneamente form e conferme durante l’I/O (AUD-31). La riprova dei picker nel workspace mappa è descritta nel paragrafo AUD-33 qui sotto.
+
+AUD-33 estende la riprova al workspace mappa Windows: oggetto e pagina/immagine/sfondo mantengono il picker sul save fallito, con errore interno e selezione conservata. Dopo aver risolto il guasto si usa lo stesso comando di conferma. Gli altri picker rapidi Windows sono corretti in AUD-34; la conferma asincrona mappa Android in AUD-35. Restano gli editor/host distinti in AUD-36/37.
+
+AUD-34 completato: anche i picker rapidi Inventario, Rack e unità rack e la pagina PDF da Allegati conservano la bozza sul save fallito, mostrano l’errore e consentono riprova. La selezione del nuovo rack cambia dopo il successo. Gli editor completi, collocazione/sostituzione/modifica multipla e form allegato restano da riprodurre in AUD-36.
+
+## Riprova nella mappa Android — AUD-35
+
+Nuova sede/piano e inserimento rapido di oggetti si chiudono dopo la conferma del salvataggio. In caso di errore restano nome, tipo e posizione e compare il messaggio nello stesso form/picker: correggere il guasto e confermare di nuovo oppure annullare la bozza. La stessa regola vale per pagina PDF, immagine e rimozione dello sfondo; un media appena importato rimane disponibile per riprovare l’assegnazione. I comandi restano bloccati durante la persistenza; il successo offre un solo undo. Chiusura/cambio progetto e cancellazione impediscono callback tardivi. Altri form Android restano da verificare in AUD-37.

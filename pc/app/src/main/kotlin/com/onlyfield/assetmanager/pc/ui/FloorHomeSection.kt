@@ -131,23 +131,35 @@ fun FloorHomeSection(state: DesktopAppState) {
         var name by remember { mutableStateOf("") }
         FormDialog(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { addingStructure = false }, {
             state.update(if (site == null) ProjectEdits.addSite(project, name.trim()) else ProjectEdits.addArea(project, site.id, Area(name = name.trim())), i18n.text("text.ad31ce615e92"))
-            addingStructure = false
-        }, confirmEnabled = name.isNotBlank()) { FormField(name, { name = it }, i18n.text("text.2e245546ff59")) }
+            if (state.error == null) addingStructure = false
+        }, confirmEnabled = name.isNotBlank()) {
+            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
+            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
     }
     adding?.let { (parent, point) -> if (area != null) MapObjectPicker(project, i18n, area.id, parent, point, onClose = { adding = null },
-        onAdd = { draft -> adding = null; state.update(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
-        onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }) }
+        onAdd = { draft ->
+            state.update(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft)))
+            if (state.error == null) adding = null
+        },
+        onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }, error = state.error) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft, editorPage) { editor = null } } }
     if (searching) GlobalSearchDialog(project, i18n, state.recentSearch, ::openHit) { searching = false }
     if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentBytes, {
         DesktopStorageHelper.pickOpenFile(i18n.text("text.04458b820c0e"), i18n.text("text.0c7a70a251fc"), "pdf", "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { file ->
             state.importFloorplan(file, area.id)?.let { a ->
-                if (a.fileType == AttachmentType.IMAGE) { state.update(ProjectEdits.setAreaFloorplan(state.project!!, area.id, a.id), i18n.text("text.fcd1cc58f46b")); selectingPlan = false }
-                else newPlanId = a.id
+                newPlanId = a.id
+                if (a.fileType == AttachmentType.IMAGE) {
+                    state.update(ProjectEdits.setAreaFloorplan(state.project!!, area.id, a.id), i18n.text("text.fcd1cc58f46b"))
+                    if (state.error == null) { selectingPlan = false; newPlanId = null }
+                }
             }
         }
-    }, { id, page, pages -> state.update(ProjectEdits.setAreaFloorplan(state.project!!, area.id, id, page, pages), i18n.text("text.fcd1cc58f46b")); selectingPlan = false; newPlanId = null }, { selectingPlan = false; newPlanId = null })
+    }, { id, page, pages ->
+        state.update(ProjectEdits.setAreaFloorplan(state.project!!, area.id, id, page, pages), i18n.text("text.fcd1cc58f46b"))
+        if (state.error == null) { selectingPlan = false; newPlanId = null }
+    }, { selectingPlan = false; newPlanId = null }, error = state.error)
     if (scanning && area != null) {
         var code by remember { mutableStateOf("") }
         FormDialog(i18n.text("text.bafdb2fe7ef0"), { scanning = false }, {

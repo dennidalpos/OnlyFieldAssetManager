@@ -95,3 +95,9 @@ Fonti ufficiali consultate il 6 ottobre 2026: [Room REPLACE](https://developer.a
 AUD-29: se nuove alimentazioni tra gli apparati rimasti rendono ciclici i record da ripristinare, il ripristino viene rifiutato prima di ricrearli, anche con più sorgenti. Progetto, cestino e file restano conservati; si correggono i collegamenti e si riprova. Controllo condiviso con la fusione, schema e formato invariati.
 
 AUD-30: l’import esegue la validazione completa del grafo di alimentazione prima di rendere utilizzabile il pacchetto. Cicli con più sorgenti producono un errore strutturale, anche dopo decifratura; nessuna sostituzione della copia locale. Il controllo è lo stesso del modello condiviso usato da fusione e ripristino.
+
+## Bozze dopo errore di persistenza Windows — AUD-32
+
+Un save fallito nei form di progetto, sede e area non chiude l’editor e non cancella i campi. Progetto, copia locale e history mantengono lo stato precedente; dopo aver risolto il guasto si può premere di nuovo Salva. Il form mappa mostra l’errore anche nel dialogo, senza doverlo chiudere. La riprova riuscita registra una sola modifica annullabile. Contratto update, Room v2 e .ofam v1 invariati. Integrità verificata con guasto filesystem nelle sette regressioni; bozza/errore/riprova anche nell’EXE isolato. Picker del workspace mappa corretti in AUD-33; picker rapidi fuori mappa corretti in AUD-34 e conferma asincrona mappa Android in AUD-35. Gli editor restanti sono AUD-36/37. Evidenze e limiti nella roadmap.
+
+AUD-34 completa i picker rapidi Windows di Inventario/Rack/unità e PDF da Allegati: errore nel dialogo, bozza conservata e selezione rack dopo il save. AUD-35 applica la conferma asincrona ai form/picker della mappa Android; catalogo precedente conservato sul guasto, callback legati a sessione e scope. Editor completi Windows in AUD-36 e altri host Android in AUD-37, da codice e non riprodotti.

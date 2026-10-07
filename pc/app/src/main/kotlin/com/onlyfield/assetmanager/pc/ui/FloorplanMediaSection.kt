@@ -42,6 +42,7 @@ fun FloorplanMediaSection(
     onOpenAttachment: (Attachment) -> Unit,
     protected: Boolean,
     onAddMapSnapshot: (DesktopMapSnapshot, String) -> Boolean,
+    saveError: () -> String? = { null },
 ) {
     val i18n = LocalMessages.current
 
@@ -50,7 +51,7 @@ fun FloorplanMediaSection(
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SubTabs(listOf(i18n.text("text.690325ff1b4c", project.attachments.size), i18n.text("text.2ebfe0133d0c")), tab) { tab = it }
         when (tab) {
-            0 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentBytes, hasAttachment, onOpenAttachment, protected)
+            0 -> AttachmentsTab(project, index, onProjectUpdated, onAddAttachment, attachmentBytes, hasAttachment, onOpenAttachment, protected, saveError)
             1 -> key(project.id) { CartographyTab(onAddMapSnapshot) }
         }
     }
@@ -66,6 +67,7 @@ private fun AttachmentsTab(
     hasAttachment: (Attachment) -> Boolean,
     onOpenAttachment: (Attachment) -> Unit,
     protected: Boolean,
+    saveError: () -> String?,
 ) {
     val i18n = LocalMessages.current
 
@@ -145,8 +147,9 @@ private fun AttachmentsTab(
         }
     }
     if (planAreaId != null && floorplanFor != null) PlanChooser(project, index.area(planAreaId)!!, floorplanFor!!.id, attachmentBytes, {}, { id, page, pages ->
-        onProjectUpdated(ProjectEdits.setAreaFloorplan(project, planAreaId!!, id, page, pages), i18n.text("text.fcd1cc58f46b")); planAreaId = null; floorplanFor = null
-    }, { planAreaId = null; floorplanFor = null })
+        onProjectUpdated(ProjectEdits.setAreaFloorplan(project, planAreaId!!, id, page, pages), i18n.text("text.fcd1cc58f46b"))
+        if (saveError() == null) { planAreaId = null; floorplanFor = null }
+    }, { planAreaId = null; floorplanFor = null }, error = saveError())
 
 }
 

@@ -3,7 +3,6 @@ package com.onlyfield.assetmanager.pc.ui
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
-import com.onlyfield.assetmanager.configurator.RackUnitPicker
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
@@ -15,7 +14,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import com.onlyfield.assetmanager.configurator.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -35,6 +33,7 @@ fun InventorySection(
     onProjectUpdated: (Project, String) -> Unit,
     onTrashItemCreated: (TrashItem) -> Unit,
     onMergeDevices: (String, String, MergeDataChoices) -> Boolean,
+    saveError: () -> String? = { null },
 ) {
     val i18n = LocalMessages.current
 
@@ -179,8 +178,11 @@ fun InventorySection(
     }
 
     if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { inventoryDeviceDraft(project, null).withType(it) },
-        onAdd = { draft -> creating = false; onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft))) },
-        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE })
+        onAdd = { draft ->
+            onProjectUpdated(draft.apply(project, i18n), i18n.text("quick.added", QuickAdd.name(draft)))
+            if (saveError() == null) creating = false
+        },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE }, error = saveError())
     if (editingNew != null || editing != null) {
         DeviceDialog(
             project = project,

@@ -102,3 +102,13 @@ AUD-25 implementato: quattro scelte disponibili su Android/Windows, ID/classific
 AUD-28 implementato: persistenza Android rifiuta collisioni tra progetti su tutte le tabelle del catalogo, prima delle cancellazioni. Import/sostituzione/fusione/ripristino conservano le copie precedenti e non rimappano ID. AUD-29 riprodotto e corretto: un ciclo ricreato dal cestino dopo modifiche alla rete blocca il ripristino e conserva i dati fino alla correzione, riusando il controllo della fusione.
 
 AUD-30 implementato: controllo completo unico per validazione/fusione/ripristino; import rifiuta anche cicli nascosti dietro sorgenti alternative. Più alimentazioni e catene profonde restano ammesse quando acicliche; nessun nuovo formato o dipendenza. Verifica completa finale verde: 470 test, APK e APK test compilati; evidenze e checkpoint del 7 ottobre nella roadmap.
+
+AUD-31 completato: il pannello occupato Windows è un dialogo sopra i form e le conferme, senza smontare le bozze. Collaudo EXE con 511 MiB e regressioni verdi; il save fallito del form è corretto in AUD-32.
+
+AUD-32 completato: errore di save conserva le bozze nei sette form Windows di progetto/sede/area, con riprova dalla stessa schermata e una sola modifica annullabile. EXE isolato e 479 report verdi; nessuna nuova API o dipendenza. Riprova dei picker del workspace mappa completata con AUD-33.
+
+AUD-33 completato: i picker della mappa Windows conservano bozza e selezione sul save fallito, con errore nel dialogo e riprova senza doppia modifica. Cinque regressioni, 484 report verdi, APK/EXE e collaudo nativo oggetto/pagina PDF; nessun nuovo formato o dipendenza. Gli altri picker rapidi Windows e le bozze asincrone mappa Android sono corretti in AUD-34/35; restano gli editor/host in AUD-36/37.
+
+AUD-34 completato: picker Windows fuori mappa con bozze conservate fino al successo, errore interno e selezione rack dopo commit. 185 test Windows verdi; nessuna dipendenza o formato nuovo. AUD-36 separa il residuo da codice degli editor completi e del form allegato; AUD-35 completato.
+
+AUD-35 completato: esito esplicito per gli edit asincroni della mappa Android, bozza conservata sul guasto e chiusura dopo successo; sessione/cancellazione e no-op verificati. 492 report JVM verdi e sei prove native su moto g86 API 36. Restano AUD-36/37 (editor/picker fuori dal perimetro corretto, evidenza da codice) e RES-13/19/23/24; nessuna nuova dipendenza, schema o formato.

@@ -92,3 +92,13 @@ Le mappe cartografiche vengono scaricate solo su richiesta e salvate come allega
 ## Ripristino delle collocazioni — AUD-27
 
 Un piano mancante o trasferito a un’altra sede, un contenitore non disponibile, un figlio ricollocato o un ID di collocazione riutilizzato bloccano il ripristino. Le coordinate originali tornano soltanto quando il contesto è disponibile; nessun posizionamento viene scartato silenziosamente. La voce e i media restano nel cestino sul rifiuto.
+
+## Riprova nei picker Windows — AUD-33
+
+Nel workspace mappa, un errore di save mantiene aperto il picker oggetto con nome, preset, posizione o contenitore e mostra il messaggio nel dialogo. Anche la scelta della pagina PDF, l’immagine e la rimozione dello sfondo restano ripetibili dalla stessa schermata dopo aver risolto il guasto. Il picker si chiude dopo il salvataggio riuscito; un allegato appena importato resta disponibile sul rifiuto dell’assegnazione. Catalogo, copia locale e history precedenti sono conservati e la riprova registra una sola modifica annullabile. Prove e limiti nella roadmap; altri picker rapidi Windows corretti in AUD-34 e percorso asincrono mappa Android in AUD-35; editor/host restanti in AUD-36/37.
+
+AUD-34 completato estende questa regola agli host Inventario/Rack/unità e alla pagina PDF da Allegati; callback di salvataggio invariati, nessun cambio di formato. AUD-35 completa il percorso asincrono mappa Android; AUD-36 riguarda editor completi e allegati Windows.
+
+## Conferma del save Android — AUD-35
+
+I form sede/piano, MapObjectPicker e PlanChooser della mappa conservano bozza e selezione fino all’esito positivo del comando asincrono. Il guasto compare nella schermata ancora aperta; la riprova conserva tipo/nome/posizione/pagina. Un’immagine importata resta selezionabile dopo un errore di assegnazione. Sei prove native su moto g86 API 36 e regressioni sessione/cancellazione verdi; la matrice visuale completa resta RES-19. Gli altri host Android sono AUD-37 e gli editor completi Windows AUD-36.
