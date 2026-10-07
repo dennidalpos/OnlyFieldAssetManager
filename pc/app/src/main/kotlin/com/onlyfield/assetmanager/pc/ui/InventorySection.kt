@@ -188,7 +188,10 @@ fun InventorySection(
             project = project,
             device = editing,
             onDismiss = { editingNew = null; editing = null },
-            onSave = { updated, message -> editingNew = null; editing = null; onProjectUpdated(updated, message) },
+            onSave = { updated, message ->
+                onProjectUpdated(updated, message)
+                if (saveError() == null) { editingNew = null; editing = null }
+            },
             initial = editingNew,
         )
     }
@@ -201,9 +204,9 @@ fun InventorySection(
     replaceTarget?.let { dev ->
         ReplaceDialog(dev, onDismiss = { replaceTarget = null }) { name, category ->
             val (updated, trashItem) = ProjectEdits.replaceDevice(project, dev.id, name, category, i18n = i18n)
-            replaceTarget = null
             trashItem?.let(onTrashItemCreated)
             onProjectUpdated(updated, i18n.text("text.6dafb91fca82", dev.technicalName, name))
+            if (saveError() == null) replaceTarget = null
         }
     }
 
@@ -217,9 +220,8 @@ fun InventorySection(
         BatchEditDialog(project, index, selectedIds, onDismiss = { showBatch = false }) { changes ->
             val count = selectedIds.size
             val updated = ProjectEdits.batchEditDevices(project, selectedIds.toList(), changes, i18n = i18n)
-            showBatch = false
-            selectedIds = emptySet()
             onProjectUpdated(updated, i18n.text("text.d57904b4d677", count))
+            if (saveError() == null) { showBatch = false; selectedIds = emptySet() }
         }
     }
 }

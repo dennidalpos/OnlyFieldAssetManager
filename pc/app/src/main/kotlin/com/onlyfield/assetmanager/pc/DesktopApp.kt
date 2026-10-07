@@ -240,9 +240,9 @@ private fun SectionContent(state: DesktopAppState) {
     when (state.section) {
         AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash, state::mergeDevices, saveError = { state.error })
         AppSection.RACKS -> RackSection(project, update, state::addToTrash, saveError = { state.error })
-        AppSection.MODELS -> DeviceModelsSection(project, update)
+        AppSection.MODELS -> DeviceModelsSection(project, update, saveError = { state.error })
         AppSection.FLOORPLANS -> FloorHomeSection(state)
-        AppSection.CREDENTIALS -> CredentialsSection(project, update)
+        AppSection.CREDENTIALS -> CredentialsSection(project, update, saveError = { state.error })
         AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::hasAttachment, state::openAttachment, state.hasPassword, state::addMapSnapshot, saveError = { state.error })
         AppSection.CABLING -> CablingSection(project, update)
         AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary)

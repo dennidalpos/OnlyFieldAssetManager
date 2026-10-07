@@ -11,7 +11,6 @@ import com.onlyfield.assetmanager.configurator.RackElevation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
@@ -21,17 +20,14 @@ import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.forms.RackLayout
 import com.onlyfield.assetmanager.core.model.*
-import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.ui.ProjectViewModel
@@ -48,6 +44,7 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var editSite by remember { mutableStateOf<Site?>(null) }
     var newSite by remember { mutableStateOf(false) }
     var areaTarget by remember { mutableStateOf<Pair<Site, Area?>?>(null) }
+    val save = rememberEditSave(vm, newSite, editSite, areaTarget)
     val takePhoto = rememberPhotoCapture(vm)
     val index = remember(project) { ProjectIndex(project) }
 
@@ -98,11 +95,11 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         var group by remember(site) { mutableStateOf(site?.group.orEmpty()) }
         var address by remember(site) { mutableStateOf(site?.address.orEmpty()) }
         EditScreen(if (site == null) i18n.text("text.9058af538683") else i18n.text("text.98b79b084f23"), { newSite = false; editSite = null }, {
-            newSite = false; editSite = null
             val g = group.trim().ifBlank { null }
             val a = address.trim().ifBlank { null }
-            vm.edit(i18n.text("text.2f92bdd5ba64")) { if (site == null) ProjectEdits.addSite(it, name.trim(), g, a) else ProjectEdits.updateSite(it, site.copy(name = name.trim(), group = g, address = a)) }
+            save.save(i18n.text("text.2f92bdd5ba64"), { newSite = false; editSite = null }) { if (site == null) ProjectEdits.addSite(it, name.trim(), g, a) else ProjectEdits.updateSite(it, site.copy(name = name.trim(), group = g, address = a)) }
         }, confirmEnabled = name.isNotBlank()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
             FormField(group, { group = it }, i18n.text("site.group"))
             FormField(address, { address = it }, i18n.text("site.address"))
@@ -114,10 +111,10 @@ fun StructureScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         var floor by remember(area, site) { mutableStateOf(area?.floor.orEmpty()) }
         var description by remember(area, site) { mutableStateOf(area?.description.orEmpty()) }
         EditScreen(if (area == null) i18n.text("text.884e872b782f", site.name) else i18n.text("text.e325f13a6dee"), { areaTarget = null }, {
-            areaTarget = null
             val edited = (area ?: Area(name = name.trim())).copy(name = name.trim(), floor = floor.trim().ifBlank { null }, description = description.trim().ifBlank { null })
-            vm.edit(i18n.text("text.b0e1d3b2c943", edited.name)) { if (area == null) ProjectEdits.addArea(it, site.id, edited) else ProjectEdits.updateArea(it, edited) }
+            save.save(i18n.text("text.b0e1d3b2c943", edited.name), { areaTarget = null }) { if (area == null) ProjectEdits.addArea(it, site.id, edited) else ProjectEdits.updateArea(it, edited) }
         }, confirmEnabled = name.isNotBlank()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"), hint = i18n.text("text.306610be3be7"))
             FormField(floor, { floor = it }, i18n.text("text.fa2bd181d8ba"))
             FormField(description, { description = it }, i18n.text("text.6fb818621896"))
@@ -134,6 +131,7 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     val index = remember(project) { ProjectIndex(project) }
     var creating by remember { mutableStateOf(false) }
     var editingNew by remember { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
+    val save = rememberEditSave(vm, creating, editingNew)
     val confirm = LocalConfirm.current
     AppScaffold(
         i18n.text("text.4cd265c2b8c6"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
@@ -156,8 +154,8 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         }
     }
     if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(project, null) },
-        onAdd = { draft -> creating = false; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
-        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK })
+        onAdd = { draft -> save.save(i18n.text("quick.added", QuickAdd.name(draft)), { creating = false }) { draft.apply(it, i18n) } },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK }, error = save.error)
     editingNew?.let { draft -> RackDialog(vm, index, null, initial = draft) { editingNew = null } }
 }
 
@@ -178,6 +176,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     var side by remember { mutableStateOf(RackSide.FRONT) }
     var addingAt by remember { mutableStateOf<Int?>(null) }
     var editingNew by remember { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
+    val save = rememberEditSave(vm, addingAt, placing, editingNew)
     val takePhoto = rememberPhotoCapture(vm)
     val inRack = index.devices.filter { it.rackId == rack.id }
     val pdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri ->
@@ -224,8 +223,8 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 
     if (editing) RackDialog(vm, index, rack) { editing = false }
     addingAt?.let { u -> RackUnitPicker(index.project, rack, u, side, i18n, onClose = { addingAt = null },
-        onAdd = { draft -> addingAt = null; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
-        onEdit = { draft -> addingAt = null; editingNew = draft }) }
+        onAdd = { draft -> save.save(i18n.text("quick.added", QuickAdd.name(draft)), { addingAt = null }) { draft.apply(it, i18n) } },
+        onEdit = { draft -> addingAt = null; editingNew = draft }, error = save.error) }
     editingNew?.let { draft -> DeviceDialog(vm, index.project, null, initial = draft) { editingNew = null } }
     if (placing) {
         val candidates = index.devices.filter { it.rackId != rack.id || it.positionU == null }
@@ -234,12 +233,12 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
         val free = device?.let { RackLayout.freeStartPositions(rack, index.devices, it.heightU, placeSide, it.id) } ?: emptyList()
         var start by remember(device, placeSide) { mutableStateOf(free.firstOrNull()) }
         EditScreen(i18n.text("text.a96a0f4b4c96", rack.name), { placing = false }, {
-            placing = false
             val d = device!!
             val placed = d.copy(rackId = rack.id, positionU = start, rackSide = placeSide,
                 mountingType = if (d.mountingType == MountingType.OUT_OF_RACK) MountingType.RACK_MOUNT else d.mountingType)
-            vm.edit(i18n.text("text.19beb0981143", d.technicalName, start)) { ProjectEdits.updateDevice(it, placed, i18n = i18n) }
+            save.save(i18n.text("text.19beb0981143", d.technicalName, start), { placing = false }) { ProjectEdits.updateDevice(it, placed, i18n = i18n) }
         }, confirmEnabled = device != null && start != null, confirmLabel = i18n.text("text.ee84d8c1e721")) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             OptionPicker(i18n.text("text.e7f2c0e68768"), candidates, device, { it.technicalName }, { device = it }, optionDetail = { "${it.heightU}U" })
             EnumPicker(i18n.text("text.22ab4cafea0c"), RackSide.entries, placeSide, { it.toDisplayString(i18n = i18n) }, { placeSide = it })
             if (device != null) {
@@ -254,9 +253,11 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
 private fun RackDialog(vm: ProjectViewModel, index: ProjectIndex, rack: Rack?, initial: com.onlyfield.assetmanager.core.forms.MapObjectDraft? = null, onClose: () -> Unit) {
     val i18n = LocalMessages.current
     var draft by remember(rack) { mutableStateOf(initial ?: com.onlyfield.assetmanager.core.forms.MapObjectDraft.forRack(index.project, rack)) }
+    val save = rememberEditSave(vm)
     EditScreen(configuratorTitle(index.project, draft, i18n), onClose, {
-        onClose(); vm.edit(configuratorTitle(index.project, draft, i18n)) { draft.apply(it, i18n) }
+        save.save(configuratorTitle(index.project, draft, i18n), onClose) { draft.apply(it, i18n) }
     }, validationMessage = configuratorValidation(index.project, draft, i18n), confirmEnabled = draft.errors(index.project, i18n).isEmpty(), confirmLabel = configuratorAction(index.project, draft, i18n)) {
+        save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         ObjectFields(index.project, draft) { draft = it }
     }
 }
@@ -273,6 +274,7 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
     var editing by remember { mutableStateOf<DeviceModel?>(null) }
     var creating by remember { mutableStateOf(false) }
     var applying by remember { mutableStateOf<DeviceModel?>(null) }
+    val save = rememberEditSave(vm, creating, editing, applying)
 
     AppScaffold(
         i18n.text("text.19b5ea1a9124"), onBack = { vm.back() }, snackbarHost = snackbar,
@@ -303,9 +305,9 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
         val original = editing
         var edited by remember(original) { mutableStateOf(original ?: DeviceModel(name = "", category = DeviceCategory.NETWORK_SWITCH)) }
         EditScreen(if (original == null) i18n.text("ux.add.model") else i18n.text("ux.edit.model", original.name), { creating = false; editing = null }, {
-            vm.edit(i18n.text("config.model")) { if (original == null) ProjectEdits.addDeviceModel(it, edited) else ProjectEdits.updateDeviceModel(it, edited) }
-            creating = false; editing = null
+            save.save(i18n.text("config.model"), { creating = false; editing = null }) { if (original == null) ProjectEdits.addDeviceModel(it, edited) else ProjectEdits.updateDeviceModel(it, edited) }
         }, confirmLabel = i18n.text(if (original == null) "ux.add" else "ux.saveChanges"), confirmEnabled = edited.name.isNotBlank() && com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(edited.portTemplates) && edited.defaultHeightU in 1..60) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             val markDirty = LocalMarkDirty.current
             com.onlyfield.assetmanager.configurator.ModelConfigurator(project, edited, i18n) { markDirty(); edited = it }
         }
@@ -315,8 +317,9 @@ fun ModelsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
         var deviceId by remember(model) { mutableStateOf<String?>(null) }
         var draft by remember(model) { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
         EditScreen(i18n.text("ux.applyModel", model.name), { applying = null }, {
-            vm.edit(i18n.text("config.model")) { requireNotNull(draft).apply(it, i18n) }; applying = null
+            save.save(i18n.text("config.model"), { applying = null }) { requireNotNull(draft).apply(it, i18n) }
         }, confirmLabel = i18n.text("ux.apply"), validationMessage = draft?.let { configuratorValidation(project, it, i18n) }, confirmEnabled = draft?.errors(project, i18n)?.isEmpty() == true) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("config.device"), index, deviceId, { id ->
                 deviceId = id
                 draft = index.device(id)?.let { com.onlyfield.assetmanager.core.forms.HardwareConfigurator.applyModel(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forDevice(project, it), model) }

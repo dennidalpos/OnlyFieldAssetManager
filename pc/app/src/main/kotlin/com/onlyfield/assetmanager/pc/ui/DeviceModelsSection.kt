@@ -19,7 +19,10 @@ import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.pc.ui.components.*
 
 @Composable
-fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) -> Unit) = DeviceModelsSection(project, onProjectUpdated, { null })
+
+@Composable
+fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
@@ -65,9 +68,9 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
     }
 
     if (creating || editing != null) {
-        ModelDialog(project, editing, onDismiss = { creating = false; editing = null }) { saved, isNew ->
-            creating = false; editing = null
+        ModelDialog(project, editing, onDismiss = { creating = false; editing = null }, error = saveError()) { saved, isNew ->
             onProjectUpdated(if (isNew) ProjectEdits.addDeviceModel(project, saved) else ProjectEdits.updateDeviceModel(project, saved), i18n.text("text.8dd532c869de", saved.name))
+            if (saveError() == null) { creating = false; editing = null }
         }
     }
 
@@ -76,8 +79,9 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
         var draft by remember(model) { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
         EditPanel(title = i18n.text("ux.applyModel", model.name), confirmLabel = i18n.text("ux.apply"), onDismiss = { applying = null }, width = 800.dp,
             validationMessage = draft?.let { com.onlyfield.assetmanager.configurator.configuratorValidation(project, it, i18n) }, confirmEnabled = draft?.errors(project, i18n)?.isEmpty() == true, onConfirm = {
-                onProjectUpdated(requireNotNull(draft).apply(project, i18n), i18n.text("config.model")); applying = null
+                onProjectUpdated(requireNotNull(draft).apply(project, i18n), i18n.text("config.model")); if (saveError() == null) applying = null
             }) {
+            saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("config.device"), index, target?.id, { id ->
                 target = index.device(id)
                 draft = target?.let { com.onlyfield.assetmanager.core.forms.HardwareConfigurator.applyModel(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forDevice(project, it), model) }
@@ -88,11 +92,12 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
 }
 
 @Composable
-private fun ModelDialog(project: Project, model: DeviceModel?, onDismiss: () -> Unit, onSave: (DeviceModel, Boolean) -> Unit) {
+private fun ModelDialog(project: Project, model: DeviceModel?, onDismiss: () -> Unit, error: String?, onSave: (DeviceModel, Boolean) -> Unit) {
     val i18n = LocalMessages.current
     var edited by remember(LocalDetailSlot.current?.editorVersion, model) { mutableStateOf(model ?: DeviceModel(name = "", category = DeviceCategory.NETWORK_SWITCH)) }
     EditPanel(title = if (model == null) i18n.text("ux.add.model") else i18n.text("ux.edit.model", model.name), confirmLabel = i18n.text(if (model == null) "ux.add" else "ux.saveChanges"), onDismiss = onDismiss, width = 800.dp,
         confirmEnabled = edited.name.isNotBlank() && com.onlyfield.assetmanager.core.forms.HardwareConfigurator.validGroups(edited.portTemplates) && edited.defaultHeightU in 1..60, onConfirm = { onSave(edited, model == null) }) {
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         val markDirty = LocalMarkDirty.current
         com.onlyfield.assetmanager.configurator.ModelConfigurator(project, edited, i18n) { markDirty(); edited = it }
     }

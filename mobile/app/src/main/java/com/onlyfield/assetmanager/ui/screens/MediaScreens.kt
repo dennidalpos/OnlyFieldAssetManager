@@ -38,6 +38,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     var floorplanFor by remember { mutableStateOf<Attachment?>(null) }
     var planArea by remember { mutableStateOf<Area?>(null) }
     var classifying by remember { mutableStateOf<Attachment?>(null) }
+    val save = rememberEditSave(vm, floorplanFor, planArea)
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> picked = uri }
     var mapping by remember { mutableStateOf(false) }
 
@@ -76,9 +77,13 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     }
 
     picked?.let { uri ->
+        val importSave = rememberEditSave(vm, uri)
         var name by remember(uri) { mutableStateOf("") }
         var classification by remember(uri) { mutableStateOf(AttachmentClassification.SHAREABLE) }
-        EditScreen(i18n.text("text.686ed80a7ada"), { picked = null }, { picked = null; vm.addAttachment(context, uri, name, classification) }, confirmLabel = i18n.text("text.84cbef7b19b8")) {
+        EditScreen(i18n.text("text.686ed80a7ada"), { picked = null }, {
+            importSave.submit({ picked = null }) { result -> vm.addAttachment(context, uri, name, classification, result) }
+        }, confirmLabel = i18n.text("text.84cbef7b19b8")) {
+            importSave.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(name, { name = it }, i18n.text("text.5086900635fe"), hint = i18n.text("text.634787507dfd"))
             EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, classification, { it.toDisplayString(i18n = i18n) }, { classification = it })
         }
@@ -94,15 +99,17 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     }
 
     if (planArea != null && floorplanFor != null) PlanChooser(project, planArea!!, floorplanFor!!.id, vm::attachmentFile, {}, { id, page, pages ->
-        vm.edit(i18n.text("text.fcd1cc58f46b")) { ProjectEdits.setAreaFloorplan(it, planArea!!.id, id, page, pages) }; planArea = null; floorplanFor = null
-    }, { planArea = null; floorplanFor = null })
+        val areaId = planArea!!.id
+        save.save(i18n.text("text.fcd1cc58f46b"), { planArea = null; floorplanFor = null }) { ProjectEdits.setAreaFloorplan(it, areaId, id, page, pages) }
+    }, { planArea = null; floorplanFor = null }, error = save.error)
 
     classifying?.let { a ->
+        val classificationSave = rememberEditSave(vm, a)
         var c by remember(a) { mutableStateOf(a.classification) }
         EditScreen(i18n.text("text.57fbd1029ff6"), { classifying = null }, {
-            classifying = null
-            vm.edit(i18n.text("text.9efcb947de14")) { p -> p.copy(attachments = p.attachments.map { if (it.id == a.id) it.copy(classification = c) else it }) }
+            classificationSave.save(i18n.text("text.9efcb947de14"), { classifying = null }) { p -> p.copy(attachments = p.attachments.map { if (it.id == a.id) it.copy(classification = c) else it }) }
         }) {
+            classificationSave.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, c, { it.toDisplayString(i18n = i18n) }, { c = it })
             Text(i18n.text("text.c3176e79018f"), style = MaterialTheme.typography.bodySmall)
         }
@@ -151,6 +158,7 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
 
     if (creating || editing != null) {
         val c = editing
+        val save = rememberEditSave(vm, c)
         var username by remember(c) { mutableStateOf(c?.username.orEmpty()) }
         var secret by remember(c) { mutableStateOf(c?.secret.orEmpty()) }
         var type by remember(c) { mutableStateOf(c?.type ?: CredentialType.PASSWORD) }
@@ -158,14 +166,14 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
         var deviceId by remember(c) { mutableStateOf(c?.deviceId) }
         var notes by remember(c) { mutableStateOf(c?.notes.orEmpty()) }
         EditScreen(if (c == null) i18n.text("text.daf354006859") else i18n.text("text.81dda9b20962"), { creating = false; editing = null }, {
-            creating = false; editing = null
             val saved = (c ?: Credential(username = username.trim(), secret = secret)).copy(
                 username = username.trim(), secret = secret, type = type, groupName = group.trim().ifBlank { null }, deviceId = deviceId, notes = notes.trim().ifBlank { null }
             )
-            vm.edit(i18n.text("text.de37f6b34612")) { p ->
+            save.save(i18n.text("text.de37f6b34612"), { creating = false; editing = null }) { p ->
                 p.copy(credentials = if (c == null) p.credentials + saved else p.credentials.map { if (it.id == saved.id) saved else it })
             }
         }, confirmEnabled = username.isNotBlank() && secret.isNotEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(username, { username = it }, i18n.text("text.3255e3d5e3b4"))
             val markDirty = LocalMarkDirty.current
             OutlinedTextField(secret, { markDirty(); secret = it }, label = { Text(i18n.text("text.7f9bedb6b654")) }, singleLine = type != CredentialType.SSH_KEY, modifier = Modifier.fillMaxWidth())
@@ -214,6 +222,7 @@ fun TrashScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 @Composable
 private fun MapDownloadEditor(vm: ProjectViewModel, onClose: () -> Unit) {
     val i18n = LocalMessages.current
+    val save = rememberEditSave(vm)
 
     val source = CartographicSource.OPEN_TOPO_MAP
     var lat by remember { mutableStateOf("") }
@@ -228,9 +237,9 @@ private fun MapDownloadEditor(vm: ProjectViewModel, onClose: () -> Unit) {
         FieldValidators.int(zoom, 1, 17, required = true, i18n = i18n)?.let { put("zoom", it) }
     }
     EditScreen(i18n.text("text.9d9c47709125"), onClose, {
-        onClose()
-        vm.downloadMap(MapSnapshotRequest(source, latValue!!, lonValue!!, FieldValidators.parseInt(zoom)!!), name)
+        save.submit(onClose) { result -> vm.downloadMap(MapSnapshotRequest(source, latValue!!, lonValue!!, FieldValidators.parseInt(zoom)!!), name, result) }
     }, confirmEnabled = errors.isEmpty(), confirmLabel = i18n.text("text.723d32f77a1d")) {
+        save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Text(
             i18n.text("text.25ca49b19a03") +
                 i18n.text("text.4d7cad637ae4"),

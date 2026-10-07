@@ -22,7 +22,6 @@ import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.QuickAdd
-import com.onlyfield.assetmanager.core.forms.PortLogic
 import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.Screen
@@ -42,6 +41,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var editingNew by remember { mutableStateOf<MapObjectDraft?>(null) }
     var batch by remember { mutableStateOf(false) }
     val confirm = LocalConfirm.current
+    val save = rememberEditSave(vm, creating, editingNew)
 
     val devices = index.devices.filter {
         matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id) &&
@@ -108,8 +108,8 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     }
 
     if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { inventoryDeviceDraft(project, null).withType(it) },
-        onAdd = { draft -> creating = false; vm.edit(i18n.text("quick.added", QuickAdd.name(draft))) { draft.apply(it, i18n) } },
-        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE })
+        onAdd = { draft -> save.save(i18n.text("quick.added", QuickAdd.name(draft)), { creating = false }) { draft.apply(it, i18n) } },
+        onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE }, error = save.error)
     editingNew?.let { draft -> DeviceDialog(vm, project, null, initial = draft) { editingNew = null } }
     if (batch) BatchDialog(vm, project, index, selected) { batch = false; selecting = false; selected = emptySet() }
 }
@@ -222,25 +222,26 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
     }
     if (editing) DeviceDialog(vm, project, device) { editing = false }
     if (replacing) {
+        val save = rememberEditSave(vm)
         var name by remember { mutableStateOf("") }
         var category by remember { mutableStateOf(device.category) }
         EditScreen(i18n.text("text.29f6b1f39967"), { replacing = false }, {
-            replacing = false
-            vm.back()
-            vm.replaceDevice(device.id, name.trim(), category)
+            save.submit({ replacing = false; vm.back() }) { result -> vm.replaceDevice(device.id, name.trim(), category, result) }
         }, confirmEnabled = name.isNotBlank(), confirmLabel = i18n.text("text.3260dc474cbc")) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text(i18n.text("text.a6c13e0dbb08"), style = MaterialTheme.typography.bodySmall)
             FormField(name, { name = it }, i18n.text("text.9d9ce7aec419"))
             EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, category, { it.toDisplayString(i18n = i18n) }, { category = it })
         }
     }
     if (merging) {
+        val save = rememberEditSave(vm)
         var duplicate by remember { mutableStateOf<Device?>(null) }
         var choices by remember { mutableStateOf(MergeDataChoices()) }
         EditScreen(i18n.text("text.e546e4f9c2ba"), { merging = false }, {
-            merging = false
-            vm.mergeDevices(device.id, duplicate!!.id, choices)
+            save.submit({ merging = false }) { result -> vm.mergeDevices(device.id, duplicate!!.id, choices, result) }
         }, confirmEnabled = duplicate != null, confirmLabel = i18n.text("text.c442a0f989e0")) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             Text(i18n.text("text.85c628019422", device.technicalName), style = MaterialTheme.typography.bodySmall)
             OptionPicker(i18n.text("text.505c57b1f96f"), index.devices.filter { it.id != device.id }, duplicate, { it.technicalName }, { duplicate = it },
                 optionDetail = { it.ipAddress })
@@ -277,9 +278,11 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device
     val i18n = LocalMessages.current
     var draft by remember(device) { mutableStateOf(initial ?: inventoryDeviceDraft(project, device).let { d -> initialSerial?.let { d.copy(device = d.device.copy(serialNumber = it)) } ?: d }) }
     var scanningSerial by remember { mutableStateOf(false) }
+    val save = rememberEditSave(vm)
     EditScreen(configuratorTitle(project, draft, i18n), onClose, {
-        onClose(); vm.edit(configuratorTitle(project, draft, i18n)) { draft.apply(it, i18n) }
+        save.save(configuratorTitle(project, draft, i18n), onClose) { draft.apply(it, i18n) }
     }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, draft, i18n)) {
+        save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         ObjectFields(project, draft, initialSection) { draft = it }
         ConfiguratorSection(i18n.text("ux.scanSerial"), i18n = i18n) {
             OutlinedButton(onClick = { scanningSerial = true }) { Text(i18n.text("ux.scanSerial")) }
@@ -293,11 +296,12 @@ private fun BatchDialog(vm: ProjectViewModel, project: Project, index: ProjectIn
     val i18n = LocalMessages.current
 
     var changes by remember { mutableStateOf(BatchDeviceChanges(category = DeviceCategory.NETWORK_SWITCH)) }
+    val save = rememberEditSave(vm)
     val any = changes.updateCategory || changes.updateAreaId || changes.updateRackId || changes.updateObservationNotes
     EditScreen(i18n.text("text.667a7f57a15e", ids.size), onClose, {
-        onClose()
-        vm.edit(i18n.text("text.9a5c72e77350", ids.size)) { ProjectEdits.batchEditDevices(it, ids.toList(), changes, i18n = i18n) }
+        save.save(i18n.text("text.9a5c72e77350", ids.size), onClose) { ProjectEdits.batchEditDevices(it, ids.toList(), changes, i18n = i18n) }
     }, confirmEnabled = any, confirmLabel = i18n.text("text.7a1ff7ffd286")) {
+        save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         Text(ids.mapNotNull { index.device(it)?.technicalName }.joinToString(", "), style = MaterialTheme.typography.bodySmall)
         LabeledCheckbox(changes.updateCategory, { changes = changes.copy(updateCategory = it) }, i18n.text("text.e87af9d65308"))
         if (changes.updateCategory) EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, changes.category ?: DeviceCategory.CUSTOM, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(category = it) })

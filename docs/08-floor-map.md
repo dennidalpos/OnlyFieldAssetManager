@@ -102,3 +102,6 @@ AUD-34 completato estende questa regola agli host Inventario/Rack/unità e alla 
 ## Conferma del save Android — AUD-35
 
 I form sede/piano, MapObjectPicker e PlanChooser della mappa conservano bozza e selezione fino all’esito positivo del comando asincrono. Il guasto compare nella schermata ancora aperta; la riprova conserva tipo/nome/posizione/pagina. Un’immagine importata resta selezionabile dopo un errore di assegnazione. Sei prove native su moto g86 API 36 e regressioni sessione/cancellazione verdi; la matrice visuale completa resta RES-19. Gli altri host Android sono AUD-37 e gli editor completi Windows AUD-36.
+
+
+AUD-39 (7 ottobre): il form di download conserva coordinate, zoom e nome dopo errore della sorgente o salvataggio fallito; la stessa conferma consente di riprovare. Download e import allegati chiudono dopo il successo e non pubblicano esiti verso una bozza/sessione dismessa. Prova nativa con PNG e sorgente sintetici, repository reale; server pubblico non collaudato. Evidenze nella roadmap e in RES-19.

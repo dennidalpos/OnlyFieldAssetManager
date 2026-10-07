@@ -10,6 +10,7 @@ import com.onlyfield.assetmanager.data.local.AppDatabase
 import com.onlyfield.assetmanager.data.repository.ProjectRepository
 import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.UiMessage
+import com.onlyfield.assetmanager.ui.screens.EditSave
 import kotlinx.coroutines.*
 import org.junit.After
 import org.junit.Assert.*
@@ -334,6 +335,40 @@ class ProjectCommandTest {
         await { vm.busy == null }
         assertEquals(0, callbacks)
         assertTrue(messages.isEmpty())
+        runBlocking { assertEquals(initial, repository.getProjectById(initial.id)) }
+    }
+
+    @Test fun disposedEditorDoesNotCloseOnLateCommittedSave() {
+        val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val save = EditSave(vm, uiScope)
+        var closes = 0
+        val release = holdTransactions()
+        try {
+            save.save("Disposed editor", { closes++ }) { it.copy(description = "Committed") }
+            shadowOf(Looper.getMainLooper()).idle()
+            uiScope.cancel()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertEquals(0, closes)
+        assertNull(save.error)
+        runBlocking { assertEquals("Committed", repository.getProjectById(initial.id)!!.description) }
+    }
+
+    @Test fun disposedEditorDoesNotReceiveLateSaveFailure() {
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_disposed BEFORE UPDATE ON projects BEGIN SELECT RAISE(ABORT, 'disposed save denied'); END")
+        val uiScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val save = EditSave(vm, uiScope)
+        var closes = 0
+        val release = holdTransactions()
+        try {
+            save.save("Disposed failure", { closes++ }) { it.copy(description = "Rejected") }
+            shadowOf(Looper.getMainLooper()).idle()
+            uiScope.cancel()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertEquals(0, closes)
+        assertNull(save.error)
+        assertEquals(initial, vm.project.value)
         runBlocking { assertEquals(initial, repository.getProjectById(initial.id)) }
     }
 }

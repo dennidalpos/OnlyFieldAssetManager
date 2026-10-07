@@ -114,8 +114,8 @@ private fun AttachmentsTab(
             onDismiss = { adding = false },
             confirmEnabled = file != null && name.isNotBlank(),
             onConfirm = {
-                adding = false
                 onAddAttachment(file!!, name, classification)
+                if (saveError() == null) adding = false
             },
             width = 520.dp
         ) {

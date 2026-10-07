@@ -165,12 +165,12 @@ fun RackSection(
 
                 if (placing) {
                     PlaceDeviceDialog(rack, index, side, onDismiss = { placing = false }) { device, startU, placeSide ->
-                        placing = false
                         val placed = device.copy(
                             rackId = rack.id, positionU = startU, rackSide = placeSide,
                             mountingType = if (device.mountingType == MountingType.OUT_OF_RACK) MountingType.RACK_MOUNT else device.mountingType
                         )
                         onProjectUpdated(ProjectEdits.updateDevice(project, placed, i18n = i18n), i18n.text("text.f42fb5a22142", device.technicalName, rack.name, startU))
+                        if (saveError() == null) placing = false
                     }
                 }
             }
@@ -190,9 +190,11 @@ fun RackSection(
         onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.RACK }, error = saveError())
     if (editingNew != null || editing != null) {
         RackDialog(index, editing, editingNew, onDismiss = { editingNew = null; editing = null }) { updated, saved, isNew ->
-            editingNew = null; editing = null
-            if (isNew) selectedRackId = saved.id
             onProjectUpdated(updated, i18n.text("text.e4ffb3690fdf", saved.name))
+            if (saveError() == null) {
+                editingNew = null; editing = null
+                if (isNew) selectedRackId = saved.id
+            }
         }
     }
 }

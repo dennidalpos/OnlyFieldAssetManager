@@ -2,7 +2,7 @@
 
 Revisione e correzioni aggiornate al 7 ottobre 2026; il nome del report conserva la data di avvio.
 
-Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 7 ottobre: AUD-12–35 chiusi; restano 6 attività aperte/parziali, AUD-36/37 e RES-13/19/23/24 (5 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
+Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 7 ottobre: AUD-12–39 chiusi; restano 5 attività aperte/parziali, AUD-40 e RES-13/19/23/24 (4 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
 
 ## Perimetro, fonti e limiti
 
@@ -48,8 +48,11 @@ P1: integrità dei dati o blocco del flusso operativo; intervenire prima dell’
 | P2 | AUD-30 | Cicli con più sorgenti nella validazione/import | Chiuso; controllo completo condiviso |
 | P2 | AUD-34 | Picker rapidi Windows fuori mappa | Chiuso; guasto filesystem e riprova verificati |
 | P2 | AUD-35 | Bozze mappa Android dopo edit asincrono | Chiuso; sei prove native e sessione/cancellazione |
-| P2 | AUD-36 | Editor completi/allegati Windows | Aperto, da codice e non riprodotto |
-| P2 | AUD-37 | Picker/editor Android fuori mappa | Aperto, da codice e non riprodotto |
+| P2 | AUD-36 | Editor completi/allegati Windows | Chiuso; otto regressioni dei form, 193 test verdi |
+| P2 | AUD-37 | Picker/editor Android fuori mappa | Chiuso; 17 prove native, esiti tardivi e 502 report verdi |
+| P2 | AUD-38 | Modelli/Credenziali Windows dopo save fallito | Chiuso; dieci regressioni dialogo/pannello e 203 test verdi; EXE in RES-23 |
+| P2 | AUD-39 | Comandi specializzati e credenziali Android | Chiuso; otto prove native, 18 regressioni nuove e 530 report verdi |
+| P2 | AUD-40 | Navigazione prima della cancellazione apparato/rack Android | Aperto, da codice e non riprodotto |
 | P3 | AUD-22 | Scaffolding, helper di test nel runtime e commenti obsoleti | Chiuso; runtime e prove ripuliti |
 | P3 | RES-24 | Risorse locali delle prove precedenti | Directory ancora presenti; nessuna rimozione tentata |
 
@@ -310,3 +313,31 @@ Il rilievo iniziale AUD-35 è storico: guasto riprodotto in sede/piano/oggetto/P
 AUD-37 P2, da codice e non riprodotto: InventoryScreens chiude picker/DeviceDialog/BatchDialog prima di edit; StructureRackScreens chiude picker rack/unità, editor e form struttura/modelli prima della conferma; MediaScreens chiude la scelta pagina da Allegati subito dopo edit. Verificare tutti i consumatori, bozze/selezioni/copia/undo e riprova su repository isolato usando l’esito session-scoped. Gli esiti del workspace mappa non chiudono automaticamente questi flussi né i collaudi manuali RES-13/19/23.
 
 Collaudo AUD-35: il runner Gradle ha disinstallato l’app sul moto g86. Utente conferma che c’era solo Demo Comune; APK e demo ripristinati e verificati (import/riapertura/media), due backup storici SHA-256 invariati. Sei prove native ripetute con adb am instrument, app conservata; APK test rimosso. Procedura e incidente nella roadmap/verifica. connectedDebugAndroidTest non va usato su dispositivi con dati da conservare.
+
+
+## AUD-36 chiuso e residuo AUD-38 — 7 ottobre 2026
+
+Editor Inventario/Rack/allegati corretti; otto regressioni dei form e 193 test Windows verdi. Bozza, file, selezioni, copia/cestino/history, errore/riprova e undo verificati su storage isolato. Il rendering Skiko del nuovo rack nel runner DesktopApp completo resta un limite della verifica, descritto in RES-23; nessun nuovo collaudo EXE rivendicato. Dettagli e comandi nella roadmap.
+
+AUD-38 P2: DeviceModelsSection chiude creazione/modifica/applicazione modello e CredentialsSection chiude il form prima della verifica dell'esito. Evidenza da codice, non riprodotta; verificare guasto filesystem, bozze/selezioni, errore/riprova e history. Nessuna chiusura implicita dagli esiti di AUD-36.
+
+
+## AUD-37 chiuso e residuo AUD-39 — 7 ottobre 2026
+
+Gli host Android degli edit generici attendono l'esito prima della chiusura. Diciassette prove native su moto g86 API 36, guasto SQLite isolato e riprova/undo verdi; due nuove regressioni per editor dismesso e suite di 502 report verdi. Dati/app/demo/backup preservati; nessun collaudo SQLCipher/Keystore/TalkBack aggiunto. Dettagli e comandi nella roadmap.
+
+AUD-39 P2: sostituzione chiude e naviga prima di replaceDevice; fusione chiude prima di mergeDevices. Import/classificazione allegato, credenziale e download cartografico in MediaScreens chiudono prima dell'esito asincrono. Evidenza da codice, non riprodotta; verificare bozze/selezioni/navigazione, rifiuti/errore/riprova, cestino/media/undo dove previsto e sessione/cancellazione. Distinto dagli edit generici corretti in AUD-37.
+
+RES-24 esteso a quattro nuove fixture JUnit di questa sessione (6708 byte) dopo interruzione dei worker Windows: rimozione respinta dal controllo automatico con blocked by policy, senza altra motivazione. Percorsi/provenienza nel tracker e in build/reports/aud36-scratch-inventory.json. Risorse storiche non ritentate; report e backup conservati.
+
+
+## AUD-38 chiuso — 7 ottobre 2026
+
+Guasto filesystem riprodotto nei cinque flussi, sia dialogo sia pannello; bozze, errori, riprova e integrità/undo verificati. 203 test Windows verdi. Rimosso dal tracker; collaudo DesktopApp/EXE conservato in RES-23. Evidenze nella roadmap e in build/reports/aud38-full.
+
+
+## AUD-39 chiuso e residuo AUD-40 — 7 ottobre 2026
+
+Bozze dei comandi specializzati, credenziali, import/classificazione allegato e download conservate sul guasto, con errore/riprova; callback protetti da sessione/cancellazione e durata della bozza. Otto prove native verdi e 530 report JVM/Compose senza regressioni; sorgenti sintetiche e persistenza reale, nessuna rete pubblica. Evidenze nella roadmap.
+
+AUD-40 P2, da codice e non riprodotto: le conferme di cancellazione in DeviceDetailScreen e RackDetailScreen navigano indietro prima di moveToTrash, che non comunica un esito al chiamante. Verificare repository/media isolati, permanenza nella schermata sul guasto, errore/riprova, un solo cestino, undo previsto, ritorno unico e sessione/cancellazione. Distinto dalla sostituzione/fusione corretta in AUD-39.

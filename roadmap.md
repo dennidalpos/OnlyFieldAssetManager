@@ -798,3 +798,78 @@ Chiusura documentale AUD-34/35: tracker con sei sole voci aperte/parziali e rife
 ## Passaggio di sessione — 7 ottobre 2026
 
 Su richiesta esplicita dell’utente, salvataggio del lavoro con commit e push sul ramo principale main. Prima del commit, fetch di origin/main riuscito e confronto HEAD...origin/main pari a 0/0; diff e nuovi test rivisti. Il checkpoint comprende AUD-31–35, documentazione e regressioni. Riprendere da AUD-36, poi AUD-37; restano RES-13/19/23/24. I report locali confermano 492 test JVM e sei prove native verdi; nessuna nuova esecuzione richiesta dalle sole modifiche di consegna. Report, APK/EXE, fixture, dati e backup sono ignorati da Git e restano su questa macchina. Controllare presenza delle evidenze prima di usarle in un altro checkout. Preservare Demo Comune ripristinato sul moto g86 e usare la procedura manuale ADB documentata. Nessuna pulizia storica ritentata.
+
+## AUD-36 — Editor Windows e allegati dopo save fallito — 7 ottobre 2026
+
+DeviceDialog e RackDialog (anche Aggiungi e modifica), collocazione, sostituzione, modifica multipla e form allegato si chiudono dopo il successo. Sul guasto rimangono campi, file e selezioni; il nuovo rack viene selezionato dopo la persistenza. Sostituzione e modifica multipla conservano cestino/history e selezione sul fallimento. Nessuna firma, dipendenza, schema Room o formato .ofam cambiato.
+
+Baseline: 11 regressioni preesistenti, BUILD SUCCESSFUL in 52s. Riproduzione iniziale: gli editor apparato scompaiono dopo il guasto filesystem mentre copia e history restano integre. Otto regressioni FailedEditorSaveTest verificano creazione/modifica apparato e rack, collocazione, sostituzione, batch e allegato con file locale aperto NOSHARE_DELETE; riprova, riapertura e un solo undo verdi. Il file viene scelto tramite il vero JFileChooser, con sorgente sintetica in TemporaryFolder.
+
+Comando: .\gradlew.bat :pc:app:test --no-parallel --max-workers=1. **BUILD SUCCESSFUL in 3m 8s; 193 test, zero fallimenti/errori/saltati**. XML in build/reports/aud36-full; baseline e prima verifica isolata in aud36-baseline e aud36-section-targeted.
+
+Limite esplicito: il runner Compose con DesktopApp completo si blocca nel rendering Skiko durante il nuovo rack. Thread dump conservati in build/reports/aud36-renderer-thread-dump.txt e aud36-full-renderer-thread-dump.txt; fermati solo worker avviati da questa sessione. Azione accessibile e pausa del clock non risolvono la matrice completa. I test finali montano le sezioni e i veri form con DesktopAppState/DesktopIo/storage, senza la cornice globale; nessuna asserzione su bozza, errore, integrità o undo esclusa. Questa prova non sostituisce il collaudo EXE/focus/blocco input, ancora in RES-23.
+
+Fonti ufficiali consultate il 7 ottobre: [stato Compose](https://developer.android.com/develop/ui/compose/state-hoisting) e [cancellazione Kotlin](https://kotlinlang.org/docs/cancellation-and-timeouts.html). L'esito della persistenza deriva dalle prove locali. AUD-36 rimosso dal tracker; AUD-38 registra Modelli/Credenziali Windows, stesso pattern da codice, non riprodotto. Nessun commit/push o pulizia storica.
+
+## AUD-37 — Bozze Android fuori mappa — 7 ottobre 2026
+
+Picker/editor Inventario, Rack e unità rack, collocazione/batch, sede/piano, creazione/modifica/applicazione modello e pagina PDF da Allegati attendono l'esito di edit prima di scartare la bozza. Sul guasto restano campi e selezioni con errore nello stesso form; la riprova salva una sola modifica annullabile. EditSave riusa il callback esistente, limita gli esiti alla composizione/bozza corrente e cancella l'errore quando cambia bozza. Le firme esistenti del ViewModel, Room v2 e .ofam v1 restano invariati; nessuna nuova dipendenza.
+
+Baseline ProjectCommandTest: 14 test, BUILD SUCCESSFUL in 34s. L'editor apparato nativo perde la bozza sul guasto SQLite prima della correzione; nel medesimo tentativo il picker non viene raggiunto per un selettore del FAB. Due nuove regressioni JVM verificano che un editor dismesso non riceva successo/errore tardivi: 16 test mirati verdi, incluso il comportamento preesistente di undo/no-op/sessione/cancellazione.
+
+FailedSectionSaveNativeTest: **OK (17 tests) in 117,658s** su moto g86 API 36, tramite `adb install -r` e `adb shell am instrument -w -e class com.onlyfield.assetmanager.FailedSectionSaveNativeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner`. Guasto BEFORE UPDATE nella sola Room in memoria; progetto/cache/PDF sintetici isolati. Ogni scenario verifica bozza/selezioni, errore raggiungibile, repository invariato sul fallimento, riprova senza duplicati, riapertura e un solo undo fino al progetto precedente. Tastiera chiusa prima del save; campi/errori raggiunti tramite scorrimento. Primo giro: 10 verdi e 7 errori nei selettori FAB; accesso all'albero semantico non aggregato corretto, 7 mirati verdi, poi intera matrice verde. Nessuna asserzione esclusa e nessun collaudo SQLCipher/Keystore/TalkBack rivendicato.
+
+Verifica complessiva:
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1
+```
+
+**BUILD SUCCESSFUL in 2m 35s; 502 test nei report, zero fallimenti/errori/saltati** (128 core, 91 exchange, 193 Windows, 90 Android). Android rieseguito integralmente; core/exchange e Windows UP-TO-DATE, quest'ultimo già eseguito in AUD-36. XML in build/reports/aud37-full, log aud37-full-suite.log; baseline/mirati e prove native in aud37-baseline, aud37-targeted e aud37-native (red, primo giro, mirati, finale).
+
+App Android aggiornata con -r; APK test disinstallato (Success), pacchetto principale verificato e app riavviata. Database e WAL originali SHA-256 invariati prima del riavvio, come i due backup storici: confronti in aud37-native. Cache di ogni scenario rimossa in finally. Quattro piccole fixture JUnit Windows lasciate dai worker interrotti (6708 byte totali, soli progetti Editor retry verificati nei ZIP e marker source.txt di questa sessione) conservate: pulizia respinta dal controllo automatico con blocked by policy, senza altra motivazione. Nessun ritentativo; percorsi esatti e inventario in aud36-scratch-inventory.json e RES-24. Recovery senza file; risorse storiche e processi altrui preservati.
+
+Fonti ufficiali consultate il 7 ottobre: [stato e ciclo di vita Compose](https://developer.android.com/develop/ui/compose/state-hoisting), [cancellazione Kotlin](https://kotlinlang.org/docs/cancellation-and-timeouts.html). Le prove locali stabiliscono integrità ed esito del salvataggio. AUD-37 rimosso dal tracker; AUD-39 separa sostituzione/fusione, import/classificazione allegato, credenziali e download cartografico Android, letti da codice e non riprodotti. Restano anche AUD-38 e RES-13/19/23/24. Nessun EXE rigenerato o commit/push.
+
+
+## AUD-38 — Modelli e Credenziali Windows — 7 ottobre 2026
+
+Creazione/modifica/applicazione modello e creazione/modifica credenziale chiudono la bozza soltanto dopo il save riuscito; l'errore è nel form. DesktopApp inoltra l'errore corrente. Gli overload precedenti preservano i chiamanti, incluse le lambda finali; nessuna nuova dipendenza, schema o formato.
+
+Baseline FailedEditorSaveTest: 8 prove verdi, BUILD SUCCESSFUL in 28s. Dieci regressioni nuove riproducono la bozza scomparsa, con file .ofam sintetico bloccato tramite NOSHARE_DELETE; catalogo, byte e history restano invariati sul guasto. Prima compilazione della fixture corretta con arrayOf<Any>; un comando di modifica respinto dal parser PowerShell ha causato un secondo giro sul codice invariato, poi applicate patch puntuali. Il controllo dei consumatori ha rilevato la lambda finale CredentialsSection nel test preesistente: overload compatibile mantenuto.
+
+Finale mirato: 18 prove verdi, BUILD SUCCESSFUL in 41s. Suite ` .\gradlew.bat :pc:app:test --no-parallel --max-workers=1 `: **203 test, zero fallimenti/errori/saltati**, BUILD SUCCESSFUL in 4m 53s. Evidenze in build/reports/aud38-baseline, aud38-red, aud38-targeted e aud38-full. I dieci casi coprono sia FormDialog sia MasterDetailHost, selezioni e campi conservati, segreti esclusivamente sintetici, riprova senza duplicati, lettura del pacchetto persistito e un solo undo.
+
+Correzione AUD-38 completata e rimossa dal tracker; il criterio nativo DesktopApp/EXE resta esplicitamente in RES-23, con il limite del runner già osservato in AUD-36. Nessun nuovo collaudo EXE, commit/push o pulizia delle risorse storiche. Prossimo AUD-39.
+
+Fonti ufficiali consultate il 7 ottobre: [stato Compose](https://developer.android.com/develop/ui/compose/state) e [state hoisting](https://developer.android.com/develop/ui/compose/state-hoisting). Remember perde lo stato quando il form esce dalla composizione; esito e integrità specifici dell'app derivano dalle prove locali.
+
+
+## AUD-39 — Comandi specializzati e credenziali Android — 7 ottobre 2026
+
+Sostituzione/fusione, import/classificazione allegato, creazione/modifica credenziale e download cartografico conservano il form fino al successo. Sul guasto campi, selezioni e navigazione restano disponibili con errore e riprova. La sostituzione torna indietro dopo il successo. Gli overload precedenti del ViewModel restano compatibili; gli esiti nuovi sono limitati alla sessione, verificano la cancellazione e, per i media, arrivano dopo la pulizia. EditSave.submit riusa lo stesso controllo della composizione degli edit generici. Nessuna nuova dipendenza, schema Room v2 o formato .ofam v1.
+
+Baseline ProjectCommandTest: 16 test verdi, BUILD SUCCESSFUL in 22s. Sei prove native iniziali riproducono bozze/comandi scomparsi e navigazione anticipata, con guasto BEFORE UPDATE nella sola Room in memoria; catalogo e media originali invariati. Red conservato in build/reports/aud39-native/red.txt (6 fallimenti, 46,45s). Il runner am instrument restituisce codice shell zero anche con test falliti: il comando di conferma verifica esplicitamente OK e termina con errore se manca.
+
+FailedSpecializedSaveNativeTest: **OK (8 tests) in 71,349s**, moto g86 5G Android 16/API 36, tramite install -r e am instrument. Otto flussi coprono campi/selezioni conservati, errore raggiungibile, retry senza duplicati, catalogo/cestino/media integri sul guasto, persistenza dopo retry e undo nei flussi che già lo prevedono. Sostituzione/fusione mantengono il cestino transazionale e non ricevono un nuovo undo. Import usa un risultato del picker sintetico; download usa un PNG reale sintetico e una sorgente iniettata dal costruttore interno, provando errore della sorgente e persistenza SQLite senza reti pubbliche. Il costruttore applicativo precedente usa sempre CartographicMapManager reale. Repository, staging e salvataggio dei media restano reali. La prova non copre picker di sistema, server cartografico, SQLCipher/Keystore, TalkBack o matrice UX completa: RES-13/19 restano aperti.
+
+SpecializedCommandTest aggiunge 18 regressioni: callback di guasto dopo cleanup, retry unico, chiusura sessione, cancellazione, editor dismesso, fusione rifiutata e sorgente import illeggibile. Mirata con ProjectCommandTest e MediaAdditionTest: **38 test verdi**, BUILD SUCCESSFUL in 25s. Prima compilazione/APK con i 16 ProjectCommandTest preesistenti: BUILD SUCCESSFUL in 34s. Report baseline/mirati in build/reports/aud39-baseline e aud39-targeted.
+
+```powershell
+.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1
+```
+
+**BUILD SUCCESSFUL in 2m 41s; 530 test nei report, zero fallimenti/errori/saltati** (128 core, 91 exchange, 203 Windows, 108 Android). Android rieseguito integralmente; Windows già verificato in AUD-38, core/exchange sul codice invariato UP-TO-DATE. XML e conteggi in build/reports/aud39-full; log aud39-full-suite.log. Prove native in aud39-native/first-fixed.txt.
+
+Il telefono si è scollegato prima del controllo finale ed è stato ricollegato dall'utente. SHA-256 di database e WAL identici alla baseline prima della riapertura; due backup storici invariati, confronti in aud39-native. APK test rimosso (Success), app principale verificata e riaperta; nessuna disinstallazione del pacchetto principale. Cache di ogni scenario rimossa in finally e assenza delle cartelle special-save verificata. Nessuna pulizia storica, rigenerazione EXE o commit/push.
+
+AUD-39 completato e rimosso dal tracker. AUD-40 registra separatamente la navigazione anticipata nelle conferme di cancellazione apparato/rack, letta da codice e non riprodotta. Collaudi generali RES-13/19/23/24 conservati. Fonti ufficiali consultate il 7 ottobre: [stato Compose](https://developer.android.com/develop/ui/compose/state), [eventi UI](https://developer.android.com/topic/architecture/ui-layer/events) e [ensureActive](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/ensure-active.html). Le proprietà delle API vengono dalle fonti; esito e integrità dell'app dalle prove locali.
+
+
+## Passaggio di sessione AUD-36–39 — 7 ottobre 2026
+
+Su richiesta esplicita dell’utente, checkpoint del lavoro corrente con commit e push sul ramo principale main. Prima del checkpoint, fetch origin/main riuscito e confronto HEAD...origin/main pari a 0/0; diff e regressioni rivisti. Il checkpoint comprende AUD-36–39, codice, test e documentazione; il tracker contiene soltanto AUD-40 e RES-13/19/23/24 (quattro P2, un P3). Riprendere da AUD-40: navigazione prima dell’esito di cancellazione apparato/rack Android, evidenza da codice e non riprodotta.
+
+Ultima suite completa: BUILD SUCCESSFUL in 2m 41s, 530 test nei report senza fallimenti/errori/saltati (128 core, 91 exchange, 203 Windows, 108 Android). Otto nuove prove native AUD-39 verdi sul moto g86 API 36; le precedenti 17 prove AUD-37 restano documentate separatamente. Nessuna nuova esecuzione per le sole modifiche di consegna. APK test rimosso e app principale riaperta; database/WAL prima della riapertura e due backup storici SHA-256 invariati.
+
+Report locali, build, APK/EXE, fixture e backup sono ignorati da Git e restano sulla macchina: il push non li trasferisce. Evidenze principali in build/reports/aud38-full, aud39-full, aud39-native e aud39-full-suite.log; conservare anche quelle AUD-36/37. Verificare la loro presenza prima di utilizzarle in un altro checkout. Preservare Demo Comune e dati/backup; collaudi nativi con install -r + am instrument, mai connectedDebugAndroidTest su hardware con dati. Nessuna pulizia storica ritentata; RES-24 conserva gli inventari. I collaudi EXE/focus, matrice UX e SQLCipher/Keystore restano nei rispettivi residui. Alla ripresa verificare ramo, uguaglianza HEAD/origin/main e copia di lavoro.

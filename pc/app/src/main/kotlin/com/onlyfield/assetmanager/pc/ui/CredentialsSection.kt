@@ -19,7 +19,10 @@ import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.pc.ui.components.*
 
 @Composable
-fun CredentialsSection(project: Project, update: (Project, String) -> Unit) {
+fun CredentialsSection(project: Project, update: (Project, String) -> Unit) = CredentialsSection(project, update, { null })
+
+@Composable
+fun CredentialsSection(project: Project, update: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
@@ -59,8 +62,9 @@ fun CredentialsSection(project: Project, update: (Project, String) -> Unit) {
             val saved = (original ?: Credential(username = username, secret = secret)).copy(username = username.trim(), secret = secret,
                 type = type, groupName = group.trim().ifBlank { null }, deviceId = deviceId, notes = notes.trim().ifBlank { null })
             update(project.copy(credentials = if (original == null) project.credentials + saved else project.credentials.map { if (it.id == saved.id) saved else it }), i18n.text("text.de37f6b34612"))
-            creating = false; editing = null
+            if (saveError() == null) { creating = false; editing = null }
         }, confirmEnabled = username.isNotBlank() && secret.isNotEmpty()) {
+            saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(username, { username = it }, i18n.text("text.3255e3d5e3b4"))
             val dirty = LocalMarkDirty.current
             OutlinedTextField(secret, { dirty(); secret = it }, label = { Text(i18n.text("text.7f9bedb6b654")) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())

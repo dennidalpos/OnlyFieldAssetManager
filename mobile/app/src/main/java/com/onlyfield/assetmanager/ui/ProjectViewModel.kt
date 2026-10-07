@@ -17,6 +17,7 @@ import com.onlyfield.assetmanager.core.edit.ProjectEdits
 import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.cartography.CartographicMapManager
 import com.onlyfield.assetmanager.cartography.MapSnapshotRequest
+import com.onlyfield.assetmanager.cartography.MapSnapshotResult
 import com.onlyfield.assetmanager.cartography.OfflineMapException
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
@@ -66,7 +67,11 @@ sealed interface ImportState {
 }
 
 /** App state; [edit] saves each change and supports one undo. */
-class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() {
+class ProjectViewModel internal constructor(
+    private val repository: ProjectRepository,
+    private val acquireMapSnapshot: (MapSnapshotRequest, Messages) -> MapSnapshotResult,
+) : ViewModel() {
+    constructor(repository: ProjectRepository) : this(repository, { request, i18n -> CartographicMapManager.acquireMapSnapshot(request, i18n) })
 
     var language by mutableStateOf(AppLanguage.SYSTEM)
         private set
@@ -405,30 +410,55 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     fun replaceDevice(oldDeviceId: String, newName: String, category: DeviceCategory) {
+        replaceDevice(oldDeviceId, newName, category, {})
+    }
+
+    fun replaceDevice(oldDeviceId: String, newName: String, category: DeviceCategory, onResult: (String?) -> Unit) {
         val projectId = _project.value?.id ?: return
         launchCommand {
-            try {
+            val result = try {
                 val (_, newDevice) = repository.replaceDevice(projectId, oldDeviceId, newName, category, i18n = i18n)
+                coroutineContext.ensureActive()
                 reload(projectId)
-                notify(i18n.text("text.f033a5d0dac5", newDevice.technicalName))
+                if (commandSession == session && _project.value?.id == projectId) notify(i18n.text("text.f033a5d0dac5", newDevice.technicalName))
+                null
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.a86610be9d16"), e)
+                i18n.text("text.a86610be9d16") + (e.message?.let { " ($it)" } ?: "")
             }
+            publishCommandResult(projectId, result, onResult)
         }
     }
 
     fun mergeDevices(survivorId: String, duplicateId: String, choices: MergeDataChoices) {
+        mergeDevices(survivorId, duplicateId, choices, {})
+    }
+
+    fun mergeDevices(survivorId: String, duplicateId: String, choices: MergeDataChoices, onResult: (String?) -> Unit) {
         val projectId = _project.value?.id ?: return
         launchCommand {
-            try {
+            val result = try {
                 val merged = repository.mergeDevices(projectId, survivorId, duplicateId, choices, i18n = i18n)
+                coroutineContext.ensureActive()
                 reload(projectId)
-                if (merged != null) notify(i18n.text("text.fc7aa94c3fb8", merged.technicalName)) else fail(i18n.text("text.03f600b15086"))
+                if (merged == null) i18n.text("text.03f600b15086") else {
+                    if (commandSession == session && _project.value?.id == projectId) notify(i18n.text("text.fc7aa94c3fb8", merged.technicalName))
+                    null
+                }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.932f8500aa16"), e)
+                i18n.text("text.932f8500aa16") + (e.message?.let { " ($it)" } ?: "")
             }
+            publishCommandResult(projectId, result, onResult)
+        }
+    }
+
+    /** Publishes only to the active originating session after cleanup. */
+    private suspend fun publishCommandResult(projectId: String, result: String?, onResult: (String?) -> Unit) {
+        kotlinx.coroutines.currentCoroutineContext().ensureActive()
+        if (commandSession == session && _project.value?.id == projectId) {
+            if (result != null) fail(result)
+            onResult(result)
         }
     }
 
@@ -691,14 +721,14 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     }
 
     private fun saveMediaEdit(context: Context, sources: List<Uri>, type: AttachmentTargetType?, targetId: String?, classification: AttachmentClassification,
-        transform: (Project) -> Project, mediaOnly: Boolean = true, title: String? = null, onSaved: (List<Attachment>) -> Unit) {
+        transform: (Project) -> Project, mediaOnly: Boolean = true, title: String? = null, onResult: (String?) -> Unit = {}, onSaved: (List<Attachment>) -> Unit) {
         if (busy != null) return
         val initial = _project.value ?: return
         launchCommand {
             operationBusy = i18n.text("text.c4f57f0165aa")
             val created = mutableListOf<File>()
             var committed = false
-            try {
+            val result = try {
                 val attachments = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                     sources.map { uri ->
                         val resolver = context.contentResolver
@@ -730,25 +760,32 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 val edited = transform(before)
                 val saved = edited.copy(attachments = edited.attachments + attachments, updatedEpochMs = System.currentTimeMillis())
                 repository.saveMediaProject(saved, i18n) { committed = true }
+                coroutineContext.ensureActive()
                 if (commandSession == session && _project.value?.id == initial.id) {
                     setProject(saved)
                     notify(i18n.text("text.b1b5983f51f1"), undo = snapshotUndo(before))
                     onSaved(attachments)
                 }
+                null
             } catch (e: Exception) {
                 if (!committed) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
                     created.forEach { java.nio.file.Files.deleteIfExists(it.toPath()) }
                 }
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.9b6ca71eb272"), e)
+                i18n.text("text.9b6ca71eb272") + (e.message?.let { " ($it)" } ?: "")
             } finally { operationBusy = null }
+            publishCommandResult(initial.id, result, onResult)
         }
     }
 
 
     /** Copies a picked file into app storage. */
     fun addAttachment(context: Context, uri: Uri, name: String, classification: AttachmentClassification) {
-        saveMediaEdit(context, listOf(uri), null, null, classification, { it }, mediaOnly = false, title = name, onSaved = {})
+        addAttachment(context, uri, name, classification, {})
+    }
+
+    fun addAttachment(context: Context, uri: Uri, name: String, classification: AttachmentClassification, onResult: (String?) -> Unit) {
+        saveMediaEdit(context, listOf(uri), null, null, classification, { it }, mediaOnly = false, title = name, onResult = onResult, onSaved = {})
     }
 
 
@@ -831,15 +868,19 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
 
     /** Downloads and stores the requested 3x3 tile map. */
     fun downloadMap(request: MapSnapshotRequest, name: String) {
+        downloadMap(request, name, {})
+    }
+
+    fun downloadMap(request: MapSnapshotRequest, name: String, onResult: (String?) -> Unit) {
         if (busy != null) return
         val p = _project.value ?: return
         launchCommand {
             operationBusy = i18n.text("text.4618bc8c688e")
             var target: File? = null
             var committed = false
-            try {
+            val result = try {
                 val attachment = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-                    val snapshot = CartographicMapManager.acquireMapSnapshot(request, i18n = i18n)
+                    val snapshot = acquireMapSnapshot(request, i18n)
                     AttachmentFiles.validateSize(snapshot.imageBytes.size.toLong(), i18n)
                     val attachment = Attachment(
                         name = name.trim().ifBlank { i18n.text("text.67c7c6400b1f", request.centerLatitude, request.centerLongitude) },
@@ -856,21 +897,24 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
                 val before = _project.value?.takeIf { it.id == p.id } ?: error(i18n.text("text.2af4c267c11f"))
                 val updated = ProjectEdits.addAttachment(before, attachment)
                 repository.saveMediaProject(updated, i18n) { committed = true }
+                coroutineContext.ensureActive()
                 if (commandSession == session && _project.value?.id == p.id) {
                     setProject(updated)
                     notify(i18n.text("text.9c32fd33c6a0", attachment.name), undo = snapshotUndo(before))
                 }
+                null
             } catch (e: OfflineMapException) {
-                fail(e.message ?: i18n.text("map.network.android"))
+                e.message ?: i18n.text("map.network.android")
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.d96c472cc255"), e)
+                i18n.text("text.d96c472cc255") + (e.message?.let { " ($it)" } ?: "")
             } finally {
                 if (!committed) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
                     target?.let { java.nio.file.Files.deleteIfExists(it.toPath()) }
                 }
                 operationBusy = null
             }
+            publishCommandResult(p.id, result, onResult)
         }
     }
 
