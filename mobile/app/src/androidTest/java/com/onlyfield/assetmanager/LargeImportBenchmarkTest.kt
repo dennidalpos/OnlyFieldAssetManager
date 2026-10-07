@@ -89,7 +89,7 @@ class LargeImportBenchmarkTest {
                 val database = EncryptedDatabase.open(isolated)
                 try {
                     val mediaRoot = File(root, "media")
-                    val repository = ProjectRepository(database, mediaRoot)
+                    val repository = ProjectRepository(database, mediaRoot, recoveryPassword = EncryptedDatabase.recoveryPassword(isolated))
                     check(repository.importProjectPackage(pkg, if (fixture?.startsWith("encrypted-") == true) "benchmark-placeholder" else null))
                     val reopened = checkNotNull(repository.getProjectById(pkg.project.id))
                     check(reopened.attachments.size == pkg.project.attachments.size)

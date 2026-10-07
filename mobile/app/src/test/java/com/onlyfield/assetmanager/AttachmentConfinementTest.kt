@@ -32,7 +32,7 @@ class AttachmentConfinementTest {
         directory = File(context.cacheDir, "confinement-${UUID.randomUUID()}").apply { mkdirs() }
         root = File(directory, "attachments").apply { mkdirs() }
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).build()
-        repository = ProjectRepository(db, root)
+        repository = ProjectRepository(db, root, recoveryPassword = "dummy-recovery-key")
     }
 
     @After fun tearDown() {

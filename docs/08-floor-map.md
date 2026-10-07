@@ -88,3 +88,7 @@ Le mappe cartografiche vengono scaricate solo su richiesta e salvate come allega
 - [Gesti multitouch Compose](https://developer.android.com/develop/ui/compose/touch-input/pointer-input/multi-touch)
 - [Android PdfRenderer](https://developer.android.com/reference/android/graphics/pdf/PdfRenderer)
 - [Apache PDFBox 3](https://pdfbox.apache.org/3.0/getting-started.html)
+
+## Ripristino delle collocazioni — AUD-27
+
+Un piano mancante o trasferito a un’altra sede, un contenitore non disponibile, un figlio ricollocato o un ID di collocazione riutilizzato bloccano il ripristino. Le coordinate originali tornano soltanto quando il contesto è disponibile; nessun posizionamento viene scartato silenziosamente. La voce e i media restano nel cestino sul rifiuto.

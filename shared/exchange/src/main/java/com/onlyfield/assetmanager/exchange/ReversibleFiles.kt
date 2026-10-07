@@ -6,22 +6,30 @@ import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 
 /** Keeps replaced files until the enclosing project commit succeeds. */
-class ReversibleFiles(scratchDirectory: File? = null) : AutoCloseable {
+class ReversibleFiles(scratchDirectory: File? = null, private val recovery: FileRecovery? = null) : AutoCloseable {
     private data class Change(val target: File, val staged: File?, var backup: String? = null, var applied: Boolean = false)
     private val changes = mutableListOf<Change>()
     private val backups = PackagePayloads(scratchDirectory)
     private var committed = false
 
     fun replace(target: File, write: (OutputStream) -> Unit) {
+        recovery?.let { it.replace(target, write); return }
         Files.createDirectories(target.parentFile.toPath())
         val staged = Files.createTempFile(target.parentFile.toPath(), ".ofam-write-", ".tmp").toFile()
         changes += Change(target, staged)
         staged.outputStream().buffered().use(write)
     }
 
-    fun remove(target: File) { if (target.isFile) changes += Change(target, null) }
+    fun remove(target: File) {
+        recovery?.let { it.remove(target); return }
+        if (target.isFile) changes += Change(target, null)
+    }
+
+    fun expectState(state: String) { recovery?.expectState(state) }
+    fun databaseCommitted() { recovery?.databaseCommitted() }
 
     fun apply() {
+        recovery?.let { it.apply(); return }
         for ((index, change) in changes.withIndex()) {
             check(!change.applied)
             if (change.target.exists()) {
@@ -38,6 +46,7 @@ class ReversibleFiles(scratchDirectory: File? = null) : AutoCloseable {
 
     /** Cleanup errors are warnings after commit, never a failed project save. */
     fun commit(): List<Exception> {
+        recovery?.let { return it.commit() }
         committed = true
         return cleanup()
     }
@@ -54,6 +63,7 @@ class ReversibleFiles(scratchDirectory: File? = null) : AutoCloseable {
     }
 
     override fun close() {
+        recovery?.let { it.close(); return }
         if (committed) return
         var failure: Exception? = null
         for (change in changes.asReversed()) {

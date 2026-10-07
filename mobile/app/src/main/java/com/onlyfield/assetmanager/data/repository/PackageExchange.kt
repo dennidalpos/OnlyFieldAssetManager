@@ -26,7 +26,10 @@ internal class PackageExchange(
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
     private val transaction: suspend (suspend () -> Unit) -> Unit = { it() },
     private val loadTrash: suspend (String) -> List<com.onlyfield.assetmanager.core.model.TrashItem> = { emptyList() },
+    private val recovery: ProjectRecovery? = null,
+    private val evaluateLocal: suspend (String) -> Project? = load,
 ) {
+    init { require(attachmentsRoot == null || recovery != null) { "File storage requires durable recovery" } }
     private suspend fun getProjectById(projectId: String) = load(projectId)
     private suspend fun saveProject(project: Project) = save(project)
 
@@ -80,7 +83,7 @@ internal class PackageExchange(
                     return@withContext PackageImportEvaluation(importResult = importResult, comparison = null)
                 }
                 val comparison = ProjectComparisonEvaluator.evaluate(
-                    currentProject = getProjectById(pkg.project.id),
+                    currentProject = evaluateLocal(pkg.project.id),
                     currentManifest = null,
                     incomingPackage = pkg,
                     i18n = i18n,
@@ -110,12 +113,13 @@ internal class PackageExchange(
         val local = getProjectById(incoming.id)
         val selected = if (local == null) incoming else com.onlyfield.assetmanager.core.edit.ProjectEdits.retainTrashAttachments(incoming, local, loadTrash(incoming.id))
         require(selected.id == pkg.project.id)
-        com.onlyfield.assetmanager.exchange.ReversibleFiles(attachmentsRoot).use { files ->
+        (recovery?.files(selected.id) ?: com.onlyfield.assetmanager.exchange.ReversibleFiles()).use { files ->
             attachmentsRoot?.let { AttachmentFiles.stage(pkg, it, selected, files) }
             currentCoroutineContext().ensureActive()
             // The commit outcome must survive cancellation at the Room return boundary.
             withContext(kotlinx.coroutines.NonCancellable) {
-                transaction { files.apply(); persist(selected); saveBase(pkg.project) }
+                transaction { persist(selected); saveBase(pkg.project); recovery?.expectState(files, selected.id); files.apply() }
+                files.databaseCommitted()
                 val cleanupErrors = files.commit()
                 if (cleanupErrors.isNotEmpty()) android.util.Log.w("PackageExchange", "Import committed; staging cleanup failed", cleanupErrors.first())
             }

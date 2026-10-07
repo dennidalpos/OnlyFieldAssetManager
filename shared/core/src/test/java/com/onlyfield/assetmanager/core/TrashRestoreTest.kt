@@ -11,6 +11,88 @@ class TrashRestoreTest {
     private val site = Site(name = "Original", devices = listOf(device))
     private val project = Project(name = "Restore", createdEpochMs = 0, updatedEpochMs = 0, sites = listOf(site))
 
+    @Test fun deviceRestoreRejectsMissingOrRelocatedFloor() {
+        val area = Area(name = "Floor")
+        val located = device.copy(areaId = area.id)
+        val original = project.copy(sites = listOf(site.copy(areas = listOf(area), devices = listOf(located))))
+        val (deleted, item) = ProjectEdits.deleteDeviceToTrash(original, device.id)
+        for (changed in listOf(
+            deleted.copy(sites = listOf(site.copy(devices = emptyList()))),
+            deleted.copy(sites = listOf(site.copy(devices = emptyList()), Site(name = "Other", areas = listOf(area))))
+        )) {
+            assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(changed, item!!) }
+        }
+        assertEquals(located, ProjectEdits.restoreFromTrash(deleted, item!!).sites.single().devices.single())
+    }
+
+    @Test fun deviceRestoreRejectsActiveAndRepeatedPortIds() {
+        val port = Port(deviceId = device.id, name = "P1")
+        val original = project.copy(sites = listOf(site.copy(devices = listOf(device.copy(ports = listOf(port))))))
+        val (deleted, item) = ProjectEdits.deleteDeviceToTrash(original, device.id)
+        val other = Device(technicalName = "Active")
+        val collision = deleted.copy(sites = listOf(site.copy(devices = listOf(other.copy(ports = listOf(port.copy(deviceId = other.id)))))))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(collision, item!!) }
+        val repeated = item!!.copy(serializedJson = Json.encodeToString(Device.serializer(), device.copy(ports = listOf(port, port))))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(deleted, repeated) }
+        assertEquals(listOf(port), ProjectEdits.restoreFromTrash(deleted, item).sites.single().devices.single().ports)
+    }
+
+    @Test fun placementRestoreRejectsMissingFloorAndReusedIds() {
+        val area = Area(name = "Floor")
+        val placement = FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE,
+            targetId = device.id, xRatio = .2f, yRatio = .3f)
+        val original = project.copy(sites = listOf(site.copy(areas = listOf(area))), floorplanPlacements = listOf(placement))
+        val (deleted, item) = ProjectEdits.deleteDeviceToTrash(original, device.id)
+        assertThrows(IllegalStateException::class.java) {
+            ProjectEdits.restoreFromTrash(deleted.copy(sites = listOf(site.copy(devices = emptyList()))), item!!)
+        }
+        val collision = deleted.copy(floorplanPlacements = listOf(placement.copy(targetId = "other")))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(collision, item!!) }
+        assertEquals(listOf(placement), ProjectEdits.restoreFromTrash(deleted, item!!).floorplanPlacements)
+    }
+
+    @Test fun hierarchyRestoreRejectsMissingContainerOrChild() {
+        val rack = Rack(name = "Rack")
+        val mounted = device.copy(rackId = rack.id)
+        val original = project.copy(sites = listOf(site.copy(devices = listOf(mounted))), racks = listOf(rack))
+        val (deleted, item) = ProjectEdits.deleteDeviceToTrash(original, device.id)
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(deleted.copy(racks = emptyList()), item!!) }
+        val (withoutRack, rackItem) = ProjectEdits.deleteRackToTrash(original, rack.id)
+        val missingChild = withoutRack.copy(sites = listOf(site.copy(devices = emptyList())))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(missingChild, rackItem!!) }
+        assertEquals(rack.id, ProjectEdits.restoreFromTrash(deleted, item!!).sites.single().devices.single().rackId)
+    }
+
+    @Test fun rackRestoreRejectsFloorMovedToAnotherSiteEvenIfOriginalSiteRemains() {
+        val area = Area(name = "Floor")
+        val rack = Rack(name = "Rack", areaId = area.id)
+        val original = project.copy(sites = listOf(site.copy(areas = listOf(area))), racks = listOf(rack))
+        val (deleted, item) = ProjectEdits.deleteRackToTrash(original, rack.id)
+        val moved = deleted.copy(sites = listOf(site, Site(name = "Other", areas = listOf(area))))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(moved, item!!) }
+    }
+
+    @Test fun containerRestoreDoesNotUndoAnExplicitMoveOfItsReleasedChild() {
+        val rack = Rack(name = "Original rack")
+        val otherRack = Rack(name = "Other rack")
+        val original = project.copy(sites = listOf(site.copy(devices = listOf(device.copy(rackId = rack.id)))), racks = listOf(rack, otherRack))
+        val (deleted, item) = ProjectEdits.deleteRackToTrash(original, rack.id)
+        val moved = ObjectHierarchy.assign(deleted, ObjectRef(PlacementTargetType.DEVICE, device.id), ObjectRef(PlacementTargetType.RACK, otherRack.id))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(moved, item!!) }
+        assertEquals(otherRack.id, moved.sites.single().devices.single().rackId)
+    }
+
+    @Test fun restoreDoesNotFollowItsContainerToAnotherFloor() {
+        val area = Area(name = "Original floor")
+        val otherArea = Area(name = "Other floor")
+        val rack = Rack(name = "Rack", areaId = area.id)
+        val original = project.copy(sites = listOf(site.copy(areas = listOf(area, otherArea),
+            devices = listOf(device.copy(areaId = area.id, rackId = rack.id)))), racks = listOf(rack))
+        val (deleted, item) = ProjectEdits.deleteDeviceToTrash(original, device.id)
+        val moved = ProjectEdits.updateRack(deleted, rack.copy(areaId = otherArea.id))
+        assertThrows(IllegalStateException::class.java) { ProjectEdits.restoreFromTrash(moved, item!!) }
+    }
+
     @Test fun missingOriginalSiteNeverRelocatesTheDeviceToAnotherSite() {
         val (deleted, item) = ProjectEdits.deleteDeviceToTrash(project, device.id)
         val changed = deleted.copy(sites = listOf(Site(name = "Other")))

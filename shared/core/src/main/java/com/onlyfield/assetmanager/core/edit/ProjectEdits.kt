@@ -99,7 +99,8 @@ object ProjectEdits {
             ?: return Pair(project, null)
         val device = deviceSite.devices.find { it.id == deviceId } ?: return Pair(project, null)
 
-        val jsonStr = jsonSerializer.encodeToString(Device.serializer(), device)
+        val retained = DeviceTrashData.capture(project, deviceId)
+        val jsonStr = retained.snapshot(jsonSerializer, device)
         val affectedPortIds = device.ports.map { it.id }.toSet()
 
         // Disconnect deleted-device ports.
@@ -149,7 +150,7 @@ object ProjectEdits {
             },
             floorplanPlacements = project.floorplanPlacements.filterNot { (it.targetType == PlacementTargetType.DEVICE) && (it.targetId == deviceId) },
             updatedEpochMs = System.currentTimeMillis()
-        ).let { dropPortReferences(it, affectedPortIds) }
+        ).let { dropPortReferences(retained.removeFrom(it), affectedPortIds) }
 
         val ref = ObjectRef(PlacementTargetType.DEVICE, deviceId)
         return Pair(ObjectHierarchy.afterDeletion(project, updatedProject, ref), ObjectHierarchy.snapshot(project, ref, trashItem))
@@ -247,9 +248,12 @@ object ProjectEdits {
         val mergedAreaId = if (choices.useLocationFromDuplicate) duplicateDev.areaId else survivingDev.areaId
 
         val mergedPorts = survivingDev.ports.toMutableList()
+        val copiedPortIds = mutableMapOf<String, String>()
         if (choices.mergePorts) {
             for (dupPort in duplicateDev.ports) {
-                mergedPorts.add(dupPort.copy(id = UUID.randomUUID().toString(), deviceId = survivingDeviceId))
+                val newId = UUID.randomUUID().toString()
+                copiedPortIds[dupPort.id] = newId
+                mergedPorts.add(dupPort.copy(id = newId, deviceId = survivingDeviceId))
             }
         }
 
@@ -263,7 +267,34 @@ object ProjectEdits {
             ports = mergedPorts
         )
 
-        val projWithUpdated = updateDevice(project, updatedSurviving, i18n = i18n)
+        val configAttachmentIds = if (choices.mergeConfigurations) project.deviceConfigurations
+            .filter { it.deviceId == duplicateDeviceId }.mapNotNull { it.attachmentId }.toSet() else emptySet()
+        val duplicatePortIds = duplicateDev.ports.map { it.id }.toSet()
+        val transferred = project.copy(
+            attachments = project.attachments.map {
+                when {
+                    it.id !in configAttachmentIds -> it
+                    it.targetType == AttachmentTargetType.DEVICE && it.targetId == duplicateDeviceId -> it.copy(targetId = survivingDeviceId)
+                    it.targetType == AttachmentTargetType.PORT && it.targetId in duplicatePortIds -> {
+                        val copiedId = copiedPortIds[it.targetId]
+                        it.copy(targetType = if (copiedId == null) AttachmentTargetType.DEVICE else AttachmentTargetType.PORT,
+                            targetId = copiedId ?: survivingDeviceId)
+                    }
+                    else -> it
+                }
+            },
+            credentials = if (choices.mergeCredentials) project.credentials.map { if (it.deviceId == duplicateDeviceId) it.copy(deviceId = survivingDeviceId) else it } else project.credentials,
+            deviceConfigurations = if (choices.mergeConfigurations) project.deviceConfigurations.map { if (it.deviceId == duplicateDeviceId) it.copy(deviceId = survivingDeviceId) else it } else project.deviceConfigurations,
+            powerFeeds = if (choices.mergePowerFeeds) project.powerFeeds.map { it.copy(
+                deviceId = if (it.deviceId == duplicateDeviceId) survivingDeviceId else it.deviceId,
+                sourceDeviceId = if (it.sourceDeviceId == duplicateDeviceId) survivingDeviceId else it.sourceDeviceId,
+            ) } else project.powerFeeds,
+            customExtraFields = if (choices.mergeExtraFields) project.customExtraFields.map {
+                if (it.targetType == "DEVICE" && it.targetId == duplicateDeviceId) it.copy(targetId = survivingDeviceId) else it
+            } else project.customExtraFields,
+        )
+        check(!choices.mergePowerFeeds || !transferred.powerFeeds.hasPowerFeedCycle()) { i18n.text("merge.powerCycle") }
+        val projWithUpdated = updateDevice(transferred, updatedSurviving, i18n = i18n)
         return deleteDeviceToTrash(projWithUpdated, duplicateDeviceId, i18n = i18n)
     }
 
@@ -477,13 +508,15 @@ object ProjectEdits {
         return items.flatMap { item ->
             val direct = AttachmentTargetType.entries.firstOrNull { it.name == item.itemType.uppercase() }
                 ?.let { listOf(it to item.itemId) }.orEmpty()
-            val ports = if (item.itemType.equals("DEVICE", ignoreCase = true) && attachments.any { it.targetType == AttachmentTargetType.PORT })
+            val ports = if (item.itemType.equals("DEVICE", ignoreCase = true) && index.device(item.itemId) == null &&
+                attachments.any { it.targetType == AttachmentTargetType.PORT })
                 jsonSerializer.decodeFromString(Device.serializer(), item.serializedJson).ports.map { AttachmentTargetType.PORT to it.id }
             else emptyList()
             direct + ports
         }.filterNot { (type, id) -> when (type) {
             AttachmentTargetType.DEVICE -> index.device(id) != null
-            AttachmentTargetType.PORT -> index.port(id) != null
+            // Reused port IDs do not release photos of a device still in trash.
+            AttachmentTargetType.PORT -> false
             AttachmentTargetType.RACK -> index.rack(id) != null
             AttachmentTargetType.AREA -> index.area(id) != null
             AttachmentTargetType.CABLE -> project.cables.any { it.id == id }
@@ -560,14 +593,22 @@ object ProjectEdits {
                 check(project.sites.none { site -> site.devices.any { it.id == device.id } }) { i18n.text("trash.alreadyExists") }
                 val targetSite = project.sites.find { it.id == trashItem.originalSiteId }
                     ?: throw IllegalStateException(i18n.text("trash.siteMissing"))
-                withInternalPassages(addDevice(project, targetSite.id, device), device.ports)
+                check(device.areaId == null || targetSite.areas.any { it.id == device.areaId }) { i18n.text("trash.contextMissing") }
+                check(device.rackId == null || project.racks.any { it.id == device.rackId }) { i18n.text("trash.contextMissing") }
+                val portIds = device.ports.map { it.id }
+                val activePortIds = project.sites.flatMap { it.devices }.flatMap { it.ports }.map { it.id }.toSet()
+                check(portIds.distinct().size == portIds.size && portIds.none { it in activePortIds }) { i18n.text("trash.alreadyExists") }
+                DeviceTrashData.decode(jsonSerializer, trashItem.serializedJson).restore(
+                    withInternalPassages(addDevice(project, targetSite.id, device), device.ports), device.id, i18n)
             }
             "RACK" -> {
                 val rack = jsonSerializer.decodeFromString(Rack.serializer(), trashItem.serializedJson)
                 check(rack.id == trashItem.itemId) { i18n.text("trash.invalidEntry") }
                 check(project.racks.none { it.id == rack.id }) { i18n.text("trash.alreadyExists") }
                 check(trashItem.originalSiteId == null || project.sites.any { it.id == trashItem.originalSiteId }) { i18n.text("trash.siteMissing") }
-                check(rack.areaId == null || project.sites.any { site -> site.areas.any { it.id == rack.areaId } }) { i18n.text("trash.siteMissing") }
+                check(rack.areaId == null || project.sites.any { site ->
+                    (trashItem.originalSiteId == null || site.id == trashItem.originalSiteId) && site.areas.any { it.id == rack.areaId }
+                }) { i18n.text("trash.contextMissing") }
                 addRack(project, rack)
             }
             "CREDENTIAL" -> {

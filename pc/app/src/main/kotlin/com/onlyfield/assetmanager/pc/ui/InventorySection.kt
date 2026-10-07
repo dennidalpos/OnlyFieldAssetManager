@@ -33,7 +33,8 @@ import com.onlyfield.assetmanager.core.scan.CodeMatch
 fun InventorySection(
     project: Project,
     onProjectUpdated: (Project, String) -> Unit,
-    onTrashItemCreated: (TrashItem) -> Unit
+    onTrashItemCreated: (TrashItem) -> Unit,
+    onMergeDevices: (String, String, MergeDataChoices) -> Boolean,
 ) {
     val i18n = LocalMessages.current
 
@@ -206,11 +207,7 @@ fun InventorySection(
 
     mergeTarget?.let { survivor ->
         MergeDialog(index, survivor, onDismiss = { mergeTarget = null }) { duplicateId, choices ->
-            val duplicateName = index.deviceName(duplicateId, i18n = i18n)
-            val (updated, trashItem) = ProjectEdits.mergeDevices(project, survivor.id, duplicateId, choices, i18n = i18n)
-            mergeTarget = null
-            trashItem?.let(onTrashItemCreated)
-            onProjectUpdated(updated, i18n.text("text.83e8fd9fecb8", duplicateName, survivor.technicalName))
+            if (onMergeDevices(survivor.id, duplicateId, choices)) mergeTarget = null
         }
     }
 
@@ -298,6 +295,11 @@ private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> 
             LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, i18n.text("text.6d44f00413d7"))
             Text("Trasferisci:", fontWeight = FontWeight.SemiBold)
             LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, i18n.text("text.625d94dac5fc", dup.ports.size))
+            LabeledCheckbox(choices.mergeCredentials, { choices = choices.copy(mergeCredentials = it) }, i18n.text("merge.credentials"))
+            LabeledCheckbox(choices.mergeConfigurations, { choices = choices.copy(mergeConfigurations = it) }, i18n.text("merge.configurations"))
+            LabeledCheckbox(choices.mergePowerFeeds, { choices = choices.copy(mergePowerFeeds = it) }, i18n.text("merge.powerFeeds"))
+            LabeledCheckbox(choices.mergeExtraFields, { choices = choices.copy(mergeExtraFields = it) }, i18n.text("merge.extraFields"))
+            Text(i18n.text("merge.associatedHint"), style = MaterialTheme.typography.bodySmall)
         }
     }
 }

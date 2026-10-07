@@ -51,9 +51,10 @@ class ImportLifecycleTest {
         context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries()
             .setTransactionExecutor(executor).build()
-        repository = ProjectRepository(db, folder.newFolder("media"))
+        repository = ProjectRepository(db, folder.newFolder("media"), recoveryPassword = "dummy-recovery-key")
         vm = ProjectViewModel(repository)
         owner.put("import", vm)
+        await { vm.busy == null }
     }
 
     @After fun tearDown() {

@@ -235,9 +235,6 @@ interface InventoryDao {
     @Query("DELETE FROM panel_mappings WHERE id = :mappingId")
     suspend fun deletePanelMappingById(mappingId: String)
 
-    @Query("SELECT * FROM devices WHERE siteId IN (:siteIds) AND (technicalName LIKE '%' || :query || '%' OR ipAddress LIKE '%' || :query || '%' OR physicalLabel LIKE '%' || :query || '%' OR alias LIKE '%' || :query || '%' OR serialNumber LIKE '%' || :query || '%')")
-    suspend fun searchDevices(siteIds: List<String>, query: String): List<DeviceEntity>
-
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertTrashItems(trashItems: List<TrashItemEntity>)
 

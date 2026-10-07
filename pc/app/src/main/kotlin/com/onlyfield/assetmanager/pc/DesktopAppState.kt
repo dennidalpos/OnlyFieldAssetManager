@@ -416,6 +416,17 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         update(restored, i18n.text("text.57a18cfa77e6", item.displayName))
     }
 
+    fun mergeDevices(survivorId: String, duplicateId: String, choices: MergeDataChoices): Boolean {
+        val before = project ?: return false
+        val (updated, item) = try { runIo { ProjectEdits.mergeDevices(before, survivorId, duplicateId, choices, i18n) } }
+        catch (e: IllegalStateException) { error = e.message; return false }
+        if (item == null) return false
+        addToTrash(item)
+        val index = ProjectIndex(before)
+        update(updated, i18n.text("text.83e8fd9fecb8", index.deviceName(duplicateId, i18n = i18n), index.deviceName(survivorId, i18n = i18n)))
+        return project == updated
+    }
+
     fun refreshStoredList() {
         val (projects, status) = runIo { storage.listStoredProjects() to storage.checkDataDirectoryStatus() }
         storedProjects = projects
@@ -443,7 +454,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
                     loadedTrash = localState.trash
                     if (previousId != newProject.id) localState.close()
                     storage.saveProjectLocally(openedProject, newPassword, trashItems = localState.trash,
-                        syncBase = incoming?.project?.takeUnless { localPackage })
+                        syncBase = incoming?.project?.takeUnless { localPackage }, recoveryPassword = localPassword ?: newPassword)
                     committed = true
                 } finally { if (previousId != newProject.id) localState.close() }
             }
@@ -474,7 +485,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             }
             if (releaseLockOnFailure) storage.releaseProjectLock(newProject.id)
             storage.restoreMedia(newProject.id, previousMedia, previousMediaProtected)
-            if (e is LocalPasswordRequired && incoming != null && !localPackage) {
+            if ((e is LocalPasswordRequired || e is com.onlyfield.assetmanager.exchange.RecoveryPasswordRequired) && incoming != null && !localPackage) {
                 dialog = AppDialog.LocalReplacementPassword(incoming, newPassword, wrongPassword = localPasswordAttempt)
                 error = null
             } else error = i18n.text("text.803d70d07f6f", e.message)
@@ -523,6 +534,10 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         val result = try {
             runIo { if (storage.isLocalProjectFile(file)) storage.loadLocalProject(file.nameWithoutExtension, password) else storage.importPackageFromFile(file, password) }
         } catch (e: Exception) {
+            if (e is com.onlyfield.assetmanager.exchange.RecoveryPasswordRequired) {
+                dialog = AppDialog.ImportPassword(file, error = i18n.text("recovery.password"))
+                return
+            }
             error = i18n.text("text.34b2135f1370", file.name, e.message)
             return
         }
@@ -543,7 +558,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             return
         }
         dialog = null
-        open(pkg.project, pkg.manifest, password, i18n.text("text.644b750a4abb", pkg.project.name, pkg.project.sites.sumOf { it.devices.size }), pkg, if (storage.isLocalProjectFile(file)) releaseLockOnFailure else !storage.ownsProjectLock(pkg.project.id), localPackage = storage.isLocalProjectFile(file))
+        open(pkg.project, pkg.manifest, password.takeIf { pkg.manifest.isEncrypted }, i18n.text("text.644b750a4abb", pkg.project.name, pkg.project.sites.sumOf { it.devices.size }), pkg, if (storage.isLocalProjectFile(file)) releaseLockOnFailure else !storage.ownsProjectLock(pkg.project.id), localPackage = storage.isLocalProjectFile(file))
     }
 
     fun acceptIncoming(pkg: ProjectPackage, incomingPassword: String?) {
@@ -593,6 +608,10 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             dialog = review
             if (review.localProject == null && project == null && warnings.isEmpty()) acceptIncoming(pkg, incomingPassword)
         } catch (e: Exception) {
+            if (e is com.onlyfield.assetmanager.exchange.RecoveryPasswordRequired) {
+                dialog = AppDialog.LocalReplacementPassword(pkg, incomingPassword, passwordAttempt, true, warnings)
+                return
+            }
             dialog = null
             runIo { pkg.close() }
             error = i18n.text("text.34b2135f1370", pkg.project.name, e.message)

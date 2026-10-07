@@ -21,7 +21,8 @@ object AppGraph {
     fun repository(context: Context): ProjectRepository = repository ?: synchronized(this) {
         repository ?: ProjectRepository(
             EncryptedDatabase.open(context),
-            attachmentsRoot = java.io.File(context.applicationContext.filesDir, "attachments")
+            attachmentsRoot = java.io.File(context.applicationContext.filesDir, "attachments"),
+            recoveryPassword = EncryptedDatabase.recoveryPassword(context)
         ).also { repository = it }
     }
 }

@@ -48,7 +48,7 @@ class MediaLifecycleTest {
         val context: Context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         root = folder.newFolder("attachments")
-        repository = ProjectRepository(db, root)
+        repository = ProjectRepository(db, root, recoveryPassword = "dummy-recovery-key")
         runBlocking { repository.saveProject(project) }
         write(removed, removedBytes)
         write(active, activeBytes)
@@ -254,6 +254,55 @@ class MediaLifecycleTest {
         assertTrue(repository.restoreFromTrash(project.id, item.id))
         assertEquals(device, repository.getProjectById(project.id)!!.sites.single().devices.single())
         assertArrayEquals(removedBytes, file(photo).readBytes())
+    }
+
+    @Test fun replacementWithSecondaryConflictsPreservesTrashMediaCredentialsAndSyncBase() = runBlocking {
+        for (scenario in listOf("floor", "port", "container", "placement")) {
+            val area = Area(name = "Original floor")
+            val rack = Rack(name = "Original rack", areaId = area.id)
+            val draft = Device(technicalName = "Recoverable", areaId = area.id, rackId = rack.id, mountingType = MountingType.RACK_MOUNT)
+            val port = Port(deviceId = draft.id, name = "P1")
+            val device = draft.copy(ports = listOf(port))
+            val other = Device(technicalName = "Active")
+            val site = Site(name = "Same site", areas = listOf(area), devices = listOf(device))
+            val placement = FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE,
+                targetId = device.id, xRatio = .2f, yRatio = .3f)
+            val photo = removed.copy(targetType = AttachmentTargetType.PORT, targetId = port.id)
+            val credential = Credential(username = "Dummy", secret = "dummy-test-secret")
+            val original = project.copy(sites = listOf(site), racks = listOf(rack), attachments = listOf(photo, active),
+                floorplanPlacements = listOf(placement), credentials = listOf(credential))
+            repository.saveProject(original)
+            write(photo, removedBytes)
+            val item = repository.moveToTrash(project.id, "DEVICE", device.id)!!
+            val incoming = original.copy(name = "Incoming $scenario", attachments = listOf(active),
+                sites = listOf(site.copy(areas = if (scenario == "floor") emptyList() else listOf(area),
+                    devices = listOf(if (scenario == "port") other.copy(ports = listOf(port.copy(deviceId = other.id))) else other))),
+                racks = if (scenario in listOf("floor", "container")) emptyList() else listOf(rack),
+                floorplanPlacements = if (scenario == "placement") listOf(placement.copy(targetId = other.id)) else emptyList())
+            val evaluation = repository.evaluateImportPackage(java.io.ByteArrayInputStream(PackageSerializer.exportPackage(incoming,
+                mapOf(AttachmentFiles.entryName(active) to activeBytes))))
+            evaluation.importResult.pkg!!.use { repository.importProjectPackage(it) }
+            val before = repository.getProjectById(project.id)!!
+            assertEquals(incoming, repository.getSyncBase(project.id))
+            assertThrows(IllegalStateException::class.java) { runBlocking { repository.restoreFromTrash(project.id, item.id) } }
+            assertEquals(before, repository.getProjectById(project.id))
+            assertEquals(incoming, repository.getSyncBase(project.id))
+            assertEquals(listOf(item), repository.getTrashItems(project.id))
+            assertEquals(listOf(credential), before.credentials)
+            assertArrayEquals(removedBytes, file(photo).readBytes())
+            assertArrayEquals(activeBytes, file(active).readBytes())
+            PackageSerializer.importPackage(repository.exportProjectPackage(project.id)!!).pkg!!.use {
+                assertEquals(listOf(active), it.project.attachments)
+                assertEquals(setOf(AttachmentFiles.entryName(active)), it.attachments.keys)
+            }
+            repository.saveProject(before.copy(sites = listOf(site.copy(devices = listOf(other))), racks = listOf(rack), floorplanPlacements = emptyList()))
+            assertTrue(repository.restoreFromTrash(project.id, item.id))
+            val restored = repository.getProjectById(project.id)!!
+            assertEquals(device, restored.sites.single().devices.first { it.id == device.id })
+            assertEquals(listOf(placement), restored.floorplanPlacements)
+            assertTrue(repository.getTrashItems(project.id).isEmpty())
+            assertArrayEquals(removedBytes, file(photo).readBytes())
+        }
     }
 
     @Test fun serializedAttachmentTrashKeepsItsPayloadUntilPermanentDeletion() = runBlocking {

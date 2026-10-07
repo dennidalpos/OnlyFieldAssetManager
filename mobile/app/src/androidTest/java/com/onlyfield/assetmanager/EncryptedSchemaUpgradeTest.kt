@@ -113,7 +113,7 @@ class EncryptedSchemaUpgradeTest {
         val demo = assets.open("onlyfield-demo.ofam").use { requireNotNull(PackageSerializer.importPackage(it).pkg) }
         try {
             withDatabase(target) { database ->
-                val repository = ProjectRepository(database, attachments)
+                val repository = ProjectRepository(database, attachments, recoveryPassword = EncryptedDatabase.recoveryPassword(target))
                 assertEquals(2, database.openHelper.writableDatabase.version)
                 // Opt-in phone setup requires an empty database and never replaces an existing project.
                 assertTrue(repository.getAllProjects().first().isEmpty())

@@ -117,6 +117,10 @@ class ProjectViewModel(private val repository: ProjectRepository) : ViewModel() 
     private var undoSnapshot: Project? = null
     private val mediaCleanup = mutableSetOf<String>()
 
+    init {
+        launchCommand { repository.recoverAll(i18n).forEach { fail(it) } }
+    }
+
     /** One command owns persistence; navigation invalidates only its UI publication. */
     private fun launchCommand(block: suspend CoroutineScope.() -> Unit): kotlinx.coroutines.Job {
         val requestedSession = session

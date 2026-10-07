@@ -110,7 +110,7 @@ object ObjectHierarchy {
         val floor = areaId(before, child)
         val updated = before.copy(objectContainments = before.objectContainments.filterNot { it.child == child } +
             if (parent == null) emptyList() else listOf(ObjectContainment(child, parent)))
-        // Clear the legacy mounting link before resolving the new hierarchy.
+        // Clear the rack link before resolving the new hierarchy.
         val detached = updated.copy(sites = updated.sites.map { site -> site.copy(devices = site.devices.map { d ->
             if (child.type == PlacementTargetType.DEVICE && d.id == child.id) d.copy(rackId = null, areaId = if (parent == null) floor else d.areaId) else d
         }) }, racks = updated.racks.map { r ->
@@ -158,17 +158,44 @@ object ObjectHierarchy {
     fun restore(project: Project, trash: TrashItem, i18n: Messages = Messages()): Project {
         var result = normalize(project)
         val available = refs(result).toSet()
+        val restoredRef = ObjectRef(PlacementTargetType.valueOf(trash.itemType.uppercase()), trash.itemId)
+        val releasedParent = trash.containments.find { it.child == restoredRef }?.parent
+        val originalArea = when (restoredRef.type) {
+            PlacementTargetType.DEVICE -> result.sites.flatMap { it.devices }.find { it.id == restoredRef.id }?.areaId
+            PlacementTargetType.RACK -> result.racks.find { it.id == restoredRef.id }?.areaId
+        }
+        check(originalArea == null || releasedParent == null || areaId(result, releasedParent) == originalArea) {
+            i18n.text("trash.contextChanged")
+        }
+        check(trash.containments.map { it.child }.distinct().size == trash.containments.size) { i18n.text("trash.invalidEntry") }
+        val areaIds = result.sites.filter { trash.originalSiteId == null || it.id == trash.originalSiteId }
+            .flatMap { it.areas }.map { it.id }.toSet()
+        check(trash.containments.all { it.child in available && it.parent in available }) { i18n.text("trash.contextMissing") }
+        check(trash.containments.filter { it.child != restoredRef }.all {
+            parent(result, it.child) in listOf(releasedParent, it.parent)
+        }) { i18n.text("trash.contextChanged") }
+        check(trash.mountSnapshots.all { mount ->
+            ObjectRef(PlacementTargetType.DEVICE, mount.deviceId) in available &&
+                (mount.rackId == null || ObjectRef(PlacementTargetType.RACK, mount.rackId) in available)
+        }) { i18n.text("trash.contextMissing") }
+        check(trash.containmentPlacements.all { it.areaId in areaIds && ObjectRef(it.targetType, it.targetId) == restoredRef }) {
+            i18n.text("trash.contextMissing")
+        }
+        val placementIds = trash.containmentPlacements.map { it.id }
+        check(placementIds.distinct().size == placementIds.size && result.floorplanPlacements.none { it.id in placementIds }) {
+            i18n.text("trash.alreadyExists")
+        }
         for (entry in trash.containments) {
-            if (entry.child !in available || entry.parent !in available) continue
             result = assign(result, entry.child, entry.parent, i18n = i18n)
         }
+        check(trash.mountSnapshots.all { snapshot ->
+            result.sites.flatMap { it.devices }.any { it.id == snapshot.deviceId && it.rackId == snapshot.rackId }
+        }) { i18n.text("trash.contextChanged") }
         return result.copy(sites = result.sites.map { site -> site.copy(devices = site.devices.map { d ->
             trash.mountSnapshots.find { it.deviceId == d.id && it.rackId == d.rackId }?.let {
                 d.copy(positionU = it.positionU, rackSide = it.side, mountingType = it.mounting)
             } ?: d
-        }) }, floorplanPlacements = result.floorplanPlacements + trash.containmentPlacements.filter { p ->
-            result.floorplanPlacements.none { it.id == p.id }
-        })
+        }) }, floorplanPlacements = result.floorplanPlacements + trash.containmentPlacements)
     }
 
     fun snapshot(project: Project, ref: ObjectRef, trash: TrashItem): TrashItem = trash.copy(

@@ -2,6 +2,8 @@ package com.onlyfield.assetmanager.data.repository
 
 import com.onlyfield.assetmanager.data.repository.mappers.*
 import androidx.room.withTransaction
+import androidx.sqlite.db.SimpleSQLiteQuery
+import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.data.local.AppDatabase
 import com.onlyfield.assetmanager.data.local.AreaEntity
@@ -92,6 +94,7 @@ internal class ProjectStore(private val db: AppDatabase) {
     /** Replaces the project atomically; ordinary edits retain its verifier. */
     suspend fun save(project: Project, importedHash: String? = null) {
         db.withTransaction {
+            checkOwnership(project)
             val existing = projectDao.getProjectById(project.id)
             val updatedProjEntity = toProjectEntity(project).copy(
                 passwordHash = if (project.isPasswordProtected) importedHash ?: existing?.passwordHash else null
@@ -271,10 +274,56 @@ internal class ProjectStore(private val db: AppDatabase) {
         }
     }
 
+    /** Check global primary keys inside the write transaction, before any deletion. */
+    private fun checkOwnership(project: Project) {
+        fun checkIds(table: String, ids: List<String>, joins: String = "", owner: String = "r.projectId") {
+            for (chunk in ids.distinct().chunked(900)) {
+                val placeholders = List(chunk.size) { "?" }.joinToString(",")
+                val query = SimpleSQLiteQuery(
+                    "SELECT r.id FROM $table r $joins WHERE r.id IN ($placeholders) AND ($owner IS NULL OR $owner != ?) LIMIT 1",
+                    (chunk + project.id).toTypedArray(),
+                )
+                db.openHelper.readableDatabase.query(query).use { cursor ->
+                    check(!cursor.moveToFirst()) { Messages().text("storage.idConflict", cursor.getString(0)) }
+                }
+            }
+        }
+        checkIds("sites", project.sites.map { it.id })
+        checkIds("areas", project.sites.flatMap { it.areas }.map { it.id }, "LEFT JOIN sites s ON s.id = r.siteId", "s.projectId")
+        val devices = project.sites.flatMap { it.devices }
+        checkIds("devices", devices.map { it.id }, "LEFT JOIN sites s ON s.id = r.siteId", "s.projectId")
+        checkIds("ports", devices.flatMap { it.ports }.map { it.id },
+            "LEFT JOIN devices d ON d.id = r.deviceId LEFT JOIN sites s ON s.id = d.siteId", "s.projectId")
+        for ((table, ids) in listOf(
+            "credentials" to project.credentials.map { it.id },
+            "racks" to project.racks.map { it.id },
+            "device_models" to project.deviceModels.map { it.id },
+            "attachments" to project.attachments.map { it.id },
+            "annotations" to project.annotations.map { it.id },
+            "floorplan_placements" to project.floorplanPlacements.map { it.id },
+            "cables" to project.cables.map { it.id },
+            "panel_mappings" to project.panelMappings.map { it.id },
+            "vlans" to project.vlans.map { it.id },
+            "subnets" to project.subnets.map { it.id },
+            "port_vlan_memberships" to project.portVlanMemberships.map { it.id },
+            "logical_interfaces" to project.logicalInterfaces.map { it.id },
+            "lag_groups" to project.lagGroups.map { it.id },
+            "device_configurations" to project.deviceConfigurations.map { it.id },
+            "wan_vpn_connections" to project.wanVpnConnections.map { it.id },
+            "video_surveillance_mappings" to project.videoSurveillanceMappings.map { it.id },
+            "custom_extra_fields" to project.customExtraFields.map { it.id },
+            "power_feeds" to project.powerFeeds.map { it.id },
+            "poe_mappings" to project.poeMappings.map { it.id },
+            "document_badges" to project.documentBadges.map { it.id },
+        )) checkIds(table, ids)
+    }
+
     /** Stores [project] as the merge base: the state the other device now has. */
-    suspend fun saveBase(project: Project) {
+    suspend fun saveBase(project: Project) = db.withTransaction {
         val json = PackageSerializer.jsonConfig.encodeToString(Project.serializer(), project)
-        projectDao.saveSyncSnapshot(com.onlyfield.assetmanager.data.local.SyncSnapshotEntity(project.id, json, System.currentTimeMillis()))
+        val previous = projectDao.getSyncSnapshot(project.id)?.savedEpochMs ?: 0L
+        val saved = maxOf(System.currentTimeMillis(), Math.addExact(previous, 1L))
+        projectDao.saveSyncSnapshot(com.onlyfield.assetmanager.data.local.SyncSnapshotEntity(project.id, json, saved))
     }
 
     suspend fun loadBase(projectId: String): Project? = projectDao.getSyncSnapshot(projectId)?.let {

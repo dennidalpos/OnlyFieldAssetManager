@@ -22,6 +22,10 @@ dependencies {
     testImplementation(libs.junit)
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("ofam.test.classpath", sourceSets["test"].runtimeClasspath.asPath)
+}
+
 
 // Importable demo project (2 sites × 2 floors, cabled switches): fixtures/demo/onlyfield-demo.ofam
 tasks.register<JavaExec>("demoPackage") {

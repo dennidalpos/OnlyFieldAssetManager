@@ -16,6 +16,10 @@ tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>().configureEach 
     }
 }
 
+tasks.withType<Test>().configureEach {
+    systemProperty("ofam.test.classpath", sourceSets["test"].runtimeClasspath.asPath)
+}
+
 kotlin.sourceSets.getByName("main").kotlin.srcDir("../../shared/configurator/src/main/kotlin")
 
 dependencies {
@@ -29,6 +33,10 @@ dependencies {
 
     testImplementation(libs.junit)
     testImplementation(libs.desktop.ui.test)
+}
+
+tasks.named<org.gradle.language.jvm.tasks.ProcessResources>("processTestResources") {
+    from(rootProject.layout.projectDirectory.file("fixtures/v1_sample_project.json"))
 }
 
 // jpackage is required to build the Windows app-image. The JDK used to run Gradle

@@ -252,6 +252,11 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                 LabeledCheckbox(choices.usePhysicalLabelFromDuplicate, { choices = choices.copy(usePhysicalLabelFromDuplicate = it) }, i18n.text("text.9fe5b72aa900"))
                 LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, i18n.text("text.d7effa1c65a8"))
                 LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, i18n.text("text.f059285a3fb1", dup.ports.size))
+                LabeledCheckbox(choices.mergeCredentials, { choices = choices.copy(mergeCredentials = it) }, i18n.text("merge.credentials"))
+                LabeledCheckbox(choices.mergeConfigurations, { choices = choices.copy(mergeConfigurations = it) }, i18n.text("merge.configurations"))
+                LabeledCheckbox(choices.mergePowerFeeds, { choices = choices.copy(mergePowerFeeds = it) }, i18n.text("merge.powerFeeds"))
+                LabeledCheckbox(choices.mergeExtraFields, { choices = choices.copy(mergeExtraFields = it) }, i18n.text("merge.extraFields"))
+                Text(i18n.text("merge.associatedHint"), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

@@ -83,7 +83,7 @@ class MasterDetailTest {
         ))
         rule.setContent {
             MasterDetailHost {
-                InventorySection(project, { updated, _ -> project = updated }, {})
+                InventorySection(project, { updated, _ -> project = updated }, {}, { _, _, _ -> error("Unexpected merge in navigation test") })
             }
         }
         rule.onAllNodesWithText("Modifica")[0].performSemanticsAction(SemanticsActions.OnClick) { it() }

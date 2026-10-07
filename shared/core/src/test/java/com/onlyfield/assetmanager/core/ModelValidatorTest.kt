@@ -10,6 +10,8 @@ import com.onlyfield.assetmanager.core.model.Port
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.Rack
 import com.onlyfield.assetmanager.core.model.RackSide
+import com.onlyfield.assetmanager.core.model.PowerFeed
+import com.onlyfield.assetmanager.core.model.hasPowerFeedCycle
 import com.onlyfield.assetmanager.core.validation.ModelValidator
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import org.junit.Assert.assertFalse
@@ -18,6 +20,33 @@ import org.junit.Test
 import java.util.UUID
 
 class ModelValidatorTest {
+    @Test fun deepPowerGraphsAndRepeatedEdgesDoNotRecurseOrCreateFalseCycles() {
+        val ids = List(10_001) { UUID.randomUUID().toString() }
+        val feeds = (0 until ids.lastIndex).map { PowerFeed(deviceId = ids[it], feedName = "A", sourceDeviceId = ids[it + 1]) }
+        assertFalse(feeds.hasPowerFeedCycle())
+        assertFalse((feeds + feeds.first().copy(id = UUID.randomUUID().toString(), feedName = "B")).hasPowerFeedCycle())
+        assertTrue((feeds + PowerFeed(deviceId = ids.last(), feedName = "A", sourceDeviceId = ids.first())).hasPowerFeedCycle())
+        assertTrue(listOf(PowerFeed(deviceId = ids.first(), feedName = "A", sourceDeviceId = ids.first())).hasPowerFeedCycle())
+    }
+
+    @Test fun cyclesBehindAlternativePowerSourcesAreStructuralErrorsInAnyOrder() {
+        val a = Device(technicalName = "A"); val b = Device(technicalName = "B")
+        val x = Device(technicalName = "X"); val y = Device(technicalName = "Y")
+        val feeds = listOf(
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = a.id, feedName = "A", sourceDeviceId = x.id),
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = a.id, feedName = "B", sourceDeviceId = b.id),
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = b.id, feedName = "A", sourceDeviceId = y.id),
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = b.id, feedName = "B", sourceDeviceId = a.id),
+        )
+        val project = Project(name = "Power sources", createdEpochMs = 0, updatedEpochMs = 0, sites = listOf(Site(name = "Site", devices = listOf(a, b, x, y))))
+        for (offset in feeds.indices) for (reverse in listOf(false, true)) {
+            val ordered = (feeds.drop(offset) + feeds.take(offset)).let { if (reverse) it.reversed() else it }
+            val result = ModelValidator.validateProject(project.copy(powerFeeds = ordered))
+            assertFalse(result.isValid)
+            assertTrue(result.issues.any { it.code == "POWER_FEED_CYCLE_DETECTED" && it.severity == ValidationSeverity.STRUCTURAL_ERROR })
+            assertTrue(ModelValidator.validateProject(project.copy(powerFeeds = ordered.filterNot { it.deviceId == b.id && it.sourceDeviceId == a.id })).isValid)
+        }
+    }
 
     @Test
     fun testValidProjectValidation() {

@@ -34,8 +34,11 @@ object EncryptedDatabase {
     }
 
     /** 32-byte key stored as AES-GCM ciphertext. */
-    private fun loadOrCreateKey(context: Context): ByteArray {
-        val file = File(context.noBackupFilesDir, KEY_FILE)
+    fun recoveryPassword(context: Context): String = java.util.Base64.getEncoder()
+        .encodeToString(loadOrCreateKey(context.applicationContext, "recovery_key.bin"))
+
+    private fun loadOrCreateKey(context: Context, name: String = KEY_FILE): ByteArray {
+        val file = File(context.noBackupFilesDir, name)
         val wrapKey = keystoreKey()
         if (file.isFile) {
             val blob = file.readBytes()
@@ -48,6 +51,7 @@ object EncryptedDatabase {
         cipher.init(Cipher.ENCRYPT_MODE, wrapKey) // Keystore generates the IV
         val tmp = File(file.path + ".tmp")
         tmp.writeBytes(cipher.iv + cipher.doFinal(key))
+        java.nio.channels.FileChannel.open(tmp.toPath(), java.nio.file.StandardOpenOption.WRITE).use { it.force(true) }
         Files.move(tmp.toPath(), file.toPath(), StandardCopyOption.ATOMIC_MOVE)
         return key
     }

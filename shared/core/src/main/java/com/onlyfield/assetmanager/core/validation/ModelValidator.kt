@@ -64,7 +64,7 @@ object ModelValidator {
         }
 
         val allPorts = mutableMapOf<String, Port>()
-        val allDevices = mutableListOf<Pair<String, Device>>() // Pair(BU_ID, Device)
+        val allDevices = mutableListOf<Pair<String, Device>>() // Site ID and device.
 
         for (site in project.sites) {
             checkUuid("INVALID_SITE_UUID", site.id, i18n.text("text.95d1c4267bec"), issues)
@@ -734,6 +734,11 @@ object ModelValidator {
 
         val allPortIds = allDevices.flatMap { it.second.ports }.map { it.id }.toSet()
         val powerFeedsByDevice = project.powerFeeds.groupBy { it.deviceId }
+        if (project.powerFeeds.hasPowerFeedCycle()) issues.add(ValidationIssue(
+            code = "POWER_FEED_CYCLE_DETECTED",
+            message = i18n.text("validation.powerCycle"),
+            severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))
         for (feed in project.powerFeeds) {
             checkUuid("INVALID_POWER_FEED_UUID", feed.id, i18n.text("text.a10fba81028f"), issues)
             trackId(feed.id, "DUPLICATE_POWER_FEED_ID", i18n.text("text.09783358748b", feed.id), seenIds, issues)
@@ -755,31 +760,6 @@ object ModelValidator {
                         ValidationIssue(
                             code = "INVALID_POWER_FEED_SOURCE",
                             message = i18n.text("text.1059883f726a", feed.feedName, srcId),
-                            severity = ValidationSeverity.STRUCTURAL_ERROR,
-                            targetEntityId = feed.id
-                        )
-                    )
-                }
-            }
-
-            if (feed.sourceDeviceId != null) {
-                var currentSourceId: String? = feed.sourceDeviceId
-                val visitedDevices = mutableSetOf(feed.deviceId)
-                var hasCycle = false
-                while (currentSourceId != null) {
-                    if (visitedDevices.contains(currentSourceId)) {
-                        hasCycle = true
-                        break
-                    }
-                    visitedDevices.add(currentSourceId)
-                    val upstreamFeeds = powerFeedsByDevice[currentSourceId]
-                    currentSourceId = upstreamFeeds?.firstOrNull { it.sourceDeviceId != null }?.sourceDeviceId
-                }
-                if (hasCycle) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "POWER_FEED_CYCLE_DETECTED",
-                            message = i18n.text("text.0c08ebb1a13c", feed.deviceId),
                             severity = ValidationSeverity.STRUCTURAL_ERROR,
                             targetEntityId = feed.id
                         )

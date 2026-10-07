@@ -1,8 +1,8 @@
 # Residui del repository — 5 ottobre 2026
 
-Revisione conclusa il 6 ottobre 2026; il nome del report conserva la data di avvio.
+Revisione e correzioni aggiornate al 7 ottobre 2026; il nome del report conserva la data di avvio.
 
-Revisione del checkout `82fe4e2`, successiva all’audit e alle correzioni registrate in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato **11 nuovi rilievi** e **4 collaudi/pulizie preesistenti**, inizialmente **4 P1, 9 P2, 2 P3**. Nessun P0 identificato. Aggiornamento 6 ottobre: AUD-12/13/14/15/16/17/18/19/20/21 chiusi, AUD-23 chiuso per scelta del limite prudenziale; AUD-26 chiuso con politica confermata; 8 attività aperte/parziali (6 P2, 2 P3), compresi AUD-24, AUD-25 e nuovo AUD-27. I dettagli descrivono lo stato rilevato; chiusure successive in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
+Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 7 ottobre: AUD-12–30 chiusi; restano 4 attività aperte/parziali, RES-13/19/23/24 (3 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
 
 ## Perimetro, fonti e limiti
 
@@ -39,11 +39,14 @@ P1: integrità dei dati o blocco del flusso operativo; intervenire prima dell’
 | P2 | RES-13 | Collaudo hardware reale | Aperto, conservato |
 | P2 | RES-19 | Matrice Android/accessibilità e nuovi flussi | Parziale, conservata |
 | P2 | RES-23 | Comandi/focus Windows ed errore nativo di stampa | Parziale, conservato |
-| P2 | AUD-24 | Recupero dopo arresto improvviso o rollback fallito | Da codice; aperto |
-| P2 | AUD-25 | Opzioni di fusione dei dati associati | Ricerca dei chiamanti; aperto |
+| P2 | AUD-24 | Recupero dopo arresto improvviso o rollback fallito | Chiuso; journal e prove di riavvio |
+| P2 | AUD-25 | Opzioni di fusione dei dati associati | Chiuso; scelte, cestino e file verificati |
 | P2 | AUD-26 | Ripristino senza contesto originale o con tipo non supportato | Chiuso 6 ottobre; politica, credenziali e rifiuti verificati |
-| P2 | AUD-27 | Riferimenti secondari durante ripristino | Da codice; non riprodotti su persistenza |
-| P3 | AUD-22 | Scaffolding, helper di test nel runtime e commenti obsoleti | Ricerca dei chiamanti |
+| P2 | AUD-27 | Riferimenti secondari durante ripristino | Chiuso; contesto e collisioni verificati |
+| P2 | AUD-28 | ID tra progetti Android | Chiuso; 24 tabelle e flussi verificati |
+| P2 | AUD-29 | Rete di alimentazione al ripristino | Chiuso; rifiuto e riprova verificati |
+| P2 | AUD-30 | Cicli con più sorgenti nella validazione/import | Chiuso; controllo completo condiviso |
+| P3 | AUD-22 | Scaffolding, helper di test nel runtime e commenti obsoleti | Chiuso; runtime e prove ripuliti |
 | P3 | RES-24 | Risorse locali delle prove precedenti | Directory ancora presenti; nessuna rimozione tentata |
 
 ## P1: integrità e continuità del lavoro
@@ -155,7 +158,7 @@ Ricerca dei riferimenti nell’intero repository:
 - `ProjectRepository.saveAttachment/updateAreaFloorplan/searchInventory/traceCableChain/batchEditDevices` sono chiamati solo dai test. La UI utilizza già modifiche o ricerca condivise: verificarne la necessità e spostare/rimuovere solo ciò che non serve.
 - Commenti `BU_ID`, contratto 1.8/1.7 in `Models` e lettori 1.11 in `DevicePresets` non descrivono più il contratto greenfield corrente.
 
-Riferimenti: [CoreModule.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/CoreModule.kt), [ExchangeModule.kt](../shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/ExchangeModule.kt), [DesktopStorageManager.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopStorageManager.kt), [ProjectRepository.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectRepository.kt), [Models.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/model/Models.kt), [DevicePresets.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/DevicePresets.kt).
+Riferimenti: `CoreModule` (rimosso in AUD-22), `ExchangeModule` (rimosso in AUD-22), [DesktopStorageManager.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopStorageManager.kt), [ProjectRepository.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectRepository.kt), [Models.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/model/Models.kt), [DevicePresets.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/DevicePresets.kt).
 
 **Compatibilità utile da conservare:** schema storico SQLCipher e fixture di versioni rifiutate sono regressioni attive; alias degli allegati e verificatori password legacy sono ancora supportati e testati. La sola parola “legacy” non giustifica la loro eliminazione. Nessuna dipendenza dichiarata viene rimossa in questo audit.
 
@@ -227,3 +230,39 @@ Restano da definire la scelta del sito quando quello originale manca ma ne esist
 AUD-26 chiuso: sito originale richiesto per gli apparati, contesto sito/piano dei rack conservato; credenziali condivise Android/Windows. Tipo non supportato, ID attivo, progetto/ID serializzato incoerente o voce non presente producono errore senza rimuovere dati/cestino. 68 prove mirate e 425 test completi verdi, APK compilato; esiti e comandi nella roadmap. Decisione utente: bloccare e conservare quando manca il sito originale. Il paragrafo AUD-26 precedente conserva il rilievo iniziale.
 
 AUD-27 P2, da codice: ObjectHierarchy.restore riaggiunge containmentPlacements senza verificare il piano; un DEVICE può mantenere areaId verso un piano rimosso anche con sito originale presente. Gli ID delle porte non sono controllati contro quelli degli apparati attivi; Room insertPorts usa REPLACE. Restano da riprodurre sostituzione/ripristino con stesso sito e piani/porte diversi e da definire rifiuto/recupero senza sovrascrittura o ricollocazione implicita. Le collisioni degli ID delle sole entità DEVICE/RACK/CREDENTIAL sono già bloccate da AUD-26. Riferimenti: ObjectContainment.restore, ProjectEdits.restoreFromTrash, ProjectStore.save e InventoryDao.insertPorts. Nessuna copertura globale dei riferimenti dichiarata.
+
+## Chiusura AUD-27 e nuovo AUD-28 — 6 ottobre 2026
+
+AUD-27 (6 ottobre): il ripristino richiede i piani originali nella stessa sede, contenitori/figli e montaggi ancora disponibili. Un contenitore spostato su un altro piano o un figlio ricollocato bloccano il ripristino. ID di porte attive, porte duplicate nel JSON e ID di collocazioni già presenti sono rifiutati; nessuna collocazione saltata o sostituita. Progetto, credenziali, base di scambio, cestino e media restano invariati su rifiuto; si può riprovare dopo aver ripristinato il contesto. Le foto delle porte di un apparato nel cestino restano locali anche quando un apparato attivo riusa l’ID della porta e non vengono esportate. Controlli nel progetto corrente; collisioni tra progetti Android tracciate separatamente in AUD-28.
+
+Sette regressioni core e due prove di flusso Android/Windows; il caso delle foto perse su porta riutilizzata è stato corretto nella stessa attività. Suite completa 433 test verdi e APK compilato; estensione finale mirata verde in 31s. Evidenze e perimetro temporale del totale in roadmap. Il rilievo AUD-27 precedente è storico.
+
+AUD-28 P2, da codice: Entities usa ID globali per tabella; ProjectStore cancella il solo progetto corrente, InventoryDao reinserisce con REPLACE. Modello e ripristino vedono solo il progetto corrente: un ID riutilizzato in un altro progetto può sostituirne righe. Import/ripristino e preservazione dell’altro progetto restano da riprodurre su database isolato; nessun recupero globale dichiarato verificato. Riferimenti: [Entities](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/local/Entities.kt), [ProjectStore](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectStore.kt), [InventoryDao](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/local/InventoryDao.kt).
+
+## Chiusura AUD-22 — 6 ottobre 2026
+
+Scaffolding, quattro prove tautologiche, loader fixture e API di sola prova rimossi dal runtime. Regressioni reali adattate ai percorsi comuni e conservate; compatibilità effettiva e fixture storiche intatte. Cinque chiavi i18n inutilizzate per lingua eliminate. 431 test verdi, APK e APK test compilati; risorsa fixture assente dal JAR principale. Dettagli/evidenze in roadmap e verifica. Il rilievo AUD-22 precedente conserva l’audit iniziale; collegamenti ai simboli eliminati convertiti in riferimenti storici. Nessun residuo tecnico nuovo dalla pulizia; collaudi e AUD-28 restano aperti.
+
+## Chiusura AUD-24 — 6 ottobre 2026
+
+Journal durevole cifrato, recupero automatico e blocco/riprova implementati secondo decisione utente. 448 test verdi e APK/APK test compilati; ultimo controllo mirato 20 prove verdi. Arresti reali dei processi Windows e riapertura di Room persistente verificati; nativo Android SQLCipher/Keystore e focus/messaggi restano nei collaudi RES-13/19/23. Dettagli in roadmap e storage. Il rilievo precedente AUD-24 è storico. AUD-25 confermato e prossimo, AUD-28 resta da riprodurre.
+
+## Chiusura AUD-25 — 6 ottobre 2026
+
+Quattro scelte condivise applicate e visibili nei due dialoghi; dati esclusi nel cestino, conflitti/ID/classificazione e file conservati. Cicli di alimentazione rifiutati con riprova secondo decisione utente. 16 combinazioni, riapertura, export, ripristino e rifiuto verificati; ultimi esiti nella roadmap. Il rilievo iniziale AUD-25 è storico. Nativo UI/focus in RES-19/23; nuovo snapshot locale richiede la versione con AUD-25 per ripristinare i dati associati, senza modifica allo schema Room o .ofam. AUD-28 resta da riprodurre su DB isolato.
+
+## Chiusura AUD-28 e nuovo AUD-29 — 6 ottobre 2026
+
+AUD-28 riprodotto e corretto: le chiavi globali Room sono controllate prima di cancellare l’albero, nella stessa transazione. Nessuna sostituzione di righe dell’altro progetto e nessuna rimappatura implicita. Prove su 24 tabelle, import/sostituzione/fusione/ripristino, collisioni oltre 900 ID e riprova: entrambi i progetti, segreti, media, basi e cestino conservati. 20 prove mirate e 464 test completi verdi; APK e APK test compilati, esiti nella roadmap. Il precedente rilievo AUD-28 è storico.
+
+AUD-29 P2, inizialmente da codice: ripristinare alimentazioni può creare un ciclo dopo aver modificato i collegamenti tra apparati rimasti. Esempio: D→O e N→D nel cestino, poi O→N nel catalogo; il ripristino ricrea D→O→N→D. DeviceTrashData.restore controlla ID e oggetti disponibili, senza verificare il grafo risultante. Non confondere il blocco della fusione AUD-25 con copertura di questo ingresso. Riferimenti: [snapshot associati](../shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/DeviceTrashData.kt), [regole condivise](../shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/ProjectEdits.kt); criterio e livello di evidenza nel tracker.
+
+## Chiusura AUD-29 e nuovo AUD-30 — 7 ottobre 2026
+
+AUD-29 riprodotto e corretto: ripristino rifiutato quando le alimentazioni conservate e quelle nuove formano un ciclo, inclusi rami con più sorgenti. Nessun dato/cestino/media modificato; correzione e riprova riuscite in entrambe le app. 65 prove mirate verdi e APK/APK test compilati; esiti nella roadmap. Il rilievo AUD-29 precedente è storico.
+
+AUD-30 P2, inizialmente da codice: ModelValidator percorre la prima sorgente di ciascun apparato. A→X e A→B, B→Y e B→A nascondono A↔B dietro X/Y, senza che il controllo completo di fusione/ripristino protegga l’import. Da riprodurre con pacchetto sintetico e consolidare con un solo algoritmo. Nessun cambio di formato o dipendenza previsto.
+
+## Chiusura AUD-30 — 7 ottobre 2026
+
+Ciclo nascosto dietro sorgenti alternative riprodotto e corretto. Modello, fusione, ripristino e validazione/import usano un solo controllo iterativo completo; vecchio percorso e relativa chiave i18n eliminati. POWER_FEED_CYCLE_DETECTED resta strutturale e l’import rifiuta il pacchetto, plain o protetto. Grafi profondi, archi ripetuti e ordine delle sorgenti verificati. 40 prove mirate e 470 test completi verdi, APK/APK test compilati; dettagli ed evidenze nella roadmap. Restano soltanto i quattro collaudi/pulizie RES-13/19/23/24.

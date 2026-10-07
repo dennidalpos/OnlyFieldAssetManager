@@ -57,3 +57,20 @@ Restano da eseguire:
 - Le combinazioni 360 dp chiaro e 411 dp scuro.
 - Zoom a due dita, moncone e Vai a, Collegamenti logici (in Altri dettagli), scheda rapida della porta (Collega a…, Inserisci passaggio con nuova scatola di giunzione, Scollega, Foto porta e cavo).
 - La prova sul moto g86.
+
+### Collaudi aggiunti dall’audit del 6 ottobre — non eseguiti su hardware
+
+Le prove JVM e la compilazione non chiudono queste voci. Usare progetti e storage isolati, conservando app, demo, media e backup reali.
+
+| Riferimento | Prova | Risultato atteso |
+| --- | --- | --- |
+| AUD-24 / RES-13 | Riavvio Android con recupero pendente e chiave Keystore, su SQLCipher isolato | Esito coerente con il commit Room; backup conservati su errore, riprova disponibile. |
+| AUD-24 / RES-19 | Avvio Android con recupero riuscito o bloccato | Comandi ordinati, errore leggibile e annunciato con TalkBack. |
+| AUD-24 / RES-23 | EXE con recupero protetto, password errata e riprova | Dialogo e focus utilizzabili, progetto bloccato fino al recupero riuscito. |
+| AUD-25 / RES-19/23 | Quattro checkbox della fusione, testo ingrandito e tastiera | Scelte raggiungibili, descrizione leggibile e nessun controllo tagliato. |
+| AUD-25 / RES-19/23 | Fusione rifiutata per ciclo; correzione e riprova | Errore leggibile, progetto e cestino conservati; operazione successiva utilizzabile. |
+| AUD-28 / RES-19 | Import/ripristino con ID già usato da altro progetto | Errore localizzato e nessuna sostituzione; comando ripetibile dopo correzione. |
+
+AUD-29 / RES-19/23: collaudare il nuovo messaggio di ciclo durante il ripristino e il ritorno al comando dopo correzione. Prove JVM verdi, resa nativa non verificata.
+
+AUD-30 / RES-19: verificare su Android nativo il messaggio di ciclo del grafo nel rifiuto di un import. Plain/protetto e ordine delle sorgenti verificati in JVM; resa nativa non verificata.

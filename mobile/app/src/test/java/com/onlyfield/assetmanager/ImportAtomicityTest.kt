@@ -25,7 +25,7 @@ class ImportAtomicityTest {
             val db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java).allowMainThreadQueries().build()
             try {
                 val root = folder.newFolder()
-                val repository = ProjectRepository(db, root)
+                val repository = ProjectRepository(db, root, recoveryPassword = "dummy-recovery-key")
                 val att = Attachment(name = "Photo", originalFileName = "photo.png", relativePath = "")
                 val device = Device(technicalName = "Recoverable")
                 val before = Project(name = "Previous", createdEpochMs = 0, updatedEpochMs = 0,

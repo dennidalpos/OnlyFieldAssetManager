@@ -59,15 +59,15 @@ object PackageSerializer {
         return hash.joinToString("") { "%02x".format(it) }
     }
 
-    private fun deriveKey(
+    internal fun deriveKey(
         password: String,
         salt: ByteArray,
         iterations: Int = PackageManifest.DEFAULT_KDF_ITERATIONS,
     ): SecretKeySpec {
         val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
         val spec = PBEKeySpec(password.toCharArray(), salt, iterations, 256)
-        val secretKey = factory.generateSecret(spec)
-        return SecretKeySpec(secretKey.encoded, "AES")
+        return try { SecretKeySpec(factory.generateSecret(spec).encoded, "AES") }
+        finally { spec.clearPassword() }
     }
 
     private fun encryptAesGcm(plainTextBytes: ByteArray, key: SecretKeySpec, iv: ByteArray): ByteArray {

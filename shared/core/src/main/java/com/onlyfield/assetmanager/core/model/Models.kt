@@ -160,7 +160,7 @@ data class Device(
     val mountingType: MountingType = MountingType.OUT_OF_RACK,
     val deviceModelId: String? = null,
     val category: DeviceCategory = DeviceCategory.CUSTOM,
-    /** Manufacturer serial (contract 1.8); absent in 1.7 packages. */
+    /** Manufacturer serial, independent of the inventory label. */
     val serialNumber: String? = null,
     val objectTypeId: String? = null,
     val hardware: HardwareSpec = HardwareSpec(),
@@ -503,6 +503,29 @@ data class PowerFeed(
     val observedEpochMs: Long? = null,
     val notes: String? = null
 )
+
+/** Count every source edge, including feeds with more than one upstream device. */
+internal fun List<PowerFeed>.hasPowerFeedCycle(): Boolean {
+    val edges = mutableMapOf<String, MutableSet<String>>()
+    val incoming = mutableMapOf<String, Int>()
+    for (feed in this) {
+        val source = feed.sourceDeviceId ?: continue
+        incoming.putIfAbsent(feed.deviceId, 0)
+        incoming.putIfAbsent(source, 0)
+        if (edges.getOrPut(feed.deviceId) { mutableSetOf() }.add(source)) incoming[source] = incoming.getValue(source) + 1
+    }
+    val ready = ArrayDeque(incoming.filterValues { it == 0 }.keys)
+    var visited = 0
+    while (ready.isNotEmpty()) {
+        val device = ready.removeFirst()
+        visited++
+        for (source in edges[device].orEmpty()) {
+            incoming[source] = incoming.getValue(source) - 1
+            if (incoming[source] == 0) ready.addLast(source)
+        }
+    }
+    return visited != incoming.size
+}
 
 @Serializable
 enum class PoeRole {

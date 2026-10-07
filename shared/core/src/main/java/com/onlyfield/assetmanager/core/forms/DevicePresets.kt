@@ -21,7 +21,7 @@ enum class PortKind(val connector: String, val media: String, val speed: String?
     }
 }
 
-/** Label scheme for generated port names; prefixes stay non-blank for contract 1.11 readers. */
+/** Label scheme for generated port names; prefixes must be non-blank. */
 enum class PortNaming {
     SHORT, INTERFACE;
 

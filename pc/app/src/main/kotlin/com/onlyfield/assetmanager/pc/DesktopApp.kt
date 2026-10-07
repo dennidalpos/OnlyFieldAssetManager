@@ -238,7 +238,7 @@ private fun SectionContent(state: DesktopAppState) {
     }
     val update = state::update
     when (state.section) {
-        AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash)
+        AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash, state::mergeDevices)
         AppSection.RACKS -> RackSection(project, update, state::addToTrash)
         AppSection.MODELS -> DeviceModelsSection(project, update)
         AppSection.FLOORPLANS -> FloorHomeSection(state)

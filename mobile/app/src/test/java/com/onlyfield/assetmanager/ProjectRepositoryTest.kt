@@ -2,6 +2,10 @@ package com.onlyfield.assetmanager
 
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.onlyfield.assetmanager.core.display.GlobalSearch
+import com.onlyfield.assetmanager.core.display.HitKind
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.core.model.ConnectionGraph
 import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.CredentialType
@@ -218,7 +222,7 @@ class ProjectRepositoryTest {
                 sites = listOf(Site(name = "BU", devices = listOf(device))))
         )
         assertEquals("FOC1234X0AB", repository.getProjectById(projId)!!.sites.single().devices.single().serialNumber)
-        assertEquals(listOf(device.id), repository.searchInventory(projId, "1234X0").map { it.device.id })
+        assertEquals(listOf(device.id), GlobalSearch(repository.getProjectById(projId)!!).search("1234X0").map { it.id })
     }
 
     @Test
@@ -288,21 +292,22 @@ class ProjectRepositoryTest {
 
         repository.saveProject(project)
 
-        val res1 = repository.searchInventory(projId, "router")
+        val search = GlobalSearch(repository.getProjectById(projId)!!)
+        val res1 = search.search("router").filter { it.kind == HitKind.DEVICE }
         assertEquals(1, res1.size)
-        assertEquals("router-core-hq", res1[0].device.technicalName)
+        assertEquals("router-core-hq", res1[0].title)
 
-        val res2 = repository.searchInventory(projId, "10.0.0.50")
+        val res2 = search.search("10.0.0.50").filter { it.kind == HitKind.DEVICE }
         assertEquals(1, res2.size)
-        assertEquals("sw-poe-floor1", res2[0].device.technicalName)
+        assertEquals("sw-poe-floor1", res2[0].title)
 
-        val res3 = repository.searchInventory(projId, "RTR-01")
+        val res3 = search.search("RTR-01").filter { it.kind == HitKind.DEVICE }
         assertEquals(1, res3.size)
-        assertEquals("router-core-hq", res3[0].device.technicalName)
+        assertEquals("router-core-hq", res3[0].title)
 
-        val res4 = repository.searchInventory(projId, "Telecamere")
+        val res4 = search.search("Telecamere").filter { it.kind == HitKind.DEVICE }
         assertEquals(1, res4.size)
-        assertEquals("sw-poe-floor1", res4[0].device.technicalName)
+        assertEquals("sw-poe-floor1", res4[0].title)
     }
 
     @Test
@@ -461,8 +466,8 @@ class ProjectRepositoryTest {
             relativePath = "attachments/plan_p1_v2.png"
         )
 
-        repository.saveAttachment(projId, newAttachment)
-        repository.updateAreaFloorplan(projId, areaId, newAttId)
+        repository.saveProject(ProjectEdits.setAreaFloorplan(
+            ProjectEdits.addAttachment(reloaded, newAttachment), areaId, newAttId))
 
         val updatedReloaded = repository.getProjectById(projId)
         assertNotNull(updatedReloaded)
@@ -544,7 +549,7 @@ class ProjectRepositoryTest {
         assertEquals(1, reloaded.panelMappings.size)
         assertEquals(project.panelMappings, reloaded.panelMappings)
 
-        val chain = repository.traceCableChain(reloaded, port1Id)
+        val chain = ConnectionGraph(reloaded).trace(port1Id)
         assertTrue(chain.isNotEmpty())
         assertEquals(3, chain.size)
         assertEquals("srv-app-01", chain[0].currentDevice?.technicalName)
@@ -796,7 +801,7 @@ class ProjectRepositoryTest {
             updateObservationNotes = true
         )
 
-        repository.batchEditDevices(projId, listOf(dev1Id, dev2Id), changes)
+        repository.saveProject(ProjectEdits.batchEditDevices(repository.getProjectById(projId)!!, listOf(dev1Id, dev2Id), changes))
 
         val updatedProj = repository.getProjectById(projId)
         assertNotNull(updatedProj)

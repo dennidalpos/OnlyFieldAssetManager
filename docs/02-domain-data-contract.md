@@ -46,7 +46,7 @@ Android e Windows leggono il pacchetto da stream e verificano i limiti durante l
 
 ## Protezione e fusione
 
-Ripristino AUD-26: DEVICE/RACK/CREDENTIAL condividono le regole core. La voce deve appartenere al progetto, il suo ID deve corrispondere al JSON e l'ID dell'entità non deve essere già attivo nello stesso catalogo. Sito originale richiesto per DEVICE; per RACK restano richiesti sito originale registrato e piano associato, quando presenti. Le nuove voci rack registrano originalSiteId nel campo opzionale esistente, senza cambiare Room v2 o `.ofam` v1. Tipo non supportato genera errore prima di rimuovere il cestino. Android salva risultato e rimozione nella stessa transazione; Windows aggiorna il cestino dopo il calcolo riuscito e conserva il rollback di persistenza. Riferimenti secondari/ID delle porte: AUD-27.
+Ripristino AUD-26: DEVICE/RACK/CREDENTIAL condividono le regole core. La voce deve appartenere al progetto, il suo ID deve corrispondere al JSON e l'ID dell'entità non deve essere già attivo nello stesso catalogo. Sito originale richiesto per DEVICE; per RACK restano richiesti sito originale registrato e piano associato, quando presenti. Le nuove voci rack registrano originalSiteId nel campo opzionale esistente, senza cambiare Room v2 o `.ofam` v1. Tipo non supportato genera errore prima di rimuovere il cestino. Android salva risultato e rimozione nella stessa transazione; Windows aggiorna il cestino dopo il calcolo riuscito e conserva il rollback di persistenza. AUD-27 (6 ottobre): il ripristino richiede i piani originali nella stessa sede, contenitori/figli e montaggi ancora disponibili. Un contenitore spostato su un altro piano o un figlio ricollocato bloccano il ripristino. ID di porte attive, porte duplicate nel JSON e ID di collocazioni già presenti sono rifiutati; nessuna collocazione saltata o sostituita. Progetto, credenziali, base di scambio, cestino e media restano invariati su rifiuto; si può riprovare dopo aver ripristinato il contesto. Le foto delle porte di un apparato nel cestino restano locali anche quando un apparato attivo riusa l’ID della porta e non vengono esportate. Controlli nel progetto corrente; collisioni tra progetti Android rifiutate dalla persistenza con AUD-28.
 
 Decisione AUD-23 del 6 ottobre 2026: capacità preventiva Android protetta mantenuta prudenziale, senza ulteriore richiesta o persistenza della password. Il budget superiore comprende cifratura, compressione e metadati ZIP; può rifiutare contenuto ancora esportabile vicino a 256 MiB. Limiti e formato restano invariati. La verifica esatta al confine non è un requisito corrente; prova del margine con limite ridotto e pacchetto cifrato reale, nessun nuovo collaudo reale a 256 MiB.
 
@@ -61,3 +61,25 @@ Riferimenti implementativi: `PackageSerializer`, `PasswordHasher`, `ProjectMerge
 - [OWASP Password Storage Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
 
 AUD-17: Observation.effectiveStatus risolve null come TO_VERIFY senza creare un rilievo fittizio o modificare il dato persistito. ModelValidator segnala anche l'apparato senza rilievo con UNVERIFIED_DEVICE_OBSERVATION, sempre DOCUMENTARY_WARNING e non bloccante. Gli stati espliciti restano invariati. Nessuna modifica a schema Room, versione del pacchetto o serializzazione.
+
+## Fusione dei dati associati — AUD-25
+
+Le quattro opzioni, attive per impostazione iniziale e selezionabili in entrambe le app, trasferiscono credenziali, configurazioni, alimentazioni e campi extra DEVICE al superstite. Un’opzione disattivata conserva i record nel cestino del duplicato: non restano riferimenti attivi verso l’apparato rimosso. Nei conflitti si conservano entrambi i record con ID, segreti, note e classificazione, senza sovrascrittura o deduplicazione. Le alimentazioni trasferiscono anche il riferimento al duplicato come sorgente di altri apparati.
+
+I file delle configurazioni trasferite conservano ID, classificazione e byte: il destinatario diventa il superstite o la porta copiata; senza copia delle porte il file viene associato al superstite. Foto e file esclusi dal trasferimento restano recuperabili nel cestino e non sono esportati come dati attivi. La fusione che crea un auto-riferimento o un ciclo di alimentazione viene rifiutata prima di modificare progetto/cestino; si corregge il collegamento e si riprova, secondo decisione confermata.
+
+Le nuove voci DEVICE conservano i record associati nel JSON locale esistente. Il ripristino richiede ID liberi e riferimenti ancora disponibili; un rifiuto conserva la voce. Vecchie voci senza dati associati restano leggibili. Per ripristinare i nuovi record occorre questa versione dell’app: una versione precedente ignora il campo opzionale. Nessuna modifica allo schema Room v2 o allo scambio .ofam v1; il cestino locale non viene scambiato.
+
+## Identità tra progetti Android — AUD-28
+
+Room conserva chiavi globali per ciascuna tabella del catalogo. ProjectStore verifica il proprietario degli ID ricevuti nella stessa transazione del salvataggio, prima di aggiornare il progetto o cancellarne l’albero. ID appartenenti a un altro progetto, o con proprietario non risolvibile, producono un errore localizzato. Il controllo copre le 24 tabelle di inventario, inclusi siti/piani/apparati/porte e record associati; valori SQL parametrizzati, query in blocchi di 900 ID. Le normali modifiche dello stesso progetto restano ammesse.
+
+Import nuovo, sostituzione, fusione e ripristino non rimappano implicitamente gli ID e non sostituiscono record di altri progetti. Il rifiuto conserva cataloghi, verificatori, basi, cestino e file. Schema Room v2 e .ofam v1 invariati. Le prove usano database isolati; nessun dato utente modificato.
+
+AUD-29: se nuove alimentazioni tra gli apparati rimasti rendono ciclici i record da ripristinare, il ripristino viene rifiutato prima di ricrearli, anche con più sorgenti. Progetto, cestino e file restano conservati; si correggono i collegamenti e si riprova. Controllo condiviso con la fusione, schema e formato invariati.
+
+## Controllo completo delle alimentazioni — AUD-30
+
+Validazione del catalogo, fusione e ripristino usano un unico controllo del grafo nel modello condiviso. Ogni sorgente concorre al controllo, indipendentemente dall’ordine; nessuna ricorsione e nessuna deduplicazione dei record. Più alimentazioni verso la stessa sorgente non costituiscono da sole un ciclo. Il controllo riguarda tutti i collegamenti, compresi auto-riferimenti e cicli nascosti dietro sorgenti alternative.
+
+Un catalogo ciclico genera POWER_FEED_CYCLE_DETECTED come STRUCTURAL_ERROR, con un messaggio sul grafo del progetto; l’import non restituisce un pacchetto utilizzabile. Fusione e ripristino conservano progetto/cestino sul rifiuto e permettono riprova dopo correzione. Eliminato il precedente percorso che seguiva la sola prima sorgente; nessuna modifica allo schema Room v2 o allo scambio .ofam v1.

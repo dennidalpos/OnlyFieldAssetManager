@@ -20,6 +20,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PackageSerializerTest {
+    @Test fun importRejectsPowerCyclesHiddenByAlternativeSourcesInPlainAndProtectedPackages() {
+        val a = Device(technicalName = "A"); val b = Device(technicalName = "B")
+        val x = Device(technicalName = "X"); val y = Device(technicalName = "Y")
+        val feeds = listOf(
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = a.id, feedName = "A", sourceDeviceId = x.id),
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = a.id, feedName = "B", sourceDeviceId = b.id),
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = b.id, feedName = "A", sourceDeviceId = y.id),
+            com.onlyfield.assetmanager.core.model.PowerFeed(deviceId = b.id, feedName = "B", sourceDeviceId = a.id),
+        )
+        val project = Project(name = "Power sources", createdEpochMs = 0, updatedEpochMs = 0,
+            sites = listOf(Site(name = "Site", devices = listOf(a, b, x, y))), powerFeeds = feeds)
+        for (password in listOf(null, "dummy-password")) for (reverse in listOf(false, true)) {
+            val incoming = project.copy(powerFeeds = if (reverse) feeds.reversed() else feeds, isPasswordProtected = password != null)
+            val rejected = PackageSerializer.importPackage(PackageSerializer.exportPackage(incoming, password = password), password)
+            assertNull(rejected.pkg)
+            assertFalse(rejected.validationResult.isValid)
+            assertTrue(rejected.validationResult.issues.any { it.code == "POWER_FEED_CYCLE_DETECTED" && it.severity == ValidationSeverity.STRUCTURAL_ERROR })
+            val corrected = incoming.copy(powerFeeds = incoming.powerFeeds.filterNot { it.deviceId == b.id && it.sourceDeviceId == a.id })
+            PackageSerializer.importPackage(PackageSerializer.exportPackage(corrected, password = password), password).pkg!!.use {
+                assertEquals(corrected, it.project)
+            }
+        }
+    }
 
     @Test
     fun testExportAndImportRoundTrip() {

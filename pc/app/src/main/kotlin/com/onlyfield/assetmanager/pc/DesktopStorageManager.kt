@@ -14,6 +14,7 @@ import com.onlyfield.assetmanager.exchange.PackagePayloads
 import com.onlyfield.assetmanager.exchange.PayloadViews
 import com.onlyfield.assetmanager.exchange.FilePayloadMap
 import com.onlyfield.assetmanager.exchange.ReversibleFiles
+import com.onlyfield.assetmanager.exchange.FileRecovery
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.io.RandomAccessFile
@@ -56,6 +57,7 @@ class DesktopStorageManager(
         try { store.copyFrom(source, include) } catch (e: Exception) { store.close(); throw e }
     }
     private val protectedMediaIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
+    private val recoveryErrors = mutableMapOf<String, String>()
     var saveCleanupErrors: List<Exception> = emptyList()
         private set
 
@@ -109,20 +111,20 @@ class DesktopStorageManager(
 
     /** Password-protected merge snapshot. */
     fun saveSyncBase(project: Project, password: String?) = withProjectLock(project.id) {
-        atomicWrite(syncBaseFile(project.id), PackageSerializer.exportPackage(project, password = password, i18n = i18n))
+        recoverProject(project.id, password)
+        ReversibleFiles(getTempFolder(), FileRecovery.start(dataDir, project.id, password)).use { files ->
+            files.replace(syncBaseFile(project.id)) { PackageSerializer.exportPackageToStream(it, project, password = password, i18n = i18n) }
+            files.apply()
+            saveCleanupErrors = files.commit()
+        }
     }
 
     fun loadSyncBase(projectId: String, password: String?): Project? {
+        recoverProject(projectId, password)
         val file = syncBaseFile(projectId)
         if (!file.isFile) return null
         return file.inputStream().use { PackageSerializer.importPackage(it, password, i18n = i18n, stagingDirectory = getTempFolder()) }.pkg?.use { it.project }
             ?: throw IllegalStateException(i18n.text("text.61c13d777659"))
-    }
-
-    private fun prepareWrite(target: File, bytes: ByteArray): File {
-        Files.createDirectories(target.parentFile.toPath())
-        val temp = Files.createTempFile(target.parentFile.toPath(), target.name, ".tmp").toFile()
-        try { temp.writeBytes(bytes); return temp } catch (e: Exception) { Files.deleteIfExists(temp.toPath()); throw e }
     }
 
     private fun replaceFile(temp: File, target: File) {
@@ -131,11 +133,6 @@ class DesktopStorageManager(
         } catch (_: java.nio.file.AtomicMoveNotSupportedException) {
             Files.move(temp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
         }
-    }
-
-    private fun atomicWrite(target: File, bytes: ByteArray) {
-        val temp = prepareWrite(target, bytes)
-        try { replaceFile(temp, target) } finally { Files.deleteIfExists(temp.toPath()) }
     }
 
     private fun preparePackage(target: File, project: Project, media: Map<String, ByteArray>, password: String?): File {
@@ -162,7 +159,7 @@ class DesktopStorageManager(
             val retained = project.copy(attachments = project.attachments + com.onlyfield.assetmanager.core.edit.ProjectEdits.trashAttachments(trashItems))
             val media = AttachmentFiles.activePayloads(retained, PayloadViews.merge(local.attachments, localMedia(project.id)))
             saveProjectLocally(project, newPassword, attachments = media, trashItems = trashItems,
-                syncBase = base?.copy(isPasswordProtected = newPassword != null))
+                syncBase = base?.copy(isPasswordProtected = newPassword != null), recoveryPassword = oldPassword ?: newPassword)
         }
     }
 
@@ -274,6 +271,7 @@ class DesktopStorageManager(
     fun loadTrash(projectId: String, password: String? = null): List<TrashItem> = loadLocalState(projectId, password).use { it.trash }
 
     internal fun loadLocalState(projectId: String, password: String?): LocalProjectState {
+        recoverProject(projectId, password)
         val local = File(getProjectsFolder(), "$projectId.ofam")
         var media = emptyMap<String, ByteArray>()
         var localProject: Project? = null
@@ -350,16 +348,24 @@ class DesktopStorageManager(
     }
 
     fun listStoredProjects(): List<StoredProjectInfo> {
+        val pending = FileRecovery.owners(dataDir)
+        for (id in pending) {
+            try {
+                if (!FileRecovery.requiresPassword(dataDir, id)) recoverProject(id, null)
+            } catch (e: Exception) { recoveryErrors[id] = i18n.text("recovery.blocked", e.message.orEmpty()) }
+        }
         val projectsDir = getProjectsFolder()
         if (!projectsDir.exists() || !projectsDir.canRead()) return emptyList()
 
-        val files = projectsDir.listFiles { _, name -> name.endsWith(".ofam") } ?: return emptyList()
+        val files = (projectsDir.listFiles { _, name -> name.endsWith(".ofam") }?.toList().orEmpty() +
+            pending.map { File(projectsDir, "$it.ofam") }).distinctBy { it.absolutePath }.filter { it.exists() || it.nameWithoutExtension in FileRecovery.owners(dataDir) }
         val result = mutableListOf<StoredProjectInfo>()
 
         for (file in files) {
             try {
                 val manifest = PackageSerializer.readManifest(file, i18n)
-                result += StoredProjectInfo(manifest.projectId, manifest.projectName, file, manifest.isEncrypted, file.lastModified())
+                result += StoredProjectInfo(manifest.projectId, manifest.projectName, file, manifest.isEncrypted, file.lastModified(),
+                    readError = recoveryErrors[manifest.projectId] ?: if (manifest.projectId in FileRecovery.owners(dataDir)) i18n.text("recovery.pending") else null)
             } catch (e: java.io.IOException) {
                 result += unreadableProject(file, e)
             } catch (e: kotlinx.serialization.SerializationException) {
@@ -376,6 +382,19 @@ class DesktopStorageManager(
         readError = i18n.text("text.953ce2808a1f", file.name) + error.message.orEmpty(),
     )
 
+    private fun recoverProject(projectId: String, password: String?) {
+        if (projectId !in FileRecovery.owners(dataDir)) return
+        withProjectLock(projectId) {
+            try {
+                FileRecovery.recover(dataDir, projectId, password)
+                recoveryErrors.remove(projectId)
+            } catch (e: Exception) {
+                recoveryErrors[projectId] = i18n.text("recovery.blocked", e.message.orEmpty())
+                throw e
+            }
+        }
+    }
+
     fun saveProjectLocally(
         project: Project,
         password: String? = null,
@@ -383,7 +402,9 @@ class DesktopStorageManager(
         trashItems: List<TrashItem>? = null,
         syncBase: Project? = null,
         recoverableAttachments: List<Attachment> = emptyList(),
+        recoveryPassword: String? = password,
     ): File = withProjectLock(project.id) {
+        recoverProject(project.id, recoveryPassword)
         val status = checkDataDirectoryStatus()
         if (!status.isWritable) {
             throw IllegalStateException(i18n.text("text.a28d4f63178f", dataDir.absolutePath))
@@ -399,7 +420,7 @@ class DesktopStorageManager(
         val next = if (password != null && (attachments.isNotEmpty() || cached == null || cached.keys != media.keys)) stagedMedia(media) else null
         var committed = false
         try {
-            ReversibleFiles(getTempFolder()).use { files ->
+            ReversibleFiles(getTempFolder(), FileRecovery.start(dataDir, project.id, recoveryPassword)).use { files ->
                 files.replace(targetFile) { PackageSerializer.exportPackageToStream(it, project, PayloadViews.merge(media, mapOf(LOCAL_TRASH_ENTRY to trashBytes(items))), password, i18n = i18n) }
                 syncBase?.let { base ->
                     require(base.id == project.id)
@@ -433,6 +454,7 @@ class DesktopStorageManager(
     }
 
     fun loadLocalProject(projectId: String, password: String? = null): PackageImportResult {
+        recoverProject(projectId, password)
         val file = File(getProjectsFolder(), "$projectId.ofam")
         if (!file.exists()) {
             throw IllegalArgumentException(i18n.text("text.c5806cf5c477", file.absolutePath))
@@ -454,6 +476,7 @@ class DesktopStorageManager(
     }
 
     fun importPackageFromFile(file: File, password: String? = null): PackageImportResult {
+        if (isLocalProjectFile(file)) recoverProject(file.nameWithoutExtension, password)
         if (!file.exists() || !file.canRead()) {
             throw IllegalArgumentException(i18n.text("text.d60173daedb8", file.absolutePath))
         }
@@ -477,25 +500,4 @@ class DesktopStorageManager(
         writePackage(targetFile, exported, AttachmentFiles.activePayloads(exported, shared), password)
     }
 
-    fun loadAndroidFixtureFile(): Project {
-        val candidatePaths = listOf(
-            File("fixtures/v1_sample_project.json"),
-            File("../fixtures/v1_sample_project.json"),
-            File("../../fixtures/v1_sample_project.json")
-        )
-        val file = candidatePaths.firstOrNull { it.exists() }
-            ?: throw IllegalStateException(i18n.text("text.25fbf87f38fe"))
-
-        val jsonText = file.readText(Charsets.UTF_8)
-        return PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), jsonText)
-    }
-
-    fun cleanTempFolder() {
-        val tmpDir = getTempFolder()
-        if (tmpDir.exists()) {
-            tmpDir.listFiles()?.forEach {
-                try { it.delete() } catch (_: Exception) {}
-            }
-        }
-    }
 }

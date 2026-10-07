@@ -186,6 +186,68 @@ class MediaLifecycleTest {
         }
     }
 
+    @Test fun replacementWithSecondaryConflictsPreservesPlainAndProtectedCopies() {
+        for (password in listOf(null, "dummy-password")) for (scenario in listOf("floor", "port", "container", "placement")) {
+            val storage = DesktopStorageManager(folder.newFolder())
+            val state = DesktopAppState(storage)
+            val area = Area(name = "Original floor")
+            val rack = Rack(name = "Original rack", areaId = area.id)
+            val draft = Device(technicalName = "Recoverable", areaId = area.id, rackId = rack.id, mountingType = MountingType.RACK_MOUNT)
+            val port = Port(deviceId = draft.id, name = "P1")
+            val device = draft.copy(ports = listOf(port))
+            val other = Device(technicalName = "Active")
+            val site = Site(name = "Same site", areas = listOf(area), devices = listOf(device))
+            val placement = FloorplanPlacement(areaId = area.id, targetType = PlacementTargetType.DEVICE,
+                targetId = device.id, xRatio = .2f, yRatio = .3f)
+            val photo = removed.copy(targetType = AttachmentTargetType.PORT, targetId = port.id)
+            val credential = Credential(username = "Dummy", secret = "dummy-test-secret")
+            val original = project.copy(sites = listOf(site), racks = listOf(rack), attachments = listOf(photo, active),
+                floorplanPlacements = listOf(placement), credentials = listOf(credential), isPasswordProtected = password != null)
+            val (deleted, item) = ProjectEdits.deleteDeviceToTrash(original, device.id)
+            storage.storeAttachmentBytes(project.id, photo, removedBytes)
+            storage.storeAttachmentBytes(project.id, active, activeBytes)
+            val localFile = storage.saveProjectLocally(deleted, password, trashItems = listOf(item!!))
+            val incoming = original.copy(name = "Incoming $scenario", attachments = listOf(active),
+                sites = listOf(site.copy(areas = if (scenario == "floor") emptyList() else listOf(area),
+                    devices = listOf(if (scenario == "port") other.copy(ports = listOf(port.copy(deviceId = other.id))) else other))),
+                racks = if (scenario in listOf("floor", "container")) emptyList() else listOf(rack),
+                floorplanPlacements = if (scenario == "placement") listOf(placement.copy(targetId = other.id)) else emptyList())
+            val packageFile = folder.newFile().apply { writeBytes(PackageSerializer.exportPackage(incoming,
+                mapOf(AttachmentFiles.entryName(active) to activeBytes), password)) }
+            try {
+                state.importFile(packageFile, password)
+                val review = state.dialog as AppDialog.Compare
+                state.acceptIncoming(review.pkg, review.password)
+                assertNull(state.error)
+                val before = state.project!!
+                val bytes = localFile.readBytes()
+                state.restoreTrash(item)
+                assertNotNull(state.error)
+                assertEquals(before, state.project)
+                assertEquals(listOf(item), state.trash)
+                assertEquals(listOf(item), storage.loadTrash(project.id, password))
+                assertEquals(incoming, storage.loadSyncBase(project.id, password))
+                assertEquals(listOf(credential), state.project!!.credentials)
+                assertArrayEquals(bytes, localFile.readBytes())
+                assertArrayEquals(removedBytes, state.attachmentBytes(photo))
+                assertArrayEquals(activeBytes, state.attachmentBytes(active))
+                val exported = folder.newFile()
+                storage.exportPackageToFile(before, exported, password)
+                storage.importPackageFromFile(exported, password).pkg!!.use {
+                    assertEquals(listOf(active), it.project.attachments)
+                    assertEquals(setOf(AttachmentFiles.entryName(active)), it.attachments.keys)
+                }
+                state.update(before.copy(sites = listOf(site.copy(devices = listOf(other))), racks = listOf(rack), floorplanPlacements = emptyList()), "Repair context")
+                state.restoreTrash(item)
+                assertNull(state.error)
+                assertEquals(device, state.project!!.sites.single().devices.first { it.id == device.id })
+                assertEquals(listOf(placement), state.project!!.floorplanPlacements)
+                assertTrue(state.trash.isEmpty())
+                assertArrayEquals(removedBytes, state.attachmentBytes(photo))
+            } finally { state.shutdown() }
+        }
+    }
+
     @Test fun historyLimitCollectsOnlyMediaWhoseLastUndoSnapshotExpires() {
         val storage = DesktopStorageManager(folder.newFolder())
         val state = DesktopAppState(storage)

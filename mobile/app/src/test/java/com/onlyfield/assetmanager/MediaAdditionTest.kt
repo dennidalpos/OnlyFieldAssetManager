@@ -41,7 +41,7 @@ class MediaAdditionTest {
         directory = File(context.cacheDir, "media-${UUID.randomUUID()}").apply { mkdirs() }
         root = File(directory, "attachments").apply { mkdirs() }
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        repository = ProjectRepository(db, root)
+        repository = ProjectRepository(db, root, recoveryPassword = "dummy-recovery-key")
         runBlocking { repository.saveProject(project) }
         vm = ProjectViewModel(repository)
         owner.put("media", vm)

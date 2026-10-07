@@ -110,12 +110,4 @@ internal class TrashOperations(private val db: AppDatabase, private val load: su
         updated.sites.flatMap { it.devices }.first { it.id == survivingDeviceId }
     }
 
-    suspend fun batchEditDevices(
-        projectId: String,
-        deviceIds: List<String>,
-        changes: com.onlyfield.assetmanager.core.model.BatchDeviceChanges,
-        i18n: Messages = Messages()) {
-        val project = getProjectById(projectId) ?: return
-        save(com.onlyfield.assetmanager.core.edit.ProjectEdits.batchEditDevices(project, deviceIds, changes, i18n = i18n))
-    }
 }

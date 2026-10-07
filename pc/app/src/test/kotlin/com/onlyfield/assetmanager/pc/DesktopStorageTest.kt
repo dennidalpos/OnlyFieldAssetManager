@@ -21,6 +21,12 @@ class DesktopStorageTest {
     private lateinit var dataDir: File
     private lateinit var storageManager: DesktopStorageManager
 
+    private fun loadAndroidFixture(): Project = requireNotNull(javaClass.getResourceAsStream("/v1_sample_project.json")) {
+        "Missing test fixture v1_sample_project.json"
+    }.bufferedReader(Charsets.UTF_8).use {
+        PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), it.readText())
+    }
+
     @Before
     fun setUp() {
         dataDir = tempFolder.newFolder("ofam_test_datadir")
@@ -114,7 +120,7 @@ class DesktopStorageTest {
 
     @Test
     fun testAndroidFixtureLoadingAndValidation() {
-        val fixture = storageManager.loadAndroidFixtureFile()
+        val fixture = loadAndroidFixture()
         assertNotNull("Fixture project should be loaded", fixture)
         assertEquals("11111111-1111-1111-1111-111111111111", fixture.id)
         assertEquals("Progetto Campione Infrastruttura v1", fixture.name)
@@ -132,7 +138,7 @@ class DesktopStorageTest {
 
     @Test
     fun testAndroidFixtureUnencryptedAndEncryptedPackageRoundtrip() {
-        val fixture = storageManager.loadAndroidFixtureFile()
+        val fixture = loadAndroidFixture()
 
         val unencryptedFile = File(tempFolder.root, "fixture_unencrypted.ofam")
         storageManager.exportPackageToFile(fixture, unencryptedFile)
@@ -180,7 +186,7 @@ class DesktopStorageTest {
 
     @Test
     fun testProjectComparisonEvaluator() {
-        val fixture = storageManager.loadAndroidFixtureFile()
+        val fixture = loadAndroidFixture()
         val pkgBytes = PackageSerializer.exportPackage(fixture)
         val importRes = PackageSerializer.importPackage(pkgBytes)
         val pkg = importRes.pkg!!
