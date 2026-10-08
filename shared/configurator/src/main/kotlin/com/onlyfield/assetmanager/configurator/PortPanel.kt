@@ -7,6 +7,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
+import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -77,7 +78,7 @@ fun PortPanel(
             // Cell size follows the available width; long blocks wrap into bands instead of scrolling.
             BoxWithConstraints(Modifier.fillMaxWidth()) {
                 val grid = if (layout != null) SchematicGeometry.arrangedGrid(ordered.size, layout.rows, maxWidth.value, 3f, if (compact) 26f else 48f)
-                    else SchematicGeometry.portGrid(block.size, maxWidth.value, 3f, if (compact) 20f else 24f, if (compact) 26f else 40f)
+                    else SchematicGeometry.portGrid(block.size, maxWidth.value, 3f, if (compact) 20f else 48f, if (compact) 26f else 48f)
                 val size = grid.cell.dp
                 val marks = !compact && grid.cell >= 32f
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -129,7 +130,8 @@ fun PortPanel(
                                                     }
                                                 }
                                                 Text(cell.port.hardware.position?.toString() ?: cell.port.name, Modifier.align(Alignment.TopCenter),
-                                                    fontSize = (grid.cell * .3f).coerceIn(9f, 12f).sp, textAlign = TextAlign.Center, maxLines = 1)
+                                                    fontSize = (grid.cell * .3f).coerceIn(9f, 12f).sp,
+                                                    lineHeight = ((grid.cell * .3f).coerceIn(9f, 12f) * 1.1f).sp, textAlign = TextAlign.Center, maxLines = 1)
                                                 if (marks) cell.vlan?.untaggedVlanId?.let { Text(it.toString(), Modifier.align(Alignment.BottomCenter), fontSize = 8.sp, maxLines = 1) }
                                                 if (cell.poe != null || cell.poeCapable != null) Text("⚡", Modifier.align(Alignment.BottomStart), fontSize = 8.sp,
                                                     color = if (cell.poe != null) Color(0xFFFFB300) else MaterialTheme.colorScheme.outline)
@@ -145,7 +147,14 @@ fun PortPanel(
                 }
             }
         }
-        if (!compact && cells.isNotEmpty()) Text(i18n.text("port.legend", cells.count { it.occupied }, cells.size), style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        if (!compact && cells.isNotEmpty()) {
+            var showLegend by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(summary, Modifier.weight(1f), style = MaterialTheme.typography.bodySmall)
+                TextButton(onClick = { showLegend = !showLegend }) { Text(i18n.text("map.legend")) }
+            }
+            if (showLegend) Text(i18n.text("port.legend", cells.count { it.occupied }, cells.size), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }

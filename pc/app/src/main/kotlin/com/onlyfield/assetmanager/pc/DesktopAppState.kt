@@ -103,6 +103,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     var canUndo by mutableStateOf(false)
         private set
     val undoLabel: String? get() = history.lastOrNull()?.third
+    val mapUiState = com.onlyfield.assetmanager.configurator.map.MapUiState()
     var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
     /** Ids opened from the project search, most recent first (session only). */
@@ -464,6 +465,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             clearHistory()
             trashState = loadedTrash
             issues = runIo { ModelValidator.validateProject(openedProject, i18n = i18n).issues }
+            mapUiState.clear()
             selectedSiteId = null
             selectedAreaId = null
             currentSection = AppSection.FLOORPLANS

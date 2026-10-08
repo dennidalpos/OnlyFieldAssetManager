@@ -4,8 +4,6 @@ import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -82,23 +80,23 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     fun done(updated: Project, message: String) { actions.update(updated, message); step = QuickStep.MAIN }
 
     val title = index.portLabel(port.id)
-    AlertDialog(onDismissRequest = ::close, title = {
+    com.onlyfield.assetmanager.configurator.theme.ContentDialog(onDismissRequest = ::close, width = 760.dp, title = {
         Column {
-            Text(title, modifier = Modifier.semantics { heading() })
+            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             Text(listOfNotNull(port.hardware.side?.takeIf { device.isPassive() }?.toDisplayString(i18n), stateLabel(summary.state, i18n), port.hardware.connector)
                 .joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }, text = {
-        Column(Modifier.heightIn(max = 480.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             when (step) {
                 QuickStep.CONFIGURE -> configuration?.let { session ->
                     val configured = session.project.sites.flatMap { it.devices }.first { it.id == device.id }
-                    DeviceDrawing(session.project, configured, i18n, onDeviceChange = { updated ->
+                    DeviceDrawing(session.project, configured, i18n, showName = false, framed = false, onDeviceChange = { updated ->
                         configuration = session.copy(project = ProjectEdits.updateDevice(session.project, updated))
                     })
                 }
                 QuickStep.MAIN -> {
-                    DeviceDrawing(project, device, i18n, selectedPortIds = setOf(port.id), onPort = { currentId = it.port.id })
+                    DeviceDrawing(project, device, i18n, showName = false, framed = false, selectedPortIds = setOf(port.id), onPort = { currentId = it.port.id })
                     OutlinedButton(onClick = { configuration = ConfigurationSession(project); step = QuickStep.CONFIGURE }) { Text(i18n.text("visual.configure")) }
                     if (PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT) {
                         val rear = PassiveCabling.rear(project, port.id)
@@ -106,6 +104,8 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
                         else if (summary.cable != null) OutlinedButton(enabled = !graph.occupied(rear.id), onClick = { fixed = true; target = null; targetPort = null; step = QuickStep.DEVICE }) { Text(i18n.text("visual.fixedCable")) }
                     }
                     MainStep(project, summary, path, index, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected)
+                    MainActions(summary, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
+                    onConnect = { fixed = PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT; justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
                 }
                 QuickStep.DEVICE -> {
                     if (PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT)
@@ -157,8 +157,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     }, confirmButton = {
         when (step) {
             QuickStep.MAIN -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
-                MainActions(summary, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
-                    onConnect = { fixed = PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT; justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
+
                 TextButton(onClick = ::close) { Text(i18n.text("ux.close")) }
                 actions.details?.let { open -> TextButton(onClick = { onClose(); open(port) }) { Text(i18n.text("quick.details")) } }
             }
@@ -193,7 +192,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
             else -> TextButton(onClick = ::close) { Text(i18n.text("ux.close")) }
         }
     }, dismissButton = {
-        if (step != QuickStep.MAIN) TextButton(onClick = { if (dirty) discard = true else { configuration = null; step = if (step == QuickStep.PORT) QuickStep.DEVICE else QuickStep.MAIN } }) { Text("‹ " + i18n.text("quick.back")) }
+        if (step != QuickStep.MAIN) TextButton(onClick = { if (dirty) discard = true else { configuration = null; step = if (step == QuickStep.PORT) QuickStep.DEVICE else QuickStep.MAIN } }) { Icon(SymbolIcons.back, null); Text(i18n.text("quick.back")) }
     })
 
     if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text(i18n.text("visual.discardTitle")) },

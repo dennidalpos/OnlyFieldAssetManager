@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
@@ -8,8 +9,6 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -29,6 +28,7 @@ fun EditScreen(
     confirmEnabled: Boolean = true,
     confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     validationMessage: String? = null,
+    wideContent: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     val i18n = LocalMessages.current
@@ -43,14 +43,12 @@ fun EditScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 2, overflow = TextOverflow.Ellipsis) },
-                    navigationIcon = { IconButton(onClick = close) { Icon(Icons.Default.Close, contentDescription = i18n.text("ux.cancelChanges")) } },
+                    title = { Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 2, overflow = TextOverflow.Ellipsis) },
                 )
             },
             bottomBar = {
                 Surface(tonalElevation = 2.dp) {
-                    Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        HorizontalDivider()
+                    Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = AppSpacing.content, vertical = AppSpacing.small), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         if (!confirmEnabled) Text(validationMessage ?: i18n.text("ux.completeRequired"), style = MaterialTheme.typography.bodySmall)
                         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             TextButton(onClick = close) { Text(i18n.text("ux.cancelChanges")) }
@@ -61,12 +59,14 @@ fun EditScreen(
             }
         ) { padding ->
             CompositionLocalProvider(LocalMarkDirty provides { dirty = true }) {
-                Column(
-                    modifier = Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize()
-                        .verticalScroll(rememberScrollState()).padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                    content = content
-                )
+                BoxWithConstraints(Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize()) {
+                    Column(
+                        modifier = Modifier.align(androidx.compose.ui.Alignment.TopCenter)
+                            .then(if (wideContent) Modifier else Modifier.widthIn(max = AppSpacing.formWidth))
+                            .fillMaxWidth().fillMaxHeight().verticalScroll(rememberScrollState()).padding(AppSpacing.page(maxWidth)),
+                        verticalArrangement = Arrangement.spacedBy(AppSpacing.content), content = content
+                    )
+                }
             }
         }
     }

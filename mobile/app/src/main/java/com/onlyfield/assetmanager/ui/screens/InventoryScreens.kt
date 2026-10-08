@@ -282,7 +282,7 @@ internal fun DeviceDialog(vm: ProjectViewModel, project: Project, device: Device
     val save = rememberEditSave(vm)
     EditScreen(configuratorTitle(project, draft, i18n), onClose, {
         save.save(configuratorTitle(project, draft, i18n), onClose) { draft.apply(it, i18n) }
-    }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, draft, i18n)) {
+    }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), wideContent = true, confirmLabel = configuratorAction(project, draft, i18n)) {
         save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         ObjectFields(project, draft, initialSection) { draft = it }
         ConfiguratorSection(i18n.text("ux.scanSerial"), i18n = i18n) {

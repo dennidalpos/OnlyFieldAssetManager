@@ -51,7 +51,7 @@ internal fun FloorObjectEditor(vm: ProjectViewModel, project: Project, initial: 
         if (allowed) shoot() else vm.notifyError(i18n.text("text.0ac53f93c8a1"))
     }
     DisposableEffect(Unit) { onDispose { temporary.forEach { it.delete() } } }
-    EditScreen(configuratorTitle(project, initial, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty() && vm.busy == null, confirmLabel = configuratorAction(project, initial, i18n)) {
+    EditScreen(configuratorTitle(project, initial, i18n), { if (vm.busy == null) close() }, { vm.saveMapObject(context, draft, photos.toList(), removed, close) }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty() && vm.busy == null, wideContent = true, confirmLabel = configuratorAction(project, initial, i18n)) {
         val dirty = LocalMarkDirty.current
         SideEffect { markDirty = dirty }
         ObjectFields(project, draft, initialSection, extraSections = {

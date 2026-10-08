@@ -7,24 +7,17 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.border
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ObjectSummary
 import com.onlyfield.assetmanager.core.display.ProjectIndex
@@ -44,7 +37,7 @@ private fun Choice(label: String, value: String, values: List<String>, error: St
         OutlinedTextField(value, change, label = { Text(label) }, singleLine = true,
             isError = error != null, supportingText = error?.let { { Text(it) } }, modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(focusedContainerColor = if (expanded) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface, unfocusedContainerColor = if (expanded) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface),
-            trailingIcon = { SymbolButton(if (expanded) "▴" else "▾", LocalConfiguratorMessages.current.text("ux.showOptions")) { expanded = true } })
+            trailingIcon = { SymbolButton(if (expanded) SymbolIcons.collapse else SymbolIcons.expand, LocalConfiguratorMessages.current.text("ux.showOptions")) { expanded = true } })
         DropdownMenu(expanded, { expanded = false }, modifier = Modifier.heightIn(max = 300.dp)) {
             values.distinctBy { it.trim().lowercase() }.forEach { item ->
                 DropdownMenuItem(text = { Text(item) }, onClick = { change(item); expanded = false })

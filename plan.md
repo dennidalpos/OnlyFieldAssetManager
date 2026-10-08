@@ -19,7 +19,7 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 - Configuratori: disegno specifico del tipo prima dei campi, sezioni tecniche richiudibili dopo. Piano, rack e porte restano facoltativi; dall'inventario la sede richiede una scelta esplicita.
 - Navigazione condivisa per gruppi Lavoro, Dati tecnici, Supporto e Progetto. Gli elenchi nominali sono ordinati solo nella presentazione; porte, VLAN e unità rack mantengono il loro ordine tecnico.
 - Titolo operativo, corpo scorrevole e azioni persistenti distinguono gli editor. L'espansione delle sezioni non modifica i dati né il contratto di scambio.
-- Mappa: `MapScene` unica per piano e contenitori; ogni contenitore è un solo oggetto, navigabile fino all'ultimo livello. Una linea per coppia di oggetti, con elenco completo dei cavi al tocco. Pannello dettagli non modale, in basso o laterale da 840 dp. Rack, mensola, armadio e cassetta sono contenitori predefiniti; i tipi predefiniti non vengono più duplicati.
+- Mappa: `MapScene` unica per piano e contenitori; ogni contenitore è un solo oggetto, navigabile fino all'ultimo livello. Una linea per coppia di oggetti, con elenco completo dei cavi al tocco. Riepilogo compatto espandibile sotto 840 dp di workspace; dettagli laterali da 360 dp oltre la soglia. Centro, zoom, selezione e contenitori conservati nella sessione. Rack, mensola, armadio e cassetta sono contenitori predefiniti; i tipi predefiniti non vengono più duplicati.
 - Collegamenti logici (WAN, VPN, Internet) agganciati al dispositivo: compaiono nel pannello della mappa (Altri dettagli) ma non nel percorso porta né sulla mappa, che mostrano solo la continuità fisica.
 - Tracciamento fisico essenziale: porta → cavo → passanti (patch panel, presa, scatola di giunzione) → porta. Rimossi dorsali (`SharedPathSegment`), `connectedPortId`, tipo e note dei passaggi, connettori A/B, orientamento, caratteristiche nominali e velocità osservata del cavo. Il cavallotto è un cavo tra due porte; la giunta è una scatola passiva con passante fronte/retro.
 - Collegamenti dal disegno dell'apparato: il tocco su una porta apre una scheda rapida (stato, percorso nei due versi, etichetta cavo suggerita, Collega a…, Inserisci passaggio, Scollega, Foto). La pagina porta completa resta in Dettagli porta.
@@ -28,6 +28,8 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 
 ## Configuratore visivo — 5 ottobre 2026
 
+- Navigazione: Mappa, Dispositivi, Rack, Cablaggio e Progetto. Android usa rail da 600 dp con altezza almeno 480 dp; Windows sidebar da 1200 dp, altrimenti rail. Gli editor conservano la navigazione; Android la disabilita fino alla chiusura della bozza.
+- Spaziature condivise 4/8/12/16/24 dp, form testuali entro 640 dp, disegni tecnici liberi. Eliminazione nel menu secondario con conferma; Foto diretta.
 - Colori per tipo coerenti su mappa, topologia e schede; selezione contrastante, nome completo e canvas contenuto nel riquadro.
 - Inserimento uniforme: tipo → disegno/preset/nome → Aggiungi. Riquadri, menu aperti evidenziati e azioni principali raccolte.
 - Dimensioni e profondità tolte dalla UI, valori precedenti conservati; U solo dove servono per rack e modelli montabili.

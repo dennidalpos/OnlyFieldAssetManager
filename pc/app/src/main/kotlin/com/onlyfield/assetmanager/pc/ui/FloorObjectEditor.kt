@@ -44,7 +44,7 @@ internal fun FloorObjectEditor(state: DesktopAppState, project: Project, initial
     SideEffect { slot.dirty = dirty }
     EditPanel(configuratorTitle(project, initial, i18n), { slot.requestChange {} }, {
         if (state.saveMapObject(draft, photos.toList(), removed)) close()
-    }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, initial, i18n), width = 640.dp) {
+    }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), wideContent = true, confirmLabel = configuratorAction(project, initial, i18n), width = 640.dp) {
         ObjectFields(project, draft, initialSection, extraSections = {
             ConfiguratorSection(i18n.text("ux.attachments"), i18n = i18n, summary = (project.attachments.count { it.targetId == draft.id && it.id !in removed } + photos.size).takeIf { it > 0 }?.let { i18n.text("config.attachmentsCount", it) }) {
                 project.attachments.filter { it.targetId == draft.id && it.id !in removed }.forEach { a ->

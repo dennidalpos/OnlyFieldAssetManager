@@ -25,7 +25,7 @@ import com.onlyfield.assetmanager.core.model.*
 @Composable
 fun DeviceDrawing(project: Project, device: Device, i18n: Messages,
                   onPort: ((PortCell) -> Unit)? = null, onDeviceChange: ((Device) -> Unit)? = null,
-                  selectedPortIds: Set<String> = emptySet(), onLongPort: ((PortCell) -> Unit)? = null, showName: Boolean = true) {
+                  selectedPortIds: Set<String> = emptySet(), onLongPort: ((PortCell) -> Unit)? = null, showName: Boolean = true, framed: Boolean = true) {
     var side by remember(device.id) { mutableStateOf(PortSide.FRONT) }
     var arranging by remember(device.id) { mutableStateOf(false) }
     var editingPoe by remember(device.id) { mutableStateOf(false) }
@@ -45,9 +45,9 @@ fun DeviceDrawing(project: Project, device: Device, i18n: Messages,
         onDeviceChange?.invoke(PortArrangement.set(device, layout.copy(order = layout.order.map { if (it == first) second else if (it == second) first else it })))
         selected = emptySet()
     }
-    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.surfaceContainer,
-        border = BorderStroke(2.dp, MapStyle.glyph(glyph))) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = if (framed) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
+        border = if (framed) BorderStroke(1.dp, MapStyle.glyph(glyph)) else null) {
+        Column(Modifier.padding(if (framed) 12.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 GlyphBadge(glyph, if (glyph.family in setOf(ObjectFamily.ENDPOINT, ObjectFamily.SECURITY)) 56.dp else 36.dp)
                 Column(Modifier.weight(1f)) {
@@ -78,7 +78,7 @@ fun DeviceDrawing(project: Project, device: Device, i18n: Messages,
                     }
                 }
             }
-            PortPanel(cells, i18n, device = device, selected = if (arranging || editingPoe) selection else selectedPortIds,
+            PortPanel(cells, i18n, device = device, compact = onPort == null && onDeviceChange == null, selected = if (arranging || editingPoe) selection else selectedPortIds,
                 onClick = { cell: PortCell ->
                     when {
                         arranging -> {

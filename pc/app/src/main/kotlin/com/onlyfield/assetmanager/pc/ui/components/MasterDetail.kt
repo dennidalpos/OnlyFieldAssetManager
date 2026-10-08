@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.pc.ui.components
 
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -18,7 +19,6 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -73,12 +73,12 @@ fun MasterDetailHost(modifier: Modifier = Modifier, master: @Composable () -> Un
         val editorVisible = slot.content != null
         val editorWidth = slot.panelWidth.coerceIn(440.dp, 640.dp).coerceAtMost(availableWidth)
         val fullEditor = editorVisible && availableWidth < editorWidth + 376.dp
-        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(if (fullEditor) 0.dp else AppSpacing.content)) {
             // Keep the master composed so it retains the editor and draft while narrow.
             Box(Modifier.width(if (fullEditor) 0.dp else if (editorVisible) availableWidth - editorWidth - 16.dp else availableWidth).fillMaxHeight().clipToBounds()) {
                 CompositionLocalProvider(LocalHasMasterDetail provides true, LocalDetailSlot provides slot, LocalDetailChange provides slot::requestChange) { master() }
             }
-            CompositionLocalProvider(LocalPanelWidth provides if (fullEditor) availableWidth - 16.dp else editorWidth) {
+            CompositionLocalProvider(LocalPanelWidth provides if (fullEditor) availableWidth else editorWidth) {
                 // Keyed by the panel too, so a different editor never inherits the previous scroll offset.
                 slot.content?.let { panel -> key(slot.editorVersion, panel) { panel() } }
             }
@@ -113,6 +113,7 @@ fun EditPanel(
     confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
     width: Dp = 560.dp,
     validationMessage: String? = null,
+    wideContent: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
 
@@ -121,7 +122,7 @@ fun EditPanel(
         FormDialog(title, onDismiss, onConfirm, confirmEnabled, confirmLabel, width, validationMessage, content)
         return
     }
-    val args by rememberUpdatedState(PanelArgs(title, onDismiss, onConfirm, confirmEnabled, confirmLabel, validationMessage, content))
+    val args by rememberUpdatedState(PanelArgs(title, onDismiss, onConfirm, confirmEnabled, confirmLabel, validationMessage, wideContent, content))
     val panel: @Composable () -> Unit = remember { { PanelBody(args, slot) } }
     DisposableEffect(slot, slot.editorVersion) {
         slot.panelWidth = width
@@ -146,6 +147,7 @@ private class PanelArgs(
     val confirmEnabled: Boolean,
     val confirmLabel: String,
     val validationMessage: String?,
+    val wideContent: Boolean,
     val content: @Composable ColumnScope.() -> Unit,
 )
 
@@ -158,7 +160,7 @@ private fun PanelBody(args: PanelArgs, slot: DetailSlot) {
 
     Surface(Modifier.width(LocalPanelWidth.current).fillMaxHeight(), tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium) {
         Column(
-            Modifier.fillMaxSize().padding(24.dp).onPreviewKeyEvent { e ->
+            Modifier.fillMaxSize().padding(AppSpacing.content).onPreviewKeyEvent { e ->
                 when {
                     e.type != KeyEventType.KeyDown -> false
                     ((e.isCtrlPressed) && (e.key == Key.S)) -> { if (args.confirmEnabled) args.onConfirm(); true }
@@ -170,22 +172,20 @@ private fun PanelBody(args: PanelArgs, slot: DetailSlot) {
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    args.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.SemiBold,
+                    args.title, style = MaterialTheme.typography.titleLarge,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f)
                 )
-                TextButton(onClick = close) { Text(i18n.text("text.32d4079b315b")) }
             }
             HorizontalDivider()
             CompositionLocalProvider(LocalMarkDirty provides { slot.dirty = true }) {
                 Column(
-                    Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
+                    Modifier.weight(1f).align(Alignment.CenterHorizontally).then(if (args.wideContent) Modifier else Modifier.widthIn(max = AppSpacing.formWidth)).fillMaxWidth().verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     content = args.content
                 )
             }
             HorizontalDivider()
             if (!args.confirmEnabled) Text(args.validationMessage ?: i18n.text("ux.completeRequired"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(i18n.text("text.21357b5bfcd0"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 TextButton(onClick = close) { Text(i18n.text("ux.cancelChanges")) }
                 Button(onClick = args.onConfirm, enabled = args.confirmEnabled) { Text(args.confirmLabel) }

@@ -2,13 +2,11 @@ package com.onlyfield.assetmanager.ui.screens
 
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
-import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -80,7 +78,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
         else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
     }
-    fun back() { when { area != null -> vm.selectedAreaId = null; site != null -> vm.selectedSiteId = null; else -> vm.back() } }
+    fun back() { when { area != null && vm.mapUiState.floor(project, area.id).let { it.expanded && !it.wideDetails } -> vm.mapUiState.floor(project, area.id).expanded = false; area != null -> vm.selectedAreaId = null; site != null -> vm.selectedSiteId = null; else -> vm.back() } }
     BackHandler(enabled = site != null) { back() }
     LaunchedEffect(attachment?.id, area?.floorplanPageIndex) {
         image = null; imageError = null
@@ -98,9 +96,9 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             } else newPlanId = a.id
         }
     }
-    AppScaffold(project.name, subtitle = listOfNotNull(site?.name, area?.let { it.name }).joinToString(" / "), onBack = ::back, snackbarHost = snackbar, busy = vm.busy,
-        actions = { IconButton(onClick = { searching = true }) { Icon(androidx.compose.material.icons.Icons.Default.Search, i18n.text("search.action")) } }) { padding ->
-        Column(Modifier.padding(padding).fillMaxSize().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    AppScaffold(project.name, subtitle = if (area == null) site?.name else null, onBack = ::back, snackbarHost = snackbar, busy = vm.busy,
+        actions = { if (area == null) IconButton(onClick = { searching = true }) { Icon(androidx.compose.material.icons.Icons.Default.Search, i18n.text("search.action")) } }) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (area == null) {
                 Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -127,7 +125,8 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("topology.title")) { topology = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { if (vm.busy == null) { saveError = null; selectingPlan = true } },
-                ), focus = focus, media = { ref ->
+                ), state = vm.mapUiState.floor(project, area.id), focus = focus, onFocusHandled = { focus = null },
+                onSearch = { searching = true }, onLeaveFloor = { vm.selectedAreaId = null }, media = { ref ->
                     val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
                     // Thumbnails wrap so the pane never scrolls sideways.
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -90,3 +90,14 @@ fun TextButton(
     contentPadding: PaddingValues = TextButtonPadding,
     content: @Composable RowScope.() -> Unit,
 ) = androidx.compose.material3.TextButton(onClick, modifier, enabled, shape, colors, contentPadding = contentPadding, content = content)
+
+/** Shared spacing for page hosts, fields and action groups. */
+object AppSpacing {
+    val tiny = 4.dp
+    val small = 8.dp
+    val inset = 12.dp
+    val content = 16.dp
+    val section = 24.dp
+    val formWidth = 640.dp
+    fun page(width: androidx.compose.ui.unit.Dp) = if (width < 600.dp) content else section
+}

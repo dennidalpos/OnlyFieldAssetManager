@@ -80,12 +80,11 @@ fun MapCanvas(
     onRoute: (SceneLink, List<MapPoint>) -> Unit,
     onLongPress: (MapPoint) -> Unit,
     modifier: Modifier = Modifier,
+    camera: MapCamera = remember(scene.areaId, scene.container) { MapCamera() },
 ) {
     val viewKey = scene.container ?: scene.areaId
     var width by remember { mutableFloatStateOf(1f) }
     var height by remember { mutableFloatStateOf(1f) }
-    var zoom by remember(viewKey, image) { mutableFloatStateOf(1f) }
-    var pan by remember(viewKey, image) { mutableStateOf(Offset.Zero) }
     var moving by remember(viewKey) { mutableStateOf<Pair<ObjectRef, MapPoint>?>(null) }
     var routeDraft by remember(viewKey) { mutableStateOf<List<MapPoint>?>(null) }
     val shown = moving?.let { (ref, p) -> scene.moved(ref, p) } ?: scene
@@ -108,9 +107,9 @@ fun MapCanvas(
     // Gesture code runs in a long-lived coroutine: read the latest scene and selection through State.
     val current by rememberUpdatedState(shown)
     val currentLink by rememberUpdatedState(selectedLink)
-    fun viewport(clamp: Boolean = true) = MapViewport(width, height, image?.width?.toFloat() ?: MAP_CONTENT_WIDTH, image?.height?.toFloat() ?: MAP_CONTENT_HEIGHT, zoom, pan.x, pan.y).let { if (clamp) it.clamped() else it }
+    fun viewport() = camera.viewport(width, height, image?.width?.toFloat() ?: MAP_CONTENT_WIDTH, image?.height?.toFloat() ?: MAP_CONTENT_HEIGHT)
     // Store the clamped pan so dragging back past an edge responds at once.
-    fun panBy(delta: Offset) { pan += delta; viewport().let { pan = Offset(it.panX, it.panY) } }
+    fun panBy(delta: Offset) { val view = viewport(); camera.capture(view.copy(panX = view.panX + delta.x, panY = view.panY + delta.y)) }
     fun screen(p: MapPoint): Offset = viewport().screen(p).let { Offset(it.x, it.y) }
     fun points(link: SceneLink): List<MapPoint> = if (link == currentLink) routeDraft ?: current.points(link) else current.points(link)
     fun drawn(link: SceneLink): List<MapPoint> = points(link).let { if (it.size == 2 && (link != currentLink || routeDraft == null)) arc(it[0], it[1]) else it }
@@ -136,14 +135,13 @@ fun MapCanvas(
         val before = viewport()
         val rx = (centroid.x - before.left) / before.pageWidth
         val ry = (centroid.y - before.top) / before.pageHeight
-        zoom = (zoom * factor).coerceIn(.5f, 8f)
-        val after = viewport(clamp = false)
-        panBy(Offset(centroid.x - rx * after.pageWidth - after.left, centroid.y - ry * after.pageHeight - after.top))
+        val after = before.copy(zoom = (before.zoom * factor).coerceIn(.5f, 8f))
+        camera.capture(after.copy(panX = centroid.x - rx * after.pageWidth - (width - after.pageWidth) / 2,
+            panY = centroid.y - ry * after.pageHeight - (height - after.pageHeight) / 2))
     }
 
     val latest by rememberUpdatedState(Triple(onSelect, onOpen, onLongPress))
     val latestCommit by rememberUpdatedState(onMove to onRoute)
-    LaunchedEffect(width, height) { viewport().let { pan = Offset(it.panX, it.panY) } }
     Box(modifier.clipToBounds()) {
         Canvas(Modifier.fillMaxSize().testTag("floor-map").background(MaterialTheme.colorScheme.surfaceVariant)
             .semantics { contentDescription = i18n.text("map.description", shown.nodes.size, shown.links.size) }
@@ -254,12 +252,12 @@ fun MapCanvas(
             drawRect(outline, pageTopLeft, pageSize, style = Stroke(unit))
             shown.links.forEach { link -> drawLink(link, drawn(link).map(::screen), link == selectedLink, unit, copper, highlight, surface, onSurface, measurer, stubs[link.routeCableId]) }
             selectedLink?.let { link -> handles(link).forEach { (h, p) -> drawCircle(if (h.insert) surface else highlight, unit * 3, screen(p)); drawCircle(highlight, unit * 3, screen(p), style = Stroke(unit)) } }
-            drawNodes(shown, ::screen, selectedNode, radius, unit, zoom, onSurface, surface, highlight, measurer)
+            drawNodes(shown, ::screen, selectedNode, radius, unit, camera.zoom, onSurface, surface, highlight, measurer)
         }
         Column(Modifier.align(Alignment.BottomEnd).padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SmallFloatingActionButton(onClick = { zoomAround(1.25f, Offset(width / 2, height / 2)) }) { Text("+") }
-            SmallFloatingActionButton(onClick = { zoomAround(.8f, Offset(width / 2, height / 2)) }) { Text("−") }
-            SmallFloatingActionButton(onClick = { zoom = 1f; pan = Offset.Zero }) { Text("⤢") }
+            SmallFloatingActionButton(onClick = { zoomAround(1.25f, Offset(width / 2, height / 2)) }, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) { Icon(com.onlyfield.assetmanager.configurator.SymbolIcons.add, i18n.text("map.zoomIn")) }
+            SmallFloatingActionButton(onClick = { zoomAround(.8f, Offset(width / 2, height / 2)) }, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) { Icon(com.onlyfield.assetmanager.configurator.SymbolIcons.minus, i18n.text("map.zoomOut")) }
+            SmallFloatingActionButton(onClick = { camera.reset() }, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) { Icon(com.onlyfield.assetmanager.configurator.SymbolIcons.fit, i18n.text("map.fit")) }
         }
     }
 }

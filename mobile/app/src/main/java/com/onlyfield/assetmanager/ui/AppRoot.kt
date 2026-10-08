@@ -6,16 +6,19 @@ import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import com.onlyfield.assetmanager.ui.components.LocalOverlayCount
+import com.onlyfield.assetmanager.ui.components.MainNavigationRail
 import com.onlyfield.assetmanager.ui.components.MainNavigationBar
-import com.onlyfield.assetmanager.ui.components.mainTabs
+import com.onlyfield.assetmanager.ui.components.mainTabFor
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.Modifier
@@ -61,13 +64,18 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                 val screen = vm.currentScreen
                 val p = project
                 val overlays = remember { mutableIntStateOf(0) }
-                val tabbed = p != null && mainTabs.any { it.screen == screen }
+                val tabbed = p != null && screen != Screen.Projects && screen != Screen.NewSite
+                val selectedTab = mainTabFor(screen)
                 val takePhoto = com.onlyfield.assetmanager.ui.components.rememberPhotoCapture(vm)
                 CompositionLocalProvider(LocalOverlayCount provides overlays,
                     com.onlyfield.assetmanager.configurator.LocalPhotoAction provides { type, id -> takePhoto(type, id) }) {
-                Column(Modifier.fillMaxSize()) {
+                BoxWithConstraints(Modifier.fillMaxSize()) {
+                val rail = maxWidth >= 600.dp && maxHeight >= 480.dp
+                Row(Modifier.fillMaxSize()) {
+                if (tabbed && rail) MainNavigationRail(selectedTab, enabled = overlays.intValue == 0) { vm.openTab(it) }
+                Column(Modifier.weight(1f).fillMaxHeight()) {
                 // The bar owns the bottom inset; screens above it must not pad for it again.
-                Box(Modifier.weight(1f).then(if (tabbed && overlays.intValue == 0) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
+                Box(Modifier.weight(1f).then(if (tabbed && !rail) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
                 if (screen == Screen.NewSite) {
                     NewSiteScreen(vm, snackbar)
                 } else if (p == null || screen == Screen.Projects) {
@@ -93,7 +101,9 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                     Screen.Projects, Screen.NewSite -> Unit
                 }
                 }
-                if (tabbed && overlays.intValue == 0) MainNavigationBar(screen) { vm.openTab(it) }
+                if (tabbed && !rail) MainNavigationBar(selectedTab, enabled = overlays.intValue == 0) { vm.openTab(it) }
+                }
+                }
                 }
                 }
             }

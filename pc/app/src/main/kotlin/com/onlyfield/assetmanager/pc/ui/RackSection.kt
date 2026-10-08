@@ -68,7 +68,7 @@ fun RackSection(
         }
 
         if (project.racks.isEmpty()) {
-            EmptyState(i18n.text("text.f42d154a6e60"), actionLabel = i18n.text("text.b049315ba1c3"), onAction = { creating = true })
+            EmptyState(i18n.text("text.f42d154a6e60"))
             return@Column
         }
 

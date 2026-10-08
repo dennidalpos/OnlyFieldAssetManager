@@ -44,14 +44,14 @@ fun DesktopApp(state: DesktopAppState) {
         ConfirmHost {
             Surface(color = MaterialTheme.colorScheme.background) {
                 BoxWithConstraints(Modifier.fillMaxSize()) {
-                    val panel = if (state.detailSlot.content != null) state.detailSlot.panelWidth.coerceIn(440.dp, 640.dp) + 16.dp else 0.dp
-                    val sidebarVisible = state.project != null && maxWidth - 208.dp - 32.dp - panel >= 360.dp
+                    val sidebarVisible = state.project != null && maxWidth >= 1200.dp
+                    val pagePadding = com.onlyfield.assetmanager.configurator.theme.AppSpacing.page(maxWidth)
                     Column(Modifier.fillMaxSize()) {
-                        ProjectToolbar(state, sidebarVisible)
+                        ProjectToolbar(state)
                         state.error?.let { ErrorBanner(it) { state.error = null } }
                         Row(Modifier.weight(1f).fillMaxWidth()) {
-                            if (sidebarVisible) ProjectSidebar(state)
-                            MasterDetailHost(Modifier.weight(1f).fillMaxHeight().padding(16.dp)) { SectionContent(state) }
+                            if (sidebarVisible) ProjectSidebar(state) else if (state.project != null) ProjectRail(state)
+                            MasterDetailHost(Modifier.weight(1f).fillMaxHeight().padding(pagePadding)) { SectionContent(state) }
                         }
                         HorizontalDivider()
                         StatusBar(state)
@@ -133,7 +133,37 @@ private fun ProjectSidebar(state: DesktopAppState) {
 }
 
 @Composable
-private fun ProjectToolbar(state: DesktopAppState, sidebarVisible: Boolean) {
+private fun ProjectRail(state: DesktopAppState) {
+    val i18n = state.i18n
+    NavigationRail(Modifier.width(104.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
+        ProjectDestination.entries.filter { it.primary }.forEach { destination ->
+            NavigationRailItem(selected = destination.appSection() == state.section,
+                onClick = { state.navigate(destination) }, icon = { Icon(destination.icon, null) },
+                label = { Text(destination.title(i18n), maxLines = 2, style = MaterialTheme.typography.labelSmall) })
+        }
+        var open by remember { mutableStateOf(false) }
+        Box {
+            NavigationRailItem(selected = ProjectDestination.entries.none { it.primary && it.appSection() == state.section },
+                onClick = { open = true }, icon = { Icon(SymbolIcons.settings, null) },
+                label = { Text(i18n.text("ux.nav.projectHome"), style = MaterialTheme.typography.labelSmall) })
+            DropdownMenu(open, { open = false }, Modifier.heightIn(max = 560.dp)) {
+                ProjectDestination.entries.filter { !it.primary && state.project?.let { p -> it.shown(p, state.showSecondary) } != false }
+                    .groupBy { it.groupKey }.forEach { (group, destinations) ->
+                        Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp))
+                        destinations.forEach { destination ->
+                            DropdownMenuItem(text = { Text(destination.title(i18n)) }, leadingIcon = { Icon(destination.icon, null) },
+                                onClick = { open = false; state.navigate(destination) })
+                        }
+                    }
+                DropdownMenuItem(text = { Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules")) },
+                    onClick = { state.showSecondary = !state.showSecondary })
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectToolbar(state: DesktopAppState) {
     val i18n = LocalMessages.current
 
     val project = state.project
@@ -148,19 +178,6 @@ private fun ProjectToolbar(state: DesktopAppState, sidebarVisible: Boolean) {
                 OutlinedButton(onClick = { state.newProject() }) { Text(i18n.text("text.ac667fe865c9")) }
                 OutlinedButton(onClick = state::pickAndImport) { Text(i18n.text("text.a6afc0c52be6")) }
             } else {
-                if (!sidebarVisible) {
-                    var sections by remember { mutableStateOf(false) }
-                    Box {
-                        OutlinedButton(onClick = { sections = true }) { Text(i18n.text("ux.nav.sections")) }
-                        DropdownMenu(sections, { sections = false }, modifier = Modifier.heightIn(max = 560.dp)) {
-                            ProjectDestination.entries.filter { it.shown(project, state.showSecondary) }.groupBy { it.groupKey }.forEach { (group, entries) ->
-                                Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp))
-                                entries.forEach { destination -> DropdownMenuItem(text = { Text(destination.title(i18n)) }, leadingIcon = { Icon(destination.icon, null, Modifier.size(20.dp)) },
-                                    onClick = { sections = false; state.navigate(destination) }) }
-                            }
-                        }
-                    }
-                }
                 TextButton(onClick = state::undo, enabled = state.canUndo) { Text(i18n.text("action.undo")) }
                 Box {
                     OutlinedButton(onClick = { tools = true }) { Text(i18n.text("ux.nav.operations")) }

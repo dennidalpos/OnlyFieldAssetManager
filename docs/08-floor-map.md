@@ -27,14 +27,16 @@ Trascinando un oggetto, il punto in cui lo si è afferrato resta sotto il dito. 
 
 ## Pannello e inserimento
 
-`configurator.map.MapWorkspace` è condiviso dalle due app; il pannello è in `MapDetailPane`. Il pannello dei dettagli non è modale: in basso sotto 840 dp di larghezza, laterale da 840 dp, secondo le classi di finestra Android.
+`configurator.map.MapWorkspace` è condiviso dalle due app; il pannello è in `MapDetailPane`. Sotto 840 dp di workspace compare un riepilogo con nome, stato, Modifica, Foto ed Espandi; Espandi occupa l’area di lavoro e Riduci riporta alla mappa senza trascinamenti. Da 840 dp i dettagli sono laterali, larghi 360 dp. Il contenuto si sposta fra le due presentazioni conservando i dialoghi e le bozze aperte.
+
+`MapUiState`, posseduto dagli host, conserva selezione, contenitori, zoom e centro normalizzato per piano durante cambio sezione, editor e ridimensionamento. Il cambio progetto azzera il contesto; piani rimossi, percorsi e selezioni non più validi vengono invalidati. Stato di sessione, senza scritture nel database o nel pacchetto.
 
 L'area del piano è un foglio pieno con bordo, su sfondo distinto, e griglia 24 × 24 con una linea più marcata ogni 4 celle; resta visibile anche in tema scuro. Con una planimetria il bordo circonda l'immagine.
 
 Nessun comando scorre in orizzontale:
 
-- **Intestazione**: ‹ Indietro e il livello corrente. I livelli superiori sono in un menu a tendina.
-- **Telefono**: Aggiungi oggetto (Aggiungi qui dentro un contenitore) a tutta larghezza con Elenco. Scansiona codice e Planimetria sono nel menu ⋮.
+- **Intestazione**: Indietro e un unico percorso sede/piano/contenitore. I livelli superiori sono in un menu a tendina.
+- **Telefono**: Aggiungi oggetto (Aggiungi qui dentro un contenitore) a tutta larghezza con Elenco. Ricerca diretta; Scansiona codice, Topologia e Planimetria sono nel menu degli strumenti.
 - **Finestre da 600 dp**: tutti i comandi in una riga.
 
 Le miniature degli allegati vanno a capo.
@@ -42,7 +44,7 @@ Le miniature degli allegati vanno a capo.
 Per un oggetto l'ordine è sempre lo stesso:
 
 1. **Intestazione**: simbolo, nome, tipo e chiusura (annunciata come Chiudi).
-2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore in Altre azioni (annullabile). In fondo **Sposta nel cestino**, rosso con icona e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto di un collegamento ha Elimina.
+2. **Azioni**: la primaria (Apri per i contenitori, altrimenti Modifica) e **Foto**, sempre presente e in evidenza (`MapActions.photo`); Porte e Rimuovi dal contenitore in Altre azioni (annullabile). **Sposta nel cestino** è nel menu secondario, rosso e con conferma, per dispositivi e rack (`MapActions.trash`); il cavo scelto ha Elimina nello stesso menu.
 3. **Dati primari**: unità del rack, contenuto, posizione nel rack, etichetta fisica e stato operativo se diverso da In servizio.
 4. **Porte**: il disegno dell'apparato con le porte occupate su totali; il tocco su una porta apre la scheda rapida (`PortQuickDialog`, vedi [10-object-configurator.md](10-object-configurator.md)). Le porte collegate senza foto della porta né del cavo hanno il segno • (`PortCell.photoMissing`, `core.forms.PhotoCoverage`); sotto il disegno il conteggio e **Apri la prima** portano alla scheda rapida della prima porta da fotografare.
 5. **Collegamenti**, con il numero di elementi.

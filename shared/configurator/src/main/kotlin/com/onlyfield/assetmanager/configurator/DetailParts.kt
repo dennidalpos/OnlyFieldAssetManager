@@ -36,11 +36,11 @@ fun GlyphBadge(glyph: Glyph, size: Dp = 40.dp) {
     }
 }
 
-/** Text glyph button that screen readers announce by [description], not by the symbol. */
+/** Accessible icon action with the shared touch target. */
 @Composable
-fun SymbolButton(symbol: String, description: String, onClick: () -> Unit) {
-    TextButton(onClick = onClick, modifier = Modifier.semantics { contentDescription = description }) {
-        Text(symbol, Modifier.clearAndSetSemantics {})
+fun SymbolButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+        Icon(icon, contentDescription = description)
     }
 }
 
@@ -54,7 +54,7 @@ fun PaneHeader(glyph: Glyph?, title: String, subtitle: String?, i18n: Messages, 
             Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
             subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
         }
-        onClose?.let { SymbolButton("✕", i18n.text("ux.close"), it) }
+        onClose?.let { SymbolButton(SymbolIcons.close, i18n.text("ux.close"), it) }
     }
 }
 
@@ -86,44 +86,38 @@ class PaneAction(val label: String, val onClick: () -> Unit)
 /** Confirmed removal: [label] on the button and the confirm action. */
 class DeleteRequest(val label: String, val title: String, val message: String, val onConfirm: () -> Unit)
 
-/** Filled primary action and photo, outlined secondaries, an overflow menu and a visible delete button last. */
+/** Filled primary action and photo, outlined secondaries, an overflow menu with confirmed removal. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> = emptyList(), overflow: List<PaneAction> = emptyList(), delete: DeleteRequest? = null,
               photo: PaneAction? = null) {
-    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+    var asking by remember { mutableStateOf(false) }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         primary?.let { Button(onClick = it.onClick) { Text(it.label) } }
-        photo?.let { FilledTonalButton(onClick = it.onClick) { Text(it.label) } }
+        photo?.let { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
         secondary.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
-        OverflowActions(i18n, overflow, i18n.text("visual.moreActions"))
-        delete?.let { DeleteAction(it, i18n) }
+        OverflowActions(i18n, overflow + listOfNotNull(delete?.let { PaneAction(it.label) { asking = true } }), i18n.text("visual.moreActions"), destructiveLabel = delete?.label)
     }
+    if (asking && delete != null) AlertDialog(onDismissRequest = { asking = false }, title = { Text(delete.title) }, text = { Text(delete.message) },
+        confirmButton = { TextButton(onClick = { asking = false; delete.onConfirm() }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(delete.label) } },
+        dismissButton = { TextButton(onClick = { asking = false }) { Text(i18n.text("text.18c9d912a210")) } })
 }
 
-/** Red outlined button with a trash icon; always asks for confirmation. */
+/** Removal shares the secondary-action menu and confirmation. */
 @Composable
-fun DeleteAction(request: DeleteRequest, i18n: Messages, modifier: Modifier = Modifier) {
-    var asking by remember { mutableStateOf(false) }
-    val error = MaterialTheme.colorScheme.error
-    OutlinedButton(onClick = { asking = true }, modifier, colors = ButtonDefaults.outlinedButtonColors(contentColor = error)) {
-        Icon(SymbolIcons.delete, contentDescription = null, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(request.label)
-    }
-    if (asking) AlertDialog(onDismissRequest = { asking = false }, title = { Text(request.title) }, text = { Text(request.message) },
-        confirmButton = { TextButton(onClick = { asking = false; request.onConfirm() }, colors = ButtonDefaults.textButtonColors(contentColor = error)) { Text(request.label) } },
-        dismissButton = { TextButton(onClick = { asking = false }) { Text(i18n.text("text.18c9d912a210")) } })
+fun DeleteAction(request: DeleteRequest, i18n: Messages) {
+    ActionRow(i18n, primary = null, delete = request)
 }
 
 /** "⋮" button with a menu of [actions]; nothing when empty. */
 @Composable
-fun OverflowActions(i18n: Messages, actions: List<PaneAction>, label: String? = null) {
+fun OverflowActions(i18n: Messages, actions: List<PaneAction>, label: String? = null, destructiveLabel: String? = null) {
     if (actions.isNotEmpty()) Box {
         var open by remember { mutableStateOf(false) }
-        if (label == null) SymbolButton("⋮", i18n.text("ux.more")) { open = true }
+        if (label == null) SymbolButton(SymbolIcons.more, i18n.text("ux.more")) { open = true }
         else TextButton(onClick = { open = true }, colors = ButtonDefaults.textButtonColors(containerColor = if (open) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)) { Text(label) }
         DropdownMenu(open, { open = false }) {
-            actions.forEach { action -> DropdownMenuItem(text = { Text(action.label) }, onClick = { open = false; action.onClick() }) }
+            actions.forEach { action -> DropdownMenuItem(text = { Text(action.label, color = if (action.label == destructiveLabel) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) }, onClick = { open = false; action.onClick() }) }
         }
     }
 }
@@ -152,7 +146,7 @@ fun SelectField(label: String, value: String, modifier: Modifier = Modifier, err
             if (enabled) onClick(label) { onOpen(); true } else disabled()
         }) {
         OutlinedTextField(value, {}, enabled = false, readOnly = true, singleLine = true, label = { Text(label) },
-            trailingIcon = { Text(if (expanded) "▴" else "▾") }, isError = error != null, supportingText = error?.let { { Text(it) } },
+            trailingIcon = { Icon(if (expanded) SymbolIcons.collapse else SymbolIcons.expand, null) }, isError = error != null, supportingText = error?.let { { Text(it) } },
             colors = colors, modifier = Modifier.fillMaxWidth())
     }
 }

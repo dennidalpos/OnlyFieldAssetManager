@@ -24,7 +24,7 @@ AUD-18: annullamento, nuova richiesta e chiusura del ViewModel invalidano l'impo
 
 **Rimozione media (AUD-19).** Un allegato rimosso non entra nello scambio; i suoi byte locali restano finché Annulla può recuperarlo. Foto di apparati/porte nel cestino restano locali, anche dopo sostituzione della copia, e vengono eliminate con l'oggetto soltanto alla rimozione definitiva. Lo svuotamento del cestino invalida l'undo precedente. L'eliminazione Android del progetto raccoglie solo i suoi file, senza toccare sorgenti utente o altri progetti. Senza siti, il ripristino di un apparato viene rifiutato conservando cestino e foto; sito originale e tipi supportati verificati da AUD-26/27.
 
-Inventario, rack, cablaggio, rete, alimentazione, media e documenti sono strumenti del progetto. Scanner e lettore USB aprono il codice trovato; un codice sconosciuto non modifica dati. Eliminazione e cambio di elemento richiedono conferma. L'eliminazione non sta mai nel menu ⋮: è un pulsante cestino rosso visibile su schede, dettagli e pannello mappa.
+Inventario, rack, cablaggio, rete, alimentazione, media e documenti sono strumenti del progetto. Scanner e lettore USB aprono il codice trovato; un codice sconosciuto non modifica dati. Eliminazione e cambio di elemento richiedono conferma. L'eliminazione è nel menu delle azioni secondarie, evidenziata in rosso e sempre confermata.
 
 Il censimento dei collegamenti parte dal disegno dell'apparato: il tocco su una porta apre la scheda rapida per collegarla a un altro apparato, inserire un passante (presa, patch panel, scatola di giunzione) o scollegarla, con l'etichetta del cavo proposta. La foto è sempre a un tocco per apparati, rack, porte e cavi: fotocamera su Android, scelta di una o più immagini su Windows (`LocalPhotoAction`), con salvataggio immediato come allegato. Su Android gli scatti sono in serie: dopo una foto confermata la fotocamera si riapre sullo stesso oggetto e annullarla chiude la serie (con più scatti compare «N foto salvate»).
 
@@ -43,19 +43,19 @@ Le destinazioni hanno gli stessi gruppi e nomi sulle due piattaforme:
 | Supporto | Modelli, Allegati, Documenti, Credenziali |
 | Progetto | Struttura e impostazioni, Cestino |
 
-**Moduli secondari** (`configurator.SecondaryModule`): Credenziali, Configurazioni apparati (scheda di Rete) e Badge documentali (scheda di Alimentazione) restano nel modello e negli export, ma compaiono solo se il progetto li usa. Altrimenti una sola voce **Altri moduli**, in fondo alla barra laterale su Windows e in Altro su Android, li elenca e li mostra per la sessione; **Nascondi i moduli non usati** li richiude. Su Windows `Ctrl+5` apre comunque le Credenziali. La videosorveglianza non ha una schermata propria.
+**Moduli secondari** (`configurator.SecondaryModule`): Credenziali, Configurazioni apparati (scheda di Rete) e Badge documentali (scheda di Alimentazione) restano nel modello e negli export, ma compaiono solo se il progetto li usa. Altrimenti una sola voce **Altri moduli**, in fondo alla barra laterale su Windows e in Progetto su Android, li elenca e li mostra per la sessione; **Nascondi i moduli non usati** li richiude. Su Windows `Ctrl+5` apre comunque le Credenziali. La videosorveglianza non ha una schermata propria.
 
-**Android.** Una barra in basso porta alle destinazioni di Lavoro (Mappa, Dispositivi, Rack, Cablaggio) e ad Altro. La scelta di una voce svuota lo stack sopra la mappa.
+**Android.** Cinque accessi: Mappa, Dispositivi, Rack, Cablaggio e Progetto. Barra inferiore nelle finestre compatte; rail da 600 dp di larghezza con almeno 480 dp di altezza. La scelta di una voce svuota lo stack sopra la mappa.
 
-Altro contiene:
+Progetto contiene:
 
 - il controllo del progetto, solo se ci sono avvisi;
 - gli altri gruppi, con icone;
 - Azioni progetto: Esporta, Importa, password e Chiudi progetto.
 
-La barra si nasconde mentre è aperto un editor a pagina intera o lo scanner, così un cambio di sezione non perde la bozza. Le sottoschede sono fisse fino a tre; oltre diventano un menu Vista.
+La navigazione resta visibile e viene disabilitata mentre è aperto un editor a pagina intera o lo scanner, conservando la bozza. Le sottoschede sono fisse fino a tre; oltre diventano un menu Vista.
 
-**Windows.** La barra laterale misura 208 dp e mostra le icone delle destinazioni. Si richiude nel menu Sezioni se lascerebbe meno di 360 dp all'elenco, tenendo conto del pannello aperto. Operazioni progetto elenca Esporta, Importa, password, poi Nuovo sito e Chiudi progetto.
+**Windows.** La barra laterale misura 208 dp e mostra le icone delle destinazioni. È estesa da 1200 dp di finestra; sotto tale soglia usa una rail da 104 dp con cinque accessi, indipendentemente dall’apertura dell’editor. Operazioni progetto elenca Esporta, Importa, password, poi Nuovo sito e Chiudi progetto.
 
 Le scorciatoie Windows mantengono le associazioni: `Ctrl+1` Dispositivi, `Ctrl+2` Rack, `Ctrl+3` Modelli, `Ctrl+4` Mappa, `Ctrl+5` Credenziali, `Ctrl+6` Allegati, `Ctrl+7` Cablaggio, `Ctrl+8` Rete, `Ctrl+9` Alimentazione.
 
@@ -63,7 +63,7 @@ Gli elenchi nominali e i selettori usano il nome nella lingua corrente per ordin
 
 ## Editor e configuratori
 
-Ogni editor ha un titolo operativo, ad esempio Aggiungi dispositivo, Modifica dispositivo · nome o Configura porte · nome. Intestazione e azioni restano separate dal corpo scorrevole. Il salvataggio usa Aggiungi, Salva modifiche o Applica secondo l'operazione; Annulla modifiche chiude la bozza, mentre l'annullamento dell'ultima operazione resta un comando distinto.
+Ogni editor ha un titolo operativo, ad esempio Aggiungi dispositivo, Modifica dispositivo · nome o Configura porte · nome. Intestazione compatta e azioni Salva/Annulla restano separate dal corpo scorrevole. Form testuali centrati entro 640 dp; disegni tecnici a larghezza disponibile. Margini pagina 16/24 dp, campi distanti 16 dp e gruppi 24 dp. Il salvataggio usa Aggiungi, Salva modifiche o Applica secondo l'operazione; Annulla modifiche chiude la bozza, mentre l'annullamento dell'ultima operazione resta un comando distinto.
 
 Le spaziature sono 8 dp fra elementi collegati, 16 dp fra campi e 24 dp fra sezioni; i margini sono 16 dp su Android e 24 dp negli editor desktop. Filtri e azioni vanno a capo quando necessario. I configuratori della mappa usano gli stessi contenitori degli altri editor.
 

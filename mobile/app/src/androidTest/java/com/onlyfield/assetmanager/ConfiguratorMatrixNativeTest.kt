@@ -48,7 +48,7 @@ class ConfiguratorMatrixNativeTest {
         hardware = HardwareSpec(portGroups = DevicePresets.forType("switch")!!.result(mapOf("ports" to "48", "uplinks" to "0")).groups))
         .let { it.copy(ports = HardwareConfigurator.ports(it.hardware.portGroups, it.id)) }
 
-    @Test fun occupiedPortFooterControlsNeverOverlap() {
+    @Test fun portActionsRemainReachableAndFooterControlsNeverOverlap() {
         val sw = device("SW-MATRIX")
         val peer = device("SW-PEER")
         val initial = Project(name = "Isolated footer matrix", createdEpochMs = 1, updatedEpochMs = 1,
@@ -68,7 +68,10 @@ class ConfiguratorMatrixNativeTest {
         displays.forEach { d -> listOf(false, true).forEach { details ->
             rule.runOnIdle { display.value = d; showDetails = details }
             snapshot("footer-${d.name}-details-$details")
-            val keys = listOf("quick.photoPort", "quick.photoCable", "quick.insertPassage", "quick.disconnect", "ux.close") +
+            listOf("quick.photoPort", "quick.photoCable", "quick.insertPassage", "quick.disconnect").forEach { key ->
+                rule.onNode(hasText(i18n.text(key)) and hasClickAction()).performScrollTo().assertIsDisplayed()
+            }
+            val keys = listOf("ux.close") +
                 if (details) listOf("quick.details") else emptyList()
             val buttons = keys.map { key ->
                 rule.onNode(hasText(i18n.text(key)) and hasClickAction()).assertIsDisplayed().fetchSemanticsNode().boundsInRoot
@@ -124,7 +127,7 @@ class ConfiguratorMatrixNativeTest {
             click("visual.editLayout")
             rule.onNodeWithContentDescription("P5: Libera").performScrollTo().performClick()
             rule.onNodeWithContentDescription("P6: Libera").performScrollTo().performClick()
-            rule.onNodeWithText("‹ " + i18n.text("quick.back")).assertIsDisplayed().performClick()
+            rule.onNodeWithText(i18n.text("quick.back")).assertIsDisplayed().performClick()
             snapshot("discard-${d.name}")
             fixedAction("ux.cancelChanges").performClick()
             rule.runOnIdle { assertEquals(committed, project.value) }
@@ -153,19 +156,19 @@ class ConfiguratorMatrixNativeTest {
         displays.forEach { d ->
             rule.runOnIdle { display.value = d; project.value = original; photos.clear(); generation++ }
             snapshot("occupied-${d.name}")
-            fixedAction("quick.photoPort").performClick()
-            fixedAction("quick.photoCable").performClick()
+            scrollAction("quick.photoPort").performClick()
+            scrollAction("quick.photoCable").performClick()
             assertEquals(listOf(AttachmentTargetType.PORT to sw.ports.first().id, AttachmentTargetType.CABLE to original.cables.single().id), photos)
             rule.onNodeWithText(i18n.text("config.traceTitle")).performScrollTo().assertIsDisplayed()
             rule.onNode(hasText("SW-PEER") and hasText("P1")).performScrollTo().assertIsDisplayed()
             snapshot("path-${d.name}")
-            rule.onAllNodesWithText(i18n.text("quick.disconnect")).onLast().assertIsDisplayed().performClick()
+            scrollAction("quick.disconnect").performClick()
             fixedAction("text.18c9d912a210").performClick()
             assertEquals(original, project.value)
-            fixedAction("quick.disconnect").performClick()
+            scrollAction("quick.disconnect").performClick()
             rule.onAllNodesWithText(i18n.text("quick.disconnect")).onLast().assertIsDisplayed().performClick()
             rule.runOnIdle { assertTrue(project.value.cables.isEmpty()) }
-            fixedAction("quick.connectTo").performClick()
+            scrollAction("quick.connectTo").performClick()
             rule.onNodeWithText("SW-PEER").performScrollTo().performClick()
             rule.onNodeWithContentDescription("P48: Libera").performScrollTo().performClick()
             rule.onNode(hasText(i18n.text("quick.continueNext")) and isToggleable())
@@ -259,6 +262,7 @@ class ConfiguratorMatrixNativeTest {
     }
 
     private fun click(key: String) = rule.onNodeWithText(i18n.text(key)).performScrollTo().performClick()
+    private fun scrollAction(key: String): SemanticsNodeInteraction = rule.onNodeWithText(i18n.text(key)).performScrollTo().assertIsDisplayed()
     private fun fixedAction(key: String): SemanticsNodeInteraction = rule.onNodeWithText(i18n.text(key)).assertIsDisplayed()
     private fun snapshot(name: String, root: SemanticsMatcher = isDialog()) {
         if (InstrumentationRegistry.getArguments().getString("matrixEvidence") != "true") return

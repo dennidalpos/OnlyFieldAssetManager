@@ -12,7 +12,6 @@ import com.onlyfield.assetmanager.core.model.*
 import com.onlyfield.assetmanager.configurator.map.MapActions
 import com.onlyfield.assetmanager.configurator.map.MapWorkspace
 import com.onlyfield.assetmanager.configurator.map.arc
-import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.pc.ui.FloorHomeSection
 import com.onlyfield.assetmanager.pc.ui.CredentialsSection
@@ -40,7 +39,7 @@ class FloorMapUiTest {
         val node = rule.onNodeWithTag("floor-map")
         val start = viewport(node).screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
         node.performTouchInput { click(start) }
-        rule.onNode(hasTestTag("map-detail") and hasAnyDescendant(hasText("SW-01"))).assertIsDisplayed()
+        rule.onNode(hasTestTag("map-summary") and hasAnyDescendant(hasText("SW-01"))).assertIsDisplayed()
         rule.runOnIdle { assertEquals(0, saves) }
         // The bottom pane shrinks the map on narrow windows: recompute the node position.
         val moved = viewport(node).screen(MapPoint(.3f, .4f)).let { Offset(it.x, it.y) }
@@ -51,13 +50,15 @@ class FloorMapUiTest {
             assertTrue(p.floorplanPlacements.single().yRatio > .4f)
         }
     }
-    @Test fun selectedObjectHasVisibleConfirmedTrash() {
+    @Test fun selectedObjectHasSecondaryConfirmedTrash() {
         var trashed: ObjectRef? = null
         rule.setContent { MaterialTheme { Box(Modifier.size(800.dp, 600.dp)) {
             MapWorkspace(initial, area.id, null, Messages(), MapActions({ _, _ -> }, { _, _ -> }, { _, _ -> }, trash = { trashed = it }))
         } } }
         val node = rule.onNodeWithTag("floor-map")
         node.clickAt(viewport(node), MapPoint(.3f, .4f))
+        rule.onNodeWithText("Espandi").performClick()
+        rule.onNodeWithText("Altre azioni").performClick()
         rule.onNodeWithText("Sposta nel cestino").assertIsDisplayed().performClick()
         rule.onNodeWithText("Spostare «SW-01» nel cestino?").assertIsDisplayed()
         rule.onAllNodesWithText("Sposta nel cestino").filterToOne(hasAnyAncestor(isDialog())).performClick()
@@ -102,9 +103,12 @@ class FloorMapUiTest {
             rule.onNodeWithText("Modem").assertIsDisplayed()
             rule.onNodeWithText("Annulla").performClick()
             rule.runOnIdle { assertEquals(1, state.project!!.sites.first().devices.size) }
-            rule.onNodeWithText("› BU-A").performClick()
+            rule.onNodeWithText("BU-A / Terra").performClick()
+            rule.onNodeWithText("BU-A").performClick()
             rule.onNodeWithText("Primo · 0 oggetti").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
+            rule.onNodeWithText("BU-A / Primo").performClick()
+            rule.onNodeWithText("BU-A").performClick()
             rule.onNodeWithText("Sito").performClick()
             rule.onNodeWithText("Aggiungi sede").performClick()
             rule.onNodeWithText("Nome *").performTextInput("BU-C")
@@ -154,13 +158,16 @@ class FloorMapUiTest {
         canvas.clickAt(viewport(canvas), middle(MapPoint(.2f, .5f), MapPoint(.8f, .5f)))
         rule.onNodeWithText("2 cavi", substring = true).assertIsDisplayed()
         rule.onNodeWithText("INT").assertDoesNotExist()
+        rule.onNodeWithText("Espandi").performClick()
         rule.onNodeWithText("C2").performScrollTo().performClick()
         rule.onNodeWithText("Modifica cavo").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(c2.id, opened) }
+        rule.onNodeWithText("Riduci").performClick()
         // Opening the rack shows the internal cable between its children.
         canvas.clickAt(viewport(canvas), MapPoint(.2f, .5f))
-        rule.onNodeWithText("‹ Indietro").assertIsDisplayed()
+        rule.onNodeWithText("Indietro").assertIsDisplayed()
         canvas.clickAt(viewport(canvas), middle(MapPoint(.5f, .25f), MapPoint(.5f, .75f)))
+        rule.onNodeWithText("Espandi").performClick()
         rule.onNodeWithText("INT").performScrollTo().performClick()
         rule.onNodeWithText("Modifica cavo").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(internal.id, opened) }
@@ -180,13 +187,15 @@ class FloorMapUiTest {
         } } }
         val canvas = rule.onNodeWithTag("floor-map")
         canvas.clickAt(viewport(canvas), MapPoint(.3f, .4f))
+        rule.onNodeWithText("Espandi").performClick()
         rule.onNodeWithText("→ SW-05 · Nord 1 · BU Nord").performScrollTo().performClick()
         rule.onNodeWithText("C9").performScrollTo().performClick()
         rule.onNodeWithText("Estremità remota: SW-05 · Nord 1 · BU Nord").assertExists()
         rule.onNodeWithText("Vai a SW-05").performScrollTo().performClick()
         rule.runOnIdle { assertEquals(north.id, shownArea); assertEquals(remote.id, focus?.id) }
         // Arrival opens the rack and selects the device.
-        rule.onNodeWithText("‹ Indietro").assertIsDisplayed()
+        rule.onNodeWithText("Indietro").assertIsDisplayed()
+        rule.onNodeWithText("Espandi").performClick()
         rule.onNode(hasTestTag("map-detail") and hasAnyDescendant(hasText("SW-05"))).assertIsDisplayed()
     }
 
@@ -200,6 +209,7 @@ class FloorMapUiTest {
         } } }
         val canvas = rule.onNodeWithTag("floor-map")
         canvas.clickAt(viewport(canvas), MapPoint(.3f, .4f))
+        rule.onNodeWithText("Espandi").performClick()
         rule.onNodeWithText("Altri dettagli ▾").performScrollTo().performClick()
         rule.onNodeWithText("Collegamenti logici (2)").performScrollTo().assertIsDisplayed()
         rule.onNodeWithText("verso Sede B", substring = true).assertExists()
@@ -235,7 +245,7 @@ class FloorMapUiTest {
         } } }
         val node = rule.onNodeWithTag("floor-map")
         node.clickAt(viewport(node), arc(MapPoint(.4f, .5f), MapPoint(.6f, .5f)).let { it[it.size / 2] })
-        rule.onNodeWithText("C1").performScrollTo().performClick()
+        rule.onNodeWithText("C1").assertIsDisplayed()
         rule.onNodeWithText("Modifica cavo").assertIsDisplayed()
         val end = viewport(node).screen(MapPoint(.6f, .5f))
         node.performTouchInput { down(Offset(end.x, end.y)); moveBy(Offset(10f, 2f)); moveBy(Offset(40f, 25f)); up() }

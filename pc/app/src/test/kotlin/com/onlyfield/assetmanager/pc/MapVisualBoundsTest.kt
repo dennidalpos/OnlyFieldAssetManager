@@ -33,7 +33,7 @@ class MapVisualBoundsTest {
             MapWorkspace(project, area.id, null, Messages(), MapActions({ _, _ -> }, { _, _ -> }, { _, _ -> }), Modifier.weight(1f))
             Box(Modifier.fillMaxWidth().height(60.dp).background(sentinel).testTag("outside-map"))
         } } }
-        repeat(6) { onNodeWithText("+").performClick() }
+        repeat(6) { onNodeWithContentDescription("Ingrandisci mappa").performClick() }
         onNodeWithTag("floor-map").performTouchInput { swipe(Offset(5f, 5f), Offset(350f, 300f)) }
         val image = onRoot().captureToImage()
         val pixels = image.toPixelMap()

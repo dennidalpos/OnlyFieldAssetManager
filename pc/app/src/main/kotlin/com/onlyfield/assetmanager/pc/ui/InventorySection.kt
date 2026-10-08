@@ -124,7 +124,7 @@ fun InventorySection(
 
         when {
             project.sites.isEmpty() -> EmptyState(i18n.text("text.d07b43aa8cb1"))
-            index.devices.isEmpty() -> EmptyState(i18n.text("text.acc21f707eb1"), actionLabel = i18n.text("text.8650e4573818"), onAction = { creating = true })
+            index.devices.isEmpty() -> EmptyState(i18n.text("text.acc21f707eb1"))
             filtered.isEmpty() -> EmptyState(i18n.text("text.4e750f66126c"), actionLabel = i18n.text("text.c4483e052140"), onAction = {
                 query = ""; categoryFilter = null; areaFilter = null; statusFilter = null
             })
@@ -237,7 +237,7 @@ private fun DeviceDialog(
 ) {
     val i18n = LocalMessages.current
     var draft by remember(LocalDetailSlot.current?.editorVersion, device) { mutableStateOf(initial ?: inventoryDeviceDraft(project, device)) }
-    EditPanel(title = configuratorTitle(project, draft, i18n, initialSection), confirmLabel = configuratorAction(project, draft, i18n), onDismiss = onDismiss,
+    EditPanel(title = configuratorTitle(project, draft, i18n, initialSection), wideContent = true, confirmLabel = configuratorAction(project, draft, i18n), onDismiss = onDismiss,
         validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), width = 800.dp,
         onConfirm = { onSave(draft.apply(project, i18n), configuratorTitle(project, draft, i18n)) }) {
         ObjectFields(project, draft, initialSection) { draft = it }

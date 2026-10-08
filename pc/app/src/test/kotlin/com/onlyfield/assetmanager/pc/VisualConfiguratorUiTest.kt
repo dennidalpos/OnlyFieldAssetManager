@@ -45,7 +45,7 @@ class VisualConfiguratorUiTest {
 
     @Test fun cancellingDiscardsTheStagedLayout() {
         open(); reorder()
-        rule.onNodeWithText("‹ Indietro").performClick()
+        rule.onNodeWithText("Indietro").performClick()
         rule.onNodeWithText("Annullare le modifiche?").assertIsDisplayed()
         rule.onNodeWithText("Annulla modifiche").performClick()
         rule.runOnIdle { assertEquals(original, state.value) }

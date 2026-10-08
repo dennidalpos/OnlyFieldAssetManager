@@ -33,7 +33,8 @@ class ConfiguratorUiTest {
         val p = Project(name = "Test", createdEpochMs = 1, updatedEpochMs = 1, sites = listOf(Site(name = "BU", devices = listOf(device))))
         var selected: String? = null
         rule.setContent { MaterialTheme { PortPanel(PortLogic.panel(p, device), Messages(), onClick = { selected = it.port.id }) } }
-        rule.onAllNodes(hasClickAction()).assertCountEquals(28)
+        rule.onAllNodes(hasClickAction() and hasContentDescription("Libera", substring = true)).assertCountEquals(28)
+        rule.onNodeWithText("Legenda").assertHasClickAction()
         rule.onNodeWithContentDescription("P1: Libera").performClick()
         rule.runOnIdle { assertEquals(device.ports.first().id, selected) }
         rule.onAllNodes(hasContentDescription("Libera", substring = true)).assertCountEquals(28)

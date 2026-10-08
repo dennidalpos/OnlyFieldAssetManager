@@ -1,6 +1,6 @@
 # Evidenze e residui
 
-Aggiornato al 5 ottobre 2026 dopo confronto con il codice e il tracker.
+Aggiornato all’8 ottobre 2026; completamenti storici sotto, lavoro aperto nel tracker.
 
 ## Evidenze disponibili
 
@@ -13,11 +13,10 @@ Aggiornato al 5 ottobre 2026 dopo confronto con il codice e il tracker.
 
 | ID | Stato | Evidenza richiesta |
 | --- | --- | --- |
-| RES-13 | Aperto | Checklist foto, scansione, multitouch e lettore USB su hardware reale. |
-| RES-20 | Aperto | Prova manuale Esporta e apri Windows con programmi esterni. |
-| RES-22 | Aperto | Memoria e tempi degli import grandi su hardware. |
-| RES-23 | Aperto | Pannello occupato Windows, focus/input e stampa nativa. |
-| RES-19 | Parziale | Emulatore eseguito (UX-01, 02, 03, 05, 06); restano TalkBack, combinazioni mancanti, conferma import con molti avvisi e moto g86. |
+| RES-13 | Parziale | Fotocamera, scansione e gesti reali; interruzione improvvisa durante scrittura. |
+| RES-19 | Parziale | Matrice Android integrale, rotazione reale e TalkBack audio/focus. |
+| RES-23 | Parziale | Matrice Windows nativa, input/focus e operazioni ancora non collaudate. |
+| RES-24 | Aperto | Residui operativi e pulizia controllata descritti nel tracker. |
 
 Il dettaglio operativo e il criterio di chiusura sono in [PROJECT_STATUS.json](PROJECT_STATUS.json). La checklist hardware e in [docs/testing/hardware-checklist.md](docs/testing/hardware-checklist.md).
 
@@ -1119,3 +1118,17 @@ Recovery fisico moto g86 API 36: prepare/recover OK (1 test) per fase, cinque sc
 Ripresa: chiedere quale progetto/piano di prova è aperto in Android > Mappa (domanda precedente senza risposta), guidare pinch/panoramica TOUCH-01, poi TalkBack e matrice UX. Non conteggiare la domanda come prova superata. Fotografie reali rinviate; lettori USB e scanner esterni esclusi. Riavvio normale non chiude perdita improvvisa/arresto forzato. Windows: conservare fixture AUD-44 protetta dalla password dell’utente, mai acquisita; errata/riprova, guasto cambio password, focus/ripristino/fusione e guasto stampa restano tracciati.
 
 Risorse locali non versionate sotto build/: report res13-reboot-20261008, res19-native/complete-evidence-20261008, res23-editors-20261008 e aud44-windows; backup telefono conservati. RES-24 elenca inventari e pulizie storiche/nuove respinte dal controllo automatico; non ritentate. Non eliminare app/demo/media/chiavi/backup per ottenere una working tree pulita. Il risultato del commit/push è verificabile nella cronologia Git della consegna.
+
+## Revisione UI/UX mappa — 8 ottobre 2026
+
+Implementati UX-01/02/03: navigazione adattiva stabile, contesto mappa di sessione, riepilogo espandibile e pannello laterale, componenti/spaziature condivisi, form testuali entro 640 dp, azioni secondarie e icone accessibili. Database, formato `.ofam`, regole di salvataggio e dipendenze invariati. Eliminati i controlli e lo stato locale sostituiti.
+
+Verifica: 589 test JVM/Compose verdi (128 core, 96 exchange, 242 PC, 123 Android), seguiti dalle regressioni mirate dei ritocchi finali. Build APK debug/test riuscita. Nove scenari nativi distinti verdi su moto g86 API 36: mappa adattiva, tastiera, cinque flussi configuratore e due cancellazioni con errore/riprova; dimensioni simulate tramite LocalDensity. Il footer fuori finestra è stato riprodotto e corretto usando i limiti reali della finestra Android; la sola gestione degli inset non bastava con Compose 1.7.5.
+
+Evidenze, fonti e limiti: [audit UI/UX](docs/ui-ux-audit-2026-10-08.md). Rapporti ignorati in `build/reports/ux-native-20261008`, screenshot PC in `pc/app/build/reports/ux` e `ux-map`. Nessuna chiusura implicita di RES-19/23: restano TalkBack, rotazione reale, tablet fisici e collaudo integrale AppRoot/EXE. Commit/push su main richiesti dall’utente per la consegna.
+
+Chiusura del collaudo UI/UX: ultima regressione footer `OK (1 test)`, numero porta separato dal simbolo a scala 1,3; screenshot verificato. Solo APK test disinstallato (`Success`), MainActivity riaperta (`Status: ok`). Database/WAL identici alle precedenti evidenze hardware; indice SQLite e marcatore profilo non trattati come dati immutabili. Report in `build/reports/ux-native-20261008`.
+
+## Passaggio di consegne UI/UX — 8 ottobre 2026
+
+Tracker aggiornato per cambio sessione: nessuna implementazione UI/UX aperta, residui RES-13/19/23/24 conservati. Ripartire dall’audit UI/UX e dai criteri del tracker, senza ripetere i test già verdi salvo nuovi problemi. Report locali ignorati da Git in `build/reports/ux-native-20261008` e screenshot in `pc/app/build/reports/ux` e `ux-map`; conservarli insieme alle fixture precedenti. APK test rimosso e app principale riaperta. L’utente ha richiesto commit e push su main; SHA ed esito remoto verificabili in Git. Questa richiesta non autorizza commit/push delle attività della prossima sessione.

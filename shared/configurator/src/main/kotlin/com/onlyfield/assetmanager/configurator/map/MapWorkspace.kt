@@ -1,36 +1,24 @@
 package com.onlyfield.assetmanager.configurator.map
 
 import com.onlyfield.assetmanager.configurator.theme.Button
-import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.configurator.OverflowActions
 import com.onlyfield.assetmanager.configurator.PaneAction
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import com.onlyfield.assetmanager.configurator.SymbolIcons
+import com.onlyfield.assetmanager.configurator.SymbolButton
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.heading
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.configurator.ConfiguratorPage
-import com.onlyfield.assetmanager.configurator.PortPanel
 import com.onlyfield.assetmanager.core.display.ProjectIndex
-import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
-import com.onlyfield.assetmanager.core.forms.PortLogic
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
 
@@ -58,7 +46,7 @@ fun editDraft(project: Project, ref: ObjectRef, areaId: String, i18n: Messages):
 
 /**
  * Floor map with drill-down into containers and an adaptive, non-modal detail pane:
- * side panel from 840 dp (expanded window class), bottom panel below.
+ * side panel from 840 dp; expandable selection card below.
  */
 @Composable
 fun MapWorkspace(
@@ -68,22 +56,34 @@ fun MapWorkspace(
     i18n: Messages,
     actions: MapActions,
     modifier: Modifier = Modifier,
-    /** Host commands (scan, floor plan…): inline on wide windows, in the ⋮ menu on phones. */
+    /** Secondary map tools. */
     tools: List<PaneAction> = emptyList(),
     media: @Composable (ObjectRef) -> Unit = {},
     /** Object to open and select on arrival, e.g. after "Go to" from another floor. */
     focus: ObjectRef? = null,
+    state: FloorUiState = remember(project.id, areaId) { FloorUiState() },
+    onFocusHandled: () -> Unit = {},
+    onSearch: (() -> Unit)? = null,
+    onLeaveFloor: (() -> Unit)? = null,
+
 ) {
     val hierarchy = remember(project) { HierarchyIndex(project) }
     val arrival = focus?.takeIf { hierarchy.areaId(it) == areaId }
-    var path by remember(areaId, arrival) { mutableStateOf(arrival?.let { hierarchy.ancestors(it).reversed() }.orEmpty()) }
+    var path by state::path
+    LaunchedEffect(arrival) {
+        if (arrival != null) {
+            path = hierarchy.ancestors(arrival).reversed()
+            state.selection = MapSelection.Node(arrival)
+            onFocusHandled()
+        }
+    }
     // Keep levels only while each is still a child of the previous one on this floor (deleted or moved levels are dropped).
     val validPath = path.withIndex().takeWhile { (i, ref) ->
         hierarchy.parents[ref] == path.getOrNull(i - 1) && (i > 0 || hierarchy.areaId(ref) == areaId)
     }.map { it.value }
     if (validPath != path) SideEffect { path = validPath }
     val container = validPath.lastOrNull()
-    var selection by remember(areaId, arrival) { mutableStateOf<MapSelection?>(arrival?.let { MapSelection.Node(it) }) }
+    var selection by state::selection
     val scene = remember(project, areaId, container) { if (container == null) MapScene.area(project, areaId) else MapScene.container(project, container) }
     // Selections that the current view no longer shows are dropped.
     when (val s = selection) {
@@ -92,34 +92,36 @@ fun MapWorkspace(
         null -> Unit
     }
     // Narrow windows hide the pane until something is selected; "List" opens it on demand.
-    var listOpen by remember(areaId) { mutableStateOf(false) }
+    var listOpen by state::listOpen
 
+    val siteName = project.sites.firstOrNull { site -> site.areas.any { it.id == areaId } }?.name.orEmpty()
     val floorName = remember(project, areaId) { ProjectIndex(project).area(areaId)?.name } ?: i18n.text("map.floor")
-    fun go(levels: List<ObjectRef>) { path = levels; selection = null }
+    fun go(levels: List<ObjectRef>) { path = levels; selection = null; state.expanded = false; listOpen = false }
     fun open(ref: ObjectRef) = go(validPath + ref)
     val canvas: @Composable (Modifier) -> Unit = { m ->
         MapCanvas(scene, if (container == null) image else null, selection, i18n,
-            onSelect = { selection = it }, onOpen = { open(it.ref) },
+            onSelect = { selection = it; state.expanded = false }, onOpen = { open(it.ref) },
             onMove = { ref, p -> actions.update(ObjectMap.place(project, areaId, ref.type, ref.id, p), i18n.text("text.6f590fa5345d")) },
             onRoute = { link, pts -> scene.route(project, link, pts)?.let { actions.update(ObjectMap.saveRoute(project, it), i18n.text("text.e020099624b5")) } },
-            onLongPress = { actions.add(null, it) }, modifier = m)
+            onLongPress = { actions.add(container, it) }, modifier = m, camera = state.camera(container))
     }
-    val pane: @Composable (Modifier) -> Unit = { m ->
+    val latestPane by rememberUpdatedState<@Composable (Modifier) -> Unit>({ m ->
         MapDetailPane(project, scene, selection, i18n, actions, onSelect = { selection = it }, onOpen = ::open, media = media, modifier = m, hierarchy = hierarchy)
-    }
+    })
+    val pane = remember { movableContentOf<Modifier> { m -> latestPane(m) } }
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         val levels = listOf(floorName) + validPath.map { ObjectHierarchy.name(project, it, i18n) }
         // Back plus the current level; the levels above sit in a menu instead of a scrolling trail.
         val trail: @Composable RowScope.() -> Unit = {
-            if (validPath.isNotEmpty()) TextButton(onClick = { go(validPath.dropLast(1)) }) { Text("‹ " + i18n.text("map.back")) }
+            if (validPath.isNotEmpty()) TextButton(onClick = { go(validPath.dropLast(1)) }) { Icon(SymbolIcons.back, null); Text(i18n.text("map.back")) }
             Box(Modifier.weight(1f)) {
                 var open by remember { mutableStateOf(false) }
-                if (validPath.isEmpty()) Text(levels.last(), style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 8.dp))
-                else TextButton(onClick = { open = true }) {
-                    Text(levels.last(), maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                    Text(" ▾", Modifier.clearAndSetSemantics {})
+                TextButton(onClick = { open = true }) {
+                    Text((listOf(siteName) + levels).filter { it.isNotBlank() }.joinToString(" / "), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Icon(SymbolIcons.expand, null)
                 }
                 DropdownMenu(open, { open = false }) {
+                    onLeaveFloor?.let { leave -> DropdownMenuItem(text = { Text(siteName) }, onClick = { open = false; leave() }) }
                     levels.dropLast(1).forEachIndexed { i, name ->
                         DropdownMenuItem(text = { Text("  ".repeat(i) + MapStyle.shortName(name, 32)) }, onClick = { open = false; go(validPath.take(i)) })
                     }
@@ -131,26 +133,40 @@ fun MapWorkspace(
             val narrow = maxWidth < 840.dp
             if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 trail()
+                onSearch?.let { search -> SymbolButton(SymbolIcons.search, i18n.text("search.action"), search) }
                 Button(onClick = { actions.add(container, null) }) { Text(addLabel) }
-                if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen }, label = { Text(i18n.text("map.list")) })
-                tools.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
+                if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen; state.expanded = listOpen }, label = { Text(i18n.text("map.list")) })
+                OverflowActions(i18n, tools)
             } else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { trail(); OverflowActions(i18n, tools) }
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { trail(); onSearch?.let { search -> SymbolButton(SymbolIcons.search, i18n.text("search.action"), search) }; OverflowActions(i18n, tools) }
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Button(onClick = { actions.add(container, null) }, modifier = Modifier.weight(1f)) { Text(addLabel) }
-                    FilterChip(selected = listOpen, onClick = { listOpen = !listOpen }, label = { Text(i18n.text("map.list")) })
+                    FilterChip(selected = listOpen, onClick = { listOpen = !listOpen; state.expanded = listOpen }, label = { Text(i18n.text("map.list")) })
                 }
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+            SideEffect { state.wideDetails = maxWidth >= 840.dp }
             val showPane = selection != null || container != null || listOpen || maxWidth >= 840.dp
-            val paneMax = maxHeight * .45f
-            if (maxWidth >= 840.dp) Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (maxWidth >= 840.dp && (selection != null || container != null || listOpen)) SideEffect { state.expanded = true }
+            if (maxWidth >= 840.dp) Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 canvas(Modifier.weight(1f).fillMaxHeight())
                 pane(Modifier.width(360.dp).fillMaxHeight())
-            } else Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                canvas(Modifier.fillMaxWidth().weight(1f))
-                if (showPane) pane(Modifier.fillMaxWidth().heightIn(max = paneMax))
+            } else Box(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (!state.expanded || !showPane) canvas(Modifier.fillMaxWidth().weight(1f))
+                    if (showPane && !state.expanded) {
+                        Column(Modifier.fillMaxWidth().heightIn(max = this@BoxWithConstraints.maxHeight * .4f).verticalScroll(rememberScrollState())) {
+                            MapSummary(project, scene, selection, i18n, actions, { selection = null; listOpen = false }, { state.expanded = true })
+                        }
+                    }
+                }
+                if (showPane && state.expanded) Surface(Modifier.fillMaxSize()) {
+                    Column(Modifier.fillMaxSize()) {
+                        TextButton(onClick = { state.expanded = false }, modifier = Modifier.align(Alignment.End)) { Text(i18n.text("ux.reduce")) }
+                        pane(Modifier.fillMaxWidth().weight(1f))
+                    }
+                }
             }
         }
     }

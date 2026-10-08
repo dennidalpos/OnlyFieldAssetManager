@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager
 
+import android.graphics.Bitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -67,9 +69,19 @@ class FailedDeletionNativeTest {
             rule.setContent {
                 CompositionLocalProvider(LocalMessages provides vm.i18n) { AppRoot(vm) { error("Unexpected exit") } }
             }
+            if (InstrumentationRegistry.getArguments().getString("matrixEvidence") == "true") {
+                val output = File(checkNotNull(context.getExternalFilesDir(null)), "adaptive-ui-evidence").apply { check(mkdirs() || isDirectory) }
+                val bitmap = rule.onRoot().captureToImage().asAndroidBitmap()
+                try { File(output, "navigation-$kind.png").outputStream().use { check(bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)) } }
+                finally { bitmap.recycle() }
+            }
+            rule.onNode(hasText(if (kind == "DEVICE") "Dispositivi" else "Rack") and
+                SemanticsMatcher.keyIsDefined(androidx.compose.ui.semantics.SemanticsProperties.Selected))
+                .assertIsDisplayed().assertIsSelected()
             fun click(key: String) = rule.onAllNodesWithText(vm.i18n.text(key), useUnmergedTree = true).onLast().performClick()
             fun openDelete() {
-                rule.onNodeWithContentDescription(vm.i18n.text("text.dd41b3275173")).performClick()
+                rule.onNodeWithContentDescription(vm.i18n.text("ux.more")).performClick()
+                rule.onNodeWithText(vm.i18n.text("text.dd41b3275173")).performClick()
             }
             openDelete()
             click("text.18c9d912a210")

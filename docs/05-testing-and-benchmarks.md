@@ -824,3 +824,7 @@ Sul moto g86 API 36, l’utente ha riavviato dal menu e sbloccato il telefono. B
 Root recovery assente dopo il finally del test; database/WAL/chiavi principali e due backup storici SHA-256 invariati. Rimosso solo com.onlyfield.assetmanager.test (Success); hash principali ancora invariati prima della riapertura di MainActivity (Status: ok). Report boot-before/after, prepare/recover, data-after-recover/cleanup e run.json in build/reports/res13-reboot-20261008.
 
 Riavvio normale con journal pendenti completato e rimosso dalle attività aperte. Restano arresto forzato/perdita improvvisa di alimentazione durante scrittura, fotocamera e gesti; questa prova non verifica UX AppRoot o TalkBack. Fonte primaria [Android Keystore](https://developer.android.com/privacy-and-security/keystore), consultata l’8 ottobre; esiti specifici dal test nativo.
+
+## Revisione UI/UX — 8 ottobre 2026
+
+Matrice mappa 360/412/600/840/1024 dp con entrambi i temi e testo 1,0/1,3 verificata su host PC e Android isolato. Footer porte e tastiera Android verificati; cancellazioni con errore/riprova conservate. Nove scenari nativi distinti verdi; dimensioni tramite LocalDensity. Vedere [esiti, comandi e limiti](ui-ux-audit-2026-10-08.md). Restano aperti RES-19/23 per TalkBack, rotazione reale, tablet fisici e intera AppRoot/EXE.

@@ -5,7 +5,6 @@ import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -77,10 +76,9 @@ fun FloorHomeSection(state: DesktopAppState) {
         // Ctrl+F opens the project search from the map.
         if (e.type == KeyEventType.KeyDown && e.isCtrlPressed && e.key == Key.F) { searching = true; true } else false
     }, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (area == null) Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = { state.selectedSiteId = null; state.selectedAreaId = null }) { Text(project.name) }
             site?.let { TextButton(onClick = { state.selectedAreaId = null }) { Text("› ${it.name}") } }
-            area?.let { Text("› ${it.name}") }
             Spacer(Modifier.weight(1f))
             OutlinedButton(onClick = { topology = true }) { Text(i18n.text("topology.title")) }
             OutlinedButton(onClick = { searching = true }) { Text(i18n.text("search.action")) }
@@ -111,9 +109,11 @@ fun FloorHomeSection(state: DesktopAppState) {
                 },
                 photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
             ), Modifier.weight(1f), tools = listOf(
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("topology.title")) { topology = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { selectingPlan = true },
-                ), focus = focus, media = { ref ->
+                ), state = state.mapUiState.floor(project, area.id), focus = focus, onFocusHandled = { focus = null },
+                onSearch = { searching = true }, onLeaveFloor = { state.selectedAreaId = null }, media = { ref ->
                 val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
                 // Thumbnails wrap so the pane never scrolls sideways.
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {

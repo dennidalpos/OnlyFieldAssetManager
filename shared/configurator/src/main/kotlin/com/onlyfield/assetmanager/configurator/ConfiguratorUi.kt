@@ -61,7 +61,7 @@ fun ConfiguratorSection(
                 }
             }
             if (error != null) Text("!", color = MaterialTheme.colorScheme.error, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp).clearAndSetSemantics {})
-            Text(if (expanded) "▴" else "▾")
+            Icon(if (expanded) SymbolIcons.collapse else SymbolIcons.expand, null)
         }
         if (expanded && error != null) Text(error, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
         if (expanded) Column(Modifier.fillMaxWidth().padding(bottom = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp), content = content)

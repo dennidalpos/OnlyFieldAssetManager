@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.ui.components
 
+import com.onlyfield.assetmanager.configurator.SymbolIcons
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
@@ -11,12 +14,9 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -103,19 +103,17 @@ fun AppScaffold(
 
 data class MenuAction(val label: String, val destructive: Boolean = false, val onClick: () -> Unit)
 
-/** Destructive actions are a visible trash button; only the others go in the "⋮" menu. */
+/** Secondary actions, with destructive entries separated and confirmed by the caller. */
 @Composable
 fun OverflowMenu(actions: List<MenuAction>, contentDescription: String = LocalMessages.current.text("text.93f019bac960")) {
-    actions.filter { it.destructive }.forEach { a ->
-        IconButton(onClick = a.onClick) { Icon(Icons.Default.Delete, contentDescription = a.label, tint = MaterialTheme.colorScheme.error) }
-    }
-    val others = actions.filterNot { it.destructive }
-    if (others.isEmpty()) return
+    if (actions.isEmpty()) return
     var open by remember { mutableStateOf(false) }
     Box {
         IconButton(onClick = { open = true }) { Icon(Icons.Default.MoreVert, contentDescription = contentDescription) }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            others.forEach { a -> DropdownMenuItem(text = { Text(a.label) }, onClick = { open = false; a.onClick() }) }
+            actions.filterNot { it.destructive }.forEach { a -> DropdownMenuItem(text = { Text(a.label) }, onClick = { open = false; a.onClick() }) }
+            if (actions.any { it.destructive } && actions.any { !it.destructive }) HorizontalDivider()
+            actions.filter { it.destructive }.forEach { a -> DropdownMenuItem(text = { Text(a.label, color = MaterialTheme.colorScheme.error) }, onClick = { open = false; a.onClick() }) }
         }
     }
 }
@@ -136,7 +134,7 @@ fun ItemCard(
         modifier = modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it },
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
-        Row(modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(AppSpacing.content), verticalAlignment = Alignment.CenterVertically) {
             leading?.invoke()
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(title, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -176,7 +174,7 @@ fun SearchField(query: String, onChange: (String) -> Unit, placeholder: String, 
         onValueChange = onChange,
         placeholder = { Text(placeholder) },
         singleLine = true,
-        trailingIcon = if (query.isNotEmpty()) { { TextButton(onClick = { onChange("") }) { Text("✕") } } } else null,
+        trailingIcon = if (query.isNotEmpty()) { { IconButton(onClick = { onChange("") }) { Icon(SymbolIcons.close, LocalMessages.current.text("ux.clearSearch")) } } } else null,
         modifier = modifier.fillMaxWidth()
     )
 }
@@ -206,18 +204,14 @@ fun FormDialog(
 ) {
     val i18n = LocalMessages.current
 
-    AlertDialog(
+    ContentDialog(
         onDismissRequest = onDismiss,
-        title = { Text(title, style = MaterialTheme.typography.headlineSmall) },
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(
-                modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                content = content
-            )
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AppSpacing.content), content = content)
         },
         confirmButton = { Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) } }
+        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) } },
     )
 }
 
@@ -302,7 +296,7 @@ fun <T> OptionPicker(
             enabled = enabled,
             label = { Text(label) },
             placeholder = { Text(i18n.text("text.60d6013749f3")) },
-            trailingIcon = { Text("▾") },
+            trailingIcon = { Icon(SymbolIcons.expand, null) },
             isError = isError,
             supportingText = supportingText?.let { { Text(it) } },
             singleLine = true,

@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.pc.ui.components
 
+import com.onlyfield.assetmanager.configurator.SymbolIcons
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -10,10 +13,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.selected
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,12 +52,10 @@ fun ConfirmHost(content: @Composable () -> Unit) {
             title = { Text(req.title) },
             text = { Text(req.message) },
             confirmButton = {
-                Button(
+                TextButton(
                     onClick = { pending = null; req.onConfirm() },
-                    colors = if (req.destructive) ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.error,
-                        contentColor = MaterialTheme.colorScheme.onError
-                    ) else ButtonDefaults.buttonColors()
+                    colors = if (req.destructive) ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
+                    else ButtonDefaults.textButtonColors()
                 ) { Text(req.confirmLabel ?: i18n.text("text.7efe336bd548")) }
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text(i18n.text("text.18c9d912a210")) } }
@@ -82,25 +79,19 @@ fun FormDialog(
 ) {
     val i18n = LocalMessages.current
 
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        BoxWithConstraints(Modifier.padding(24.dp)) {
-            Surface(Modifier.widthIn(max = width).heightIn(max = (maxHeight - 48.dp).coerceAtMost(720.dp)),
-                shape = MaterialTheme.shapes.large, tonalElevation = 6.dp) {
-                Column(Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                    Text(title, style = MaterialTheme.typography.headlineSmall)
-                    HorizontalDivider()
-                    Column(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(16.dp), content = content)
-                    HorizontalDivider()
-                    if (!confirmEnabled) Text(validationMessage ?: i18n.text("ux.completeRequired"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) }
-                        Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) }
-                    }
-                }
+    ContentDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title, style = MaterialTheme.typography.titleLarge) },
+        text = {
+            Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
+                content()
+                if (!confirmEnabled) Text(validationMessage ?: i18n.text("ux.completeRequired"), style = MaterialTheme.typography.bodySmall)
             }
-        }
-    }
+        },
+        confirmButton = { Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) } },
+        width = width,
+    )
 }
 
 /** Field that displays [error]. */
@@ -160,7 +151,7 @@ fun SectionHeader(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Column(modifier = Modifier.widthIn(min = 180.dp).weight(1f)) {
-            Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.SemiBold)
+            Text(title, style = MaterialTheme.typography.titleLarge)
             subtitle?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -177,7 +168,7 @@ fun SectionHeader(
                     } else false
                 },
                 trailingIcon = if (searchQuery.isNotEmpty()) {
-                    { TextButton(onClick = { onSearchChange("") }) { Text("✕") } }
+                    { IconButton(onClick = { onSearchChange("") }) { Icon(SymbolIcons.close, LocalMessages.current.text("ux.clearSearch")) } }
                 } else null
             )
         }
@@ -203,7 +194,7 @@ fun ItemCard(
         colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
     ) {
         FlowRow(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp).fillMaxWidth(),
+            modifier = Modifier.padding(AppSpacing.content).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -243,19 +234,17 @@ fun DeleteButton(itemName: String, onDelete: () -> Unit, label: String = LocalMe
     val i18n = LocalMessages.current
 
     val confirm = LocalConfirm.current
-    TextButton(
-        onClick = {
-            confirm(
-                ConfirmRequest(
-                    title = i18n.text("text.ab0928009332", label, itemName),
-                    message = message ?: i18n.text("text.b5f4e725fbe1"),
-                    confirmLabel = label,
-                    onConfirm = onDelete
-                )
-            )
-        },
-        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)
-    ) { Text(label) }
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(SymbolIcons.more, i18n.text("ux.more") + " · " + itemName) }
+        DropdownMenu(open, { open = false }) {
+            DropdownMenuItem(text = { Text(label, color = MaterialTheme.colorScheme.error) }, onClick = {
+                open = false
+                confirm(ConfirmRequest(i18n.text("text.ab0928009332", label, itemName),
+                    message ?: i18n.text("text.b5f4e725fbe1"), label, onConfirm = onDelete))
+            })
+        }
+    }
 }
 
 @Composable

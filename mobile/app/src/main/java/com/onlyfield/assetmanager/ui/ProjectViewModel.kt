@@ -105,6 +105,7 @@ class ProjectViewModel internal constructor(
     private var importJob: kotlinx.coroutines.Job? = null
     private var importRequest = 0L
 
+    val mapUiState = com.onlyfield.assetmanager.configurator.map.MapUiState()
     var selectedSiteId by mutableStateOf<String?>(null)
     var selectedAreaId by mutableStateOf<String?>(null)
     /** Ids opened from the project search, most recent first (session only). */
@@ -206,6 +207,7 @@ class ProjectViewModel internal constructor(
                 fail(i18n.text("text.05065b58f085"))
                 return@launchCommand
             }
+            mapUiState.clear()
             selectedSiteId = null
             selectedAreaId = null
             setProject(p)
