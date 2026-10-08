@@ -15,6 +15,7 @@ Editor offline per censire e documentare infrastrutture di rete e telecomunicazi
 - [Documenti ed export](docs/03-export-and-documents.md)
 - [Storage e interoperabilita](docs/04-desktop-storage-interop.md)
 - [Verifica](docs/05-testing-and-benchmarks.md)
+- [Seed demo e casistiche di collaudo](docs/05-testing-and-benchmarks.md#progetto-demo): 366 apparati, modelli, mappe e allegati sintetici nel pacchetto [Demo Comune](fixtures/demo/onlyfield-demo.ofam).
 - [Build e rilascio](docs/06-release-and-delivery.md)
 - [Flussi utente](docs/07-workflows.md)
 - [Mappa e planimetrie](docs/08-floor-map.md)

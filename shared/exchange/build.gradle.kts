@@ -27,7 +27,7 @@ tasks.withType<Test>().configureEach {
 }
 
 
-// Importable demo project (2 sites × 2 floors, cabled switches): fixtures/demo/onlyfield-demo.ofam
+// Municipality network and survey lab: fixtures/demo/onlyfield-demo.ofam
 tasks.register<JavaExec>("demoPackage") {
     group = "application"
     description = "Writes the demo .ofam package for manual tests."

@@ -1,8 +1,8 @@
 # Residui del repository — 5 ottobre 2026
 
-Revisione e correzioni aggiornate al 7 ottobre 2026; il nome del report conserva la data di avvio.
+Revisione e correzioni aggiornate all’8 ottobre 2026; il nome del report conserva la data di avvio.
 
-Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 7 ottobre: AUD-12–39 chiusi; restano 5 attività aperte/parziali, AUD-40 e RES-13/19/23/24 (4 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
+Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 8 ottobre: AUD-12–43 chiusi; restano 4 attività aperte/parziali, RES-13/19/23/24 (3 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
 
 ## Perimetro, fonti e limiti
 
@@ -52,7 +52,8 @@ P1: integrità dei dati o blocco del flusso operativo; intervenire prima dell’
 | P2 | AUD-37 | Picker/editor Android fuori mappa | Chiuso; 17 prove native, esiti tardivi e 502 report verdi |
 | P2 | AUD-38 | Modelli/Credenziali Windows dopo save fallito | Chiuso; dieci regressioni dialogo/pannello e 203 test verdi; EXE in RES-23 |
 | P2 | AUD-39 | Comandi specializzati e credenziali Android | Chiuso; otto prove native, 18 regressioni nuove e 530 report verdi |
-| P2 | AUD-40 | Navigazione prima della cancellazione apparato/rack Android | Aperto, da codice e non riprodotto |
+| P2 | AUD-40 | Navigazione prima della cancellazione apparato/rack Android | Chiuso; 10 regressioni JVM e due prove native con AppRoot reale |
+| P2 | AUD-41 | Serie foto Android e risultati tardivi | Chiuso; nove prove JVM mirate e cinque native con camera sintetica |
 | P3 | AUD-22 | Scaffolding, helper di test nel runtime e commenti obsoleti | Chiuso; runtime e prove ripuliti |
 | P3 | RES-24 | Risorse locali delle prove precedenti | Directory ancora presenti; nessuna rimozione tentata |
 
@@ -173,7 +174,7 @@ Riferimenti: `CoreModule` (rimosso in AUD-22), `ExchangeModule` (rimosso in AUD-
 
 Confermata la presenza locale di `build/import-benchmark`, `build/native-window-app`, `build/native-window-exports` e `build/task-verification`. Conservare `build/reports` e `build/phone-backup`. I precedenti rifiuti della pulizia automatica restano evidenze storiche: questa sessione non ha ritentato quei comandi né verificato i lock dell’emulatore. RES-24 mantiene stato e criteri precedenti.
 
-RES-13, RES-19 e RES-23 mantengono ID, prove già svolte e parti non eseguite. Dipendenze aggiunte per ripetere i collaudi interessati dopo le correzioni. Nessun test JVM sostituisce scanner/foto/USB fisici, TalkBack, matrice Android o errore nativo di stampa.
+RES-13, RES-19 e RES-23 mantengono ID, prove già svolte e parti non eseguite. Dipendenze aggiunte per ripetere i collaudi interessati dopo le correzioni. Nessun test JVM sostituisce fotocamera integrata/gesti reali, TalkBack, matrice Android o errore nativo di stampa. Lettori USB e scanner esterni esclusi dal collaudo per decisione utente del giorno 8 ottobre.
 
 ## Verifiche e riproduzioni
 
@@ -341,3 +342,54 @@ Guasto filesystem riprodotto nei cinque flussi, sia dialogo sia pannello; bozze,
 Bozze dei comandi specializzati, credenziali, import/classificazione allegato e download conservate sul guasto, con errore/riprova; callback protetti da sessione/cancellazione e durata della bozza. Otto prove native verdi e 530 report JVM/Compose senza regressioni; sorgenti sintetiche e persistenza reale, nessuna rete pubblica. Evidenze nella roadmap.
 
 AUD-40 P2, da codice e non riprodotto: le conferme di cancellazione in DeviceDetailScreen e RackDetailScreen navigano indietro prima di moveToTrash, che non comunica un esito al chiamante. Verificare repository/media isolati, permanenza nella schermata sul guasto, errore/riprova, un solo cestino, undo previsto, ritorno unico e sessione/cancellazione. Distinto dalla sostituzione/fusione corretta in AUD-39.
+
+## AUD-40 — Cancellazione apparato/rack Android — 8 ottobre 2026
+
+Riprodotto su moto g86 API 36 con guasto SQLite isolato: DEVICE/RACK rimangono nel database ma la conferma torna subito alla lista. Due prove native rosse; dieci nuove regressioni JVM riproducono anche l'errore tardivo dopo chiusura/cambio progetto (due rosse, otto verdi). Fixture sincronizzate tramite ObjectHierarchy, non dati applicativi reali.
+
+Rimossi i due back anticipati; il ritorno esistente reagisce all'oggetto assente dopo reload del commit, con controllo di progetto/destinazione. Nessuna nuova firma/callback, dipendenza, schema o formato. moveToTrash rispetta ensureActive prima di pubblicare stato/messaggi e sopprime errori di una sessione chiusa.
+
+Verifica mirata: `.\gradlew.bat :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.DeletionCommandTest --tests com.onlyfield.assetmanager.ProjectCommandTest --tests com.onlyfield.assetmanager.SpecializedCommandTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1` → BUILD SUCCESSFUL in 44s, 44 test senza fallimenti/errori/saltati. Baseline dei comandi esistenti verde prima della correzione. Dieci regressioni: guasto/riprova, doppia richiesta con un solo cestino/undo, media e collocazione rack ripristinati, ID assente, chiusura/cambio progetto, altra schermata e cancellazione ViewModel.
+
+Native: `adb -s ZY32LNCB8C install -r` per APK principale/test e `adb -s ZY32LNCB8C shell am instrument -w -r -e class com.onlyfield.assetmanager.FailedDeletionNativeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner` → **OK (2 tests), 35,168s**. AppRoot/ConfirmHost/Scaffold/snackbar reali: annullamento conferma, guasto SQLite, scheda e selezioni conservate, errore visualizzato, riprova, un solo ritorno e undo toccato nella UI; database/media verificati. L'undo attende la durata dello snackbar di errore precedente. Cache delete-save-UUID rimossa in finally, database/WAL e due backup storici SHA-256 invariati prima della riapertura. Report `build/reports/aud40-red`, `aud40-targeted`, `aud40-native` e log `aud40-*.log`.
+
+AUD-40 completato e rimosso dal tracker; restano RES-13/19/23/24. Matrici UX/TalkBack, hardware/SQLCipher/Keystore ed EXE/focus/stampa conservano i propri limiti. Fonti primarie consultate l'8 ottobre: [eventi e navigazione UI Android](https://developer.android.com/topic/architecture/ui-layer/events) e [ensureActive Kotlin](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/ensure-active.html); esiti e integrità dell'app derivano dalle prove locali.
+RES-13 (8 ottobre): recupero SQLCipher/Keystore verificato su moto g86 API 36 in due processi distinti, con database/media/chiavi avvolte isolati. Cinque scenari di commit/rollback e blocco/riprova conservano l'esito Room e i backup; test roundtrip ordinario verde. Riavvio fisico, arresto forzato e perdita di alimentazione non eseguiti. Restano fotocamera integrata (anche porta/cavo e serie), scansione tramite fotocamera e gesti; lettori USB/scanner esterni esclusi dalle prove per decisione utente. Dettagli e comandi nella roadmap; nessuna modifica al runtime.
+
+## AUD-41 — Serie foto Android e risultati tardivi — 8 ottobre 2026
+
+Durante RES-13 emerge dal codice che onPhotoResult richiama onSaved in finally, prima della fine di launchCommand. pendingCommands resta positivo e preparePhoto rifiuta lo scatto successivo. PhotoCommandTest riproduce il guasto e altri due problemi: errore/callback dopo chiusura e accettazione del risultato dopo chiusura/riapertura dello stesso progetto. Baseline MediaAdditionTest verde prima della modifica; nuova suite iniziale cinque test, tre fallimenti, XML/log in build/reports/aud41-red e aud41-red.log.
+
+La continuazione attende Job.join: soltanto dopo rilascio del comando può preparare lo scatto successivo. PendingPhoto conserva progetto/allegato/file/sessione; errori e callback sono vincolati alla sessione ancora valida. Cancellazione rilanciata e file non committati rimossi; PhotoCapture ignora la continuazione dopo uscita dalla composizione. Nessuna firma pubblica, dipendenza, schema o formato modificato.
+
+Mirata: `.\gradlew.bat :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.PhotoCommandTest --tests com.onlyfield.assetmanager.MediaAdditionTest --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 17s, nove test**, zero fallimenti/errori/saltati. Verificati prima continuazione, cleanup su errore, undo, esiti dopo chiusura/cancellazione e risultato appartenente a un'altra apertura dello stesso progetto.
+
+Native: assembleDebug/assembleDebugAndroidTest → BUILD SUCCESSFUL in 14s; install -r e `adb -s ZY32LNCB8C shell am instrument -w -r -e class com.onlyfield.assetmanager.PhotoSeriesNativeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner` → **OK (5 tests), 31,371s**, moto g86 API 36. Tre serie DEVICE/PORT/CABLE con due JPEG sintetici e terzo risultato annullato; guasto SQLite, arresto della serie e riprova; host smontato durante il save senza nuovo lancio. Byte/target, persistenza, export/import AES-GCM e undo verificati. Camera e risultato del permesso sono simulati solo nel registry di test, senza aprire la fotocamera; Compose/helper/launcher/FileProvider/repository e media sono reali, host minimo. Non è collaudo del sensore, di rotazione reale o delle schede rapide porta/cavo complete. Fixture cache/object_photos/native-series-UUID rimosse in finally.
+
+Scatti reali rinviati su risposta esplicita dell'utente. RES-13 mantiene la checklist fisica; RES-19/23 mantengono matrici UX/TalkBack e Windows, RES-24 le pulizie storiche respinte. Fonti primarie consultate l'8 ottobre: [Job.join](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-job/join.html), [scope Compose](https://developer.android.com/develop/ui/compose/side-effects) e [TakePicture](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.TakePicture). Esiti e integrità specifici dell'app derivano dalle prove locali.
+
+Verifica finale: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 2m 45s**. 545 test nei report: 128 core, 91 exchange, 203 Windows, 123 Android; zero fallimenti/errori/saltati. Android rieseguito, moduli invariati UP-TO-DATE; APK test finale compilato. XML e conteggi conservati in `build/reports/aud41-full`, log `build/reports/aud41-full-suite.log`.
+
+Database/WAL, chiavi avvolte applicative e due backup storici SHA-256 invariati prima della riapertura. Nessuna cache native-series residua; APK test rimosso con Success e MainActivity riaperta, evidenza `build/reports/aud41-native/final-integrity.txt`. AUD-41 completato e rimosso dal tracker. Restano quattro residui RES-13/19/23/24 (3 P2, 1 P3); prossima attività RES-19, scatti reali rimandati. Nessun EXE rigenerato, pulizia storica ritentata o commit/push.
+
+## AUD-42 — Footer della scheda rapida — chiuso l'8 ottobre 2026
+
+Durante RES-19, due riproduzioni native su host Compose isolato rilevano Chiudi sovrapposto a Scollega a 360 dp, testo 1,0, senza callback Dettagli. Il tocco può intercettare Chiudi e non aprire la conferma. I chiamanti completi attuali forniscono Dettagli: non è una riproduzione sulla cornice AppRoot o su Demo Comune. Il difetto riguarda comunque l'opzione supportata di PortQuickActions. La prima prova con Dettagli presente passa; la regressione geometrica senza Dettagli è rossa. Gli errori iniziali di selettore della nuova prova sono distinti dal difetto applicativo.
+
+Azioni e navigazione riunite in un solo gruppo verticale del footer. Nessuna firma, dipendenza, schema o formato modificato. Tre regressioni native verdi nella matrice 360/412 dp, chiaro/scuro, testo 1,0/1,3; suite con 545 report senza fallimenti/errori/saltati. AUD-42 rimosso dal tracker; RES-19 conserva la matrice completa, TalkBack e i flussi non eseguiti. Fonti ed evidenze nella roadmap.
+
+RES-23 (8 ottobre): nuova prova nativa del rack in DesktopApp/EditorFrame reale completata: guasto filesystem, bozza conservata, riprova Ctrl+S e riapertura persistita. Nessuna riproduzione del limite Skiko del runner nell'EXE. Finestra standard chiara, dati sintetici; altri editor/focus/input/checkbox/stampa aperti. 17 media invariati; app/helper chiusi. Nessun nuovo task correttivo.
+
+RES-23, collaudi EXE successivi dell’8 ottobre: editor apparato con guasto/riprova e SHA-256 immediato invariato, quattro checkbox fusione con Tab/Spazio a scala standard, Ctrl+N/Ctrl+W durante save del progetto da 511 MiB e annullamento stampa con Escape verificati. Matrice restante aperta; roadmap e build/reports/res23-followup-20261008 contengono esiti e limiti. Tracker consolidato sulle sole quattro voci residue, senza cronologia dei task di codice già conclusi. Android/evidenze in attesa USB; nessuna pulizia storica ritentata.
+
+## AUD-43 — Selettori Windows e focus — chiuso l’8 ottobre 2026
+
+Rilevato durante RES-23 e riprodotto nel vero EXE: dopo annullamento apertura/esportazione, scorciatoie inattive prima di un clic. I quattro JFileChooser ora appartengono alla finestra AWT attiva anziché al frame Swing nascosto. Quattro regressioni native rosse → verdi; suite Windows 207 test senza fallimenti/errori/saltati e nuovo EXE verificato. Dialoghi centrati, Escape e scorciatoie/chiusura senza clic intermedi, dati invariati rispetto alla baseline dopo apertura. Dettagli, comandi e fonti primarie nella roadmap; AUD-43 rimosso dal tracker.
+
+RES-23: completati anche creazione/modifica/applicazione modello, creazione/modifica credenziale e cambio tema con guasto reale/riprova, oltre all’annullamento dei selettori. Restano i soli scenari mancanti indicati nel tracker. RES-24 include la nuova fixture minima nel runtime generato e il probe invalido elencati in docs/05: rimozione respinta automaticamente con blocked by policy, non ritentata. Android ancora senza ADB; nessuna chiusura dei residui hardware/UX o delle pulizie storiche.
+
+## AUD-44 — Alimentazioni/PoE/Badge Windows — chiuso l’8 ottobre 2026
+
+Dodici regressioni rosse → verdi su creazione/modifica, dialogo/pannello; bozza, selezioni, errore, riprova, campi nascosti e undo verificati. 219 test Windows verdi, EXE isolato collaudato sulla nuova alimentazione con guasto reale/hash invariato/riprova/undo. Rimosso dal tracker. Runtime e fixture sintetici conservati in RES-24; dettagli, comandi, fonti e limiti nella roadmap. Moto g86 riconnesso; recupero evidenze in corso.
+
+RES-19/24, aggiornamento 8 ottobre: 80 coppie finali e otto precedenti recuperate, 176 SHA-256 verificati e distinzione nel manifest; database/WAL/chiavi e backup invariati. Rimossi dal telefono solo evidenze verificate e APK test, MainActivity riaperta. Parti concluse rimosse dal tracker; matrice completa Android e pulizie Windows rimangono aperte. Dettagli e limiti nella roadmap.

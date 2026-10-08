@@ -24,6 +24,11 @@ import com.onlyfield.assetmanager.core.forms.PowerFeedForm
 
 @Composable
 fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> Unit, showSecondary: Boolean = false) {
+    PowerBadgeSection(project, onProjectUpdated, showSecondary, { null })
+}
+
+@Composable
+fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> Unit, showSecondary: Boolean, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
@@ -35,15 +40,15 @@ fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> U
         if (tab !in shown) tab = shown.first()
         SubTabs(shown.map(labels::get), shown.indexOf(tab)) { tab = shown[it] }
         when (tab) {
-            0 -> FeedsTab(project, index, onProjectUpdated)
-            1 -> PoeTab(project, index, onProjectUpdated)
-            2 -> BadgesTab(project, index, onProjectUpdated)
+            0 -> FeedsTab(project, index, onProjectUpdated, saveError)
+            1 -> PoeTab(project, index, onProjectUpdated, saveError)
+            2 -> BadgesTab(project, index, onProjectUpdated, saveError)
         }
     }
 }
 
 @Composable
-private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     var query by remember { mutableStateOf("") }
@@ -54,7 +59,7 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(i18n.text("text.21adae0b690e"), searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = i18n.text("text.2abb86128114")) {
-            Button(onClick = { changeDetail { creating = true } }, enabled = index.devices.isNotEmpty()) { Text(i18n.text("text.04585136780b")) }
+            Button(onClick = { changeDetail { editing = null; creating = true } }, enabled = index.devices.isNotEmpty()) { Text(i18n.text("text.04585136780b")) }
         }
         if (feeds.isEmpty()) EmptyState(if (index.devices.isEmpty()) i18n.text("text.0b91a2f27a41") else i18n.text("text.90bbe6100ed6"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -74,7 +79,7 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
                         f.notes.orEmpty()
                     )
                 ) {
-                    EditButton { editing = f }
+                    EditButton { changeDetail { creating = false; editing = f } }
                     DeleteButton(f.feedName, onDelete = { onProjectUpdated(ProjectEdits.deletePowerFeed(project, f.id), i18n.text("text.a5c30e639a4d")) })
                 }
             }
@@ -91,11 +96,12 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toFeed(f)
-                creating = false; editing = null
                 onProjectUpdated(if (f == null) ProjectEdits.addPowerFeed(project, saved) else ProjectEdits.updatePowerFeed(project, saved), i18n.text("text.4237371feb41"))
+                if (saveError() == null) { creating = false; editing = null }
             },
             width = 640.dp
         ) {
+            saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.a814bcd8ca15"), index, form.deviceId, { form = form.copy(deviceId = it) }, error = errors["deviceId"])
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), Modifier.weight(1.3f), errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
@@ -118,7 +124,7 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
 }
 
 @Composable
-private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     var editing by remember { mutableStateOf<PoeMapping?>(null) }
@@ -127,7 +133,7 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(i18n.text("text.b4f1378ac2dd"), subtitle = i18n.text("text.07b3cd2501fb")) {
-            Button(onClick = { changeDetail { creating = true } }, enabled = index.ports.isNotEmpty()) { Text(i18n.text("text.b5aeb95142a5")) }
+            Button(onClick = { changeDetail { editing = null; creating = true } }, enabled = index.ports.isNotEmpty()) { Text(i18n.text("text.b5aeb95142a5")) }
         }
         if (project.poeMappings.isEmpty()) EmptyState(if (index.ports.isEmpty()) i18n.text("text.411098441beb") else i18n.text("text.0c1e677a5476"))
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -137,7 +143,7 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
                     badge = poe.role.toDisplayString(i18n = i18n),
                     details = listOf(listOfNotNull(poe.standard.toDisplayString(i18n = i18n), poe.allocatedPowerWatts?.let { i18n.text("text.cd49315c743a", trim(it)) }).joinToString(" · "), poe.notes.orEmpty())
                 ) {
-                    EditButton { editing = poe }
+                    EditButton { changeDetail { creating = false; editing = poe } }
                     DeleteButton(i18n.text("text.3685af18e07a", index.portLabel(poe.portId)), onDelete = { onProjectUpdated(ProjectEdits.deletePoeMapping(project, poe.id), i18n.text("text.4e9f5d77e309")) })
                 }
             }
@@ -155,11 +161,12 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toMapping(poe)
-                creating = false; editing = null
                 onProjectUpdated(ProjectEdits.addOrUpdatePoeMapping(project, saved), i18n.text("text.f9730fd8963f"))
+                if (saveError() == null) { creating = false; editing = null }
             },
             width = 600.dp
         ) {
+            saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             PortPicker(i18n.text("text.57c2ec879203"), index, form.portId, { form = form.copy(portId = it) }, noneLabel = null, error = errors["portId"])
             if (existingOnPort != null) Text(i18n.text("text.2d099536dd33"), color = MaterialTheme.colorScheme.tertiary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -173,7 +180,7 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
 }
 
 @Composable
-private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     var editing by remember { mutableStateOf<DocumentBadge?>(null) }
@@ -182,9 +189,9 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(i18n.text("text.d3154f7a9686"), subtitle = i18n.text("text.c965e24a18f4")) {
-            Button(onClick = { changeDetail { creating = true } }) { Text(i18n.text("text.5e9867b48f83")) }
+            Button(onClick = { changeDetail { editing = null; creating = true } }) { Text(i18n.text("text.5e9867b48f83")) }
         }
-        if (project.documentBadges.isEmpty()) EmptyState(i18n.text("text.eb3e34b0bacb"), actionLabel = i18n.text("text.5e9867b48f83"), onAction = { creating = true })
+        if (project.documentBadges.isEmpty()) EmptyState(i18n.text("text.eb3e34b0bacb"), actionLabel = i18n.text("text.5e9867b48f83"), onAction = { changeDetail { editing = null; creating = true } })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.documentBadges.sortedForDisplay(i18n) { it.label }, key = { it.id }) { b ->
                 ItemCard(
@@ -192,7 +199,7 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
                     badge = b.category.toDisplayString(i18n = i18n),
                     details = listOf(index.targetLabel(b.targetType, b.targetId, i18n = i18n), if (b.isDerived) i18n.text("text.1e564953491e") else "", b.notes.orEmpty())
                 ) {
-                    if (!b.isDerived) EditButton { editing = b }
+                    if (!b.isDerived) EditButton { changeDetail { creating = false; editing = b } }
                     DeleteButton(b.label, onDelete = { onProjectUpdated(ProjectEdits.deleteDocumentBadge(project, b.id), i18n.text("text.fc7c2dba7445")) })
                 }
             }
@@ -209,11 +216,12 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toBadge(b, project.id)
-                creating = false; editing = null
                 onProjectUpdated(if (b == null) ProjectEdits.addDocumentBadge(project, saved) else ProjectEdits.updateDocumentBadge(project, saved), i18n.text("text.6b86c681c041"))
+                if (saveError() == null) { creating = false; editing = null }
             },
             width = 620.dp
         ) {
+            saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             TargetPicker(index, form.target, { form = form.copy(target = it) }, errors["target"])
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), Modifier.weight(1.3f), errors["label"])

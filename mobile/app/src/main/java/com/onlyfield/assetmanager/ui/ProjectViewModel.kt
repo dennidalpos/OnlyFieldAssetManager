@@ -139,7 +139,7 @@ class ProjectViewModel internal constructor(
                         _project.value?.id?.let(mediaCleanup::add)
                         for (id in mediaCleanup.toList()) {
                             val recoverable = undoSnapshot?.takeIf { it.id == id }?.attachments.orEmpty() +
-                                listOfNotNull(pendingPhoto?.takeIf { it.first == id }?.second)
+                                listOfNotNull(pendingPhoto?.takeIf { it.projectId == id }?.attachment)
                             repository.collectMedia(id, recoverable)
                             mediaCleanup.remove(id)
                         }
@@ -367,13 +367,15 @@ class ProjectViewModel internal constructor(
         launchCommand {
             try {
                 val item = repository.moveToTrash(projectId, itemType, itemId, i18n = i18n)
+                coroutineContext.ensureActive()
                 reload(projectId)
-                if (item != null && commandSession == session) notify(i18n.text("text.4e2629d50c9b", name), undo = {
+                coroutineContext.ensureActive()
+                if (item != null && commandSession == session && _project.value?.id == projectId) notify(i18n.text("text.4e2629d50c9b", name), undo = {
                     if (session == requestedSession && _project.value?.id == projectId) restoreFromTrash(item.id)
                 })
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.ce9e7fe8c973"), e)
+                if (commandSession == session && _project.value?.id == projectId) fail(i18n.text("text.ce9e7fe8c973"), e)
             }
         }
     }
@@ -790,7 +792,8 @@ class ProjectViewModel internal constructor(
 
 
     /** Pending camera attachment and target file. */
-    private var pendingPhoto: Triple<String, Attachment, File>? = null
+    private data class PendingPhoto(val projectId: String, val attachment: Attachment, val file: File, val session: Long)
+    private var pendingPhoto: PendingPhoto? = null
 
     /** Creates a photo target for [type]/[targetId]. */
     fun preparePhoto(type: AttachmentTargetType, targetId: String?): File? {
@@ -808,38 +811,42 @@ class ProjectViewModel internal constructor(
             targetId = targetId,
         )
         val file = AttachmentFiles.localFile(root, p.id, attachment).apply { parentFile?.mkdirs() }
-        pendingPhoto = Triple(p.id, attachment, file)
+        pendingPhoto = PendingPhoto(p.id, attachment, file, session)
         return file
     }
 
     /** Continues the series only after validation and persistence succeed. */
     fun onPhotoResult(saved: Boolean, onSaved: (Boolean) -> Unit) {
-        val (projectId, attachment, file) = pendingPhoto ?: run { onSaved(false); return }
+        val (projectId, attachment, file, requestedSession) = pendingPhoto ?: run { onSaved(false); return }
         pendingPhoto = null
-        val available = busy == null
+        val available = busy == null && requestedSession == session
         if (available) operationBusy = i18n.text("text.c4f57f0165aa")
-        launchCommand {
-            var committed = false
+        var committed = false
+        val job = launchCommand {
             try {
                 if (!available || !saved || file.length() == 0L) return@launchCommand
                 val before = _project.value?.takeIf { it.id == projectId } ?: return@launchCommand
                 val added = attachment.copy(relativePath = AttachmentFiles.entryName(attachment))
                 val updated = ProjectEdits.addAttachment(before, added)
                 repository.saveMediaProject(updated, i18n) { committed = true }
+                coroutineContext.ensureActive()
                 if (commandSession == session && _project.value?.id == projectId) {
                     setProject(updated)
                     notify(i18n.text("text.ef0af7808f11"), undo = snapshotUndo(before))
                 }
             } catch (e: Exception) {
                 if (e is kotlinx.coroutines.CancellationException) throw e
-                fail(i18n.text("text.9b6ca71eb272"), e)
+                if (requestedSession == session && _project.value?.id == projectId) fail(i18n.text("text.9b6ca71eb272"), e)
             } finally {
                 if (!committed) kotlinx.coroutines.withContext(kotlinx.coroutines.NonCancellable + kotlinx.coroutines.Dispatchers.IO) {
                     java.nio.file.Files.deleteIfExists(file.toPath())
                 }
                 if (available) operationBusy = null
-                onSaved(committed && kotlinx.coroutines.currentCoroutineContext().isActive && commandSession == session && _project.value?.id == projectId)
             }
+        }
+        viewModelScope.launch {
+            job.join()
+            if (!job.isCancelled && requestedSession == session && _project.value?.id == projectId) onSaved(committed)
         }
     }
 

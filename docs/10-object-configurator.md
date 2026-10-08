@@ -119,3 +119,7 @@ Il database conserva le tabelle esistenti. Il JSON hardware aggiunge i campi fac
 - [Dialoghi Compose](https://developer.android.com/develop/ui/compose/components/dialog)
 - [Accessibilità predefinita Compose](https://developer.android.com/develop/ui/compose/accessibility/api-defaults)
 - [Forme Material 3](https://m3.material.io/styles/shape)
+
+AUD-42 (8 ottobre): le azioni principali, Chiudi e Dettagli porta sono un unico gruppo verticale nel footer di PortQuickDialog. Non si affiancano più un blocco su più righe e un secondo blocco di altezza diversa negli slot di AlertDialog: senza Dettagli, Chiudi poteva sovrapporsi a Scollega. Salva e Indietro restano fissi durante la configurazione. Regressione nativa rossa prima della correzione, poi matrice 360/412 dp, temi chiaro/scuro e testo 1,0/1,3 verde, con e senza Dettagli. Perimetro e limiti in [roadmap.md](../roadmap.md).
+
+UX-04 Android (8 ottobre): ricerca di un modello tra 12 e riduzione di un gruppo collegato verificate nelle otto combinazioni su host isolato. Il filtro non cambia la bozza; la scelta applica il modello. La riduzione richiede conferma, conserva gli ID delle porte rimaste e del cavo e lascia aperto l'estremo della porta rimossa. Nessuna modifica al runtime per questa verifica; tastiera aperta, TalkBack e editor completo restano in RES-19.

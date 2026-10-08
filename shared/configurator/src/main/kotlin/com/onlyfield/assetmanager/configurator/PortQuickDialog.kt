@@ -156,8 +156,12 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
         }
     }, confirmButton = {
         when (step) {
-            QuickStep.MAIN -> MainActions(summary, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
-                onConnect = { fixed = PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT; justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
+            QuickStep.MAIN -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.End) {
+                MainActions(summary, i18n, actions, fresh = justConnected != null && summary.cable?.id == justConnected,
+                    onConnect = { fixed = PassiveCabling.supported(device) && port.hardware.side == PortSide.FRONT; justConnected = null; step = QuickStep.DEVICE }, onPassage = { step = QuickStep.PASSAGE }, onDisconnect = { asking = true })
+                TextButton(onClick = ::close) { Text(i18n.text("ux.close")) }
+                actions.details?.let { open -> TextButton(onClick = { onClose(); open(port) }) { Text(i18n.text("quick.details")) } }
+            }
             QuickStep.CONFIGURE -> Button(enabled = dirty, onClick = {
                 configuration?.let { actions.update(it.apply(project), i18n.text("ux.saveChanges")) }
                 configuration = null; step = QuickStep.MAIN
@@ -190,10 +194,6 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
         }
     }, dismissButton = {
         if (step != QuickStep.MAIN) TextButton(onClick = { if (dirty) discard = true else { configuration = null; step = if (step == QuickStep.PORT) QuickStep.DEVICE else QuickStep.MAIN } }) { Text("‹ " + i18n.text("quick.back")) }
-        else Column {
-            TextButton(onClick = ::close) { Text(i18n.text("ux.close")) }
-            actions.details?.let { open -> TextButton(onClick = { onClose(); open(port) }) { Text(i18n.text("quick.details")) } }
-        }
     })
 
     if (discard) AlertDialog(onDismissRequest = { discard = false }, title = { Text(i18n.text("visual.discardTitle")) },

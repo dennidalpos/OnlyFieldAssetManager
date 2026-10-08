@@ -168,7 +168,9 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     val index = remember(project) { ProjectIndex(project) }
     val rack = index.rack(rackId)
     if (rack == null) {
-        LaunchedEffect(Unit) { vm.back() }
+        LaunchedEffect(project.id, rackId) {
+            if (vm.project.value?.id == project.id && vm.currentScreen == Screen.RackDetail(rackId)) vm.back()
+        }
         return
     }
     var editing by remember { mutableStateOf(false) }
@@ -195,7 +197,6 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
                 MenuAction(i18n.text("text.550dee4c04e7")) { pdfLauncher.launch("${safeFileName(rack.name)}.pdf") },
                 MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
                     confirm(ConfirmRequest(i18n.text("text.87fc0efddabf", rack.name), i18n.text("text.309921cb8d51"), i18n.text("text.dd41b3275173")) {
-                        vm.back()
                         vm.moveToTrash("RACK", rack.id, rack.name)
                     })
                 }

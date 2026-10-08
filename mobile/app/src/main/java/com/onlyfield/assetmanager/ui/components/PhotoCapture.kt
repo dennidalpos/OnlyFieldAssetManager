@@ -12,6 +12,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import com.onlyfield.assetmanager.core.model.AttachmentTargetType
 import com.onlyfield.assetmanager.ui.ProjectViewModel
+import kotlinx.coroutines.isActive
 
 /**
  * Opens the camera and links its output as an attachment. Shots come in series: after a kept photo
@@ -22,12 +23,14 @@ fun rememberPhotoCapture(vm: ProjectViewModel): (AttachmentTargetType, String?) 
     val i18n = LocalMessages.current
 
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var series by remember { mutableStateOf<Pair<AttachmentTargetType, String?>?>(null) }
     var shots by remember { mutableStateOf(0) }
     lateinit var shoot: (AttachmentTargetType, String?) -> Unit
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { saved ->
         val target = series
         vm.onPhotoResult(saved) { kept ->
+            if (!scope.isActive) return@onPhotoResult
             if (kept && target != null) { shots++; shoot(target.first, target.second) }
             else {
                 if (shots > 1) vm.notifyInfo(i18n.plural("photo.seriesDone", shots))

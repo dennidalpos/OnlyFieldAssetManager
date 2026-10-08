@@ -22,17 +22,17 @@ Le regressioni dell'audit sono permanenti: `ImportedProtectionTest` verifica la 
 .\gradlew.bat :shared:exchange:demoPackage
 ```
 
-Contenuto («Demo Comune», 356 apparati, 7 rack, 1001 cavi):
+Contenuto aggiornato l'8 ottobre 2026 («Demo Comune», **366 apparati, 8 rack, 1007 cavi, 14 modelli, 7 allegati**):
 
-- **Comune – Municipio** (CED, Piano terra, Primo piano, Copertura). Il rack CED è il centro stella. Contiene: patch panel fibra PPF-COM-CED (24 LC), SW-COM-CORE (24 RJ45 + 12 SFP+), FW-COM-01, RTR-COM-01, ONT-COM-01, due server, NAS e UPS. La catena WAN è ONT → router → firewall → core.
+- **Comune – Municipio** (CED, Piano terra, Primo piano, Copertura, Laboratorio collaudi). Il rack CED è il centro stella. Contiene: patch panel fibra PPF-COM-CED (24 LC), SW-COM-CORE (24 RJ45 + 12 SFP+), FW-COM-01, RTR-COM-01, ONT-COM-01, due server, NAS, UPS e PDU sul retro. La catena WAN è ONT → router → firewall → core.
 - **Teatro comunale** (Piano terra): ONT e router propri con linea FTTH e VPN verso il firewall del Municipio (collegamenti logici). Il cavo della presa PR-TEA-PT-01 passa per la scatola di giunzione GB-TEA-PT-01.
 - **Scuola media** (Piano terra, Primo piano, Copertura): il rack del piano terra è il centro stella della scuola.
 - **Scuola materna** (Piano terra, Copertura).
-- **Ogni piano** ha un rack RK da 42 U con:
+- **I sei piani operativi** hanno ciascuno un rack RK da 42 U con:
   - due patch panel da 48 RJ45 (PP-…-A/B), cablati per 3/4 (72 porte su 96) verso 36 prese PR da due porte;
   - due switch da 48 porte PoE con 4 SFP+;
   - sui piani con dorsale, un patch panel fibra da 12 LC.
-- **Sulla mappa**, per piano: le prese in quattro file e 16 apparati sulle prime prese (4 AP, 2 telecamere, 4 telefoni, 6 PC).
+- **Sulla mappa**, per piano operativo: le prese in quattro file e 16 apparati sulle prime prese (4 AP, 2 telecamere, 4 telefoni, 6 PC). Il piano terra del Municipio e il laboratorio hanno una planimetria PNG sintetica incorporata.
 - **Dorsali**: gli switch dei piani salgono in fibra (cavi FO) al patch panel del centro stella e da lì al core. Nelle sedi a un solo rack lo switch B è collegato allo switch A con un DAC.
 - **Ponti radio**, tutti di tipo Ponte radio con tratta radio tracciabile:
   - RAD-COM-01 sulla copertura del Municipio (alimentato da SW-COM-P1-A P40) verso RAD-MED-01 della Scuola media (tratta PR-COM-MED, 1200 m);
@@ -40,11 +40,36 @@ Contenuto («Demo Comune», 356 apparati, 7 rack, 1001 cavi):
 
   I percorsi porta sono completi tra le sedi, ad esempio SW-COM-P1-A P40 → … → SW-MED-PT-A P40.
 
-Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di `:shared:exchange`); `DemoSeedTest` ne verifica struttura, cablaggio e import.
+### Casistiche del laboratorio
+
+Il laboratorio aggiunge dieci apparati e un rack senza cambiare i percorsi comunali esistenti. Gli avvisi sono intenzionali e documentali; il pacchetto non contiene errori strutturali.
+
+| Caso | Dove provarlo | Contenuto atteso |
+| --- | --- | --- |
+| Ricerca e applicazione modello | Modelli, filtro `DEMO Switch` | 12 switch: 8/16/24/48 RJ45 × senza PoE/metà/tutte; oltre alle prime sette opzioni. Modelli anche per rack 12U e cavo rame arancione. |
+| Layout e override PoE | `SW-COM-LAB` | 8 RJ45 + 4 SFP+, due righe ordinate 2/1/4/3/6/5/8/7; P3 con 802.3bt, P4 senza PoE. |
+| Porta completa | `SW-COM-LAB P1` | Cavo arancione → `AP-COM-LAB`; sorgente e ricevitore PoE documentati. |
+| Porta conflittuale | `SW-COM-LAB P2` | → `CAM-COM-LAB`; osservazione della porta discordante, avviso `PHYSICAL_CONNECTION_CONFLICT`, senza doppio cablaggio. |
+| Estremità aperta | `SW-COM-LAB P3`, `APERTO-LAB-01` | Porta scollegata da verificare, estremità B assente, avviso `DETACHED_CABLE_ENDPOINT`. |
+| Passante incompleto | `SW-COM-LAB P6` | → fronte `PP-COM-LAB P1`; retro non cablato. |
+| Porta libera | `SW-COM-LAB P7` | Disponibile per aggiungere una connessione; nessun cavo. |
+| Dorsale ottica | `SW-COM-LAB X1` | AOC verso `SW-COM-CORE X5`; distinto da fibra, DAC e radio già presenti. |
+| Rack e gerarchia | `RK-COM-LAB`, `ARM-COM-LAB` | Rack 12U con numerazione dall'alto; armadio → cassetta → alimentatore/sensore, due livelli di mappe interne. |
+| Rete logica | VLAN e configurazione `SW-COM-LAB` | VLAN 10/20/30/90, quattro subnet/interfacce, porte access/trunk, LACP core/server, testo configurazione sintetico. |
+| Video e alimentazione | `CAM-COM-LAB`, `NVR-COM-LAB`, `SRV-COM-01` | Canale NVR; due ingressi A/B del server; UPS → PDU, autonomia rilevata sintetica; alimentazione singola NVR con avviso di copertura parziale. |
+| Rilievi e stati operativi | Inventario e filtri | Verificato/da verificare/conflitto/non rilevato; in servizio/spento/dismesso/da verificare. Il sensore non è rilevato; gli stati operativi dei tre apparati precedenti restano disponibili. |
+| Foto/allegati e filtri documentali | Progetto, area, rack, apparato, cavo e porta | Sette PNG con payload/checksum, tutti i sei target; quattro condivisibili, uno riservato, due da revisionare. Campi extra condivisibile/riservato e annotazione da revisionare. |
+| Mappa e percorso disegnato | Laboratorio, cavo `AP-COM-LAB-01` | Planimetria, annotazioni e cavo con due curve; mappa densa del Municipio per zoom/pan/selezione. |
+
+I PNG sono illustrazioni di prova, non fotografie o rilievi architettonici reali. `DemoMedia` li genera in memoria con il JDK, senza dipendenze nuove; fonte primaria consultata l'8 ottobre: [Java ImageIO](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageIO.html). Il seed usa timestamp sintetici fissi e mantiene l'ID del progetto demo; le entità vengono rigenerate. L'importazione nella propria copia locale segue il normale confronto/sostituzione dell'app.
+
+Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di `:shared:exchange`). Il comando di generazione valida la struttura e reimporta in memoria il pacchetto completo prima di scriverlo. `DemoSeedTest` verifica anche il file generato, immagini decodificabili, classificazioni, applicazione modello senza cambiare ID porte/cavi e scambio semplice/cifrato con checksum.
+
+Verifica dell'8 ottobre: baseline 13 prove demo verdi; dopo l'ampliamento **18 prove demo + una prova PDF Desktop**, zero fallimenti/errori/saltati. Generazione `BUILD SUCCESSFUL in 6s`; prove demo e `:mobile:app:assembleDebugAndroidTest` `BUILD SUCCESSFUL in 45s`; PDF `BUILD SUCCESSFUL in 12s`. APK test compilato con fixture aggiornata; prove native Android di importazione non rieseguite. Fonte per il filtro mirato: [Gradle JVM testing](https://docs.gradle.org/current/userguide/java_testing.html). Report locali in `build/reports/demo-seed-20261008`; pacchetto 489.823 byte, SHA-256 `fabda66be2d7545a1357b8f3a2af14b2742b9e35b9fd6c557eacbe56eeb4dc33`. Anteprime sintetiche ispezionate; demo installata, dati e backup conservati. RES-13/19/23/24 restano aperti.
 
 ## Limiti noti
 
-- Il collaudo su telefono, multitouch, fotocamera, scanner e lettore USB richiede hardware reale: [checklist](testing/hardware-checklist.md).
+- Il collaudo su telefono, multitouch, fotocamera integrata e scansione tramite fotocamera richiede hardware reale (lettori USB e scanner esterni esclusi per decisione utente): [checklist](testing/hardware-checklist.md).
 - RES-17 chiuso: suite nativa API 37 verde con Espresso 3.7.0; la checklist hardware e visiva rimane distinta.
 - La pubblicazione su tag è verificata dalla release v1.0.1 (run 37238450362).
 
@@ -611,3 +636,191 @@ SpecializedCommandTest aggiunge 18 regressioni: callback di guasto dopo cleanup,
 Il telefono si è scollegato prima del controllo finale ed è stato ricollegato dall'utente. SHA-256 di database e WAL identici alla baseline prima della riapertura; due backup storici invariati, confronti in aud39-native. APK test rimosso (Success), app principale verificata e riaperta; nessuna disinstallazione del pacchetto principale. Cache di ogni scenario rimossa in finally e assenza delle cartelle special-save verificata. Nessuna pulizia storica, rigenerazione EXE o commit/push.
 
 AUD-39 completato e rimosso dal tracker. AUD-40 registra separatamente la navigazione anticipata nelle conferme di cancellazione apparato/rack, letta da codice e non riprodotta. Collaudi generali RES-13/19/23/24 conservati. Fonti ufficiali consultate il 7 ottobre: [stato Compose](https://developer.android.com/develop/ui/compose/state), [eventi UI](https://developer.android.com/topic/architecture/ui-layer/events) e [ensureActive](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/ensure-active.html). Le proprietà delle API vengono dalle fonti; esito e integrità dell'app dalle prove locali.
+
+## AUD-40 — Cancellazione apparato/rack Android — 8 ottobre 2026
+
+Riprodotto su moto g86 API 36 con guasto SQLite isolato: DEVICE/RACK rimangono nel database ma la conferma torna subito alla lista. Due prove native rosse; dieci nuove regressioni JVM riproducono anche l'errore tardivo dopo chiusura/cambio progetto (due rosse, otto verdi). Fixture sincronizzate tramite ObjectHierarchy, non dati applicativi reali.
+
+Rimossi i due back anticipati; il ritorno esistente reagisce all'oggetto assente dopo reload del commit, con controllo di progetto/destinazione. Nessuna nuova firma/callback, dipendenza, schema o formato. moveToTrash rispetta ensureActive prima di pubblicare stato/messaggi e sopprime errori di una sessione chiusa.
+
+Verifica mirata: `.\gradlew.bat :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.DeletionCommandTest --tests com.onlyfield.assetmanager.ProjectCommandTest --tests com.onlyfield.assetmanager.SpecializedCommandTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1` → BUILD SUCCESSFUL in 44s, 44 test senza fallimenti/errori/saltati. Baseline dei comandi esistenti verde prima della correzione. Dieci regressioni: guasto/riprova, doppia richiesta con un solo cestino/undo, media e collocazione rack ripristinati, ID assente, chiusura/cambio progetto, altra schermata e cancellazione ViewModel.
+
+Native: `adb -s ZY32LNCB8C install -r` per APK principale/test e `adb -s ZY32LNCB8C shell am instrument -w -r -e class com.onlyfield.assetmanager.FailedDeletionNativeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner` → **OK (2 tests), 35,168s**. AppRoot/ConfirmHost/Scaffold/snackbar reali: annullamento conferma, guasto SQLite, scheda e selezioni conservate, errore visualizzato, riprova, un solo ritorno e undo toccato nella UI; database/media verificati. L'undo attende la durata dello snackbar di errore precedente. Cache delete-save-UUID rimossa in finally, database/WAL e due backup storici SHA-256 invariati prima della riapertura. Report `build/reports/aud40-red`, `aud40-targeted`, `aud40-native` e log `aud40-*.log`.
+
+AUD-40 completato e rimosso dal tracker; restano RES-13/19/23/24. Matrici UX/TalkBack, hardware/SQLCipher/Keystore ed EXE/focus/stampa conservano i propri limiti. Fonti primarie consultate l'8 ottobre: [eventi e navigazione UI Android](https://developer.android.com/topic/architecture/ui-layer/events) e [ensureActive Kotlin](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/ensure-active.html); esiti e integrità dell'app derivano dalle prove locali.
+
+Suite completa AUD-40: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 2m 43s, 540 report senza fallimenti/errori/saltati** (128 core, 91 exchange, 203 Windows, 118 Android). Android rieseguito integralmente; moduli invariati UP-TO-DATE. XML e conteggi conservati in `build/reports/aud40-full`; log `build/reports/aud40-full-suite.log`.
+Perimetro dei collaudi hardware (decisione utente, 8 ottobre 2026): usare la fotocamera integrata Android; lettori USB e scanner esterni sono esclusi definitivamente dalle prove richieste. Le funzionalità applicative restano disponibili; questa è una decisione sul collaudo. RES-13 conserva fotocamera/gesti e recupero SQLCipher/Keystore isolato, con distinzione fra riavvio del processo e del dispositivo.
+## RES-13 — Recupero nativo SQLCipher/Keystore parziale — 8 ottobre 2026
+
+Aggiunto EncryptedRecoveryNativeTest: EncryptedDatabase e ProjectRepository reali, con ContextWrapper che separa database, media e file delle chiavi avvolte in cache/native-recovery-UUID. Il provider AndroidKeyStore resta reale; nessuna chiave applicativa viene rimossa o esportata. Le verifiche aprono SQLCipher dopo chiusura del database, controllano fingerprint di progetto/base/verificatore password/cestino, byte media e blob della chiave avvolta. Nessuna modifica al runtime, schema o formato.
+
+| Scenario | Esito verificato su moto g86 API 36 |
+| --- | --- |
+| Sostituzione media prima del commit | Rollback di catalogo/base/password/cestino e ripristino dei byte precedenti. |
+| Sostituzione media dopo il commit | Catalogo/base aggiornati, cestino conservato e byte incoming mantenuti. |
+| Cancellazione prima del commit | Progetto/base/verificatore/cestino/media precedenti recuperati. |
+| Cancellazione dopo il commit | Progetto/base/media rimossi secondo il commit persistito. |
+| File modificato esternamente durante rollback | Recupero bloccato, letture/scritture rifiutate, tutti i file di journal/backup SHA-256 invariati; riprova dopo ripristino del file riuscita. |
+
+Comandi: assembleDebugAndroidTest → BUILD SUCCESSFUL in 4s, install -r del solo APK test, poi `adb -s ZY32LNCB8C shell am instrument -w -r -e class com.onlyfield.assetmanager.EncryptedRecoveryNativeTest -e recoveryPhase prepare -e recoveryRun <UUID> com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner` e stessa invocazione con recoveryPhase recover e medesimo UUID. **OK (1 test)** in entrambe le fasi, 20,718s / 13,918s; la seconda verifica esplicitamente un PID diverso. Il test senza argomenti esegue anche il percorso normale roundtrip, **OK (1 test), 35,566s**. Report `build/reports/res13-native/{prepare,recover,roundtrip}.txt`, run.json e prepare-pid.txt; build log res13-recovery-build.log.
+
+Il journal è lasciato pendente intenzionalmente: l'interruzione prima del commit è un'eccezione sintetica nella transazione; dopo il commit manca l'acknowledgement. Il runner termina normalmente e il secondo processo recupera i file. Non è un arresto forzato, riavvio del dispositivo o perdita di alimentazione: queste prove restano non eseguite. Il test ordinario pulisce le proprie fixture; la modalità prepare le conserva soltanto fino alla modalità recover. Database/WAL e blob cifrati delle chiavi applicative confrontati prima della riapertura; backup storici conservati.
+
+RES-13 resta PARTIAL per fotocamera integrata, foto porta/cavo e serie, scansione tramite fotocamera, gesti e riavvio fisico. Lettori USB/scanner esterni esclusi definitivamente dalle prove su indicazione utente; funzionalità applicative conservate. RES-19/23/24 invariati nel perimetro residuo. Fonti primarie consultate l'8 ottobre: [Android Keystore](https://developer.android.com/privacy-and-security/keystore) e [SQLCipher Android con Room](https://github.com/sqlcipher/sqlcipher-android). Le fonti descrivono le API; i cinque esiti provengono dalle prove native.
+
+Controllo finale della sessione: SHA-256 di database/WAL, blob cifrati delle chiavi applicative e due backup storici invariati prima della riapertura. Cache delete-save/native-recovery assente; APK test rimosso con Success e MainActivity riaperta. RES-13 aggiornato a PARTIAL; tracker con sole quattro voci residue (3 P2, 1 P3), AUD-40 rimosso. Nessun EXE rigenerato, pulizia storica ritentata o commit/push.
+
+## AUD-41 — Serie foto Android e risultati tardivi — 8 ottobre 2026
+
+Durante RES-13 emerge dal codice che onPhotoResult richiama onSaved in finally, prima della fine di launchCommand. pendingCommands resta positivo e preparePhoto rifiuta lo scatto successivo. PhotoCommandTest riproduce il guasto e altri due problemi: errore/callback dopo chiusura e accettazione del risultato dopo chiusura/riapertura dello stesso progetto. Baseline MediaAdditionTest verde prima della modifica; nuova suite iniziale cinque test, tre fallimenti, XML/log in build/reports/aud41-red e aud41-red.log.
+
+La continuazione attende Job.join: soltanto dopo rilascio del comando può preparare lo scatto successivo. PendingPhoto conserva progetto/allegato/file/sessione; errori e callback sono vincolati alla sessione ancora valida. Cancellazione rilanciata e file non committati rimossi; PhotoCapture ignora la continuazione dopo uscita dalla composizione. Nessuna firma pubblica, dipendenza, schema o formato modificato.
+
+Mirata: `.\gradlew.bat :mobile:app:testDebugUnitTest --tests com.onlyfield.assetmanager.PhotoCommandTest --tests com.onlyfield.assetmanager.MediaAdditionTest --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 17s, nove test**, zero fallimenti/errori/saltati. Verificati prima continuazione, cleanup su errore, undo, esiti dopo chiusura/cancellazione e risultato appartenente a un'altra apertura dello stesso progetto.
+
+Native: assembleDebug/assembleDebugAndroidTest → BUILD SUCCESSFUL in 14s; install -r e `adb -s ZY32LNCB8C shell am instrument -w -r -e class com.onlyfield.assetmanager.PhotoSeriesNativeTest com.onlyfield.assetmanager.test/androidx.test.runner.AndroidJUnitRunner` → **OK (5 tests), 31,371s**, moto g86 API 36. Tre serie DEVICE/PORT/CABLE con due JPEG sintetici e terzo risultato annullato; guasto SQLite, arresto della serie e riprova; host smontato durante il save senza nuovo lancio. Byte/target, persistenza, export/import AES-GCM e undo verificati. Camera e risultato del permesso sono simulati solo nel registry di test, senza aprire la fotocamera; Compose/helper/launcher/FileProvider/repository e media sono reali, host minimo. Non è collaudo del sensore, di rotazione reale o delle schede rapide porta/cavo complete. Fixture cache/object_photos/native-series-UUID rimosse in finally.
+
+Scatti reali rinviati su risposta esplicita dell'utente. RES-13 mantiene la checklist fisica; RES-19/23 mantengono matrici UX/TalkBack e Windows, RES-24 le pulizie storiche respinte. Fonti primarie consultate l'8 ottobre: [Job.join](https://kotlinlang.org/api/kotlinx.coroutines/kotlinx-coroutines-core/kotlinx.coroutines/-job/join.html), [scope Compose](https://developer.android.com/develop/ui/compose/side-effects) e [TakePicture](https://developer.android.com/reference/androidx/activity/result/contract/ActivityResultContracts.TakePicture). Esiti e integrità specifici dell'app derivano dalle prove locali.
+
+Verifica finale: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 2m 45s**. 545 test nei report: 128 core, 91 exchange, 203 Windows, 123 Android; zero fallimenti/errori/saltati. Android rieseguito, moduli invariati UP-TO-DATE; APK test finale compilato. XML e conteggi conservati in `build/reports/aud41-full`, log `build/reports/aud41-full-suite.log`.
+
+Database/WAL, chiavi avvolte applicative e due backup storici SHA-256 invariati prima della riapertura. Nessuna cache native-series residua; APK test rimosso con Success e MainActivity riaperta, evidenza `build/reports/aud41-native/final-integrity.txt`. AUD-41 completato e rimosso dal tracker. Restano quattro residui RES-13/19/23/24 (3 P2, 1 P3); prossima attività RES-19, scatti reali rimandati. Nessun EXE rigenerato, pulizia storica ritentata o commit/push.
+
+Controllo documentale finale: 18 Markdown UTF-8 senza BOM, 143 link locali validi; quattro ID residui univoci, riferimenti/dipendenze validi e git diff --check senza errori.
+
+## Scheda rapida e configuratore Android — AUD-42 / RES-19, 8 ottobre 2026
+
+ConfiguratorMatrixNativeTest verifica sul moto g86 API 36 le otto combinazioni 360/412 dp, chiaro/scuro, testo 1,0/1,3. Tre test nativi passano: 16 configurazioni del footer (con/senza Dettagli), otto di disposizione/PoE/Salva/Annulla e otto di percorso, foto porta/cavo come callback, collegamento e scollegamento con conferma/annullamento. AUD-42 riprodotto senza Dettagli: Chiudi sovrapposto a Scollega; il footer condiviso è ora un unico gruppo verticale.
+
+Host Compose e progetto in memoria isolati; LocalDensity cambia solo il contenuto del test, non le impostazioni del telefono. Nessuna persistenza, camera reale, TalkBack audio, tastiera, rotazione, mappa densa, topologia o cornice AppRoot completa collaudata. RES-19 e RES-13 restano parziali. L'opzione strumentale `-e matrixEvidence true` salva screenshot e alberi semantici; senza opzione non scrive evidenze sul dispositivo. 56 coppie PNG/testo correnti in build/reports/res19-native/final-evidence, campione controllato visivamente; log e regressione rossa conservati nella stessa directory dei report. CaptureToImage attende il rendering del dialogo, evitando fotogrammi transitori di UiAutomation.
+
+Suite completa: BUILD SUCCESSFUL in 6m, 545 test nei report (128 core, 91 exchange, 203 Windows, 123 Android), nessun fallimento/errore/saltato; Windows e Android rieseguiti, core/exchange invariati UP-TO-DATE. XML in build/reports/aud42-full. Comandi e fonti ufficiali nella roadmap.
+
+UX-04 completato sul componente Android: due ulteriori prove nella classe ConfiguratorMatrixNativeTest coprono ricerca fra 12 modelli e riduzione di gruppo collegato nelle otto combinazioni. Nessun ulteriore difetto applicativo. Classe finale: OK (5 tests), 87,536s, moto g86 API 36; log build/reports/res19-native/complete.txt. Popup catturato con isPopup, form con inset safeDrawing, tastiera chiusa; alberi completi di ogni root. 80 coppie finali PNG/albero completo generate sul telefono: copia e pulizia pendenti perché ADB non rileva più il dispositivo. I primi screenshot dello sfondo/alberi ridotti restano cronologia, non evidenza finale. Dopo la suite JVM già verde sono cambiati solo test nativo e raccolta evidenze; suite generale non ripetuta. RES-19 complessivo resta parziale.
+
+## RES-23 — Editor rack nell'EXE, 8 ottobre 2026
+
+`:pc:app:createDistributable --no-parallel --max-workers=1` → BUILD SUCCESSFUL in 4s. App/EXE aggiornati nel solo scratch già esistente build/tmp/res23-20261007, dati/runtime conservati; due progetti sintetici verificati. Finestra 1348×854, tema chiaro, UI nativa con computer-use. Nuovo rack → Aggiungi e modifica apre DesktopApp/EditorFrame senza il limite del runner Skiko.
+
+FileStream Open/Read/FileShare.Read sul solo pacchetto sintetico forza un errore reale della sostituzione: banner leggibile, editor/bozza conservati, nome RES23-RACK raggiungibile e focalizzabile, catalogo senza rack dopo l'errore. Handle rilasciato con Enter nella sessione helper; Ctrl+S dalla stessa schermata salva un solo rack. Ctrl+W, riapertura e Ctrl+2 ne verificano la persistenza. App chiusa con Alt+F4, finestra/processo e helper assenti.
+
+17 media e tre pacchetti fuori dalla modifica SHA-256 invariati. Hash del pacchetto modificato diverso dalla baseline prima dell'avvio: non prova l'invariabilità byte durante il guasto, non rivendicata. Screenshot successo/riapertura, inventario e hash in build/reports/res23-20261008; errore/focus osservati nella sessione. Nessun nuovo difetto/runtime; altri editor, matrice focus/input, protezione/recupero, checkbox e stampa ancora aperti. Nessuna suite ripetuta per questa sola verifica nativa.
+
+## RES-23 — Editor apparato nell’EXE, 8 ottobre 2026
+
+EXE nello storage sintetico esistente build/tmp/res23-20261007, finestra 1348×854 e tema chiaro. Modifica dell’apparato con bozza RES23-DEVICE-RETRY: handle FileStream Open/Read/FileShare.Read sul solo pacchetto sintetico provoca il guasto della sostituzione. Editor, bozza e banner restano visibili; Tab passa al tipo e Ctrl+S resta disponibile. SHA-256 del pacchetto identico alla baseline immediata durante il guasto. Dopo rilascio, Ctrl+S salva; chiusura e riapertura confermano un solo apparato, 28 porte e rack RES23-RACK conservato. Screenshot e JSON in build/reports/res23-followup-20261008.
+
+Scenario apparato completato; RES-23 resta PARTIAL per la matrice input durante operazioni lunghe, altri editor, checkbox della fusione, recupero protetto e errore nativo della stampa. Nessun difetto applicativo emerso, nessuna modifica al runtime o suite JVM ripetuta.
+
+## RES-23 — Checkbox fusione nell’EXE, 8 ottobre 2026
+
+Creato AP-01 nel solo progetto sintetico AUD-33 native. Il vero editor Unisci un duplicato mostra tutte le opzioni tramite scorrimento, descrizione e footer fissi. Credenziali risponde a clic sulla riga e Spazio; Tab raggiunge nell’ordine Configurazioni, Alimentazioni e Campi extra, e Spazio cambia ognuna delle selezioni. Escape apre la conferma di scarto; Scarta ritorna all’inventario con entrambi gli apparati conservati. Screenshot merge-options-before.png e merge-keyboard-options.png in build/reports/res23-followup-20261008.
+
+Completata l’interazione dei quattro controlli a 1348×854, tema chiaro e scala standard. Non eseguiti testo ingrandito, applicazione/trasferimento dei dati o rifiuto per ciclo: restano in RES-23. Nessuna modifica al runtime o suite ripetuta.
+
+## RES-23 — Scorciatoie e commit grande nell’EXE, 8 ottobre 2026
+
+Progetto sintetico expanded-511 (535.835.495 byte ZIP espansi, 16 allegati): pannello leggibile durante apertura e salvataggio di RES23-INPUT-MATRIX. Ctrl+N e Ctrl+O non aprono wizard/picker durante l’apertura; Escape non rilascia il pannello. Durante il salvataggio con form Nuova sede ancora aperto, Ctrl+N e Ctrl+W non avviano il wizard né chiudono il progetto: screenshot prima/dopo con pannello e form in build/reports/res23-followup-20261008.
+
+Ctrl+Z è stato ricevuto dopo il commit e ha avviato l’undo; non è evidenza del blocco durante il save. Undo riuscito e persistito: quattro sedi originali, nessuna RES23-INPUT-MATRIX. Ctrl+1 dopo il completamento torna all’inventario. Il clic finale durante apertura e Ctrl+1 non vengono conteggiati come prove di blocco perché hanno coinciso con il rilascio. La matrice mouse/tastiera/focus resta parziale; nessun difetto applicativo dimostrato e nessuna suite ripetuta.
+
+## RES-23 — Annullamento stampa da tastiera, 8 ottobre 2026
+
+EXE corrente, progetto sintetico AUD-33 native: Documenti e stampa → Stampa apre il vero dialogo Windows. Escape lo annulla, il pannello occupato viene rilasciato e lo stato mostra Stampa annullata. Ctrl+1 dalla finestra principale torna all’inventario; due apparati conservati. Tutti i 21 file dello storage (17 media e quattro pacchetti) mantengono lo SHA-256 della baseline immediata e la coda contiene zero lavori. Evidenze print-native-dialog.png, print-cancelled.png, print-integrity.json e print-result.json in build/reports/res23-followup-20261008.
+
+Annullamento da tastiera completato. Non sono errore del motore di stampa o stampa fisica; RES-23 resta parziale. Fonte primaria consultata l’8 ottobre: [PrinterJob Java SE 21](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/java/awt/print/PrinterJob.html), che distingue esito di printDialog ed esecuzione di print. Gli esiti specifici provengono dalla prova locale.
+
+## Consolidamento tracker — 8 ottobre 2026
+
+Il tracker conserva solo RES-13/19/23/24 (tre P2, un P3), tutti PARTIAL: descrizioni ridotte al lavoro mancante, cronologia conclusa nella roadmap e nelle evidenze. Nessuna voce residua chiusa integralmente da questa sessione; nessun nuovo difetto applicativo emerso. ADB devices -l non rileva dispositivi, quindi matrice Android, copia delle 80 coppie finali e pulizia del telefono restano in attesa USB. Pulizie storiche respinte non ritentate. I collaudi Windows completati sono registrati nelle sezioni precedenti; dettagli della sessione in build/reports/res23-followup-20261008.
+
+Fonti ufficiali consultate l’8 ottobre: [ADB](https://developer.android.com/tools/adb), [verifica accessibilità Compose](https://developer.android.com/develop/ui/compose/accessibility/testing) e [PrinterJob Java SE 21](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/java/awt/print/PrinterJob.html). Le API documentate non dimostrano il comportamento dell’app: i risultati e i limiti provengono dai collaudi locali.
+
+Controllo finale della sessione: 18 Markdown UTF-8 senza BOM, 146 link locali validi, quattro ID residui univoci e riferimenti/dipendenze validi; git diff --check senza errori. Tutti i 17 media dello scratch conservano gli SHA-256 iniziali; nessun file .recovery/.tmp nello storage e nessun processo EXE della sessione residuo. Report final-integrity-summary.json e document-validation.json. Nessuna modifica ai sorgenti o dipendenze in questa sessione; suite/compilazione non ripetute perché non è emerso un nuovo difetto. Modifiche preesistenti conservate, nessun commit/push.
+
+## RES-23 — Creazione modello nell’EXE, 8 ottobre 2026
+
+DesktopApp/EditorFrame reali, storage sintetico res23-20261007, finestra 1348×854 chiara. Nuovo modello RES23-MODEL-NEW: guasto filesystem tramite handle Read/FileShare.Read sul pacchetto conserva nome, editor, errore interno e banner; SHA-256 immediato del pacchetto invariato. Rilascio e Ctrl+S dalla stessa bozza salvano un solo modello; due apparati e 29 porte conservati. Screenshot/JSON in build/reports/res23-editors-20261008. Nessun nuovo difetto o modifica al runtime; matrice restante RES-23 aperta.
+
+### RES-23: modifica modello nell’EXE (8 ottobre 2026)
+
+Sul progetto sintetico AUD-33, un handle senza condivisione della cancellazione provoca un errore reale nella sostituzione del pacchetto. Il pannello conserva il nuovo nome e l’errore; SHA-256 invariato. Dopo rilascio e Ctrl+S, il pacchetto contiene un solo modello rinominato con ID originale. Screenshot e riscontri JSON: `build/reports/res23-editors-20261008/edit-model-*`. Verifica del frame chiaro a 1348 × 854; non estesa ad altri layout.
+
+### RES-23: applicazione modello nell’EXE (8 ottobre 2026)
+
+Provato il percorso completo scelta AP-01 → bozza → guasto della sostituzione file → rilascio → Ctrl+S. La bozza rimane aperta con il nome modificato e il banner di errore; hash del pacchetto invariato al guasto. La riprova aggiorna una sola volta lo stesso apparato. Il modello senza porte elimina la sola porta del destinatario; confronto JSON integrale dello switch non destinatario invariato (28 porte). Evidenze `build/reports/res23-editors-20261008/apply-model-*`, frame chiaro 1348 × 854.
+
+L’annullamento dell’applicazione ripristina AP-01 con una porta. Una seconda sequenza guasto/riprova, senza rinomina, salva AP-01 con ID originale e riferimento al modello; il confronto completo dello switch con la baseline dopo Annulla è identico. Il primo probe usava `name` al posto di `technicalName`; la verifica corretta è in `apply-model-persisted.json` e `apply-model-repeat-*`.
+
+### RES-23: nuova credenziale nell’EXE (8 ottobre 2026)
+
+Creazione con utente sintetico, segnaposto, tipo Password, AP-01 e gruppo di prova. Provocato un errore reale di sostituzione del pacchetto: bozza aperta e campi conservati, SHA-256 invariato. Riprova Ctrl+S dopo rilascio: una sola credenziale con valori e collegamento attesi. Il probe confronta il segnaposto senza stamparlo nei riscontri; gli screenshot lo mostrano mascherato. Evidenze `build/reports/res23-editors-20261008/new-credential-*`, frame chiaro 1348 × 854.
+
+### RES-23: modifica credenziale nell’EXE (8 ottobre 2026)
+
+Rinomina utente con blocco reale del pacchetto e riprova dopo rilascio. Errore e bozza restano nel pannello; file invariato al guasto. Il probe del pacchetto verifica una sola credenziale con stesso ID, nuovo utente e invarianti su segnaposto, tipo, apparato, gruppo e note. Riscontro senza valori segreti in `edit-credential-persisted.json`; screenshot mascherati in `build/reports/res23-editors-20261008`. Frame chiaro 1348 × 854; altri layout e superfici del frame restano da verificare.
+
+### RES-23: preferenze EXE (8 ottobre 2026)
+
+Tema scuro → cambio al chiaro con handle reale senza condivisione cancellazione su settings.properties: banner leggibile, tema precedente conservato, hash di impostazioni e progetto invariati. Ctrl+1 funziona dopo il guasto. Riprova dopo rilascio: tema chiaro persistito, banner rimosso e progetto invariato. Evidenze `build/reports/res23-editors-20261008/preferences-*`; profilo sintetico, frame standard. Lingua e recupero/password non collaudati qui.
+
+## AUD-43 — Selettori Windows e focus, 8 ottobre 2026
+
+Riprodotto nell’EXE: annullamento con Escape di apertura/esportazione lascia le scorciatoie e Alt+F4 inattivi fino a un clic. Il parent null di JFileChooser usa il frame Swing nascosto. I quattro selettori DesktopStorageHelper ora usano la finestra AWT attiva; API e formati invariati. NativePickerOwnershipTest apre realmente i selettori cartella/singolo/multipli/salvataggio e verifica proprietario, posizione, annullamento e ritorno del focus. Baseline quattro regressioni rosse e tre test esistenti verdi; mirata finale sette test verdi (6s). Suite Windows e createDistributable: 207 test, zero fallimenti/errori/saltati, BUILD SUCCESSFUL in 3m 18s. Comandi completi e fonti Oracle nella roadmap; report `build/reports/aud43-red`, `aud43-targeted`, `aud43-windows`.
+
+EXE rigenerato, frame chiaro 1348 × 854, dati sintetici: apertura ed esportazione centrati, Escape e successive Ctrl+3/Ctrl+1/Ctrl+E/Alt+F4 efficaci senza clic di recupero. Quattro file invariati rispetto alla baseline immediata dopo apertura; la baseline precedente all’apertura include la riscrittura locale prevista e non è prova di invarianza byte dei selettori. Evidenze `build/reports/res23-editors-20261008/aud43-*`. Questo chiude AUD-43 e i due scenari di annullamento, non l’intera RES-23.
+
+Pulizia nuova fixture respinta automaticamente con blocked by policy, non ritentata: `pc/app/build/compose/binaries/main/app/OnlyFieldAssetManager/data` (soli dati sintetici) e `build/reports/res23-editors-20261008/apply-model-entities-before.json` (probe invalido, non evidenza). Inventario `cleanup-blocked-inventory.json`; baseline corretta applicazione modello `apply-model-undo-baseline.json`. Percorsi aggiunti a RES-24. Runtime/exe e helper chiusi; report conservati.
+
+### RES-23: preferenza lingua EXE (8 ottobre 2026)
+
+Sistema/italiano → English con errore reale di sostituzione impostazioni: banner leggibile, UI italiana e SHA-256 precedenti conservati. Dopo rilascio, riprova persistita (language=en), menu e pagina iniziale inglesi, errore rimosso e testi utente preservati. Ripristino Italiano riuscito. Finestra chiara standard, profilo sintetico nel runtime generato; evidenze `build/reports/res23-editors-20261008/language-*`. Non è collaudo della pagina password o del recupero.
+
+### RES-23: fusione reale, guasto/riprova e undo (8 ottobre 2026)
+
+Sul solo progetto sintetico del nuovo EXE, tutte le opzioni selezionate: AP-01 → switch RES23-DEVICE-RETRY. Blocco reale sostituzione pacchetto: pannello e scelte conservati, hash invariato. Riprova Ctrl+S salva un solo apparato (28 porte), sposta la credenziale con ID/contenuto conservati e il duplicato nel cestino. UI Credenziali mostra lo switch. Ctrl+Z ripristina JSON integrale precedente, AP-01, collegamento originario e cestino vuoto. Evidenze `build/reports/res23-editors-20261008/merge-*`. Fixture senza configurazioni/alimentazioni/campi extra e senza porte del duplicato: questi trasferimenti, ciclo/ripristino e testo ingrandito restano aperti.
+
+### AUD-44 — Alimentazioni/PoE/Badge Windows, chiuso l’8 ottobre 2026
+
+Guasto reale della sostituzione del pacchetto: creazione/modifica dei tre editor chiudevano prima dell’esito, perdendo la bozza. Dodici regressioni, dialogo e pannello, riproducono la perdita dopo aver verificato file, progetto, cestino e history invariati. Fixture iniziale corretta con UUID valido prima della baseline rossa; nessun errore della fixture attribuito al prodotto. XML rosso: build/reports/res23-editors-20261008/aud44-red.xml.
+
+PowerBadgeSection chiude ora solo dopo save riuscito, mostra errore interno e protegge Nuovo/Modifica tramite il guard esistente. Selezioni, ID e campi nascosti conservati; firma precedente disponibile, nessuna dipendenza/schema/formato modificato. Mirata FailedPowerSaveTest e FailedModelCredentialSaveTest: BUILD SUCCESSFUL in 34s, 22 test verdi. Suite Windows e createDistributable con init-script build/tmp/aud44-20261008/native-output.init.gradle, --no-parallel --max-workers=1: BUILD SUCCESSFUL in 3m 50s, 219 test, zero fallimenti/errori/saltati. XML in build/reports/aud44-windows, log in res23-editors-20261008.
+
+Nel vero EXE isolato, nuova alimentazione AP-01 da switch: guasto mantiene nome/sorgente/errore e SHA-256 invariato; rilascio e Ctrl+S salvano una sola alimentazione; Ctrl+Z ripristina il progetto JSON integrale. Screenshot/JSON aud44-feed-*; EXE/helper chiusi. Le altre undici varianti sono verificate dalle regressioni, senza estendere il collaudo EXE a tutte. AUD-44 rimosso dal tracker; RES-23 resta parziale. Runtime build/tmp/aud44-native-20261008 e fixture sintetica conservati e inventariati per RES-24, senza alterare la fixture AUD-43 già respinta.
+
+Fonti primarie consultate l’8 ottobre: [stato Compose](https://developer.android.com/develop/ui/compose/state) e [distribuzioni native Compose](https://kotlinlang.org/docs/multiplatform/compose-native-distribution.html). Risultati applicativi da prove locali; outputBaseDir usato solo nello script di collaudo. Nessun commit/push.
+
+### RES-19/24 — Evidenze Android recuperate e pulizia telefono, 8 ottobre 2026
+
+Moto g86 API 36 nuovamente autorizzato via ADB. Copiati 176 file (11.234.842 byte) in build/reports/res19-native/complete-evidence-20261008, verificando ogni SHA-256 contro il telefono: 80 coppie finali PNG/albero completo e otto coppie footer precedenti, distinte nel manifest complete-evidence-integrity-20261008.json. Ogni nome finale e intestazione API/modello verificati; due campioni finali controllati visivamente. Non ripetuta la suite già verde; questi screenshot documentano host Compose isolati, non AppRoot, tastiera/TalkBack o persistenza completa.
+
+Database, WAL, db_key.bin e recovery_key.bin coincidono con data-before.txt; entrambi i backup storici SHA-256 invariati. Riverificati percorso fisico e 176 hash immediatamente prima della rimozione: eliminati solo i file della cartella configurator-matrix-evidence e la directory vuota; disinstallato esclusivamente com.onlyfield.assetmanager.test (Success). App principale conservata. Hash dati/chiavi nuovamente invariati prima della riapertura; MainActivity riaperta con Status: ok. Report data-before-cleanup-20261008.txt e data-after-cleanup-20261008.txt.
+
+Recupero evidenze e pulizia del telefono completati e rimossi dalle descrizioni aperte. RES-19 conserva la matrice UX non eseguita; RES-24 conserva solo le risorse Windows storiche respinte e gli eventuali scratch nuovi. Fonte ufficiale [ADB](https://developer.android.com/tools/adb), consultata l’8 ottobre. Nessun commit/push.
+
+### RES-23 — Fusione rifiutata per ciclo e riprova EXE, 8 ottobre 2026
+
+Fixture sintetica con AP-01 alimentato dallo switch. Unire AP-01 nello switch trasferendo Alimentazioni creerebbe un arco verso se stesso: il vero EXE mostra il messaggio localizzato, mantiene pannello/duplicato/scelte e SHA-256 del pacchetto invariato. Tutte le scelte di trasferimento restano raggiungibili e selezionate.
+
+Dalla stessa schermata, escluso il trasferimento Alimentazioni, Ctrl+S salva un solo switch con 28 porte e trasferisce la credenziale; duplicato nel cestino, alimentazione esclusa rimossa insieme al duplicato. Ctrl+Z ripristina il progetto JSON integrale precedente, inclusi due apparati, alimentazione e collegamento credenziale. Non è trasferimento di un’alimentazione valida né correzione dei collegamenti: sono ancora scenari distinti. Report/screenshot merge-cycle-* in build/reports/res23-editors-20261008. Nessun difetto, modifica al runtime o suite ripetuta. Scala standard, tema chiaro 1348 × 854; testo ingrandito e ripristino dal cestino per ciclo ancora aperti.
+
+### RES-23 — Password impostata manualmente nell’EXE, 8 ottobre 2026
+
+Utente ha completato il salvataggio nel progetto sintetico AUD-33 del runtime AUD-44; frame mostra Protetto da password e Password del progetto impostata. Verifica filesystem: pacchetto progetto e base sync cifrati, project.json.enc presente e project.json assente; allegati del pacchetto cifrati. Nessun PDF in chiaro o file temporaneo/recovery nello storage. Password non acquisita o registrata. Inventario/prova password-native-* in build/reports/res23-editors-20261008.
+
+Ctrl+W chiude il progetto e Continua apre il dialogo Pacchetto protetto. Richiesta all’utente prova di password errata, poi riprova corretta; ancora pendente, non conteggiata come successo. EXE lasciato aperto per il collaudo guidato. Il passaggio finale di impostazione è manuale secondo computer-use/confirmations.md; nessun segreto chiesto in chat.
+
+### RES-23 — Riapertura corretta e PDF cifrato, 8 ottobre 2026
+
+L’utente ha inserito la password corretta nel dialogo, senza comunicarla. DesktopApp riapre AUD-33 protetto: due apparati, modello e una alimentazione con AP-01/sorgente switch conservati nella UI. L’unico PDF allegato viene decifrato e renderizzato come planimetria dopo il caricamento asincrono; nessun PDF in chiaro o file tmp/recovery nello storage. Screenshot password-native-reopened-correct, password-native-pdf-rendered e password-native-power-retained.
+
+Impostazione e riapertura corretta native completate; password errata/riprova, guasto del cambio password e recupero bloccato non verificati in questo flusso. Nessun confronto JSON integrale del pacchetto cifrato rivendicato, nessuna password acquisita. EXE chiuso, fixture protetta conservata per RES-24; serve la password dell’utente per riaprirla. Nessun difetto e nessuna suite ripetuta.
+
+### RES-13 — Recovery dopo riavvio fisico, completato l’8 ottobre 2026
+
+Sul moto g86 API 36, l’utente ha riavviato dal menu e sbloccato il telefono. Boot ID diverso verificato prima di recoveryPhase=recover, stesso recoveryRun=b91d2730-9698-4936-a271-3460d7f0c5cc: OK (1 test), 14,046s. Cinque scenari SQLCipher/Keystore isolati verificati dopo il riavvio: rollback/commit di update e delete, più rollback bloccato da modifica esterna e riprova; chiavi wrapped conservate, journal recuperati secondo l’esito Room. Preparazione precedente: OK (1 test), 20,781s.
+
+Root recovery assente dopo il finally del test; database/WAL/chiavi principali e due backup storici SHA-256 invariati. Rimosso solo com.onlyfield.assetmanager.test (Success); hash principali ancora invariati prima della riapertura di MainActivity (Status: ok). Report boot-before/after, prepare/recover, data-after-recover/cleanup e run.json in build/reports/res13-reboot-20261008.
+
+Riavvio normale con journal pendenti completato e rimosso dalle attività aperte. Restano arresto forzato/perdita improvvisa di alimentazione durante scrittura, fotocamera e gesti; questa prova non verifica UX AppRoot o TalkBack. Fonte primaria [Android Keystore](https://developer.android.com/privacy-and-security/keystore), consultata l’8 ottobre; esiti specifici dal test nativo.

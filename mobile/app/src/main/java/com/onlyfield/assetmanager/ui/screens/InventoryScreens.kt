@@ -125,7 +125,9 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
     val confirm = LocalConfirm.current
     val device = index.device(deviceId)
     if (device == null) {
-        LaunchedEffect(Unit) { vm.back() }
+        LaunchedEffect(project.id, deviceId) {
+            if (vm.project.value?.id == project.id && vm.currentScreen == Screen.DeviceDetail(deviceId)) vm.back()
+        }
         return
     }
     var editing by remember { mutableStateOf(false) }
@@ -150,7 +152,6 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                     MenuAction(i18n.text("text.99f9d71d6d8e")) { merging = true },
                     MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
                         confirm(ConfirmRequest(i18n.text("text.87fc0efddabf", device.technicalName), i18n.text("text.2548407c6a6b"), i18n.text("text.dd41b3275173")) {
-                            vm.back()
                             vm.moveToTrash("DEVICE", device.id, device.technicalName)
                         })
                     }

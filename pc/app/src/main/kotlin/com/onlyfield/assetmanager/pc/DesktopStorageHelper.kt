@@ -2,6 +2,7 @@ package com.onlyfield.assetmanager.pc
 
 import com.onlyfield.assetmanager.core.i18n.Messages
 
+import java.awt.KeyboardFocusManager
 import java.awt.print.PrinterJob
 import java.io.File
 import javax.swing.JFileChooser
@@ -9,6 +10,8 @@ import javax.swing.filechooser.FileNameExtensionFilter
 
 /** Desktop storage, picker and print helpers. */
 object DesktopStorageHelper {
+
+    private val dialogParent get() = KeyboardFocusManager.getCurrentKeyboardFocusManager().activeWindow
 
     fun pickDirectory(
         title: String = Messages().text("text.79762e9e52e9"),
@@ -21,7 +24,7 @@ object DesktopStorageHelper {
                 currentDirectory = currentDir
             }
         }
-        val result = chooser.showOpenDialog(null)
+        val result = chooser.showOpenDialog(dialogParent)
         return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
     }
 
@@ -35,7 +38,7 @@ object DesktopStorageHelper {
             isMultiSelectionEnabled = false
             fileFilter = FileNameExtensionFilter(extensionDescription, *extensions)
         }
-        val result = chooser.showOpenDialog(null)
+        val result = chooser.showOpenDialog(dialogParent)
         return if (result == JFileChooser.APPROVE_OPTION) chooser.selectedFile else null
     }
 
@@ -46,7 +49,7 @@ object DesktopStorageHelper {
             isMultiSelectionEnabled = true
             fileFilter = FileNameExtensionFilter(extensionDescription, *extensions)
         }
-        return if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
+        return if (chooser.showOpenDialog(dialogParent) == JFileChooser.APPROVE_OPTION) chooser.selectedFiles.toList() else emptyList()
     }
 
     fun pickSaveFile(
@@ -60,7 +63,7 @@ object DesktopStorageHelper {
             selectedFile = File(defaultFileName)
             if (extensions.isNotEmpty()) fileFilter = FileNameExtensionFilter(extensionDescription, *extensions)
         }
-        val result = chooser.showSaveDialog(null)
+        val result = chooser.showSaveDialog(dialogParent)
         return if (result == JFileChooser.APPROVE_OPTION) {
             var file = chooser.selectedFile
             val ext = extensions.firstOrNull() ?: ""

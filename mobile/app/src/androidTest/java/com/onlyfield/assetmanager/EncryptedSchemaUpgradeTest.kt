@@ -65,11 +65,12 @@ class EncryptedSchemaUpgradeTest {
                 database.openHelper.writableDatabase.query("SELECT name FROM sqlite_master WHERE name='business_units'").use { assertFalse(it.moveToFirst()) }
                 val repository = ProjectRepository(database)
                 assertTrue(repository.getAllProjects().first().isEmpty())
-                val demo = assets.open("onlyfield-demo.ofam").use { requireNotNull(PackageSerializer.importPackage(it).pkg) }
-                assertTrue(repository.importProjectPackage(demo))
-                val restored = requireNotNull(repository.getProjectById(demo.project.id))
-                assertEquals("Demo Comune", restored.name)
-                assertEquals(356, restored.sites.sumOf { it.devices.size })
+                assets.open("onlyfield-demo.ofam").use { requireNotNull(PackageSerializer.importPackage(it).pkg) }.use { demo ->
+                    assertTrue(repository.importProjectPackage(demo))
+                    val restored = requireNotNull(repository.getProjectById(demo.project.id))
+                    assertEquals("Demo Comune", restored.name)
+                    assertEquals(demo.project.sites.sumOf { it.devices.size }, restored.sites.sumOf { it.devices.size })
+                }
             }
             withDatabase(isolated) { database ->
                 assertEquals("Demo Comune", ProjectRepository(database).getAllProjects().first().single().name)
@@ -125,6 +126,7 @@ class EncryptedSchemaUpgradeTest {
                 assertEquals("Demo Comune", ProjectRepository(database).getAllProjects().first().single().name)
             }
         } finally {
+            demo.close()
             if (!seedApplication) {
                 context.deleteDatabase(name)
                 check(attachments.canonicalFile.parentFile == context.cacheDir.canonicalFile)

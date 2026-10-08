@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.exchange
 
 import com.onlyfield.assetmanager.core.forms.DevicePresets
+import com.onlyfield.assetmanager.core.forms.CableForm
 import com.onlyfield.assetmanager.core.forms.HardwareConfigurator
 import com.onlyfield.assetmanager.core.forms.MapObjectDraft
 import com.onlyfield.assetmanager.core.forms.PortGroups
@@ -10,16 +11,12 @@ import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.core.forms.RackForm
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.validation.ModelValidator
 import java.io.File
 
 /**
- * Demo project for manual tests: a municipality network.
- * - Comune – Municipio: CED star rack (fibre panel, core switch, firewall, router, ONT, servers, NAS, UPS) and two office floors.
- * - Teatro comunale: own FTTH line, VPN to the Municipio firewall, one run extended through a junction box.
- * - Scuola media: radio bridge from the Municipio roof, relaying by radio to the Scuola materna.
- * Every floor has a wiring rack with 2 × 48 patch panels, 3/4 of the ports cabled to wall outlets,
- * two PoE switches and endpoints (AP, cameras, phones, PCs) on the first outlets.
- * Built through the same drafts the apps use, so ports, rack units, map placement and containment are real.
+ * Municipality network plus a labelled survey lab. Uses the apps' drafts and hardware APIs.
+ * The lab adds incomplete/conflicting surveys, models, nested maps and synthetic media.
  */
 object DemoSeed {
     private val i18n = Messages()
@@ -34,7 +31,8 @@ object DemoSeed {
 
     fun build(now: Long = 1_760_000_000_000): Project {
         val com = Site(name = "Comune – Municipio", code = "COM", group = "Sedi comunali", address = "Piazza del Municipio 1", areas = listOf(
-            Area(name = "CED", floor = "-1"), Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
+            Area(name = "CED", floor = "-1"), Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2"),
+            Area(name = "Laboratorio collaudi", floor = "0", description = "Casi sintetici: porte, modelli, contenitori e rilievi da verificare")))
         val tea = Site(name = "Teatro comunale", code = "TEA", group = "Sedi comunali", address = "Via del Teatro 5", areas = listOf(Area(name = "Piano terra", floor = "0")))
         val med = Site(name = "Scuola media", code = "MED", group = "Scuole", address = "Via delle Scuole 10", areas = listOf(
             Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
@@ -45,8 +43,10 @@ object DemoSeed {
         fun add(draft: MapObjectDraft): String { p = draft.apply(p, i18n); return draft.id }
         fun device(id: String) = p.sites.flatMap { it.devices }.first { it.id == id }
         fun port(deviceId: String, name: String, side: PortSide? = null) = device(deviceId).ports.first { it.name == name && (side == null || it.hardware.side == side) }.id
-        fun cable(code: String?, a: String, b: String, medium: CableMedium = CableMedium.ETHERNET_COPPER, length: Double? = null, color: String? = null) {
-            p = p.copy(cables = p.cables + Cable(codeOrLabel = code, portAId = a, portBId = b, medium = medium, lengthValue = length, color = color))
+        fun cable(code: String?, a: String, b: String?, medium: CableMedium = CableMedium.ETHERNET_COPPER, length: Double? = null, color: String? = null): String {
+            val c = Cable(codeOrLabel = code, portAId = a, portBId = b, medium = medium, lengthValue = length, color = color)
+            p = p.copy(cables = p.cables + c)
+            return c.id
         }
         fun onMap(site: Site, area: Area, typeId: String, name: String, point: MapPoint, result: PresetResult? = DevicePresets.forType(typeId)?.let { preset(typeId) }) =
             add(QuickAdd.draft(MapObjectDraft(type = type(typeId), siteId = site.id, areaId = area.id, mapPoint = point), name, result))
@@ -170,17 +170,118 @@ object DemoSeed {
             WanVpnConnection(name = "FTTH Teatro", type = WanVpnType.INTERNET, providerOrCarrier = "Operatore FTTH", bandwidth = "300 Mbps", localEndpointDeviceId = rtrTea),
             WanVpnConnection(name = "VPN Teatro–Municipio", type = WanVpnType.VPN, localEndpointDeviceId = rtrTea, remoteEndpointDeviceId = fw),
         ))
-        // A few operational states so filters and faded map nodes have something to show.
+        // Keep lab anomalies separate from the municipality's complete paths.
+        val lab = com.areas.last()
+        val switchModels = listOf(8, 16, 24, 48).flatMap { count -> listOf("NONE", "HALF", "ALL").map { poe ->
+            val draft = QuickAdd.draft(MapObjectDraft(type = type("switch"), siteId = com.id, areaId = lab.id), "Modello",
+                preset("switch", mapOf("ports" to count.toString(), "poe" to poe)))
+            val suffix = when (poe) { "NONE" -> "senza PoE"; "HALF" -> "PoE metà porte"; else -> "PoE tutte le porte" }
+            HardwareConfigurator.model(p, draft, "DEMO Switch %02d – %s".format(count, suffix)).copy(brand = "Demo", notes = "Modello sintetico per ricerca e applicazione")
+        } }
+        val rackDraft = QuickAdd.draft(MapObjectDraft(type = type("rack"), siteId = com.id, areaId = lab.id,
+            rack = RackForm(areaId = lab.id, depthMm = "600", mountingDepthMm = "450", numberingDirection = NumberingDirection.TOP_TO_BOTTOM)), "RK-COM-LAB", rackHeightU = 12)
+        val rackModel = HardwareConfigurator.model(p, rackDraft, "DEMO Rack 12U – numerazione dall’alto")
+        val cableDraft = MapObjectDraft(type = type("copper-cable"), siteId = com.id, areaId = lab.id,
+            cable = CableForm(color = "Arancione"))
+        val cableModel = HardwareConfigurator.model(p, cableDraft, "DEMO Rame – arancione")
+        p = p.copy(deviceModels = switchModels + rackModel + cableModel)
+        val labRackId = add(HardwareConfigurator.applyModel(rackDraft, rackModel).copy(mapPoint = MapPoint(.12f, .5f)))
+        val labRack = p.racks.single { it.id == labRackId }
+        val labSwitchModel = switchModels.single { it.name == "DEMO Switch 08 – PoE metà porte" }
+        val swLab = add(HardwareConfigurator.applyModel(QuickAdd.draft(QuickAdd.inRack(p, labRack, type("switch"), 12, RackSide.FRONT), "SW-COM-LAB"), labSwitchModel))
+        val swHardware = device(swLab).hardware.copy(
+            portLayouts = listOf(PortLayout(group = "P", rows = 2, order = listOf("2", "1", "4", "3", "6", "5", "8", "7"))),
+            portPoeOverrides = listOf(PortPoeOverride(group = "P", key = "3", standard = PoeStandard.IEEE_802_3BT), PortPoeOverride(group = "P", key = "4")))
+        p = HardwareConfigurator.configure(p, device(swLab).copy(hardware = swHardware))
+        val ppLab = mounted(labRack, "patch-panel", "PP-COM-LAB", 11, preset("patch-panel", mapOf("ports" to "12")))
+        val nvr = mounted(labRack, "nvr", "NVR-COM-LAB", 10, preset("nvr", mapOf("ports" to "0")))
+        val pdu = add(QuickAdd.draft(QuickAdd.inRack(p, rkCed, type("pdu"), 1, RackSide.REAR), "PDU-COM-CED", preset("pdu")))
+        val apLab = onMap(com, lab, "access-point", "AP-COM-LAB", MapPoint(.45f, .22f), preset("access-point", mapOf("poe" to "IEEE_802_3AF")))
+        val camLab = onMap(com, lab, "camera", "CAM-COM-LAB", MapPoint(.8f, .22f))
+        val cabinet = onMap(com, lab, "cabinet", "ARM-COM-LAB", MapPoint(.8f, .72f))
+        fun inside(parent: String, typeId: String, name: String, point: MapPoint): String = add(QuickAdd.draft(
+            MapObjectDraft.newObject(p, type(typeId), com.id, lab.id, ObjectRef(PlacementTargetType.DEVICE, parent)).copy(mapPoint = point), name, DevicePresets.forType(typeId)?.let { preset(typeId) }))
+        val enclosure = inside(cabinet, "enclosure", "CAS-COM-LAB", MapPoint(.5f, .5f))
+        inside(enclosure, "power-supply", "ALIM-COM-LAB", MapPoint(.25f, .5f))
+        val sensor = inside(enclosure, "sensor", "SENS-COM-LAB", MapPoint(.75f, .5f))
+        cable("AOC-COM-LAB", port(swLab, "X1"), port(core, "X5"), CableMedium.AOC, 10.0)
+        val apCable = cable("AP-COM-LAB-01", port(swLab, "P1"), device(apLab).ports.single().id, length = 8.0, color = "Arancione")
+        cable("CAM-COM-LAB-01", port(swLab, "P2"), device(camLab).ports.single().id, length = 14.0)
+        val openCable = cable("APERTO-LAB-01", port(swLab, "P3"), null, length = 6.0, color = "Arancione")
+        cable("NVR-COM-LAB-01", port(swLab, "P5"), port(nvr, "LAN1"), length = 1.0)
+        cable("PASSANTE-LAB-01", port(swLab, "P6"), port(ppLab, "P1", PortSide.FRONT), length = 1.0)
+        p = p.copy(cables = p.cables.map { c -> when (c.id) {
+            apCable -> c.copy(deviceModelId = cableModel.id, objectTypeId = "copper-cable")
+            openCable -> c.copy(notes = "Estremità B non rilevata: completare dalla scheda porta")
+            else -> c
+        } }, cableRoutes = listOf(CableRoute(cableId = apCable, areaId = lab.id,
+            points = listOf(MapPoint(.12f, .5f), MapPoint(.3f, .5f), MapPoint(.3f, .22f), MapPoint(.45f, .22f)))))
+
+        val vlans = listOf(10 to "Uffici", 20 to "Voce", 30 to "Videosorveglianza", 90 to "Laboratorio").map { (number, name) -> Vlan(vlanId = number, name = name) }
+        val ups = p.sites.flatMap { it.devices }.single { it.technicalName == "UPS-COM-01" }.id
+        p = p.copy(vlans = vlans, subnets = vlans.map { v -> Subnet(cidrBlock = "10.10.${v.vlanId}.0/24", gatewayIp = "10.10.${v.vlanId}.1", vlanId = v.id, name = v.name) },
+            portVlanMemberships = listOf(
+                PortVlanMembership(portId = port(swLab, "P1"), mode = PortVlanMode.ACCESS, untaggedVlanId = 90),
+                PortVlanMembership(portId = port(swLab, "P2"), mode = PortVlanMode.ACCESS, untaggedVlanId = 30),
+                PortVlanMembership(portId = port(swLab, "X1"), mode = PortVlanMode.TRUNK, taggedVlanIds = vlans.map { it.vlanId }),
+                PortVlanMembership(portId = port(core, "X5"), mode = PortVlanMode.TRUNK, taggedVlanIds = vlans.map { it.vlanId })),
+            logicalInterfaces = vlans.map { v -> LogicalInterface(deviceId = core, name = "VLAN${v.vlanId}", ipAddress = "10.10.${v.vlanId}.1", subnetCidr = "10.10.${v.vlanId}.0/24", vlanId = v.vlanId) },
+            lagGroups = listOf(LagGroup(deviceId = core, name = "LAG-SRV-01", memberPortIds = listOf(port(core, "P2"), port(core, "P3"))),
+                LagGroup(deviceId = servers.first(), name = "bond0", memberPortIds = listOf(port(servers.first(), "NIC1"), port(servers.first(), "NIC2")))),
+            deviceConfigurations = listOf(DeviceConfiguration(deviceId = swLab, title = "Configurazione demo", capturedEpochMs = now,
+                configText = "hostname SW-COM-LAB\ninterface P1\n description AP laboratorio\n access vlan 90", notes = "Esempio sintetico, non destinato ad apparati reali")),
+            videoSurveillanceMappings = listOf(VideoSurveillanceMapping(cameraDeviceId = camLab, managerDeviceId = nvr, channelNumber = 1, resolution = "1920x1080")),
+            poeMappings = listOf(PoeMapping(portId = port(swLab, "P1"), allocatedPowerWatts = 12.0),
+                PoeMapping(portId = device(apLab).ports.single().id, role = PoeRole.PD_SINK, standard = PoeStandard.IEEE_802_3AF, allocatedPowerWatts = 9.0)),
+            powerFeeds = listOf(PowerFeed(deviceId = pdu, feedName = "UPS → PDU", feedType = PowerFeedType.UPS_BACKUP, sourceDeviceId = ups,
+                observedRuntimeMinutes = 18, observedSource = "Rilievo sintetico demo", observedEpochMs = now),
+                PowerFeed(deviceId = servers.first(), feedName = "Ingresso A", feedType = PowerFeedType.PRIMARY_A, sourceDeviceId = pdu, sourceOutletDescription = "OUT1"),
+                PowerFeed(deviceId = servers.first(), feedName = "Ingresso B", feedType = PowerFeedType.SECONDARY_B, voltageVolts = 230, notes = "Rete diretta demo"),
+                PowerFeed(deviceId = nvr, feedName = "Alimentazione singola", feedType = PowerFeedType.MAINS_DIRECT, voltageVolts = 230)),
+            customExtraFields = listOf(CustomExtraField(targetType = "DEVICE", targetId = swLab, fieldKey = "Inventario", fieldValue = "DEMO-LAB-001"),
+                CustomExtraField(targetType = "DEVICE", targetId = swLab, fieldKey = "Nota interna", fieldValue = "Dato sintetico riservato", classification = AttachmentClassification.CONFIDENTIAL)),
+            annotations = listOf(Annotation(areaId = lab.id, x1Ratio = .35f, y1Ratio = .85f, label = "Laboratorio: anomalie intenzionali"),
+                Annotation(areaId = lab.id, type = AnnotationType.HIGHLIGHT_ZONE, x1Ratio = .65f, y1Ratio = .6f, x2Ratio = .95f, y2Ratio = .9f,
+                    label = "Contenitore da verificare", classification = AttachmentClassification.REVIEW_REQUIRED)))
+
+        fun attachment(name: String, target: AttachmentTargetType, id: String, classification: AttachmentClassification = AttachmentClassification.SHAREABLE): Attachment {
+            val a = Attachment(name = name, originalFileName = "$name.png", mimeType = "image/png", relativePath = "attachments/$name.png",
+                targetType = target, targetId = id, classification = classification, createdAtEpochMs = now, attributionText = "Illustrazione sintetica DemoSeed; nessuna fotografia reale")
+            p = p.copy(attachments = p.attachments + a)
+            return a
+        }
+        val floorPlan = attachment("Pianta-COM-PT", AttachmentTargetType.AREA, comPt.id)
+        val labPlan = attachment("Pianta-COM-LAB", AttachmentTargetType.AREA, lab.id)
+        attachment("Guida-demo", AttachmentTargetType.PROJECT, p.id, AttachmentClassification.REVIEW_REQUIRED)
+        attachment("Rack-LAB", AttachmentTargetType.RACK, labRack.id)
+        attachment("Apparato-LAB-riservato", AttachmentTargetType.DEVICE, swLab, AttachmentClassification.CONFIDENTIAL)
+        attachment("Cavo-LAB-da-verificare", AttachmentTargetType.CABLE, apCable, AttachmentClassification.REVIEW_REQUIRED)
+        attachment("Porta-LAB-P1", AttachmentTargetType.PORT, port(swLab, "P1"))
+
         val states = mapOf("PC-TEA-PT-06" to OperationalStatus.OFF, "TEL-MAT-PT-04" to OperationalStatus.DECOMMISSIONED, "CAM-MED-PT-02" to OperationalStatus.TO_VERIFY)
-        p = p.copy(sites = p.sites.map { s -> s.copy(devices = s.devices.map { d -> states[d.technicalName]?.let { d.copy(operationalStatus = it) } ?: d }) })
+        val graph = ConnectionGraph(p)
+        val openPort = port(swLab, "P3")
+        p = p.copy(sites = p.sites.map { s -> s.copy(areas = s.areas.map { a -> a.copy(floorplanAttachmentId = when (a.id) { comPt.id -> floorPlan.id; lab.id -> labPlan.id; else -> a.floorplanAttachmentId }) },
+            devices = s.devices.map { d -> d.copy(operationalStatus = states[d.technicalName] ?: d.operationalStatus,
+                observation = Observation("DemoSeed sintetico", now, when (d.id) { sensor -> ObservationStatus.NOT_DETECTED; camLab -> ObservationStatus.CONFLICT; swLab -> ObservationStatus.TO_VERIFY; else -> ObservationStatus.VERIFIED }),
+                hardware = if (d.id == servers.first()) d.hardware.copy(redundantPower = true) else d.hardware,
+                ports = d.ports.map { pt -> pt.copy(endpointStatus = when { pt.id == openPort -> EndpointStatus.DETACHED_TO_VERIFY; graph.occupied(pt.id) -> EndpointStatus.CONNECTED; else -> EndpointStatus.DISCONNECTED },
+                    observation = if (d.id == camLab) Observation("DemoSeed sintetico", now, ObservationStatus.CONFLICT, "Identificazione porta discordante: caso di collaudo") else pt.observation) })
+        }) })
         return p.copy(updatedEpochMs = now)
     }
 
     /** Writes the importable package; run with `.\gradlew.bat :shared:exchange:demoPackage`. */
     @JvmStatic fun main(args: Array<String>) {
         val out = File(args.firstOrNull() ?: "fixtures/demo/onlyfield-demo.ofam").absoluteFile
-        out.parentFile.mkdirs()
-        out.writeBytes(PackageSerializer.exportPackage(build(), exportedEpochMs = 1_760_000_000_000))
-        println("Demo package: $out")
+        val project = build()
+        val validation = ModelValidator.validateProject(project)
+        check(validation.isValid) { validation.issues.toString() }
+        val bytes = PackageSerializer.exportPackage(project, DemoMedia.payloads(project), exportedEpochMs = 1_760_000_000_000)
+        PackageSerializer.importPackage(bytes).pkg?.use { check(it.project == project && it.attachments.size == project.attachments.size) }
+            ?: error("Generated demo could not be imported")
+        check(out.parentFile.isDirectory || out.parentFile.mkdirs())
+        out.writeBytes(bytes)
+        println("Demo package: $out (${project.sites.sumOf { it.devices.size }} devices, ${project.racks.size} racks, ${project.cables.size} cables, ${project.deviceModels.size} models, ${project.attachments.size} attachments)")
     }
 }
