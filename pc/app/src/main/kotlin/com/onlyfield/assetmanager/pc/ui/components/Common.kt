@@ -9,6 +9,7 @@ import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
@@ -22,7 +23,6 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 
@@ -146,7 +146,7 @@ fun SectionHeader(
     actions: @Composable RowScope.() -> Unit = {},
 ) {
     FlowRow(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth().padding(bottom = AppSpacing.tiny),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
@@ -160,7 +160,8 @@ fun SectionHeader(
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = onSearchChange,
-                placeholder = { Text(searchPlaceholder) },
+                placeholder = { Text(searchPlaceholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                leadingIcon = { Icon(SymbolIcons.search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
                 singleLine = true,
                 modifier = Modifier.widthIn(max = 280.dp).onPreviewKeyEvent { e ->
                     if (onSearchSubmit != null && e.type == KeyEventType.KeyDown && (e.key == Key.Enter || e.key == Key.NumPadEnter)) {
@@ -191,7 +192,8 @@ fun ItemCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick).semantics { this.selected = selected } else it },
-        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow)
+        colors = CardDefaults.cardColors(containerColor = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
     ) {
         FlowRow(
             modifier = Modifier.padding(AppSpacing.content).fillMaxWidth(),
@@ -201,7 +203,7 @@ fun ItemCard(
             leading?.let { Row(verticalAlignment = Alignment.CenterVertically) { it() } }
             Column(modifier = Modifier.widthIn(min = 200.dp).weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(title, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     badge?.let { Tag(it) }
                 }
                 details.filter { it.isNotBlank() }.forEach {
@@ -214,9 +216,9 @@ fun ItemCard(
 }
 
 @Composable
-fun Tag(text: String, container: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.secondaryContainer) {
+fun Tag(text: String, container: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.tertiaryContainer) {
     Surface(color = container, shape = MaterialTheme.shapes.small) {
-        Text(text, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
+        Text(text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
     }
 }
 
@@ -250,11 +252,14 @@ fun DeleteButton(itemName: String, onDelete: () -> Unit, label: String = LocalMe
 @Composable
 fun EmptyState(message: String, modifier: Modifier = Modifier, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
     val changeDetail = LocalDetailChange.current
-    Box(modifier = modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (actionLabel != null && onAction != null) {
-                Button(onClick = { changeDetail(onAction) }) { Text(actionLabel) }
+    Surface(modifier = modifier.fillMaxWidth().padding(vertical = AppSpacing.content), shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Box(modifier = Modifier.padding(24.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                if (actionLabel != null && onAction != null) {
+                    Button(onClick = { changeDetail(onAction) }) { Text(actionLabel) }
+                }
             }
         }
     }

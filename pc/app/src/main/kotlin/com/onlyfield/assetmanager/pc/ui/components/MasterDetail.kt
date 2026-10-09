@@ -6,6 +6,7 @@ import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -158,7 +159,7 @@ private fun PanelBody(args: PanelArgs, slot: DetailSlot) {
 
     val close = { slot.requestChange {} }
 
-    Surface(Modifier.width(LocalPanelWidth.current).fillMaxHeight(), tonalElevation = 2.dp, shape = MaterialTheme.shapes.medium) {
+    Surface(Modifier.width(LocalPanelWidth.current).fillMaxHeight(), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shape = MaterialTheme.shapes.medium) {
         Column(
             Modifier.fillMaxSize().padding(AppSpacing.content).onPreviewKeyEvent { e ->
                 when {

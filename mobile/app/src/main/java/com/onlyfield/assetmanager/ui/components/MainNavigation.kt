@@ -61,7 +61,7 @@ fun TrackOverlay() {
 @Composable
 fun MainNavigationBar(current: Screen, enabled: Boolean = true, onSelect: (Screen) -> Unit) {
     val i18n = LocalMessages.current
-    NavigationBar {
+    NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainer, tonalElevation = 0.dp) {
         mainTabs.forEach { tab ->
             NavigationBarItem(enabled = enabled, selected = current == tab.screen, onClick = { if (current != tab.screen) onSelect(tab.screen) },
                 icon = { Icon(tab.destination?.icon ?: Icons.Default.Menu, contentDescription = null) },
@@ -75,7 +75,7 @@ fun MainNavigationBar(current: Screen, enabled: Boolean = true, onSelect: (Scree
 @Composable
 fun MainNavigationRail(current: Screen, enabled: Boolean = true, onSelect: (Screen) -> Unit) {
     val i18n = LocalMessages.current
-    NavigationRail(Modifier.fillMaxHeight().width(104.dp).verticalScroll(rememberScrollState())) {
+    NavigationRail(Modifier.fillMaxHeight().width(104.dp).verticalScroll(rememberScrollState()), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
         mainTabs.forEach { tab ->
             NavigationRailItem(enabled = enabled, selected = current == tab.screen, onClick = { if (current != tab.screen) onSelect(tab.screen) },
                 icon = { Icon(tab.destination?.icon ?: Icons.Default.Menu, null) },

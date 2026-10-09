@@ -3,11 +3,15 @@ package com.onlyfield.assetmanager.ui.screens
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.BrandMark
+import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
@@ -38,12 +42,12 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
     }
 
     AppScaffold(
-        title = "OnlyField Asset Manager",
+        title = "OnlyField",
         subtitle = i18n.text("text.3d46bfbe7868"),
         onBack = null,
         snackbarHost = snackbar,
         busy = vm.busy,
-        actions = { LanguagePicker(vm); TextButton(onClick = { importLauncher.launch(arrayOf("*/*")) }) { Text(i18n.text("text.a53503bbd801")) } },
+        actions = { LanguagePicker(vm) },
         floatingActionButton = {
             if (projects.isNotEmpty()) {
                 ExtendedFloatingActionButton(onClick = vm::startNewSite, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.ac667fe865c9")) })
@@ -65,8 +69,18 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
             // Projects are ordered by last change: the first one is where the user left off.
             item(key = "continue") {
                 val last = projects.first()
-                Button(onClick = { open(last) }, modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp)) {
-                    Text(i18n.text("text.d5555c9b8e0b", last.name), style = MaterialTheme.typography.titleMedium)
+                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        BrandMark()
+                        Button(onClick = { open(last) }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
+                            Text(i18n.text("text.d5555c9b8e0b", last.name), style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                }
+            }
+            item(key = "import") {
+                OutlinedButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
+                    Text(i18n.text("text.a53503bbd801"))
                 }
             }
             item(key = "header") {
@@ -75,6 +89,7 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
             items(projects, key = { it.id }) { p ->
                 ItemCard(
                     title = p.name,
+                    leading = { Icon(SymbolIcons.map, null, tint = MaterialTheme.colorScheme.primary) },
                     badge = if (p.isPasswordProtected) i18n.text("text.a73763f25907") else null,
                     details = listOf(p.description.orEmpty(), i18n.text("text.c95c16b49c20", formatDateTime(p.updatedEpochMs))),
                     onClick = { open(p) },
@@ -127,9 +142,10 @@ private fun StartActions(onNewSite: () -> Unit, onImport: () -> Unit, modifier: 
     val i18n = LocalMessages.current
 
     Column(
-        modifier.fillMaxSize().padding(24.dp),
+        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
     ) {
+        BrandMark(72.dp)
         Text(i18n.text("text.adb53755cdc3"), style = MaterialTheme.typography.headlineMedium)
         Text(
             i18n.text("text.55f623cd4bf4"),

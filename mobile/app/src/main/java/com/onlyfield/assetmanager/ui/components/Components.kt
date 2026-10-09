@@ -8,6 +8,7 @@ import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.selection.toggleable
@@ -23,7 +24,6 @@ import androidx.compose.runtime.*
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -83,15 +83,17 @@ fun AppScaffold(
                 TopAppBar(
                     title = {
                         Column {
-                            Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                            Text(title, style = MaterialTheme.typography.titleLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            subtitle?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                         }
                     },
                     navigationIcon = {
                         if (onBack != null) IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = i18n.text("text.80426885bb74")) }
                     },
-                    actions = actions
+                    actions = actions,
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
                 )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 if (busy != null) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         },
@@ -132,12 +134,13 @@ fun ItemCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth().let { if (onClick != null) it.clickable(onClick = onClick) else it },
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Row(modifier = Modifier.padding(AppSpacing.content), verticalAlignment = Alignment.CenterVertically) {
+        Row(modifier = Modifier.padding(AppSpacing.content), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.inset)) {
             leading?.invoke()
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                 badge?.let { Tag(it) }
                 details.filter { it.isNotBlank() }.forEach {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -150,20 +153,23 @@ fun ItemCard(
 
 @Composable
 fun Tag(text: String) {
-    Surface(color = MaterialTheme.colorScheme.secondaryContainer, shape = MaterialTheme.shapes.small) {
-        Text(text, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp), style = MaterialTheme.typography.labelSmall)
+    Surface(color = MaterialTheme.colorScheme.tertiaryContainer, shape = MaterialTheme.shapes.small) {
+        Text(text, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), style = MaterialTheme.typography.labelSmall)
     }
 }
 
 @Composable
 fun EmptyState(message: String, modifier: Modifier = Modifier, actionLabel: String? = null, onAction: (() -> Unit)? = null) {
-    Column(
-        modifier = modifier.fillMaxWidth().padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        if (actionLabel != null && onAction != null) Button(onClick = onAction) { Text(actionLabel) }
+    Surface(modifier = modifier.fillMaxWidth().padding(AppSpacing.content), shape = MaterialTheme.shapes.medium,
+        color = MaterialTheme.colorScheme.surfaceContainerLow, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            if (actionLabel != null && onAction != null) Button(onClick = onAction) { Text(actionLabel) }
+        }
     }
 }
 
@@ -172,7 +178,8 @@ fun SearchField(query: String, onChange: (String) -> Unit, placeholder: String, 
     OutlinedTextField(
         value = query,
         onValueChange = onChange,
-        placeholder = { Text(placeholder) },
+        placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        leadingIcon = { Icon(SymbolIcons.search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant) },
         singleLine = true,
         trailingIcon = if (query.isNotEmpty()) { { IconButton(onClick = { onChange("") }) { Icon(SymbolIcons.close, LocalMessages.current.text("ux.clearSearch")) } } } else null,
         modifier = modifier.fillMaxWidth()

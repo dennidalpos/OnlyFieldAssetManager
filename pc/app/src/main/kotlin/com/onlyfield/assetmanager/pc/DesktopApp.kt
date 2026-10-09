@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.onlyfield.assetmanager.configurator.ProjectDestination
 import com.onlyfield.assetmanager.configurator.theme.OnlyFieldTheme
+import com.onlyfield.assetmanager.configurator.theme.BrandMark
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
@@ -108,7 +109,7 @@ private fun DesktopAppState.navigate(destination: ProjectDestination) {
 @Composable
 private fun ProjectSidebar(state: DesktopAppState) {
     val i18n = LocalMessages.current
-    Surface(Modifier.width(208.dp).fillMaxHeight(), tonalElevation = 1.dp) {
+    Surface(Modifier.width(208.dp).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             val project = state.project
             ProjectDestination.entries.filter { project == null || it.shown(project, state.showSecondary) }.groupBy { it.groupKey }.forEach { (group, entries) ->
@@ -135,7 +136,7 @@ private fun ProjectSidebar(state: DesktopAppState) {
 @Composable
 private fun ProjectRail(state: DesktopAppState) {
     val i18n = state.i18n
-    NavigationRail(Modifier.width(104.dp).fillMaxHeight().verticalScroll(rememberScrollState())) {
+    NavigationRail(Modifier.width(104.dp).fillMaxHeight().verticalScroll(rememberScrollState()), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
         ProjectDestination.entries.filter { it.primary }.forEach { destination ->
             NavigationRailItem(selected = destination.appSection() == state.section,
                 onClick = { state.navigate(destination) }, icon = { Icon(destination.icon, null) },
@@ -168,11 +169,12 @@ private fun ProjectToolbar(state: DesktopAppState) {
 
     val project = state.project
     var tools by remember { mutableStateOf(false) }
-    Surface(tonalElevation = 2.dp) {
+    Surface(color = MaterialTheme.colorScheme.surface) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            BrandMark(40.dp)
             Column(Modifier.weight(1f)) {
                 Text(project?.name ?: i18n.text("text.57ecf1a02db6"), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (project != null) Text(i18n.text("text.b1f6bb96d793") + if (project.isPasswordProtected) i18n.text("text.29322f0f7cb0") else "", style = MaterialTheme.typography.bodySmall)
+                if (project != null) Text(i18n.text("text.b1f6bb96d793") + if (project.isPasswordProtected) i18n.text("text.29322f0f7cb0") else "", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (project == null) {
                 OutlinedButton(onClick = { state.newProject() }) { Text(i18n.text("text.ac667fe865c9")) }

@@ -5,6 +5,9 @@ import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.configurator.OverflowActions
 import com.onlyfield.assetmanager.configurator.PaneAction
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -103,13 +106,13 @@ fun MapWorkspace(
             onSelect = { selection = it; state.expanded = false }, onOpen = { open(it.ref) },
             onMove = { ref, p -> actions.update(ObjectMap.place(project, areaId, ref.type, ref.id, p), i18n.text("text.6f590fa5345d")) },
             onRoute = { link, pts -> scene.route(project, link, pts)?.let { actions.update(ObjectMap.saveRoute(project, it), i18n.text("text.e020099624b5")) } },
-            onLongPress = { actions.add(container, it) }, modifier = m, camera = state.camera(container))
+            onLongPress = { actions.add(container, it) }, modifier = m.clip(MaterialTheme.shapes.medium).border(1.dp, MaterialTheme.colorScheme.outlineVariant, MaterialTheme.shapes.medium), camera = state.camera(container))
     }
     val latestPane by rememberUpdatedState<@Composable (Modifier) -> Unit>({ m ->
         MapDetailPane(project, scene, selection, i18n, actions, onSelect = { selection = it }, onOpen = ::open, media = media, modifier = m, hierarchy = hierarchy)
     })
     val pane = remember { movableContentOf<Modifier> { m -> latestPane(m) } }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         val levels = listOf(floorName) + validPath.map { ObjectHierarchy.name(project, it, i18n) }
         // Back plus the current level; the levels above sit in a menu instead of a scrolling trail.
         val trail: @Composable RowScope.() -> Unit = {
@@ -129,7 +132,7 @@ fun MapWorkspace(
             }
         }
         val addLabel = i18n.text(if (container == null) "map.addObject" else "map.addHere")
-        BoxWithConstraints(Modifier.fillMaxWidth()) {
+        BoxWithConstraints(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)) {
             val narrow = maxWidth < 840.dp
             if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 trail()
@@ -161,7 +164,7 @@ fun MapWorkspace(
                         }
                     }
                 }
-                if (showPane && state.expanded) Surface(Modifier.fillMaxSize()) {
+                if (showPane && state.expanded) Surface(Modifier.fillMaxSize(), shape = MaterialTheme.shapes.medium) {
                     Column(Modifier.fillMaxSize()) {
                         TextButton(onClick = { state.expanded = false }, modifier = Modifier.align(Alignment.End)) { Text(i18n.text("ux.reduce")) }
                         pane(Modifier.fillMaxWidth().weight(1f))

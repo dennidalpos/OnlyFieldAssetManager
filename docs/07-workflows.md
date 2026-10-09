@@ -63,6 +63,8 @@ Gli elenchi nominali e i selettori usano il nome nella lingua corrente per ordin
 
 ## Editor e configuratori
 
+Il [restyling del 9 ottobre](ui-restyling-2026-10-09.md) uniforma palette chiara/scura, titoli, pannelli e controlli su Android e Windows. Nella lista progetti Android, Importa si trova sotto il pannello Continua; senza progetti resta fra le azioni iniziali. Le destinazioni e i flussi di salvataggio non cambiano.
+
 Ogni editor ha un titolo operativo, ad esempio Aggiungi dispositivo, Modifica dispositivo · nome o Configura porte · nome. Intestazione compatta e azioni Salva/Annulla restano separate dal corpo scorrevole. Form testuali centrati entro 640 dp; disegni tecnici a larghezza disponibile. Margini pagina 16/24 dp, campi distanti 16 dp e gruppi 24 dp. Il salvataggio usa Aggiungi, Salva modifiche o Applica secondo l'operazione; Annulla modifiche chiude la bozza, mentre l'annullamento dell'ultima operazione resta un comando distinto.
 
 Le spaziature sono 8 dp fra elementi collegati, 16 dp fra campi e 24 dp fra sezioni; i margini sono 16 dp su Android e 24 dp negli editor desktop. Filtri e azioni vanno a capo quando necessario. I configuratori della mappa usano gli stessi contenitori degli altri editor.

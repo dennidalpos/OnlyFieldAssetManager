@@ -3,6 +3,7 @@ package com.onlyfield.assetmanager.pc.ui
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.BrandMark
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
@@ -47,8 +48,9 @@ fun ProjectSection(state: DesktopAppState) {
 private fun WelcomeCard(state: DesktopAppState) {
     val i18n = LocalMessages.current
 
-    Card(modifier = Modifier.fillMaxWidth()) {
+    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
         Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            BrandMark(64.dp)
             Text(i18n.text("text.f9f3bd8a9b95"), style = MaterialTheme.typography.headlineSmall)
             state.storedProjects.maxByOrNull { it.lastModifiedEpochMs }?.let { last ->
                 Button(onClick = { state.openStored(last.file) }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {

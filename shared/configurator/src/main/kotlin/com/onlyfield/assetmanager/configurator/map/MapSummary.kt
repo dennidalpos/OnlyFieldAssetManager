@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.configurator.map
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -28,7 +29,7 @@ internal fun MapSummary(project: Project, scene: MapScene, selection: MapSelecti
     val link = selection as? MapSelection.Link
     val cables = project.cables.filter { it.id in link?.cableIds.orEmpty() }
     val cable = cables.singleOrNull()
-    Surface(modifier = Modifier.testTag("map-summary"), color = MaterialTheme.colorScheme.surfaceContainerLow, shape = MaterialTheme.shapes.medium) {
+    Surface(modifier = Modifier.testTag("map-summary"), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shape = MaterialTheme.shapes.medium) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PaneHeader(node?.glyph, ref?.let { ObjectHierarchy.name(project, it, i18n) } ?: cable?.codeOrLabel ?: if (link != null) i18n.plural("map.cableCount", cables.size) else i18n.text("map.list"),
                 device?.operationalStatus?.toDisplayString(i18n), i18n, onClose = if (selection != null) onClose else null)

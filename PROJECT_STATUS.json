@@ -1,9 +1,9 @@
 {
   "projectName": "OnlyFieldAssetManager",
-  "lastUpdated": "2026-10-08",
-  "currentPhase": "Revisione UI/UX mappa implementata e regressioni automatiche concluse; restano i collaudi operativi RES-13/19/23/24.",
+  "lastUpdated": "2026-10-09",
+  "currentPhase": "Restyling Android/Windows e icona Android implementati; restano i collaudi operativi RES-13/19/23/24.",
   "activeTask": null,
-  "nextSession": "Riprendere da main e da docs/ui-ux-audit-2026-10-08.md. Implementazione UI/UX conclusa: 589 test JVM/Compose e nove scenari Android nativi distinti verdi, seguiti da regressioni mirate. Proseguire RES-19/23: TalkBack audio/focus, rotazione reale, tablet fisici e intera matrice AppRoot/editor/EXE. Conservare RES-13/24, dati, fixture protette, backup e report locali. APK test rimosso, app Android principale aggiornata e riaperta; nessun processo Windows avviato da questa revisione rimasto aperto. Commit/push su main richiesti dall’utente per questa consegna; verificarne SHA nella cronologia Git. Nessuna nuova autorizzazione a commit/push per attività successive.",
+  "nextSession": "Riprendere da main e da docs/ui-restyling-2026-10-09.md. Restyling completato: build Android/Desktop riuscite, 8 scenari Desktop e 5 nativi Android distinti verdi, con ripetizione finale della matrice AppRoot e 46 coppie di contrasto verificate. Non ripetere le suite senza nuovi problemi. Proseguire dai residui RES-13/19/23/24: TalkBack, rotazione reale, tablet fisici e matrice completa editor/EXE non coperti. APK principale aggiornato e riaperto; APK test rimosso. Conservare dati, backup ed evidenze locali in build/reports/restyling-20261009 e pc/app/build/reports/restyling: i report ignorati non sono inclusi nel commit. Commit e push su main richiesti per questo cambio sessione; verificare SHA ed esito remoto nella cronologia Git. Nessuna autorizzazione a commit/push per attivita successive.",
   "remainingTasks": [],
   "residuals": [
     {
@@ -31,7 +31,8 @@
       "references": [
         "docs/testing/hardware-checklist.md",
         "roadmap.md",
-        "docs/ui-ux-audit-2026-10-08.md"
+        "docs/ui-ux-audit-2026-10-08.md",
+        "docs/ui-restyling-2026-10-09.md"
       ],
       "dependsOn": []
     },
@@ -46,7 +47,8 @@
       "references": [
         "docs/05-testing-and-benchmarks.md",
         "roadmap.md",
-        "docs/ui-ux-audit-2026-10-08.md"
+        "docs/ui-ux-audit-2026-10-08.md",
+        "docs/ui-restyling-2026-10-09.md"
       ],
       "dependsOn": []
     },

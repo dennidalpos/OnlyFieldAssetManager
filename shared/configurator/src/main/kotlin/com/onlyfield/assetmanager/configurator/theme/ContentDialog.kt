@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.configurator.theme
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
@@ -29,7 +30,8 @@ fun ContentDialog(onDismissRequest: () -> Unit, title: @Composable () -> Unit,
                 val margin = if (compact) 0.dp else AppSpacing.section
                 Surface(Modifier.padding(margin).widthIn(max = width).fillMaxWidth()
                     .heightIn(max = (maxHeight - margin * 2).coerceAtLeast(1.dp)),
-                    shape = MaterialTheme.shapes.large, tonalElevation = 2.dp) {
+                    shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
                     Column(Modifier.padding(AppSpacing.content), verticalArrangement = Arrangement.spacedBy(AppSpacing.content)) {
                         title()
                         Box(Modifier.weight(1f, fill = false).fillMaxWidth().verticalScroll(rememberScrollState())) { text() }

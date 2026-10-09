@@ -1132,3 +1132,15 @@ Chiusura del collaudo UI/UX: ultima regressione footer `OK (1 test)`, numero por
 ## Passaggio di consegne UI/UX — 8 ottobre 2026
 
 Tracker aggiornato per cambio sessione: nessuna implementazione UI/UX aperta, residui RES-13/19/23/24 conservati. Ripartire dall’audit UI/UX e dai criteri del tracker, senza ripetere i test già verdi salvo nuovi problemi. Report locali ignorati da Git in `build/reports/ux-native-20261008` e screenshot in `pc/app/build/reports/ux` e `ux-map`; conservarli insieme alle fixture precedenti. APK test rimosso e app principale riaperta. L’utente ha richiesto commit e push su main; SHA ed esito remoto verificabili in Git. Questa richiesta non autorizza commit/push delle attività della prossima sessione.
+
+## Restyling tecnico elegante — 9 ottobre 2026
+
+Completati tema condiviso chiaro/scuro, tipografia semibold, controlli e pannelli arrotondati, gerarchia di progetti/navigazione/editor e icona Android vettoriale con segnaposto e tre nodi. Identita visiva coerente fra Android e Windows; icona EXE, dati e contratti invariati. Corretto il suggerimento di ricerca che poteva espandere la barra; alleggerita la barra progetti Android spostando Importa sotto Continua.
+
+Build iniziale e finale riuscite. Otto scenari Desktop (dimensioni, temi, testo) e cinque scenari Android nativi distinti passati; matrice AppRoot ripetuta dopo aver isolato le densita sintetiche dell'host di test. Controllate 46 coppie di contrasto, minimo testo 5,17:1. Icona verificata in zona sicura, maschere e monocromatico; immagini ispezionate. Dettagli, comandi, fonti e limiti nel [resoconto del restyling](docs/ui-restyling-2026-10-09.md).
+
+Evidenze conservate in `build/reports/restyling-20261009` e `pc/app/build/reports/restyling`. APK Android aggiornato senza disinstallare l'app principale; APK test rimosso, MainActivity riaperta. Unica differenza nei quattro file privati confrontati: `files/profileInstalled`; altri file invariati. Nessun EXE avviato. RES-13/19/23/24 conservati: non dedurre TalkBack, rotazione reale, tablet fisici o copertura completa degli editor da questi risultati. Nessun commit o push.
+
+## Passaggio di consegne restyling — 9 ottobre 2026
+
+Tracker aggiornato per cambio sessione. L’utente ha richiesto commit e push su main dell’intero restyling; SHA ed esito remoto da verificare nella cronologia Git. Ripartire dal resoconto UI e dai residui RES-13/19/23/24, senza ripetere verifiche gia verdi in assenza di nuovi problemi. I report e le anteprime ignorati da Git restano locali nei percorsi documentati: conservarli insieme a dati, backup e fixture storiche. Nessuna autorizzazione a commit/push delle attivita della sessione successiva.
