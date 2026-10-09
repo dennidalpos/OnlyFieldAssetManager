@@ -1357,3 +1357,143 @@ Controlli conclusivi: 21 Markdown e 221 collegamenti locali validi; 54 file modi
 L’utente ha richiesto successivamente salvataggio, commit e push per cambiare sessione. Consegna dei 13 task AUD-52–64, regressioni e documentazione aggiornata su `main`; prima del commit, `git fetch origin main` e confronto con `origin/main` confermano 0 commit di divergenza dalla base `ff11653`. SHA della consegna ed esito del push sono verificabili nel log Git; riscontro locale in `build/reports/tracker-followup-20261009/handoff.json`.
 
 Ripartenza dai soli RES-13/19/23/24: nessun task attivo o task di audit ancora aperto. Restano validi i 679 test e le build già registrati sopra; il passaggio di sessione modifica soltanto la documentazione e non richiede una nuova esecuzione runtime. Preservati report, dati, backup e chiavi; nessuna installazione, rigenerazione portable o pulizia storica. Il collaudo nativo e hardware rimane esplicitamente aperto nei residui.
+
+## RES-23 — Wizard Windows semplice, errore e riprova verificati il 9 ottobre 2026
+
+EXE compilato dal codice corrente in output isolato con init script: `:pc:app:createDistributable -I build/tmp/res23-native-20261009/native-output.init.gradle --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 20s**. Build e distribuzione entrambe nello scratch nuovo; nessuna rigenerazione del runtime storico con dati o di `dist`.
+
+Wizard “Nuovo sito”, tema chiaro, finestra 1348×854, password vuota: guasto reale del percorso `data/projects` sul solo storage sintetico conserva il dialogo e mostra l’errore completo. Shift+Tab e Invio tornano al piano precedente; sede e piano conservati. Ripristinata la cartella sintetica, riprova dalla stessa bozza riuscita: un solo pacchetto .ofam, nome/cliente/sede/piano verificati nel JSON salvato. Variante protetta, altri temi/dimensioni e restante matrice EXE non verificati. Nessun difetto emerso, modifica runtime o suite ripetuta.
+
+Evidenze PNG, JSON, risultato e log in `build/reports/res23-native-20261009`; init script copiato nel report. Scenario semplice completato e rimosso dal lavoro aperto di RES-23; residuo ancora parziale. EXE chiuso con Alt+F4. Pulizia del solo nuovo scratch respinta dal controllo automatico prima dell’esecuzione, motivo `blocked by policy`; nessun ritentativo. 1058 file con dimensioni/SHA-256 in `cleanup-blocked-inventory.json`; nuova risorsa tracciata in RES-24.
+
+## RES-19 — Avvio guidato Android, 9 ottobre 2026
+
+Moto g86 API 36 collegato e autorizzato ADB. Configurazione letta: 1220×2712 px, densità fisica 450 dpi, testo 1,0, tema scuro. L’utente sceglie di proseguire su Android e dichiara TalkBack non disponibile; lettura ADB `enabled_accessibility_services` restituisce `null`. Nessun annuncio/audio/focus TalkBack verificato. Le prove manuali con il servizio restano esplicite in RES-19, secondo la [guida Android ufficiale ai test di accessibilità](https://developer.android.com/guide/topics/ui/accessibility/testing), consultata il 9 ottobre. Nessuna nuova suite automatica necessaria in assenza di difetti.
+
+Preparazione Android guidata: prima di `adb install -r` conservati APK installato e snapshot dei dati applicativi, esclusi cache/code_cache, in `build/reports/res19-guided-20261009`. Backup per file, senza garanzia transazionale o power-loss. Installazione **Success**; SHA-256 del nuovo APK installato `5274a48533318f266239492f6660c0a6726fe5cee267de1948f227722034e1f1`, uguale alla build debug già verificata. Avvio MainActivity **Status: ok**; Demo Comune ancora visibile dopo il caricamento. Aperta solo una bozza non salvata `RES19 Rotation Draft`: titolo, nome e Avanti visibili in verticale con tastiera. Rotazione fisica richiesta all’utente, ancora in attesa; questo preparativo non chiude la matrice RES-19. Fonte operativa [ADB ufficiale](https://developer.android.com/tools/adb), consultata il 9 ottobre.
+
+
+## RES-23 — Creazione VLAN nel vero EXE, 9 ottobre 2026
+
+Telefono non disponibile ora, dichiarato dall’utente: RES-19 e RES-13 restano pendenti. Ripreso il runtime Windows sintetico già compilato in `build/tmp/res23-native-20261009`, finestra 1348×854, tema chiaro, progetto semplice. Backup iniziale conservato nel nuovo report; nessun nuovo build o dato reale coinvolto.
+
+Creazione VLAN 20: blocco reale del solo pacchetto mediante FileStream leggibile senza condivisione Delete, errore visibile, bozza conservata e nessuna VLAN prima del commit. Shift+Tab/Tab raggiungono Annulla/Salva; Invio ripete il guasto e, dopo il rilascio dell’handle della sessione, salva una sola VLAN con nome/ID/ambito verificati nel JSON. SHA-256 identico prima/dopo la ripetizione controllata del guasto. La prima apertura riscrive il contenitore ZIP per il flusso `DesktopAppState.open`; contenuto del progetto confrontato e identico al backup.
+
+Evidenze: `build/reports/res23-network-native-20261009/vlan-creation-result.json`, pacchetti e screenshot. Creazione VLAN a questa configurazione completata; matrice RES-23 ancora parziale, senza dedurre altri temi/dimensioni/editor o protezione. Nessun problema emerso, nessuna suite automatica ripetuta. Fonte operativa [FileShare](https://learn.microsoft.com/en-us/dotnet/api/system.io.fileshare?view=net-10.0), consultata il 9 ottobre.
+
+
+### RES-23 — Modifica VLAN, guasto/riprova/undo verificati
+
+Sul medesimo EXE semplice/chiaro 1348×854, nome della VLAN modificato con mouse/tastiera. Guasto reale senza condivisione Delete: errore nel pannello, nuova bozza conservata, pacchetto SHA-256 invariato. Dopo rilascio, Invio salva il nuovo nome mantenendo ID e ambito. Annulla nella barra progetto ripristina l’intero progetto precedente, confrontato nel JSON. Evidenze `vlan-edit-result.json`, pacchetti e screenshot in `build/reports/res23-network-native-20261009`. Creazione/modifica VLAN con guasto/riprova e undo della modifica completati per questa configurazione; altri editor, temi/dimensioni e protezione restano in RES-23. Nessun difetto emerso.
+
+
+### RES-23 — Creazione subnet e picker VLAN verificati
+
+Medesimo EXE semplice/chiaro 1348×854: creata subnet 192.0.2.0/24 associata alla VLAN dal picker reale. Al guasto la bozza e la scelta restano conservate, il picker è raggiungibile con lo scorrimento del pannello e SHA-256 del pacchetto resta identico. Invio dopo rilascio del blocco salva una sola subnet con CIDR e riferimento all’UUID VLAN corretti nel JSON. Evidenze `subnet-creation-result.json`, pacchetti e screenshot nello stesso report. Scenario completato per questa configurazione; modifica/undo subnet e altri casi restano aperti.
+
+
+### RES-23 — Modifica subnet, guasto/riprova/undo verificati
+
+Nome subnet modificato nella medesima configurazione. Guasto reale: errore leggibile, bozza e scelta VLAN conservate/raggiungibili con scorrimento, SHA-256 del pacchetto invariato. Dopo rilascio, Invio salva conservando UUID subnet/VLAN; Annulla ripristina l’intero progetto precedente verificato nel JSON. Evidenze `subnet-edit-result.json`, pacchetti e screenshot. Creazione/modifica subnet con guasto/riprova e undo della modifica completati per semplice/chiaro 1348×854. Altri editor e configurazioni restano in RES-23; nessun difetto emerso.
+
+
+### RES-23 — Creazione WAN verificata
+
+Medesimo EXE semplice/chiaro 1348×854: connessione WAN senza apparati locali/remoti, esplicitamente Non nel progetto. Al guasto nome/tipo conservati, errore leggibile e pacchetto SHA-256 invariato rispetto alla baseline dopo undo subnet. Invio dopo rilascio salva una sola connessione. Screenshot e pacchetto `wan-created.ofam` nello stesso report; configurazioni con apparati e VPN restano aperte.
+
+
+### RES-23 — Modifica WAN/VPN e undo visivi
+
+Picker reale cambia WAN in VPN; guasto conserva scelta/nome e SHA-256 del pacchetto. Invio alla riprova mostra VPN; Annulla ripristina WAN. Confronto completo del progetto prima/dopo undo superato. JSON finale conferma type=VPN e ID conservato; evidenza wan-result.json. La prima verifica puntuale usava connectionType invece di type ed è stata corretta dopo lettura del JSON; risultato finale superato. Scenario completato nella stessa configurazione; varianti con apparati e altre configurazioni restano aperte.
+
+
+### RES-23 — Creazione campo extra verificata
+
+Medesimo EXE semplice/chiaro 1348×854: chiave e valore sintetici, target Progetto e classificazione Condivisibile. Guasto reale conserva bozza/target e SHA-256 del pacchetto; Invio dopo rilascio salva una sola voce. Screenshot e `extra-created.ofam` nello stesso report. Scenario completato per questa configurazione; modifica/undo e altri target/tipi restano aperti.
+
+
+### RES-23 — Modifica campo extra e undo verificati
+
+Valore modificato, guasto reale senza mutazione del pacchetto e bozza conservata. Invio dopo rilascio salva il nuovo valore mantenendo ID/target/chiave/tipo/classificazione; Annulla ripristina l’intero progetto precedente confrontato nel JSON. Evidenza extra-result.json e screenshot nello stesso report. Scenario completato per campo Progetto/Testo/Condivisibile nella configurazione corrente; altri target/tipi e configurazioni restano aperti.
+
+
+### RES-23 — Creazione cavo verificata
+
+Cavo rame senza estremità, medesimo EXE semplice/chiaro 1348×854: guasto reale conserva nome/tipo e SHA-256 del pacchetto. Invio dopo rilascio esegue Aggiungi dalla stessa bozza, singolo cavo visibile. Evidenza `cable-created.ofam` e screenshot nello stesso report. Modifica/undo, cablaggio con estremità e altre configurazioni restano aperti.
+
+
+### RES-23 — Modifica cavo e undo verificati
+
+Nome cavo modificato, guasto reale conserva bozza e SHA-256 del pacchetto. Invio dopo rilascio salva mantenendo ID/tipo/mezzo; Annulla ripristina l’intero progetto precedente confrontato nel JSON. Evidenza cable-result.json e screenshot. Scenario completato per cavo rame senza estremità nella configurazione corrente; collegamenti alle porte, altre varianti e configurazioni restano aperti.
+
+
+### RES-23 — Creazione interfaccia logica verificata
+
+Switch SW-01 con 28 porte creato tramite preset nativo nel solo progetto sintetico; backup switch-baseline.ofam. Interfaccia scelta dal picker apparato reale, nome compilato, nessun IP/VLAN assegnato. Guasto reale conserva apparato/nome e SHA-256 del pacchetto; Invio dopo rilascio salva una sola interfaccia sullo switch. Screenshot e interface-created.ofam nello stesso report. Configurazione corrente semplice/chiaro 1348×854; modifica/undo e altre varianti restano aperti.
+
+
+### RES-23 — Modifica interfaccia e undo verificati
+
+Checkbox L3 disattivata, guasto reale conserva bozza/checkbox e SHA-256 del pacchetto. Campi inferiori, checkbox e note raggiungibili con scorrimento. Invio dopo rilascio salva L2 mantenendo ID interfaccia/apparato; Annulla ripristina l’intero progetto precedente confrontato nel JSON. Evidenza interface-result.json e screenshot. Scenario completato nella configurazione corrente; indirizzi, VLAN e altre varianti/configurazioni restano aperti.
+
+
+### RES-23 — Creazione configurazione apparato verificata
+
+Altri moduli rende raggiungibile Configurazioni apparati. Picker SW-01, titolo e testo sintetici compilati. Guasto reale conserva apparato/titolo/testo e SHA-256 del pacchetto; Invio dopo rilascio salva una sola configurazione. Screenshot e config-created.ofam nello stesso report. Scenario completato per semplice/chiaro 1348×854; modifica/undo e altre configurazioni restano aperti.
+
+
+### RES-23 — Modifica configurazione e undo verificati
+
+Testo modificato, guasto conserva bozza e SHA-256 del pacchetto. Invio alla riprova salva conservando tutti gli altri campi, inclusi ID/apparato/titolo/data cattura; Annulla ripristina l’intero progetto precedente nel JSON. Evidenza config-result.json e screenshot. Scenario completato nella configurazione corrente, altre varianti/configurazioni restano aperte.
+
+
+### RES-23 — Creazione permutazione verificata
+
+Picker porta reale, SW-01/P1 e passaggio sconosciuto senza porta B. Guasto conserva scelta/checkbox e SHA-256 del pacchetto; Invio dopo rilascio salva una sola permutazione. Screenshot e mapping-created.ofam nello stesso report. Scenario completato per semplice/chiaro 1348×854; modifica/undo, due porte/patch panel e altre configurazioni restano aperti.
+
+
+### RES-23 — Modifica permutazione e undo verificati
+
+Checkbox passaggio sconosciuto disattivata; guasto conserva bozza, scelta porta e SHA-256 del pacchetto. Invio alla riprova salva conservando ID permutazione/porta; Annulla ripristina l’intero progetto precedente nel JSON. Evidenza mapping-result.json e screenshot. Scenario completato per porta P1 singola nella configurazione corrente; due porte/patch panel e altre configurazioni restano aperti.
+
+### RES-23 · alimentazione semplice, creazione nativa (9 ottobre)
+
+Nel runtime EXE isolato chiaro 1348×854: picker SW-01, linea RES23 Native Power, Primaria (A), 230 V. Scrittura realmente bloccata: errore visibile, bozza e hash del pacchetto conservati. Rilasciato il solo helper della sessione, Invio salva una sola linea con UUID apparato corretto. Evidenze: build/reports/res23-network-native-20261009/power-created.ofam e schermate power-*. Varianti UPS/PDU e altre configurazioni restano aperte.
+
+### RES-23 · alimentazione semplice, modifica e undo nativi (9 ottobre)
+
+Picker Primaria (A)→Secondaria (B), errore reale con bozza/hash invariati, riprova da Invio: UUID linea/apparato conservati. Undo della modifica ripristina integralmente project.json del pacchetto creato. PASS in build/reports/res23-network-native-20261009/power-result.json; varianti UPS/PDU e altre configurazioni aperte.
+
+### RES-23 · PoE semplice, creazione nativa (9 ottobre)
+
+SW-01/P1 selezionata nel picker reale, Eroga (PSE)/802.3at senza potenza assegnata: errore reale mantiene bozza e hash, riprova da Invio salva una sola mappatura. Evidenze poe-created.ofam e poe-create-failed-* in build/reports/res23-network-native-20261009. Budget/override hardware e varianti restano aperti.
+
+### RES-23 · PoE semplice, modifica e undo nativi (9 ottobre)
+
+Standard 802.3at→802.3af, guasto reale con bozza/hash invariati, riprova da Invio, UUID mappatura/porta preservati. Undo ripristina integralmente project.json. PASS in build/reports/res23-network-native-20261009/poe-result.json. Varianti budget/override hardware e configurazioni diverse aperte.
+
+### RES-23 · badge semplice, creazione nativa (9 ottobre)
+
+Badge di progetto RES23 Native Badge/Etichetta libera: errore reale conserva bozza e hash, riprova da Invio salva un solo badge e target UUID corretto. Evidenze badge-created.ofam e badge-create-failed-* nella cartella rete. Target diversi, badge derivati e resa nei documenti non coperti.
+
+### RES-23 · badge semplice, modifica e undo nativi (9 ottobre)
+
+Categoria Etichetta libera→Problema aperto, guasto reale con bozza/hash invariati e riprova da Invio; UUID badge/target preservati. Undo ripristina integralmente project.json. PASS in build/reports/res23-network-native-20261009/badge-result.json. Target diversi/derivati/resa documentale e configurazioni diverse aperti.
+
+## Consolidamento della matrice nativa Windows · 9 ottobre 2026
+
+Completati e rimossi dal lavoro aperto di RES-23 i casi base degli 11 editor elencati nella [matrice Windows](docs/testing/windows-native-matrix.md): 22 scenari guasto/riprova e 11 undo della modifica. La matrice distingue ogni perimetro dalle varianti ancora pendenti. Rianalisi dei 33 pacchetti creato/modificato/undo: singolo record, unica proprietà attesa modificata, altri campi del record conservati e intero progetto dopo undo identico; 11 PASS in build/reports/res23-network-native-20261009/matrix-result.json. Nessun difetto applicativo, codice modificato o suite generale ripetuta.
+
+EXE della sola sessione chiuso con Alt+F4, assenza finestra confermata; tutti gli helper di blocco rilasciati. Un controllo del processo helper usava erroneamente un pattern wildcard con parentesi quadre: corretto con confronto letterale prima di chiudere il solo helper verificato della sessione. Nessuna pulizia respinta ritentata. Inventario runtime aggiornato: 1058 file con dimensioni/SHA-256 in cleanup-preserved-inventory.json, entrambi i report nativi e backup conservati in RES-24.
+
+Tracker mantiene 4 residui parziali, 0 P1 / 3 P2 / 1 P3, senza task completati. Android: telefono non disponibile per dichiarazione utente, rotazione fisica non eseguita e TalkBack ancora pendente. Disponibilità per protezione Windows/stampa fisica chiesta, senza risposta; nessun esito dedotto. Prossimi casi nella tabella aperta della matrice. Nessun commit/push.
+
+Controlli documentali finali: 4 file UTF-8 senza BOM, 40 link locali validi, ID/riferimenti/dipendenze e activeTask del tracker coerenti, zero completati nel tracker, git diff --check superato. Markdown elaborato con ConvertFrom-Markdown; evidenza build/reports/res23-network-native-20261009/document-validation.json. Diff rivisto; modifiche solo a tracker/documentazione e nuova matrice, evidenze locali conservate.
+
+## Consegna della matrice nativa · 9 ottobre 2026
+
+L’utente richiede salvataggio, commit e push su main per cambiare sessione. Tracker preparato per la ripresa: activeTask nullo, remainingTasks vuoto, RES-13/19/23/24 ancora parziali. Ripartire dalla tabella aperta in [matrice Windows](docs/testing/windows-native-matrix.md), senza ripetere i casi base conclusi in assenza di nuovi problemi. Telefono non disponibile; TalkBack, rotazione fisica, protezione guidata e stampa fisica non dedotti dalle prove concluse.
+
+Consegna di tracker, documentazione di verifica, roadmap e matrice; nessuna modifica runtime. Baseline Git prima del commit: main = origin/main = 7a2fe1f56cb910896954b579b451d97dcfd5d1ce, divergenza 0/0 dopo git fetch origin main. Restano validi gli esiti nativi 22 guasto/riprova e 11 undo e i controlli documentali; nessuna nuova suite necessaria per il solo passaggio di consegne.
+
+Report, screenshot, pacchetti e backup in build/reports restano conservati localmente e ignorati da Git: non disponibili in un checkout nuovo. Runtime della sessione chiuso, helper rilasciati e inventario aggiornato conservato; nessuna pulizia storica respinta ritentata. SHA della consegna, push e allineamento remoto saranno verificati nel log Git; riscontro locale in build/reports/res23-network-native-20261009/handoff.json.

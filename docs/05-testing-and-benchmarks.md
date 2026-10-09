@@ -924,3 +924,23 @@ Finale `.\gradlew.bat :pc:app:test :mobile:app:testDebugUnitTest :pc:app:assembl
 
 RES-19/23 includono esplicitamente i controlli nativi di wizard, rinomina, rifiuti di riferimenti rete e sfondi PDF. RES-13 mantiene gli scatti rinviati e i limiti hardware; RES-24 conserva tutte le pulizie storiche respinte, senza ritentativi. Nessun commit/push richiesto o eseguito.
 Controlli conclusivi: 21 Markdown e 221 collegamenti locali validi; 54 file modificati/nuovi verificati UTF-8 senza BOM. JSON, ID, riferimenti e dipendenze del tracker validi; `git diff --check` superato. Rimosso soltanto l’helper creato per questa sessione `build/tmp/task_updates_20261009.py`; nessuna pulizia storica ritentata. Diff completo rivisto, nessun lockfile/vendor/migrazione applicata modificato. Evidenza `build/reports/tracker-followup-20261009/document-validation.json`.
+
+## RES-23 — Wizard Windows semplice, errore e riprova verificati il 9 ottobre 2026
+
+EXE compilato dal codice corrente in output isolato con init script: `:pc:app:createDistributable -I build/tmp/res23-native-20261009/native-output.init.gradle --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 20s**. Build e distribuzione entrambe nello scratch nuovo; nessuna rigenerazione del runtime storico con dati o di `dist`.
+
+Wizard “Nuovo sito”, tema chiaro, finestra 1348×854, password vuota: guasto reale del percorso `data/projects` sul solo storage sintetico conserva il dialogo e mostra l’errore completo. Shift+Tab e Invio tornano al piano precedente; sede e piano conservati. Ripristinata la cartella sintetica, riprova dalla stessa bozza riuscita: un solo pacchetto .ofam, nome/cliente/sede/piano verificati nel JSON salvato. Variante protetta, altri temi/dimensioni e restante matrice EXE non verificati. Nessun difetto emerso, modifica runtime o suite ripetuta.
+
+Evidenze PNG, JSON, risultato e log in `build/reports/res23-native-20261009`; init script copiato nel report. Scenario semplice completato e rimosso dal lavoro aperto di RES-23; residuo ancora parziale. EXE chiuso con Alt+F4. Pulizia del solo nuovo scratch respinta dal controllo automatico prima dell’esecuzione, motivo `blocked by policy`; nessun ritentativo. 1058 file con dimensioni/SHA-256 in `cleanup-blocked-inventory.json`; nuova risorsa tracciata in RES-24.
+
+## RES-19 — Avvio guidato Android, 9 ottobre 2026
+
+Moto g86 API 36 collegato e autorizzato ADB. Configurazione letta: 1220×2712 px, densità fisica 450 dpi, testo 1,0, tema scuro. L’utente sceglie di proseguire su Android e dichiara TalkBack non disponibile; lettura ADB `enabled_accessibility_services` restituisce `null`. Nessun annuncio/audio/focus TalkBack verificato. Le prove manuali con il servizio restano esplicite in RES-19, secondo la [guida Android ufficiale ai test di accessibilità](https://developer.android.com/guide/topics/ui/accessibility/testing), consultata il 9 ottobre. Nessuna nuova suite automatica necessaria in assenza di difetti.
+
+Preparazione Android guidata: prima di `adb install -r` conservati APK installato e snapshot dei dati applicativi, esclusi cache/code_cache, in `build/reports/res19-guided-20261009`. Backup per file, senza garanzia transazionale o power-loss. Installazione **Success**; SHA-256 del nuovo APK installato `5274a48533318f266239492f6660c0a6726fe5cee267de1948f227722034e1f1`, uguale alla build debug già verificata. Avvio MainActivity **Status: ok**; Demo Comune ancora visibile dopo il caricamento. Aperta solo una bozza non salvata `RES19 Rotation Draft`: titolo, nome e Avanti visibili in verticale con tastiera. Rotazione fisica richiesta all’utente, ancora in attesa; questo preparativo non chiude la matrice RES-19. Fonte operativa [ADB ufficiale](https://developer.android.com/tools/adb), consultata il 9 ottobre.
+
+## RES-23 — Matrice base degli editor Windows, 9 ottobre 2026
+
+Completati 11 editor nel vero EXE semplice/chiaro 1348×854: 22 scenari di guasto/riprova e 11 undo della modifica. Bozze e pacchetti conservati al guasto; singolo record, ID e altri campi verificati, progetto integralmente ripristinato dall’undo. Esiti, limiti e prossimi casi nella [matrice nativa Windows](testing/windows-native-matrix.md). Evidenze in `build/reports/res23-network-native-20261009`; nessun difetto applicativo o suite JVM ripetuta.
+
+RES-23 resta parziale per varianti/editor completi, operazioni lunghe, protezione/recupero, fusione/rifiuti e stampa. Android non disponibile per dichiarazione utente: rotazione fisica ancora non eseguita. EXE chiuso e helper della sessione rilasciati; inventario del runtime conservato aggiornato senza ritentare le pulizie storiche respinte (RES-24).
