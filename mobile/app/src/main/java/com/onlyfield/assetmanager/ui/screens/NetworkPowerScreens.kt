@@ -74,7 +74,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
                 when (tab) {
                     0 -> entityItems(project.vlans.sortedBy { it.vlanId }, i18n.text("text.7de621e87842"), { it.id }) { v ->
                         ItemCard(i18n.text("text.15fd0dfb7614", v.vlanId, v.name), listOf(v.scopeType.toDisplayString(i18n = i18n), v.description.orEmpty()), onClick = { vlan = EditTarget(v) },
-                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i18n.text("text.da4da5c165af", v.vlanId), i18n.text("text.17c0edc568d1")) { ProjectEdits.deleteVlan(it, v.id) } }))
+                            menu = listOf(MenuAction(i18n.text("text.7efe336bd548"), true) { del(i18n.text("text.da4da5c165af", v.vlanId), i18n.text("text.17c0edc568d1")) { ProjectEdits.deleteVlan(it, v.id, i18n) } }))
                     }
                     1 -> entityItems(project.subnets.sortedForDisplay(i18n) { it.name ?: it.cidrBlock }, i18n.text("text.446498be42fe"), { it.id }) { s ->
                         val v = project.vlans.find { it.id == s.vlanId }

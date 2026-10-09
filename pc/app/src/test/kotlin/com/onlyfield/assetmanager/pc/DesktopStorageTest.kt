@@ -14,6 +14,22 @@ import java.io.File
 import java.util.UUID
 
 class DesktopStorageTest {
+    @Test fun explicitCentreRouteSurvivesWorkingCopyStorage() {
+        val area = com.onlyfield.assetmanager.core.model.Area(name = "Floor")
+        val cable = com.onlyfield.assetmanager.core.model.Cable()
+        val points = listOf(com.onlyfield.assetmanager.core.model.MapPoint(.2f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.5f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.8f, .5f))
+        val project = Project(name = "Routes", createdEpochMs = 0, updatedEpochMs = 0,
+            sites = listOf(com.onlyfield.assetmanager.core.model.Site(name = "Building", areas = listOf(area))), cables = listOf(cable),
+            cableRoutes = listOf(com.onlyfield.assetmanager.core.model.CableRoute(cableId = cable.id, areaId = area.id, points = points)))
+        for (password in listOf(null, "dummy-password")) {
+            val incoming = project.copy(isPasswordProtected = password != null)
+            storageManager.saveProjectLocally(incoming, password)
+            storageManager.loadLocalProject(project.id, password).pkg!!.use {
+                assertEquals(incoming, it.project)
+                assertEquals(listOf(points[1]), it.project.cableRoutes.single().bends)
+            }
+        }
+    }
 
     @get:Rule
     val tempFolder = TemporaryFolder()

@@ -25,7 +25,7 @@ import java.io.OutputStream
 class PdfReportWriter(
     private val project: Project,
     private val i18n: Messages = Messages(),
-    /** Floor plan background of an area (image or rendered PDF page); null draws a plain frame. */
+    /** Supplies each referenced background; an unreadable one fails the report. */
     private val planImage: (Area) -> BufferedImage? = { null },
 ) {
     private val doc = PDDocument()
@@ -98,23 +98,31 @@ class PdfReportWriter(
     }
 
     fun build(lines: List<ReportLine>, title: String): PDDocument {
-        newPage()
-        for (line in lines) when (line) {
-            is ReportLine.Figure -> { header = null; figure(line) }
-            is ReportLine.Row -> { if (line.header) header = line; row(line) }
-            else -> { header = null; textLine(line) }
-        }
-        stream.close()
-        val pages = doc.numberOfPages
-        doc.pages.forEachIndexed { i, page ->
-            PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { footer ->
-                footer.beginText(); footer.setNonStrokingColor(Color.DARK_GRAY); footer.setFont(regular, 8f); footer.newLineAtOffset(MARGIN, 28f)
-                footer.showText(safe(i18n.text("text.657bcc42ca8e", title, i + 1, pages), regular)); footer.endText()
+        var built = false
+        try {
+            newPage()
+            for (line in lines) when (line) {
+                is ReportLine.Figure -> { header = null; figure(line) }
+                is ReportLine.Row -> { if (line.header) header = line; row(line) }
+                else -> { header = null; textLine(line) }
             }
+            stream.close()
+            val pages = doc.numberOfPages
+            doc.pages.forEachIndexed { i, page ->
+                PDPageContentStream(doc, page, PDPageContentStream.AppendMode.APPEND, true, true).use { footer ->
+                    footer.beginText(); footer.setNonStrokingColor(Color.DARK_GRAY); footer.setFont(regular, 8f); footer.newLineAtOffset(MARGIN, 28f)
+                    footer.showText(safe(i18n.text("text.657bcc42ca8e", title, i + 1, pages), regular)); footer.endText()
+                }
+            }
+            doc.documentInformation.title = title
+            doc.documentInformation.producer = "OnlyField Asset Manager"
+            built = true
+            return doc
+        } finally {
+            if (!built) try {
+                if (::stream.isInitialized) stream.close()
+            } finally { doc.close() }
         }
-        doc.documentInformation.title = title
-        doc.documentInformation.producer = "OnlyField Asset Manager"
-        return doc
     }
 
     fun write(lines: List<ReportLine>, title: String, out: OutputStream) { build(lines, title).use { it.save(out) } }
@@ -169,7 +177,8 @@ class PdfReportWriter(
 
     private fun floorPlan(caption: String, areaId: String) {
         val area = project.sites.flatMap { it.areas }.find { it.id == areaId } ?: return
-        val image = runCatching { planImage(area) }.getOrNull()
+        val image = if (area.floorplanAttachmentId == null) null else
+            planImage(area) ?: throw java.io.IOException(i18n.text("document.planUnreadable", area.name))
         val aspect = image?.let { it.height.toFloat() / it.width } ?: (1 / 1.414f)
         var w = CONTENT_W
         var h = w * aspect

@@ -256,8 +256,13 @@ class ProjectEditsTest {
         proj = ProjectEdits.addWanVpnConnection(project = proj, connection = wanConn)
         assertEquals(1, proj.wanVpnConnections.size)
 
+        val referenced = proj
+        assertThrows(IllegalArgumentException::class.java) { ProjectEdits.deleteVlan(referenced, "vlan-10") }
+        assertEquals(listOf(subnet), proj.subnets)
+        proj = ProjectEdits.updateSubnet(proj, subnet.copy(vlanId = null))
         proj = ProjectEdits.deleteVlan(proj, "vlan-10")
         assertEquals(0, proj.vlans.size)
+        assertEquals(listOf(subnet.copy(vlanId = null)), proj.subnets)
     }
 
     @Test

@@ -12,6 +12,7 @@ import com.onlyfield.assetmanager.ui.ProjectViewModel
 import com.onlyfield.assetmanager.ui.UiMessage
 import com.onlyfield.assetmanager.ui.screens.EditSave
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.first
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -29,6 +30,66 @@ import java.util.concurrent.TimeUnit
 @RunWith(RobolectricTestRunner::class)
 @LooperMode(LooperMode.Mode.PAUSED)
 class ProjectCommandTest {
+    @Test fun protectedWizardRetainsDraftAfterFailureAndRapidRetryCreatesOneProject() {
+        vm.startNewSite()
+        val wizard = com.onlyfield.assetmanager.core.onboarding.NewSiteWizard(
+            step = com.onlyfield.assetmanager.core.onboarding.NewSiteStep.PASSWORD,
+            draft = com.onlyfield.assetmanager.core.onboarding.NewSiteDraft(projectName = "Protected creation",
+                sites = listOf(Site(name = "New building", areas = listOf(Area(name = "Floor")))),
+                password = "dummy-password", passwordConfirm = "dummy-password"))
+        vm.newSite = wizard
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_wizard BEFORE INSERT ON sites BEGIN SELECT RAISE(ABORT, 'isolated wizard failure'); END")
+        messages.clear()
+        vm.finishNewSite()
+        vm.finishNewSite()
+        await { vm.busy == null }
+        assertEquals(wizard, vm.newSite)
+        assertEquals(1, runBlocking { repository.getAllProjects().first().size })
+        assertEquals(1, messages.count { it.isError })
+        db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_wizard")
+        messages.clear()
+        vm.finishNewSite()
+        vm.finishNewSite()
+        await { vm.busy == null && vm.project.value?.name == "Protected creation" }
+        assertEquals(2, runBlocking { repository.getAllProjects().first().size })
+        assertTrue(vm.project.value!!.isPasswordProtected)
+        assertTrue(runBlocking { repository.verifyProjectPassword(vm.project.value!!.id, "dummy-password") })
+        assertFalse(messages.any { it.isError })
+        assertEquals(wizard.draft.sites, vm.project.value!!.sites)
+    }
+    @Test fun networkScopesBlockTrashMergeAndSiteDeletionWithVisibleErrorsThenAllowRetry() {
+        val duplicate = Device(technicalName = "Duplicate")
+        val emptySite = Site(name = "Empty")
+        vm.edit("Scope fixture") { it.copy(sites = listOf(it.sites.single().copy(devices = listOf(device, duplicate)), emptySite),
+            vlans = listOf(Vlan(vlanId = 10, name = "LAN", scopeType = VlanScopeType.DEVICE, scopeTargetId = device.id)),
+            subnets = listOf(Subnet(cidrBlock = "10.0.0.0/24", scopeType = VlanScopeType.SITE, scopeTargetId = emptySite.id))) }
+        await { vm.busy == null }
+        val before = vm.project.value!!
+        messages.clear()
+        vm.moveToTrash("DEVICE", device.id, device.technicalName)
+        await { vm.busy == null }
+        var mergeError: String? = null
+        vm.mergeDevices(device.id, duplicate.id, MergeDataChoices()) { mergeError = it }
+        await { vm.busy == null }
+        vm.edit("Delete referenced site") { com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteSite(it, emptySite.id) ?: error("Site still referenced") }
+        await { vm.busy == null }
+        assertNotNull(mergeError)
+        assertEquals(3, messages.size); assertTrue(messages.all { it.isError })
+        assertEquals(before, vm.project.value)
+        assertEquals(before, runBlocking { repository.getProjectById(initial.id) })
+        assertTrue(vm.trash.value.isEmpty())
+        vm.edit("Explicitly remove scopes") { it.copy(vlans = emptyList(), subnets = emptyList()) }
+        await { vm.busy == null }
+        vm.mergeDevices(device.id, duplicate.id, MergeDataChoices()) { mergeError = it }
+        await { vm.busy == null }
+        assertNull(mergeError); assertEquals(1, vm.trash.value.size)
+        vm.restoreFromTrash(vm.trash.value.single().id)
+        await { vm.busy == null }
+        assertEquals(2, vm.project.value!!.sites.first().devices.size)
+        vm.edit("Retry site deletion") { com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteSite(it, emptySite.id)!! }
+        await { vm.busy == null }
+        assertEquals(1, vm.project.value!!.sites.size)
+    }
     @get:Rule val folder = TemporaryFolder()
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var db: AppDatabase
@@ -77,6 +138,76 @@ class ProjectCommandTest {
         executor.execute { reached.countDown(); check(release.await(10, TimeUnit.SECONDS)) }
         assertTrue(reached.await(5, TimeUnit.SECONDS))
         return release
+    }
+
+    @Test fun renameFailureRetainsDraftAndRetryClosesOnlyItsActiveEditor() {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val save = EditSave(vm, scope)
+        var closed = 0
+        db.openHelper.writableDatabase.execSQL("CREATE TRIGGER fail_rename BEFORE UPDATE ON projects BEGIN SELECT RAISE(ABORT, 'rename denied'); END")
+        save.submit({ closed++ }) { vm.renameProject(initial.id, "Retained name", it) }
+        await { vm.busy == null }
+        assertNotNull(save.error)
+        assertEquals(0, closed)
+        assertEquals(initial, runBlocking { repository.getProjectById(initial.id) })
+        db.openHelper.writableDatabase.execSQL("DROP TRIGGER fail_rename")
+        save.submit({ closed++ }) { vm.renameProject(initial.id, "Retained name", it) }
+        await { vm.busy == null }
+        assertNull(save.error)
+        assertEquals(1, closed)
+        assertEquals("Retained name", runBlocking { repository.getProjectById(initial.id) }!!.name)
+        scope.cancel()
+    }
+
+    @Test fun lateRenameCannotCloseAnEditorThatHasLeftComposition() {
+        val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+        val save = EditSave(vm, scope)
+        var closed = false
+        val release = holdTransactions()
+        try {
+            save.submit({ closed = true }) { vm.renameProject(initial.id, "Late name", it) }
+            shadowOf(Looper.getMainLooper()).idle()
+            scope.cancel()
+        } finally { release.countDown() }
+        await { vm.busy == null }
+        assertFalse(closed)
+        assertEquals("Late name", runBlocking { repository.getProjectById(initial.id) }!!.name)
+    }
+
+    @Test fun corruptReadReportsFailureAndCannotRewriteTheStoredInventory() {
+        db.openHelper.writableDatabase.execSQL("UPDATE devices SET category = 'UNKNOWN_CATEGORY'")
+        var result: String? = null
+        vm.edit("Edit corrupted inventory", { result = it }) { it.copy(name = "Must not save") }
+        await { vm.busy == null }
+        assertNotNull(result)
+        assertTrue(messages.any { it.isError })
+        assertEquals(initial, vm.project.value)
+        assertEquals("Initial", runBlocking { db.projectDao().getProjectById(initial.id) }!!.name)
+        assertEquals("UNKNOWN_CATEGORY", runBlocking { db.inventoryDao().getDevicesBySiteIds(initial.sites.map { it.id }) }.single().category)
+        db.openHelper.writableDatabase.execSQL("UPDATE devices SET category = ?", arrayOf(device.category.name))
+        vm.edit("Retry") { it.copy(name = "Corrected read") }
+        await { vm.busy == null }
+        assertEquals("Corrected read", vm.project.value!!.name)
+    }
+
+    @Test fun referencedVlanDeletionReportsErrorAndLeavesRoomUnchanged() {
+        val vlan = Vlan(vlanId = 10, name = "LAN")
+        val subnet = Subnet(cidrBlock = "10.0.0.0/24", vlanId = vlan.id)
+        vm.edit("Add network") { it.copy(vlans = listOf(vlan), subnets = listOf(subnet)) }
+        await { vm.busy == null }
+        val before = runBlocking { repository.getProjectById(initial.id) }
+        var error: String? = null
+        vm.edit("Delete VLAN", { error = it }) { com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteVlan(it, vlan.id) }
+        await { vm.busy == null }
+        assertNotNull(error)
+        assertTrue(messages.any { it.isError })
+        assertEquals(before, runBlocking { repository.getProjectById(initial.id) })
+        vm.edit("Disconnect subnet") { it.copy(subnets = listOf(subnet.copy(vlanId = null))) }
+        await { vm.busy == null }
+        vm.edit("Retry VLAN deletion") { com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteVlan(it, vlan.id) }
+        await { vm.busy == null }
+        assertTrue(vm.project.value!!.vlans.isEmpty())
+        assertEquals(1, vm.project.value!!.subnets.size)
     }
 
     @Test fun rapidEditsUseCommittedStateAndFailedFirstSaveCannotEraseTheSecond() {

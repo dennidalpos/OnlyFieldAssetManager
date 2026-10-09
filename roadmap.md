@@ -1,6 +1,6 @@
 # Evidenze e residui
 
-Aggiornato all’8 ottobre 2026; completamenti storici sotto, lavoro aperto nel tracker.
+Aggiornato al 9 ottobre 2026 dopo il secondo audit; completamenti storici sotto, lavoro aperto nel tracker.
 
 ## Evidenze disponibili
 
@@ -9,7 +9,9 @@ Aggiornato all’8 ottobre 2026; completamenti storici sotto, lavoro aperto nel 
 - La suite locale registrata prima di questa revisione copre core, exchange, Android JVM e Desktop; le prove strumentali e manuali hanno limiti espliciti sotto.
 - Il workflow GitHub esegue le suite JVM/Compose, genera APK debug e ZIP portable, calcola SHA-256 e pubblica soltanto su tag `v*`.
 
-## Residui aperti
+## Attività aperte
+
+Secondo audit del 9 ottobre completato: **AUD-52–64 verificati e rimossi dal tracker**. Restano **4 residui, 0 P1 / 3 P2 / 1 P3** (RES-13/19/23/24), con i vincoli dei collaudi nativi e delle pulizie preservati. Evidenze nel [report corrente](docs/repo-residuals-2026-10-09.md) nelle sezioni successive.
 
 | ID | Stato | Evidenza richiesta |
 | --- | --- | --- |
@@ -1242,3 +1244,116 @@ Commit e push su main richiesti dall’utente. Consegna delle correzioni AUD-45�
 Tracker aggiornato: nessun task runtime aperto, soli RES-13/19/23/24 (3 P2, 1 P3), prossimo lavoro RES-19. Le verifiche già concluse restano 643 test automatici e quattro prove PDF native, con build APK riuscite; nessuna suite ripetuta per il solo passaggio documentale. Validati nuovamente JSON, riferimenti del tracker e diff prima del commit.
 
 Evidenze ignorate da Git conservate in build/reports/tracker-remediation-20261009 e nelle directory storiche: disponibili nel checkout, escluse dal commit. Preservare dati, backup, media, chiavi e app/demo. Nessuna pulizia respinta ritentata; RES-24 comprende anche helper e bytecode della remediation. La fixture sintetica mancante non richiede recupero, come confermato dall’utente. Questa autorizzazione al commit/push riguarda la sola consegna corrente.
+
+## Secondo audit del repository e aggiornamento tracker — 9 ottobre 2026
+
+Inventariati 398 file versionati con `git ls-files` e ricerca dei punti incompleti/consumatori con `rg`; revisione di dominio, persistenza, scambio, media, UI, documenti, test, build e rilascio. Registrati **AUD-52–62 OPEN**: 2 P1, 8 P2 e 1 P3. Conservati senza modifiche RES-13/19/23/24: totale **15 attività, 2 P1 / 11 P2 / 2 P3**. `activeTask` impostato a `null`; prossime priorità AUD-52 e AUD-53. Nessuna dipendenza obbligatoria individuata. Dettaglio ed esiti nel [secondo audit](docs/repo-residuals-2026-10-09.md#secondo-audit-completo--9-ottobre-2026).
+
+Il P1 AUD-52 è riprodotto: cancellazione del piano con annotazione consentita, export/import rifiutato con `INVALID_ANNOTATION_AREA`. Il P1 AUD-53 è da codice: salvataggio del nuovo progetto Android distinto dall’applicazione della password e ID nuovo alla riprova; nessun guasto nativo provocato. Le evidenze degli altri rilievi distinguono casi riprodotti, rischio da codice e verifica parziale. Fonti primarie Microsoft, W3C e Oracle consultate il 9 ottobre e collegate nel report.
+
+Comando mirato eseguito durante l’analisi:
+
+```powershell
+.\gradlew.bat :shared:exchange:test --tests '*PackageSerializerTest*' --tests '*ContractVersionTest*' --tests '*PasswordHasherTest*' :mobile:app:testDebugUnitTest --tests '*ProjectCommandTest*' --tests '*ProjectRepositoryTest*' --no-parallel --max-workers=1
+```
+
+**BUILD SUCCESSFUL in 1m 21s**: **46 test**, 12 exchange e 34 Android JVM, zero fallimenti/errori/saltati. Probe sintetici in memoria sui casi riprodotti; esiti essenziali conservati nel report versionato. Nessuna modifica/import di dati utente. I 643 test e le quattro prove PDF native della precedente remediation restano evidenze storiche distinte; le prove verdi non chiudono i nuovi rilievi.
+
+Aggiornati tracker, report, README, piano prodotto e guida di verifica. Conservato lo storico AUD-45–51. Corretto il riepilogo RES-13 del piano: riavvio fisico normale completato l’8 ottobre con boot ID diverso e cinque scenari SQLCipher/Keystore verificati; arresto forzato e perdita improvvisa di alimentazione restano da collaudare. Compatibilità e fixture utili mantenute. Nessuna nuova suite generale per sole modifiche documentali; nessuna correzione runtime, prova nativa, pulizia, commit o push in questo intervento.
+
+Verifica documentale finale dell’aggiornamento: parsing JSON riuscito, **15 ID univoci**, priorità **2/11/2**, stati/evidenze coerenti, riferimenti esistenti e dipendenze valide senza cicli. RES-13/19/23/24 confrontati con HEAD e invariati. **21 Markdown, 221 link locali validi**, UTF-8 senza BOM; diff completo rivisto e `git diff --check` superato. Modificati soltanto sei file di tracker/documentazione, senza file temporanei nuovi, sorgenti, fixture o dipendenze modificati. Report XML dell’analisi ricontrollati: 12 test exchange e 34 Android JVM, zero fallimenti/errori/saltati; nessuna suite rieseguita.
+
+## AUD-52 completato — 9 ottobre 2026
+
+La cancellazione condivisa rifiuta anche i piani referenziati da annotazioni, senza mutare il progetto. PackageSerializerTest verifica rifiuto, conservazione della nota, cancellazione del piano vuoto e riapertura .ofam semplice/protetta. Baseline verde; finale .\gradlew.bat :shared:exchange:test --tests *PackageSerializerTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 5s, nessun fallimento. Prima compilazione della nuova fixture corretta per usare label e coordinate obbligatorie. Fonte ufficiale per verifica mirata: [Gradle JVM testing](https://docs.gradle.org/current/userguide/java_testing.html), consultata il 9 ottobre. Nessun collaudo nativo richiesto per il controllo condiviso.
+
+Rimosso dal tracker dopo verifica; 14 attività aperte: 1 P1 / 11 P2 / 2 P3.
+
+## AUD-53 completato — 9 ottobre 2026
+
+ProjectRepository.createProject prepara il verificatore e salva progetto/inventario/protezione nella stessa transazione Room. Il wizard conserva ID alla riprova e blocca invii simultanei; un ID già esistente viene rifiutato. Baseline ImportedProtectionTest: BUILD SUCCESSFUL in 37s. Finale .\gradlew.bat :mobile:app:testDebugUnitTest --tests *ProjectCreationTest* --tests *ImportedProtectionTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 21s, 9 test, zero fallimenti/errori/saltati. Coperti creazione semplice/protetta, password errata, guasto dopo inserimento progetto, rollback verificatore/inventario, annullamento prima della transazione e riprova senza duplicati. Una prima fixture riutilizzava un ID sede tra progetti ed è stata corretta: il rifiuto ownership esistente resta intatto. Fonte: [Room withTransaction](https://developer.android.com/reference/androidx/room/RoomDatabaseKt), consultata il 9 ottobre. Prova Room JVM distinta da SQLCipher nativo; messaggi/focus del wizard protetto restano nella matrice RES-19.
+
+Rimosso dal tracker dopo verifica; 13 attività aperte: 0 P1 / 11 P2 / 2 P3.
+
+## AUD-54 completato — 9 ottobre 2026
+
+Il wizard Windows conserva lo stato in DesktopAppState durante la rimozione temporanea del dialogo per I/O; chiude e azzera i campi solo dopo commit riuscito. Rinomina Android usa EditSave: errore nel dialogo, campi conservati e callback ignorato dopo uscita dalla composizione. Baseline mirata verde; finale .\gradlew.bat :pc:app:test --tests *ProjectWizardSaveTest* :mobile:app:testDebugUnitTest --tests *ProjectCommandTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 26s. Prova Compose con storage inaccessibile e riprova protetta singola, prove Room di guasto/riprova e risultato tardivo. La compilazione Android della baseline includeva già il callback di rinomina appena aggiornato; la baseline Desktop era precedente. Collaudo EXE/focus e dialogo nativo Android restano in RES-23/19.
+
+Rimosso dal tracker dopo verifica; 12 attività aperte: 0 P1 / 10 P2 / 2 P3.
+
+## AUD-55 completato — 9 ottobre 2026
+
+Import rifiuta duplicati manifest/progetto/media, ID manifest discordante, payload plain/encrypted conflittuali, metadati crittografici in pacchetti semplici e progetto protetto in ZIP semplice. Ogni rifiuto è strutturale e chiude staging. Conservata compatibilità utilizzata: cifratura richiesta esplicitamente su progetto non protetto e vecchi allegati non cifrati dentro progetto cifrato restano ammessi. Baseline PackageSerializerTest/StagedPayloadTest verde; finale .\gradlew.bat :shared:exchange:test --tests *PackageMetadataTest* --tests *PackageSerializerTest* --tests *StagedPayloadTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 6s, zero fallimenti/errori/saltati. Nuove fixture includono duplicati reali, staging già presente, controlli validi semplici/protetti; nessun accesso a storage utente.
+
+Rimosso dal tracker dopo verifica; 11 attività aperte: 0 P1 / 9 P2 / 2 P3.
+
+## AUD-56 completato — 9 ottobre 2026
+
+Rimossi i fallback dei cinque mapper: JSON VLAN/LAG illeggibile ed enum sconosciuti interrompono la lettura, senza costruire valori vuoti/predefiniti. Il comando edit segnala il guasto e non salva; righe e stato visibile precedente restano intatti. Baseline 37 prove verdi; finale .\gradlew.bat :mobile:app:testDebugUnitTest --tests *CorruptStoredDataTest* --tests *ProjectCommandTest* --tests *ProjectRepositoryTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 25s, 39 test, zero fallimenti/errori/saltati. Coperti i due JSON, tutti i 29 campi enum interessati, valori validi, riprova dopo correzione ed errore del comando. La prima fixture verificava la colonna legacy del modello mentre configurationJson corrente prevale; corretta per esercitare il formato legacy effettivamente letto. Fonte: [Kotlin enumValueOf](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/enum-value-of.html), consultata il 9 ottobre. Nessuna migrazione schema; collaudo messaggi/focus Android resta RES-19.
+
+Rimosso dal tracker dopo verifica; 10 attività aperte: 0 P1 / 8 P2 / 2 P3.
+
+## AUD-57 completato — 9 ottobre 2026
+
+ModelValidator riusa il controllo CIDR IPv4 dei form e controlla subnet.vlanId e scope VLAN/subnet per progetto/sede/apparato. Riferimenti inesistenti sono strutturali; destinazione SITE/DEVICE non rilevata resta documentale, con messaggi it/en/es. Baseline ModelValidatorTest/EntityFormsTest verde; verifica con NetworkValidationTest e DemoSeedTest: BUILD SUCCESSFUL in 34s; regressioni scope ampliate: BUILD SUCCESSFUL in 3s. Conservati limiti /0 e /32, incompletezza ammessa e demo valido; import semplici/protetti invalidi non restituiscono pacchetti. Fonte [RFC 4632](https://www.rfc-editor.org/rfc/rfc4632), consultata il 9 ottobre. Emersi e tracciati AUD-63 (VLAN referenziate: blocco richiesto dall’utente) e AUD-64 (scope nelle operazioni sede/apparato), da completare separatamente.
+
+Rimosso dal tracker dopo verifica; 11 attività aperte: 0 P1 / 9 P2 / 2 P3.
+
+## AUD-63 completato — 9 ottobre 2026
+
+Applicata la decisione utente: ProjectEdits.deleteVlan rifiuta la cancellazione quando una subnet usa la VLAN, con messaggio it/en/es. Windows visualizza il rifiuto senza chiamare il salvataggio; Android lo riceve nel comando edit senza mutazione. Baseline Desktop ProjectEdits/FailedNetworkSave verde (28s); finale shared/exchange NetworkValidationTest + pc VlanDeletionUiTest + compileDebugKotlin: BUILD SUCCESSFUL in 13s. Android ProjectCommandTest: BUILD SUCCESSFUL in 20s. Verificati dati invariati, errore visibile, riprova dopo scollegamento esplicito della subnet, salvataggio singolo e .ofam semplice/protetto valido. Nessuna modifica automatica delle reti. Rimane distinto il collaudo visivo nativo RES-19/23.
+
+Rimosso dal tracker dopo verifica; 10 attività aperte: 0 P1 / 8 P2 / 2 P3.
+
+## AUD-58 completato — 9 ottobre 2026
+
+XLSX applica ST_Xstring al testo delle celle: protegge underscore iniziali delle sequenze letterali, codifica controlli/XML non validi e CR, conserva LF/tab, Unicode e spazi tramite xml:space=preserve. Originali e tipi numerici invariati. Baseline documentale verde; finale XlsxTextTest/LocalizedExportsTest/DocumentSelectionTest/DemoXlsxPathsTest: BUILD SUCCESSFUL in 6s, 7 test, zero fallimenti/errori/saltati. Tutte le parti XML parsate nelle tre lingue e testo ricostruito in un solo passaggio. Due tentativi iniziali della fixture cercavano erroneamente altezza rack nei fogli; dopo segnalazione e lettura del generatore, la prova numerica usa L2 (numero porte). Fonti consultate il 9 ottobre: [Microsoft ST_Xstring](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d34ae755-c53f-4a44-a363-c6dd3ee018a4) e [W3C XML 1.0](https://www.w3.org/TR/xml/#charsets). Apertura Excel nativa non eseguita.
+
+Rimosso dal tracker dopo verifica; 9 attività aperte: 0 P1 / 7 P2 / 2 P3.
+
+## AUD-59 completato — 9 ottobre 2026
+
+Le tile Windows verificano 256x256 con ImageReader.getWidth/getHeight prima di read(0), con stream in memoria e reader.dispose in finally. Conservato limite 2 MiB anche per fetch iniettato. Baseline DesktopDocumentAndCartographyTest verde; finale TileDecodeTest + suite precedente: BUILD SUCCESSFUL in 5s, 6 test, zero fallimenti/errori/saltati. Sorgente HTTP locale della sessione chiusa al termine: tile valida, PNG 4096x4096 sotto il limite compresso, malformato e risposta oltre 2 MiB. Un PNG con solo header sovradimensionato verifica il rifiuto dimensioni prima dei pixel. Fonte [Oracle ImageReader](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageReader.html), consultata il 9 ottobre. Nessun download dal servizio pubblico né OOM provocato.
+
+Rimosso dal tracker dopo verifica; 8 attività aperte: 0 P1 / 6 P2 / 2 P3.
+
+## AUD-60 completato — 9 ottobre 2026
+
+Planimetrie richieste ma illeggibili o senza payload interrompono PDF/stampa con errore; rimosse le due conversioni silenziose in sfondo assente. Documento/stream chiusi anche al fallimento. Sfondo assente, escluso dal filtro o sezione disattivata restano validi. Baseline DeliveryPdfTest/ReportPdfTest/FloorMediaTest verde; regressioni FloorPlanPdfFailureTest includono immagini/PDF corrotti, payload mancante dopo svuotamento del cache isolato, immagine e PDF validi, filtri e assenza. Dieci test, zero errori/fallimenti/skips: `:pc:app:test --tests '*FloorPlanPdfFailureTest*' --tests '*DeliveryPdfTest*' --tests '*ReportPdfTest*' --tests '*FloorMediaTest*' --no-parallel --max-workers=1`, BUILD SUCCESSFUL in 16s. Corretti un errore di compilazione della fixture e una prima simulazione che manteneva il payload nel cache. Fonti PDFBox 3 consultate il 9 ottobre. Interazione nativa stampa/focus resta RES-23.
+
+Rimosso dal tracker dopo verifica; 7 attività aperte: 0 P1 / 5 P2 / 2 P3.
+
+## AUD-61 completato — 9 ottobre 2026
+
+Rimossa l’euristica LEGACY_DEFAULT e la costante orfana: ogni punto intermedio salvato è una piega. Default a due punti ancora rettilineo. Baseline MapSceneTest verde; dopo modifica MapSceneTest e PackageSerializerTest verdi, DesktopStorageTest verde alla riprova con stato di protezione esplicito, ProjectRepositoryTest verde dopo correzione import della fixture (BUILD SUCCESSFUL in 21s). Verificati coordinate .2/.5/.8, estremi spostati e risalvataggio, working copy semplice/protetta, Room e .ofam semplice/protetto; stesso contenuto e ID. Nessuna migrazione Room/.ofam. Documentazione mappa aggiornata.
+
+Rimosso dal tracker dopo verifica; 6 attività aperte: 0 P1 / 4 P2 / 2 P3.
+
+## AUD-64 completato — 9 ottobre 2026
+
+Policy conservativa confermata dall’utente: guard prima di cancellazione sede, cestino/sostituzione apparato e fusione di entrambi gli apparati quando referenziati da ambito VLAN/subnet. Nessuna rete modificata automaticamente, nessun record di cestino creato al rifiuto. Errori it/en/es; gestione rifiuto in inventario/mappa Windows e dialoghi sostituzione/fusione. NetworkScopeRetentionTest verifica entrambe le sorgenti VLAN/subnet, entrambi i dispositivi, sede vuota referenziata, target estraneo eliminabile, rimozione esplicita, ripristino e .ofam semplice/protetto. ProjectCommandTest verifica errori, Room/inventario/cestino invariati e riprova. Gradle mirato: BUILD SUCCESSFUL in 29s. NetworkScopeUiTest: messaggio Compose di cancellazione, zero callback di save/trash, riprova; fusione Windows semplice/protetta preserva file e undo/cestino, retry/undo riusciti: BUILD SUCCESSFUL in 7s. Baseline ha rilevato vecchia aspettativa di cancellazione VLAN referenziata in ProjectEditsTest; sostituita con rifiuto e disconnessione esplicita conformi ad AUD-63. Documentazione dominio aggiornata. Focus/matrice nativa resta RES-19/23.
+
+Rimosso dal tracker dopo verifica; 5 attività aperte: 0 P1 / 3 P2 / 2 P3.
+
+## AUD-62 completato — 9 ottobre 2026
+
+Ricerca completa dei consumatori conferma che DeviceModelSerializer era usato soltanto dal proprio test: entrambi eliminati. Modelli e fixture utili restano nel flusso del progetto. Baseline PackageSerializerTest/DeviceModelSerializerTest verde (BUILD SUCCESSFUL in 3s); dopo rimozione PackageSerializerTest e tutte le prove Demo verdi (BUILD SUCCESSFUL in 45s). Regressione .ofam semplice/protetto confronta l’intero progetto con modello, ID, metadati, template porte, PoE, hardware/layout/override e campi extra. Nessun consumer applicativo residuo, contratto/schema invariato. Documentazione dominio aggiornata; fonti dello scambio ZIP già consultate.
+
+Rimosso dal tracker dopo verifica; 4 attività aperte: 0 P1 / 3 P2 / 1 P3.
+
+## Chiusura della remediation AUD-52–64 — 9 ottobre 2026
+
+Completati e rimossi tutti i 13 task del secondo audit, inclusi AUD-63/64 emersi dalla validazione rete. Tracker con `remainingTasks=[]`; restano RES-13/19/23/24, **4 residui (0 P1 / 3 P2 / 1 P3)**. Documentazione dominio, workflow, export, mappa e linee guida allineata; fonti primarie nelle sezioni pertinenti.
+
+Verifica completa: **679 test, zero fallimenti/errori/saltati**: core 130, exchange 115, Windows 292, Android JVM 142. Core/exchange verdi nella prima esecuzione completa. Questa aveva quattro fallimenti Windows: tre casi della stessa fixture interop con numero VLAN al posto dell’UUID, e un selettore Compose che trovava due messaggi ora visibili. Fixture corretta con `vlan.id`, assert del messaggio nel dialogo specifico, diagnostica spostata negli assert; nessuna validazione indebolita. Riprova mirata verde in 33s, incluso wizard protetto Android con guasto, invii rapidi e riprova senza duplicati.
+
+Finale `.\gradlew.bat :pc:app:test :mobile:app:testDebugUnitTest :pc:app:assemble :mobile:app:assembleDebug --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 7m 2s**. Build Desktop e APK debug Android riuscite; nessuna installazione, rigenerazione portable o qualificazione hardware. Report XML iniziali falliti e finali conservati in `build/reports/tracker-followup-20261009`, riepilogo `verification.json` con hash APK.
+
+RES-19/23 includono esplicitamente i controlli nativi di wizard, rinomina, rifiuti di riferimenti rete e sfondi PDF. RES-13 mantiene gli scatti rinviati e i limiti hardware; RES-24 conserva tutte le pulizie storiche respinte, senza ritentativi. Nessun commit/push richiesto o eseguito.
+Controlli conclusivi: 21 Markdown e 221 collegamenti locali validi; 54 file modificati/nuovi verificati UTF-8 senza BOM. JSON, ID, riferimenti e dipendenze del tracker validi; `git diff --check` superato. Rimosso soltanto l’helper creato per questa sessione `build/tmp/task_updates_20261009.py`; nessuna pulizia storica ritentata. Diff completo rivisto, nessun lockfile/vendor/migrazione applicata modificato. Evidenza `build/reports/tracker-followup-20261009/document-validation.json`.
+
+## Passaggio di sessione su main — 9 ottobre 2026
+
+L’utente ha richiesto successivamente salvataggio, commit e push per cambiare sessione. Consegna dei 13 task AUD-52–64, regressioni e documentazione aggiornata su `main`; prima del commit, `git fetch origin main` e confronto con `origin/main` confermano 0 commit di divergenza dalla base `ff11653`. SHA della consegna ed esito del push sono verificabili nel log Git; riscontro locale in `build/reports/tracker-followup-20261009/handoff.json`.
+
+Ripartenza dai soli RES-13/19/23/24: nessun task attivo o task di audit ancora aperto. Restano validi i 679 test e le build già registrati sopra; il passaggio di sessione modifica soltanto la documentazione e non richiede una nuova esecuzione runtime. Preservati report, dati, backup e chiavi; nessuna installazione, rigenerazione portable o pulizia storica. Il collaudo nativo e hardware rimane esplicitamente aperto nei residui.

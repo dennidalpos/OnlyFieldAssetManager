@@ -55,6 +55,15 @@ class ProjectRepository(
 
     suspend fun saveProject(project: Project) = recovery.access(project.id) { store.save(project) }
 
+    /** Commits the new inventory and its password verifier together. */
+    suspend fun createProject(project: Project, password: String?) = recovery.access(project.id) {
+        val hash = password?.let { withContext(Dispatchers.Default) { PasswordHasher.hash(it) } }
+        db.withTransaction {
+            check(projectDao.getProjectById(project.id) == null) { "Project already exists" }
+            store.save(project.copy(isPasswordProtected = password != null), hash)
+        }
+    }
+
     /** Undo files stay local; the current catalogue also keeps media of items in trash. */
     suspend fun collectMedia(projectId: String, recoverable: List<com.onlyfield.assetmanager.core.model.Attachment> = emptyList()) = recovery.access(projectId) { withContext(Dispatchers.IO) {
         val root = attachmentsRoot ?: return@withContext

@@ -46,7 +46,7 @@ internal fun toVlan(entity: com.onlyfield.assetmanager.data.local.VlanEntity): c
         id = entity.id,
         vlanId = entity.vlanId,
         name = entity.name,
-        scopeType = try { com.onlyfield.assetmanager.core.model.VlanScopeType.valueOf(entity.scopeType) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.VlanScopeType.PROJECT },
+        scopeType = com.onlyfield.assetmanager.core.model.VlanScopeType.valueOf(entity.scopeType),
         scopeTargetId = entity.scopeTargetId,
         description = entity.description
     )
@@ -73,7 +73,7 @@ internal fun toSubnet(entity: com.onlyfield.assetmanager.data.local.SubnetEntity
         gatewayIp = entity.gatewayIp,
         vlanId = entity.vlanId,
         name = entity.name,
-        scopeType = try { com.onlyfield.assetmanager.core.model.VlanScopeType.valueOf(entity.scopeType) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.VlanScopeType.PROJECT },
+        scopeType = com.onlyfield.assetmanager.core.model.VlanScopeType.valueOf(entity.scopeType),
         scopeTargetId = entity.scopeTargetId,
         description = entity.description
     )
@@ -93,15 +93,11 @@ internal fun toPortVlanMembershipEntity(projectId: String, membership: com.onlyf
 }
 
 internal fun toPortVlanMembership(entity: com.onlyfield.assetmanager.data.local.PortVlanMembershipEntity): com.onlyfield.assetmanager.core.model.PortVlanMembership {
-    val tagged = try {
-        mapperJson.decodeFromString<List<Int>>(entity.taggedVlanIdsJson)
-    } catch (_: Exception) {
-        emptyList()
-    }
+    val tagged = mapperJson.decodeFromString<List<Int>>(entity.taggedVlanIdsJson)
     return com.onlyfield.assetmanager.core.model.PortVlanMembership(
         id = entity.id,
         portId = entity.portId,
-        mode = try { com.onlyfield.assetmanager.core.model.PortVlanMode.valueOf(entity.mode) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.PortVlanMode.ACCESS },
+        mode = com.onlyfield.assetmanager.core.model.PortVlanMode.valueOf(entity.mode),
         untaggedVlanId = entity.untaggedVlanId,
         taggedVlanIds = tagged,
         nativeVlanId = entity.nativeVlanId,
@@ -151,16 +147,12 @@ internal fun toLagGroupEntity(projectId: String, lag: com.onlyfield.assetmanager
 }
 
 internal fun toLagGroup(entity: com.onlyfield.assetmanager.data.local.LagGroupEntity): com.onlyfield.assetmanager.core.model.LagGroup {
-    val members = try {
-        mapperJson.decodeFromString<List<String>>(entity.memberPortIdsJson)
-    } catch (_: Exception) {
-        emptyList()
-    }
+    val members = mapperJson.decodeFromString<List<String>>(entity.memberPortIdsJson)
     return com.onlyfield.assetmanager.core.model.LagGroup(
         id = entity.id,
         deviceId = entity.deviceId,
         name = entity.name,
-        mode = try { com.onlyfield.assetmanager.core.model.LagMode.valueOf(entity.mode) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.LagMode.LACP },
+        mode = com.onlyfield.assetmanager.core.model.LagMode.valueOf(entity.mode),
         memberPortIds = members,
         notes = entity.notes
     )
@@ -212,7 +204,7 @@ internal fun toWanVpnConnection(entity: com.onlyfield.assetmanager.data.local.Wa
     return com.onlyfield.assetmanager.core.model.WanVpnConnection(
         id = entity.id,
         name = entity.name,
-        type = try { com.onlyfield.assetmanager.core.model.WanVpnType.valueOf(entity.type) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.WanVpnType.WAN },
+        type = com.onlyfield.assetmanager.core.model.WanVpnType.valueOf(entity.type),
         providerOrCarrier = entity.providerOrCarrier,
         bandwidth = entity.bandwidth,
         localEndpointDeviceId = entity.localEndpointDeviceId,
@@ -272,8 +264,8 @@ internal fun toCustomExtraField(entity: com.onlyfield.assetmanager.data.local.Cu
         targetId = entity.targetId,
         fieldKey = entity.fieldKey,
         fieldValue = entity.fieldValue,
-        fieldType = try { com.onlyfield.assetmanager.core.model.CustomFieldType.valueOf(entity.fieldType) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.CustomFieldType.STRING },
-        classification = try { com.onlyfield.assetmanager.core.model.AttachmentClassification.valueOf(entity.classification) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.AttachmentClassification.SHAREABLE },
+        fieldType = com.onlyfield.assetmanager.core.model.CustomFieldType.valueOf(entity.fieldType),
+        classification = com.onlyfield.assetmanager.core.model.AttachmentClassification.valueOf(entity.classification),
         notes = entity.notes
     )
 }

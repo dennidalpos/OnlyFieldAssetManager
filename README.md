@@ -27,4 +27,4 @@ Editor offline per censire e documentare infrastrutture di rete e telecomunicazi
 
 Le decisioni e i limiti di prodotto sono in [plan.md](plan.md); le evidenze e i residui sono in [roadmap.md](roadmap.md) e [PROJECT_STATUS.json](PROJECT_STATUS.json).
 
-Remediation del 9 ottobre: AUD-45–51 completati; 643 test JVM/Compose e quattro prove PDF native verdi. Restano i quattro collaudi/pulizie nel tracker; esiti e limiti nella roadmap.
+Secondo audit del 9 ottobre completato: **AUD-52–64 verificati e rimossi dal tracker**. Restano **4 residui, 0 P1 / 3 P2 / 1 P3** (RES-13/19/23/24), con i vincoli dei collaudi nativi e delle pulizie preservati. Evidenze nel [report corrente](docs/repo-residuals-2026-10-09.md) e nella [roadmap](roadmap.md).

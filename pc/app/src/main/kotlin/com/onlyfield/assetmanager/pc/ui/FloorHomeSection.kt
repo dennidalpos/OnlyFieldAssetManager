@@ -102,10 +102,12 @@ fun FloorHomeSection(state: DesktopAppState) {
                 add = { parent, point -> adding = parent to point },
                 trash = { ref ->
                     val name = ObjectHierarchy.name(project, ref, i18n)
-                    val (updated, item) = if (ref.type == PlacementTargetType.RACK) ProjectEdits.deleteRackToTrash(project, ref.id, i18n)
-                        else ProjectEdits.deleteDeviceToTrash(project, ref.id, i18n)
-                    item?.let(state::addToTrash)
-                    state.update(updated, i18n.text("text.4e2629d50c9b", name))
+                    try {
+                        val (updated, item) = if (ref.type == PlacementTargetType.RACK) ProjectEdits.deleteRackToTrash(project, ref.id, i18n)
+                            else ProjectEdits.deleteDeviceToTrash(project, ref.id, i18n)
+                        item?.let(state::addToTrash)
+                        state.update(updated, i18n.text("text.4e2629d50c9b", name))
+                    } catch (e: IllegalStateException) { state.error = e.message }
                 },
                 photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
             ), Modifier.weight(1f), tools = listOf(

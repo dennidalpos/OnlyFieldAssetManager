@@ -108,8 +108,12 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 
     renaming?.let { p ->
         var name by remember(p) { mutableStateOf(p.name) }
-        FormDialog(i18n.text("text.62e351b7ecb0"), { renaming = null }, { renaming = null; vm.renameProject(p.id, name) }, confirmEnabled = name.isNotBlank()) {
+        val save = rememberEditSave(vm, p)
+        FormDialog(i18n.text("text.62e351b7ecb0"), { renaming = null }, {
+            save.submit({ renaming = null }) { result -> vm.renameProject(p.id, name, result) }
+        }, confirmEnabled = name.isNotBlank() && vm.busy == null) {
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         }
     }
 

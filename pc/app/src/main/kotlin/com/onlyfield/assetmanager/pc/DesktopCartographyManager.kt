@@ -101,11 +101,7 @@ object DesktopCartographyManager {
                     (center.y + row - 1).coerceIn(0, tileCount - 1), zoom
                 )
                 val bytes = fetch(getTileUrl(source, tile))
-                val bitmap = ImageIO.read(ByteArrayInputStream(bytes))
-                    ?: throw MapDownloadException(i18n.text("text.1b8c268d5010"))
-                if (bitmap.width != 256 || bitmap.height != 256) {
-                    throw MapDownloadException(i18n.text("text.31677e1f659a"))
-                }
+                val bitmap = decodeTile(bytes, i18n)
                 graphics.drawImage(bitmap, column * 256, row * 256, null)
             }
             graphics.color = Color.WHITE
@@ -119,5 +115,21 @@ object DesktopCartographyManager {
         val output = ByteArrayOutputStream()
         check(ImageIO.write(image, "png", output)) { i18n.text("text.67b5aa03bb6a") }
         return DesktopMapSnapshot(output.toByteArray(), source.attribution)
+    }
+
+    private fun decodeTile(bytes: ByteArray, i18n: Messages): BufferedImage {
+        if (bytes.size > 2 * 1024 * 1024) throw MapDownloadException(i18n.text("text.63bc51f297f4"))
+        return javax.imageio.stream.MemoryCacheImageInputStream(ByteArrayInputStream(bytes)).use { input ->
+            val readers = ImageIO.getImageReaders(input)
+            if (!readers.hasNext()) throw MapDownloadException(i18n.text("text.1b8c268d5010"))
+            val reader = readers.next()
+            try {
+                reader.input = input
+                if (reader.getWidth(0) != 256 || reader.getHeight(0) != 256) {
+                    throw MapDownloadException(i18n.text("text.31677e1f659a"))
+                }
+                reader.read(0) ?: throw MapDownloadException(i18n.text("text.1b8c268d5010"))
+            } finally { reader.dispose() }
+        }
     }
 }

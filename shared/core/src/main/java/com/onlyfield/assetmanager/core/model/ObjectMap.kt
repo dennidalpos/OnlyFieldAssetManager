@@ -32,12 +32,7 @@ data class CableRoute(
     val areaId: String,
     val points: List<MapPoint> = listOf(MapPoint(.4f, .5f), MapPoint(.6f, .5f)),
 ) {
-    /** Routes saved before 2026-10 used a shared centre bend; treat it as "no bend". */
-    val bends: List<MapPoint> get() = if (points == LEGACY_DEFAULT) emptyList() else points.drop(1).dropLast(1)
-
-    companion object {
-        val LEGACY_DEFAULT = listOf(MapPoint(.2f, .5f), MapPoint(.5f, .5f), MapPoint(.8f, .5f))
-    }
+    val bends: List<MapPoint> get() = points.drop(1).dropLast(1)
 }
 
 object ObjectCatalog {

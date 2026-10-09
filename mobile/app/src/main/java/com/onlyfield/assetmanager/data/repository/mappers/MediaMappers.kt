@@ -53,13 +53,13 @@ internal fun toAttachment(entity: com.onlyfield.assetmanager.data.local.Attachme
         id = entity.id,
         name = entity.name,
         originalFileName = entity.originalFileName,
-        fileType = try { com.onlyfield.assetmanager.core.model.AttachmentType.valueOf(entity.fileType) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.AttachmentType.IMAGE },
+        fileType = com.onlyfield.assetmanager.core.model.AttachmentType.valueOf(entity.fileType),
         mimeType = entity.mimeType,
         relativePath = entity.relativePath,
         thumbnailPath = entity.thumbnailPath,
-        classification = try { com.onlyfield.assetmanager.core.model.AttachmentClassification.valueOf(entity.classification) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.AttachmentClassification.SHAREABLE },
+        classification = com.onlyfield.assetmanager.core.model.AttachmentClassification.valueOf(entity.classification),
         pageCount = entity.pageCount,
-        targetType = entity.targetType?.let { try { com.onlyfield.assetmanager.core.model.AttachmentTargetType.valueOf(it) } catch (_: Exception) { null } },
+        targetType = entity.targetType?.let { com.onlyfield.assetmanager.core.model.AttachmentTargetType.valueOf(it) },
         targetId = entity.targetId,
         attributionText = entity.attributionText,
         createdAtEpochMs = entity.createdAtEpochMs
@@ -86,14 +86,14 @@ internal fun toAnnotation(entity: com.onlyfield.assetmanager.data.local.Annotati
     return com.onlyfield.assetmanager.core.model.Annotation(
         id = entity.id,
         areaId = entity.areaId,
-        type = try { com.onlyfield.assetmanager.core.model.AnnotationType.valueOf(entity.type) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.AnnotationType.TEXT },
+        type = com.onlyfield.assetmanager.core.model.AnnotationType.valueOf(entity.type),
         x1Ratio = entity.x1Ratio,
         y1Ratio = entity.y1Ratio,
         x2Ratio = entity.x2Ratio,
         y2Ratio = entity.y2Ratio,
         label = entity.label,
         colorHex = entity.colorHex,
-        classification = try { com.onlyfield.assetmanager.core.model.AttachmentClassification.valueOf(entity.classification) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.AttachmentClassification.SHAREABLE }
+        classification = com.onlyfield.assetmanager.core.model.AttachmentClassification.valueOf(entity.classification)
     )
 }
 
@@ -114,7 +114,7 @@ internal fun toFloorplanPlacement(entity: com.onlyfield.assetmanager.data.local.
     return com.onlyfield.assetmanager.core.model.FloorplanPlacement(
         id = entity.id,
         areaId = entity.areaId,
-        targetType = try { com.onlyfield.assetmanager.core.model.PlacementTargetType.valueOf(entity.targetType) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.PlacementTargetType.DEVICE },
+        targetType = com.onlyfield.assetmanager.core.model.PlacementTargetType.valueOf(entity.targetType),
         targetId = entity.targetId,
         xRatio = entity.xRatio,
         yRatio = entity.yRatio,

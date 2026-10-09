@@ -21,7 +21,7 @@ Gli apparati spenti o dismessi sono disegnati attenuati (`SceneNode.inactive`). 
 - I collegamenti senza percorso salvato sono archi: le linee da uno stesso nodo si annidano invece di passare sopra altri oggetti.
 - Il tocco su un collegamento apre l'elenco completo dei cavi (porta A → porta B, piano se diverso, mezzo). Il cavo scelto si apre nel configuratore.
 
-I percorsi salvati restano `CableRoute`. Il percorso predefinito è rettilineo; i percorsi salvati con il vecchio punto centrale `(.5, .5)` non vengono più fatti convergere al centro (`CableRoute.bends`). Sul piano si trascinano i punti del collegamento selezionato o il punto medio, che aggiunge una curva (al massimo 12 punti; oltre, il punto medio non fa nulla).
+I percorsi salvati restano `CableRoute`. Il percorso predefinito è rettilineo; tutti i punti intermedi esplicitamente salvati vengono conservati (`CableRoute.bends`), anche se coincidono con coordinate usate in passato come default. Lo spostamento degli estremi conserva le pieghe. AUD-61 verificato in scena, Room, working copy Windows e scambio semplice/protetto; nessuna euristica sulle coordinate o migrazione del formato. Sul piano si trascinano i punti del collegamento selezionato o il punto medio, che aggiunge una curva (al massimo 12 punti; oltre, il punto medio non fa nulla).
 
 Trascinando un oggetto, il punto in cui lo si è afferrato resta sotto il dito. La pressione prolungata senza movimento non sposta nulla e non salva. Un secondo dito annulla lo spostamento in corso e passa a zoom e panoramica, senza salti quando si solleva un dito.
 
@@ -113,3 +113,7 @@ AUD-39 (7 ottobre): il form di download conserva coordinate, zoom e nome dopo er
 ### AUD-48 — 9 ottobre 2026
 
 Tile Android limitati a 2 MiB durante la lettura, connessione disconnessa in finally. Dimensioni 256x256 verificate prima del decode; bitmap individuali e risultato sempre riciclati, anche a guasto parziale. La griglia usa wrap X e clamp Y ai bordi; input geografici non finiti o fuori range rifiutati. Rimossa la costante italiana legacy NO_NETWORK_MESSAGE dal modulo Android; messaggi it/en/es conservati.
+
+## Download cartografico Windows — AUD-59
+
+Ogni tile è limitato a 2 MiB e deve dichiarare 256 × 256 pixel prima della decodifica raster. Immagini malformate, dimensioni inattese e risposte oltre limite interrompono il download. Lettura in memoria, decoder e risorse grafiche chiusi; test con server HTTP locale, senza download pubblici. Fonte primaria: [ImageReader JDK 21](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageReader.html), consultata il 9 ottobre 2026.

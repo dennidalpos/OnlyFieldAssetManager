@@ -487,8 +487,25 @@ object ModelValidator {
 
         val vlanNumbersByScope = mutableMapOf<String, MutableSet<Int>>()
         val knownVlanIds = project.vlans.map { it.vlanId }.toSet()
+        val vlanIds = project.vlans.map { it.id }.toSet()
+        val siteIds = project.sites.map { it.id }.toSet()
+        val deviceIds = allDevices.map { it.second.id }.toSet()
+        fun validateNetworkScope(type: VlanScopeType, target: String?, id: String) {
+            if (type == VlanScopeType.PROJECT && target == null) return
+            if (type != VlanScopeType.PROJECT && target.isNullOrBlank()) {
+                issues += ValidationIssue("MISSING_NETWORK_SCOPE_TARGET", i18n.text("network.scopeMissing"), ValidationSeverity.DOCUMENTARY_WARNING, id)
+                return
+            }
+            val valid = when (type) {
+                VlanScopeType.PROJECT -> target == project.id
+                VlanScopeType.SITE -> target in siteIds
+                VlanScopeType.DEVICE -> target in deviceIds
+            }
+            if (!valid) issues += ValidationIssue("INVALID_NETWORK_SCOPE_TARGET", i18n.text("network.scopeInvalid"), ValidationSeverity.STRUCTURAL_ERROR, id)
+        }
 
         for (vlan in project.vlans) {
+            validateNetworkScope(vlan.scopeType, vlan.scopeTargetId, vlan.id)
             checkUuid("INVALID_VLAN_UUID", vlan.id, i18n.text("text.f1620ea04aeb"), issues)
             trackId(vlan.id, "DUPLICATE_VLAN_ID", i18n.text("text.01f8a71e9988", vlan.id), seenIds, issues)
 
@@ -520,10 +537,14 @@ object ModelValidator {
         }
 
         for (subnet in project.subnets) {
+            validateNetworkScope(subnet.scopeType, subnet.scopeTargetId, subnet.id)
+            if (subnet.vlanId != null && subnet.vlanId !in vlanIds) {
+                issues += ValidationIssue("INVALID_SUBNET_VLAN_REFERENCE", i18n.text("network.vlanInvalid"), ValidationSeverity.STRUCTURAL_ERROR, subnet.id)
+            }
             checkUuid("INVALID_SUBNET_UUID", subnet.id, i18n.text("text.61df76270ad5"), issues)
             trackId(subnet.id, "DUPLICATE_SUBNET_ID", i18n.text("text.481a7568314f", subnet.id), seenIds, issues)
 
-            if (subnet.cidrBlock.isBlank() || !subnet.cidrBlock.contains("/")) {
+            if (com.onlyfield.assetmanager.core.forms.FieldValidators.cidr(subnet.cidrBlock, required = true, i18n = i18n) != null) {
                 issues.add(
                     ValidationIssue(
                         code = "INVALID_SUBNET_CIDR",

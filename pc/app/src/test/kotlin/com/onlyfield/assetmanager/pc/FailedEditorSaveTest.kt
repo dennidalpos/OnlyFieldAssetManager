@@ -141,7 +141,8 @@ class FailedEditorSaveTest(private val editor: String) {
                     assertArrayEquals(bytes, local.readBytes())
                 }
                 compose.onNodeWithText(action).assertIsDisplayed()
-                compose.onNodeWithText(state.error!!).assertIsDisplayed()
+                if (editor == "replace") compose.onNode(hasText(state.error!!) and hasAnyAncestor(isDialog())).assertIsDisplayed()
+                else compose.onNodeWithText(state.error!!).assertIsDisplayed()
                 if (editor == "place") compose.onNodeWithText(device.technicalName).assertIsDisplayed()
                 else compose.onNode(hasSetTextAction() and hasText("Retained draft")).performScrollTo().assertIsDisplayed()
                 if (editor == "attachment") {

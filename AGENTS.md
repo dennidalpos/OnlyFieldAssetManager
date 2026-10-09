@@ -10,7 +10,7 @@
 - Shared UI: `shared/configurator`; hardware: `core.forms`, `core.model.ConnectionGraph`.
 - `MapWorkspace` uses host `MapUiState`: camera/selection/containers survive view/size changes; outside Room/.ofam.
 - Reuse `OnlyFieldTheme`, `AppSpacing` and `ContentDialog`; text forms max 640 dp, technical canvases exempt. Dialogs use window/IME bounds.
-- Forms `copy()` to retain hidden fields; close drafts after successful save.
+- Forms `copy()` retain hidden fields; close on successful save. Scope refusals never retarget networks.
 - `core.i18n.Messages`: UTF-8 it/en/es, Italian default; capture at generation start, preserve user text.
 - `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data beside EXE. Regeneration refuses runtime data/. `prepare-release.ps1` needs an empty output dir.
 - Native tests: `adb install -r` + `adb shell am instrument`; connected Gradle tests uninstall app/data. Require instrumentation `OK`.

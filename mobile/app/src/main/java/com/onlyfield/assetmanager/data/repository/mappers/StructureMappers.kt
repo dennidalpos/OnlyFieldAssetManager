@@ -68,7 +68,7 @@ internal fun toRack(entity: RackEntity): Rack {
         name = entity.name,
         areaId = entity.areaId,
         heightU = entity.heightU,
-        numberingDirection = try { NumberingDirection.valueOf(entity.numberingDirection) } catch (_: Exception) { NumberingDirection.BOTTOM_TO_TOP },
+        numberingDirection = NumberingDirection.valueOf(entity.numberingDirection),
         depthMm = entity.depthMm,
         mountingDepthMm = entity.mountingDepthMm,
         deviceModelId = entity.deviceModelId,
@@ -100,7 +100,7 @@ internal fun toDeviceModel(entity: DeviceModelEntity): DeviceModel {
         name = entity.name,
         brand = entity.brand,
         modelNumber = entity.modelNumber,
-        category = try { DeviceCategory.valueOf(entity.category) } catch (_: Exception) { DeviceCategory.CUSTOM },
+        category = DeviceCategory.valueOf(entity.category),
         defaultHeightU = entity.defaultHeightU,
         portTemplates = templates,
         notes = entity.notes,
@@ -127,7 +127,7 @@ internal fun toCredential(entity: CredentialEntity): Credential {
         groupName = entity.groupName,
         username = entity.username,
         secret = entity.secret,
-        type = try { CredentialType.valueOf(entity.type) } catch (_: Exception) { CredentialType.PASSWORD },
+        type = CredentialType.valueOf(entity.type),
         notes = entity.notes,
     )
 }
@@ -248,7 +248,7 @@ internal fun toProject(
                     Observation(
                         source = portEnt.obsSource,
                         timestampEpochMs = portEnt.obsTimestampEpochMs,
-                        status = try { ObservationStatus.valueOf(portEnt.obsStatus) } catch (_: Exception) { ObservationStatus.TO_VERIFY },
+                        status = ObservationStatus.valueOf(portEnt.obsStatus),
                         notes = portEnt.obsNotes
                     )
                 } else null
@@ -259,7 +259,7 @@ internal fun toProject(
                     name = portEnt.name,
                     label = portEnt.label,
                     hardware = mapperJson.decodeFromString<com.onlyfield.assetmanager.core.model.PortHardware>(portEnt.hardwareJson),
-                    endpointStatus = try { EndpointStatus.valueOf(portEnt.endpointStatus) } catch (_: Exception) { EndpointStatus.DISCONNECTED },
+                    endpointStatus = EndpointStatus.valueOf(portEnt.endpointStatus),
                     observation = obs
                 )
             }
@@ -268,7 +268,7 @@ internal fun toProject(
                 Observation(
                     source = devEnt.obsSource,
                     timestampEpochMs = devEnt.obsTimestampEpochMs,
-                    status = try { ObservationStatus.valueOf(devEnt.obsStatus) } catch (_: Exception) { ObservationStatus.TO_VERIFY },
+                    status = ObservationStatus.valueOf(devEnt.obsStatus),
                     notes = devEnt.obsNotes
                 )
             } else null
@@ -286,14 +286,14 @@ internal fun toProject(
                 rackId = devEnt.rackId,
                 positionU = devEnt.positionU,
                 heightU = devEnt.heightU,
-                rackSide = try { RackSide.valueOf(devEnt.rackSide) } catch (_: Exception) { RackSide.BOTH },
-                mountingType = try { MountingType.valueOf(devEnt.mountingType) } catch (_: Exception) { MountingType.OUT_OF_RACK },
+                rackSide = RackSide.valueOf(devEnt.rackSide),
+                mountingType = MountingType.valueOf(devEnt.mountingType),
                 deviceModelId = devEnt.deviceModelId,
-                category = try { DeviceCategory.valueOf(devEnt.category) } catch (_: Exception) { DeviceCategory.CUSTOM },
+                category = DeviceCategory.valueOf(devEnt.category),
                 objectTypeId = devEnt.objectTypeId,
                 serialNumber = devEnt.serialNumber,
                 hardware = mapperJson.decodeFromString<com.onlyfield.assetmanager.core.model.HardwareSpec>(devEnt.hardwareJson),
-                operationalStatus = runCatching { com.onlyfield.assetmanager.core.model.OperationalStatus.valueOf(devEnt.operationalStatus) }.getOrDefault(com.onlyfield.assetmanager.core.model.OperationalStatus.IN_SERVICE),
+                operationalStatus = com.onlyfield.assetmanager.core.model.OperationalStatus.valueOf(devEnt.operationalStatus),
             )
         }
 

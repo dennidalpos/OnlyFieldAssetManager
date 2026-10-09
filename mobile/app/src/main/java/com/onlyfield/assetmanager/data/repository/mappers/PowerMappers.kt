@@ -53,7 +53,7 @@ internal fun toPowerFeed(entity: com.onlyfield.assetmanager.data.local.PowerFeed
         id = entity.id,
         deviceId = entity.deviceId,
         feedName = entity.feedName,
-        feedType = try { com.onlyfield.assetmanager.core.model.PowerFeedType.valueOf(entity.feedType) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.PowerFeedType.PRIMARY_A },
+        feedType = com.onlyfield.assetmanager.core.model.PowerFeedType.valueOf(entity.feedType),
         sourceDeviceId = entity.sourceDeviceId,
         sourceOutletDescription = entity.sourceOutletDescription,
         voltageVolts = entity.voltageVolts,
@@ -82,8 +82,8 @@ internal fun toPoeMapping(entity: com.onlyfield.assetmanager.data.local.PoeMappi
     return com.onlyfield.assetmanager.core.model.PoeMapping(
         id = entity.id,
         portId = entity.portId,
-        role = try { com.onlyfield.assetmanager.core.model.PoeRole.valueOf(entity.role) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.PoeRole.PSE_SOURCE },
-        standard = try { com.onlyfield.assetmanager.core.model.PoeStandard.valueOf(entity.standard) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.PoeStandard.IEEE_802_3AT },
+        role = com.onlyfield.assetmanager.core.model.PoeRole.valueOf(entity.role),
+        standard = com.onlyfield.assetmanager.core.model.PoeStandard.valueOf(entity.standard),
         allocatedPowerWatts = entity.allocatedPowerWatts,
         notes = entity.notes
     )
@@ -108,7 +108,7 @@ internal fun toDocumentBadge(entity: com.onlyfield.assetmanager.data.local.Docum
         targetType = entity.targetType,
         targetId = entity.targetId,
         label = entity.label,
-        category = try { com.onlyfield.assetmanager.core.model.BadgeCategory.valueOf(entity.category) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.BadgeCategory.FREE_LABEL },
+        category = com.onlyfield.assetmanager.core.model.BadgeCategory.valueOf(entity.category),
         isDerived = entity.isDerived,
         notes = entity.notes
     )

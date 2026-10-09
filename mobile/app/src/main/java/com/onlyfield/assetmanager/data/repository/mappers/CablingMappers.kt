@@ -33,7 +33,7 @@ internal fun toCable(entity: com.onlyfield.assetmanager.data.local.CableEntity):
         Observation(
             source = entity.obsSource,
             timestampEpochMs = entity.obsTimestampEpochMs,
-            status = try { ObservationStatus.valueOf(entity.obsStatus) } catch (_: Exception) { ObservationStatus.TO_VERIFY },
+            status = ObservationStatus.valueOf(entity.obsStatus),
             notes = entity.obsNotes
         )
     } else null
@@ -47,7 +47,7 @@ internal fun toCable(entity: com.onlyfield.assetmanager.data.local.CableEntity):
         deviceBId = entity.deviceBId,
         portAId = entity.portAId,
         portBId = entity.portBId,
-        medium = try { com.onlyfield.assetmanager.core.model.CableMedium.valueOf(entity.medium) } catch (_: Exception) { com.onlyfield.assetmanager.core.model.CableMedium.ETHERNET_COPPER },
+        medium = com.onlyfield.assetmanager.core.model.CableMedium.valueOf(entity.medium),
         color = entity.color,
         lengthValue = entity.lengthValue,
         lengthUnit = entity.lengthUnit,

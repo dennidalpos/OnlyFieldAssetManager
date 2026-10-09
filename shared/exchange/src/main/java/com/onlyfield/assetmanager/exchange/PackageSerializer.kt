@@ -252,6 +252,9 @@ object PackageSerializer {
         fun invalidZip() = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
             code = "INVALID_ZIP_ARCHIVE", message = i18n.text("text.0e2a1010ee48"), severity = ValidationSeverity.STRUCTURAL_ERROR,
         ))))
+        fun inconsistent(code: String) = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = code, message = i18n.text("text.0e2a1010ee48"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
         var manifestBytes: ByteArray? = null
         var projectPlainBytes: ByteArray? = null
         var projectEncBytes: ByteArray? = null
@@ -262,10 +265,12 @@ object PackageSerializer {
                 var entryCount = 0
                 var expandedBytes = 0L
                 val buffer = ByteArray(8192)
+                val entryNames = mutableSetOf<String>()
                 var entry = zis.nextEntry
                 while (entry != null) {
                     if (++entryCount > limits.entries) throw PackageLimitExceeded("PACKAGE_ENTRY_LIMIT_EXCEEDED")
                     val current = entry
+                    if (!entryNames.add(current.name)) return inconsistent("DUPLICATE_PACKAGE_ENTRY")
                     fun readEntry(output: java.io.OutputStream) {
                         var entryBytes = 0L
                         var read = zis.read(buffer)
@@ -341,6 +346,13 @@ object PackageSerializer {
                 severity = ValidationSeverity.STRUCTURAL_ERROR,
             )
             return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        if ((manifest.attachmentsEncrypted && !manifest.isEncrypted) ||
+            (manifest.isEncrypted && projectPlainBytes != null) ||
+            (!manifest.isEncrypted && projectEncBytes != null) ||
+            (!manifest.isEncrypted && (manifest.kdfSaltHex != null || manifest.kdfIterations != null || manifest.cipherIvHex != null))) {
+            return inconsistent("INCONSISTENT_PACKAGE_PROTECTION")
         }
 
         val rawLimit = limits.fileBytes
@@ -508,6 +520,9 @@ object PackageSerializer {
             )
             return PackageImportResult(null, ValidationResult(issues))
         }
+
+        if (manifest.projectId != project.id) return inconsistent("PACKAGE_PROJECT_ID_MISMATCH")
+        if (project.isPasswordProtected && !manifest.isEncrypted) return inconsistent("INCONSISTENT_PACKAGE_PROTECTION")
 
         val imported = ProjectPackage(manifest, project, attachments)
         val missingPaths = mutableSetOf<String>()

@@ -1,6 +1,6 @@
 # Piano prodotto
 
-Aggiornato al 9 ottobre 2026 dopo remediation e verifica del codice.
+Aggiornato al 9 ottobre 2026 dopo remediation e secondo audit del repository.
 
 ## Obiettivo e limiti
 
@@ -71,7 +71,7 @@ Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](ro
 
 ## Stato
 
-AUD-45–51 completati e rimossi dal [tracker](PROJECT_STATUS.json): protezione dati del portable, bozze al guasto, numeri finiti, cartografia Android, stampa selettiva e documenti completi/escapati. Restano **quattro residui, 3 P2 e 1 P3**: hardware, matrice UX Android, collaudo EXE Windows e pulizie storiche. I collaudi manuali non sono dedotti dalle suite automatiche. Evidenze e limiti nel [report corrente](docs/repo-residuals-2026-10-09.md) e nella [roadmap](roadmap.md); il [report precedente](docs/repo-residuals-2026-10-05.md) conserva lo storico.
+Secondo audit del 9 ottobre completato: **AUD-52–64 verificati e rimossi dal tracker**. Restano **4 residui, 0 P1 / 3 P2 / 1 P3** (RES-13/19/23/24), con i vincoli dei collaudi nativi e delle pulizie preservati. Evidenze nel [report corrente](docs/repo-residuals-2026-10-09.md) e nella [roadmap](roadmap.md).
 
 Le funzionalità previste sono implementate; l’audit ha rilevato difetti e flussi da completare nei confini di persistenza, scambio e media. Lo stato aperto è mantenuto esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile è in [roadmap.md](roadmap.md).
 
@@ -125,7 +125,7 @@ AUD-40 (8 ottobre): le schede Android di apparato e rack restano aperte fino al 
 
 Perimetro dei collaudi hardware (decisione utente, 8 ottobre 2026): usare la fotocamera integrata Android; lettori USB e scanner esterni sono esclusi definitivamente dalle prove richieste. Le funzionalità applicative restano disponibili; questa è una decisione sul collaudo. RES-13 conserva fotocamera/gesti e recupero SQLCipher/Keystore isolato, con distinzione fra riavvio del processo e del dispositivo.
 
-RES-13 (8 ottobre): recupero SQLCipher/Keystore verificato su moto g86 API 36 in due processi distinti, con database/media/chiavi avvolte isolati. Cinque scenari di commit/rollback e blocco/riprova conservano l'esito Room e i backup; test roundtrip ordinario verde. Riavvio fisico, arresto forzato e perdita di alimentazione non eseguiti. Restano fotocamera integrata (anche porta/cavo e serie), scansione tramite fotocamera e gesti; lettori USB/scanner esterni esclusi dalle prove per decisione utente. Dettagli e comandi nella roadmap; nessuna modifica al runtime.
+RES-13 (8 ottobre): recupero SQLCipher/Keystore verificato su moto g86 API 36 in due processi distinti, con database/media/chiavi avvolte isolati. Cinque scenari di commit/rollback e blocco/riprova conservano l'esito Room e i backup; test roundtrip ordinario verde. Il riavvio fisico normale è stato completato l’8 ottobre sullo stesso dispositivo: boot ID diverso e recupero dei cinque scenari SQLCipher/Keystore isolati verificati. Arresto forzato e perdita improvvisa di alimentazione durante scrittura restano non eseguiti. Restano fotocamera integrata (anche porta/cavo e serie), scansione tramite fotocamera e gesti; lettori USB/scanner esterni esclusi dalle prove per decisione utente. Dettagli e comandi nella roadmap; nessuna modifica al runtime.
 
 AUD-41 (8 ottobre): la continuazione della serie foto Android attende la fine del comando tramite Job.join, dopo commit, cleanup e rilascio dello stato occupato. La foto pendente conserva la sessione di origine; risultati di una precedente apertura dello stesso progetto, errori tardivi e callback cancellati vengono ignorati. Il callback Compose controlla lo scope della schermata prima di riaprire il launcher. Nove prove JVM mirate e cinque prove native con camera/permesso sintetici, FileProvider e repository reali verificano DEVICE/PORT/CABLE, annullamento, guasto/riprova, undo e scambio cifrato. Scatti reali rinviati per decisione utente: RES-13 resta parziale.
 

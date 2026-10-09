@@ -23,7 +23,6 @@ import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.onboarding.NewSiteDraft
 import com.onlyfield.assetmanager.core.onboarding.NewSiteStep
-import com.onlyfield.assetmanager.core.onboarding.NewSiteWizard
 import com.onlyfield.assetmanager.core.model.ReportSelection
 import com.onlyfield.assetmanager.core.validation.ValidationSeverity
 import com.onlyfield.assetmanager.exchange.LabelSheetPdf
@@ -56,10 +55,10 @@ fun ProjectDialogs(state: DesktopAppState) {
 private fun NewProjectDialog(state: DesktopAppState) {
     val i18n = LocalMessages.current
 
-    var w by remember { mutableStateOf(NewSiteWizard()) }
+    val w = state.newSiteWizard
     val errors = w.errors(i18n = i18n)
     fun set(t: (NewSiteDraft) -> NewSiteDraft) {
-        w = w.update(t)
+        state.newSiteWizard = w.update(t)
     }
 
     AlertDialog(
@@ -71,6 +70,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
                 LinearProgressIndicator(progress = { w.stepNumber / w.stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
                 Text(w.step.localizedTitle(i18n), style = MaterialTheme.typography.titleMedium)
                 Text(w.step.localizedHint(i18n), style = MaterialTheme.typography.bodySmall)
+                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 if (w.isFirst && state.project != null) {
                     Text(i18n.text("text.f86e27a6906c"), style = MaterialTheme.typography.bodySmall)
                 }
@@ -82,7 +82,7 @@ private fun NewProjectDialog(state: DesktopAppState) {
                             FormField(d.projectName, { v -> set { it.copy(projectName = v) } }, i18n.text("text.85afe7453202"), error = errors["projectName"])
                             FormField(d.customer, { v -> set { it.copy(customer = v) } }, i18n.text("text.f851d9a83ab0"), hint = i18n.text("text.98c72991302e"))
                         }
-                        NewSiteStep.SITE, NewSiteStep.AREA -> WizardLists(w) { w = it }
+                        NewSiteStep.SITE, NewSiteStep.AREA -> WizardLists(w) { state.newSiteWizard = it }
                         NewSiteStep.PASSWORD -> {
                             WizardPassword(d.password, { v -> set { it.copy(password = v) } }, i18n.text("text.e7cf3ef4f17c"), null)
                             WizardPassword(d.passwordConfirm, { v -> set { it.copy(passwordConfirm = v) } }, i18n.text("text.44d09ab8e50d"), errors["passwordConfirm"])
@@ -93,15 +93,15 @@ private fun NewProjectDialog(state: DesktopAppState) {
         },
         confirmButton = {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (w.step.skippable && !w.isLast) TextButton(onClick = { w = w.skip() }) { Text(i18n.text("text.fb397a42956c")) }
+                if (w.step.skippable && !w.isLast) TextButton(onClick = { state.newSiteWizard = w.skip() }) { Text(i18n.text("text.fb397a42956c")) }
                 Button(
                     enabled = w.canProceed,
-                    onClick = { if (w.isLast) state.createProject(w) else w = w.next() }
+                    onClick = { if (w.isLast) state.createProject(w) else state.newSiteWizard = w.next() }
                 ) { Text(if (w.isLast) i18n.text("text.6c4a7984bdc6") else i18n.text("text.29ddfd8a8643")) }
             }
         },
         dismissButton = {
-            TextButton(onClick = { if (w.isFirst) state.dismissDialog() else w = w.back() }) {
+            TextButton(onClick = { if (w.isFirst) state.dismissDialog() else state.newSiteWizard = w.back() }) {
                 Text(if (w.isFirst) i18n.text("text.18c9d912a210") else i18n.text("text.80426885bb74"))
             }
         }

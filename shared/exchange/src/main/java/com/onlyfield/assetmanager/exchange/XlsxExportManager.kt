@@ -86,7 +86,21 @@ object XlsxExportManager {
     private fun cellStr(col: String, row: Int, text: String): String {
         // Row 1 is the header of every sheet: bold (style 1).
         val style = if (row == 1) " s=\"1\"" else ""
-        return "<c r=\"$col$row\"$style t=\"inlineStr\"><is><t>${escapeXml(text)}</t></is></c>"
+        return "<c r=\"$col$row\"$style t=\"inlineStr\"><is><t xml:space=\"preserve\">${escapeCellText(text)}</t></is></c>"
+    }
+
+    /** ST_Xstring: protect literal escapes and characters XML would reject or normalize. */
+    private fun escapeCellText(text: String): String {
+        val literal = text.replace(Regex("_(?=[xX][0-9a-fA-F]{4}_)"), "_x005F_")
+        return escapeXml(buildString {
+            literal.forEachIndexed { index, c ->
+                val unpaired = (c.isHighSurrogate() && literal.getOrNull(index + 1)?.isLowSurrogate() != true) ||
+                    (c.isLowSurrogate() && literal.getOrNull(index - 1)?.isHighSurrogate() != true)
+                if ((c < ' ' && c != '\n' && c != '\t') || c == '\uFFFE' || c == '\uFFFF' || unpaired) {
+                    append("_x").append(c.code.toString(16).uppercase(java.util.Locale.ROOT).padStart(4, '0')).append('_')
+                } else append(c)
+            }
+        })
     }
 
     /** Header row frozen while scrolling and a default width that fits names and labels. */

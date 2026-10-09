@@ -62,3 +62,9 @@ Markdown e foglio XLSX Alimentazione adottano una riga per ogni record, senza se
 ### AUD-51 — 9 ottobre 2026
 
 Escaping Markdown applicato a testo utente in titoli, metadati, inventario, hardware, rack, cablaggio, VLAN, alimentazioni, badge, attribuzioni, note e avvisi. CR/LF normalizzati in spazi soltanto nel documento; punteggiatura Markdown/HTML e backslash resi letterali. Gli span usano delimitatori adeguati ai backtick del contenuto; le pipe sono esterne agli span per mantenere tabelle e backslash anche nei renderer GFM. Testo del progetto invariato. Rimossi i quattro messaggi legacy delle colonne A/B non più usati.
+
+## Testo XLSX e sfondi PDF — 9 ottobre 2026
+
+AUD-58: celle di testo conservano Unicode, spazi iniziali/finali, tab e LF (`xml:space="preserve"`). CR e caratteri vietati da XML vengono rappresentati con gli escape OpenXML; sequenze letterali `_xHHHH_` protette, anche sovrapposte. Numeri restano celle numeriche, testo utente resta testo e il progetto non viene modificato. Fonti primarie: [ST_Xstring Microsoft](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d34ae755-c53f-4a44-a363-c6dd3ee018a4), [XML 1.0 W3C](https://www.w3.org/TR/xml/#charsets), consultate il 9 ottobre 2026.
+
+AUD-60: uno sfondo richiesto ma illeggibile, non supportato o senza payload interrompe PDF e stampa Windows con errore visibile. Sfondo assente, escluso dai filtri o sezione planimetrie disattivata restano casi validi. Documento e stream PDFBox chiusi anche dopo errore; nessun esito di successo per una planimetria omessa. Fonte primaria: [PDFBox 3](https://pdfbox.apache.org/3.0/migration.html), consultata il 9 ottobre 2026. Validazione automatica e limiti nativi nella [verifica](05-testing-and-benchmarks.md).

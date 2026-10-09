@@ -10,6 +10,7 @@ import com.onlyfield.assetmanager.core.model.Site
 import com.onlyfield.assetmanager.core.model.Credential
 import com.onlyfield.assetmanager.core.model.CredentialType
 import com.onlyfield.assetmanager.core.model.Device
+import com.onlyfield.assetmanager.core.model.Area
 import com.onlyfield.assetmanager.core.model.DeviceCategory
 import com.onlyfield.assetmanager.core.model.DeviceModel
 import com.onlyfield.assetmanager.core.model.Observation
@@ -39,6 +40,20 @@ import java.util.UUID
 
 @RunWith(RobolectricTestRunner::class)
 class ProjectRepositoryTest {
+    @Test fun explicitCentreRouteSurvivesRoomStorage() = runBlocking {
+        val area = Area(name = "Route floor")
+        val a = Device(technicalName = "A", areaId = area.id)
+        val b = Device(technicalName = "B", areaId = area.id)
+        val cable = com.onlyfield.assetmanager.core.model.Cable(deviceAId = a.id, deviceBId = b.id)
+        val points = listOf(com.onlyfield.assetmanager.core.model.MapPoint(.2f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.5f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.8f, .5f))
+        val project = Project(name = "Routes", createdEpochMs = 0, updatedEpochMs = 0,
+            sites = listOf(Site(name = "Building", areas = listOf(area), devices = listOf(a, b))), cables = listOf(cable),
+            cableRoutes = listOf(com.onlyfield.assetmanager.core.model.CableRoute(cableId = cable.id, areaId = area.id, points = points)))
+        repository.saveProject(project)
+        val restored = repository.getProjectById(project.id)!!
+        assertEquals(project, restored)
+        assertEquals(listOf(points[1]), restored.cableRoutes.single().bends)
+    }
 
     private lateinit var db: AppDatabase
     private lateinit var repository: ProjectRepository

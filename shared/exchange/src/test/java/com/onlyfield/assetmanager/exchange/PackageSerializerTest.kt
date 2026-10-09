@@ -20,6 +20,60 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class PackageSerializerTest {
+    @Test fun deviceModelsTravelWithTheProjectInPlainAndProtectedPackages() {
+        val model = com.onlyfield.assetmanager.core.model.DeviceModel(name = "Switch 24 Ports", brand = "Test brand", modelNumber = "TEST-24",
+            category = com.onlyfield.assetmanager.core.model.DeviceCategory.NETWORK_SWITCH, defaultHeightU = 2,
+            portTemplates = listOf(com.onlyfield.assetmanager.core.model.PortTemplate(namePrefix = "Gi1/0/", portCount = 24,
+                mediaType = "RJ45", connector = "8P8C", speed = "1G", poeStandard = com.onlyfield.assetmanager.core.model.PoeStandard.IEEE_802_3AF)),
+            hardware = com.onlyfield.assetmanager.core.model.HardwareSpec(widthMm = 440, depthMm = 240, poeBudgetWatts = 120.0,
+                redundantPower = true, features = listOf("VLAN"),
+                portLayouts = listOf(com.onlyfield.assetmanager.core.model.PortLayout(rows = 2, order = listOf("1", "2"))),
+                portPoeOverrides = listOf(com.onlyfield.assetmanager.core.model.PortPoeOverride(key = "1", standard = com.onlyfield.assetmanager.core.model.PoeStandard.IEEE_802_3AT))),
+            notes = "Preserved model notes", extraFields = listOf(com.onlyfield.assetmanager.core.model.ModelField("Owner", "Local team")))
+        val project = Project(name = "Model catalogue", createdEpochMs = 0, updatedEpochMs = 0, deviceModels = listOf(model))
+        for (password in listOf(null, "dummy-password")) {
+            val incoming = project.copy(isPasswordProtected = password != null)
+            val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(incoming, password = password), password)
+            assertTrue(result.validationResult.isValid)
+            result.pkg!!.use { assertEquals(incoming, it.project) }
+        }
+    }
+    @Test fun explicitCentreRouteSurvivesPlainAndProtectedExchange() {
+        val area = Area(name = "Floor")
+        val a = Device(technicalName = "A", areaId = area.id)
+        val b = Device(technicalName = "B", areaId = area.id)
+        val cable = com.onlyfield.assetmanager.core.model.Cable(deviceAId = a.id, deviceBId = b.id)
+        val points = listOf(com.onlyfield.assetmanager.core.model.MapPoint(.2f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.5f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.8f, .5f))
+        val project = Project(name = "Routes", createdEpochMs = 0, updatedEpochMs = 0,
+            sites = listOf(Site(name = "Building", areas = listOf(area), devices = listOf(a, b))), cables = listOf(cable),
+            cableRoutes = listOf(com.onlyfield.assetmanager.core.model.CableRoute(cableId = cable.id, areaId = area.id, points = points)))
+        for (password in listOf(null, "dummy-password")) {
+            val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(project, password = password), password)
+            assertTrue(result.validationResult.isValid)
+            result.pkg!!.use {
+                assertEquals(project, it.project)
+                assertEquals(listOf(points[1]), it.project.cableRoutes.single().bends)
+            }
+        }
+    }
+    @Test fun annotatedAreaCannotBeDeletedAndRemainsExchangeable() {
+        val area = Area(name = "Annotated floor")
+        val empty = Area(name = "Empty floor")
+        val project = Project(name = "Site", createdEpochMs = 0, updatedEpochMs = 0,
+            sites = listOf(Site(name = "Building", areas = listOf(area, empty))),
+            annotations = listOf(com.onlyfield.assetmanager.core.model.Annotation(areaId = area.id, x1Ratio = 0.5f, y1Ratio = 0.5f, label = "Keep this note")))
+        assertNull(com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteArea(project, area.id))
+        assertEquals(2, project.sites.single().areas.size)
+        val edited = com.onlyfield.assetmanager.core.edit.ProjectEdits.deleteArea(project, empty.id)!!
+        assertEquals(listOf(area), edited.sites.single().areas)
+        for (password in listOf(null, "dummy-password")) {
+            val incoming = edited.copy(isPasswordProtected = password != null)
+            val result = PackageSerializer.importPackage(PackageSerializer.exportPackage(incoming, password = password), password)
+            assertTrue(result.validationResult.isValid)
+            result.pkg!!.use { assertEquals(incoming, it.project) }
+        }
+    }
+
     @Test fun importRejectsPowerCyclesHiddenByAlternativeSourcesInPlainAndProtectedPackages() {
         val a = Device(technicalName = "A"); val b = Device(technicalName = "B")
         val x = Device(technicalName = "X"); val y = Device(technicalName = "Y")

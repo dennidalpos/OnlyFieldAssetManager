@@ -1,6 +1,6 @@
 # Residui del repository — 9 ottobre 2026
 
-**Stato dopo la remediation del 9 ottobre:** AUD-45–51 completati e rimossi dal [tracker](../PROJECT_STATUS.json). Restano **RES-13/19/23/24: quattro attività, 0 P1 / 3 P2 / 1 P3**. Chiusure, regressioni e limiti nella [roadmap](../roadmap.md) e nelle sezioni remediation sotto.
+**Secondo audit completato:** AUD-52–64 verificati e rimossi. Nel [tracker](../PROJECT_STATUS.json) restano RES-13/19/23/24: **4 residui, 0 P1 / 3 P2 / 1 P3**. Completamenti ed evidenze nella [roadmap](../roadmap.md); riproduzioni e conteggi dell’audit sono la baseline storica.
 
 L’audit iniziale identificava sette nuovi rilievi (un P1 e sei P2) oltre ai quattro residui operativi. Le riproduzioni e il perimetro iniziali sono conservati come evidenza storica; descrivono il codice precedente alle correzioni.
 
@@ -14,7 +14,7 @@ Gli AUD precedenti sono confrontati con implementazione e chiusure, senza riapri
 
 ## Attività ancora aperte
 
-Ordine di remediation eseguito: AUD-45 → AUD-46 → AUD-49 → AUD-48 → AUD-47 → AUD-50 → AUD-51. Per i residui seguenti restano collaudi reali o pulizie storiche; non sono state ritentate le rimozioni precedentemente respinte.
+Restano RES-13/19/23/24: collaudi reali con i vincoli già confermati e pulizie storiche respinte, non ritentate. AUD-52–64 completati; le riproduzioni sotto descrivono la baseline e gli esiti successivi sono nelle sezioni remediation.
 
 | Priorità | ID | Attività | Evidenza attuale |
 | --- | --- | --- | --- |
@@ -158,8 +158,205 @@ Escaping Markdown applicato a testo utente in titoli, metadati, inventario, hard
 
 Baseline MarkdownEscapingTest: intestazione CR/LF introdotta dal testo utente (regressione riprodotta). Gradle exchange: 12 regressioni documenti/filtri/lingue verdi prima delle prove ai bordi; MarkdownEscapingTest ora 2 test, BUILD SUCCESSFUL. tools/testing/markdown-content.ps1 → PASS it/en/es, 7 tabelle ciascuna: parser Markdig di ConvertFrom-Markdown verifica intestazioni, liste, markup, righe/colonne e testo letterale rispetto al controllo; PASS anche 7 casi span (pipe, backslash adiacenti, delimitatori backtick, spazi e CR/LF). Fixture/evidenze in shared/exchange/build/reports/markdown-*.md; nessuna dipendenza aggiunta. Fonte primaria [GFM](https://github.github.com/gfm/) e sezioni tabelle/escape/code span, consultate il 9 ottobre.
 
-### Verifica finale
+### Verifica finale della remediation
 
-643 test JVM/Compose e quattro prove native PDF verdi; APK compilate. Comandi, risultati e limiti nella roadmap e nella guida di verifica. Restano i quattro residui indicati sopra, senza nuovi task runtime. Packaging protegge i dati destinatari e rifiuta la rigenerazione con data/ sorgente; nessun recupero pendente per la vecchia fixture sintetica, come confermato dall’utente.
+643 test JVM/Compose e quattro prove native PDF verdi; APK compilate. Comandi, risultati e limiti nella roadmap e nella guida di verifica. Al termine di quella remediation restavano soltanto RES-13/19/23/24; il secondo audit documentato sotto aggiunge i nuovi rilievi, senza riaprire AUD-45–51. Packaging protegge i dati destinatari e rifiuta la rigenerazione con data/ sorgente; nessun recupero pendente per la vecchia fixture sintetica, come confermato dall’utente.
 
 Pulizia finale della remediation: il controllo automatico ha respinto la rimozione dei soli build/tmp/remediation_docs.py, build/tmp/__pycache__/remediation_docs.cpython-313.pyc e della directory cache se vuota, con motivo blocked by policy. Nessuna rimozione eseguita o ritentata. Due file inventariati con dimensioni/SHA-256 in build/reports/tracker-remediation-20261009/cleanup-blocked-inventory.json; aggiunti a RES-24. I report restano conservati.
+
+## Secondo audit completo — 9 ottobre 2026
+
+Ricognizione dei **398 file versionati** e revisione trasversale di dominio, persistenza, scambio, media, UI, documenti, test, build e rilascio. Individuati **11 nuovi rilievi** (2 P1, 8 P2, 1 P3), oltre ai quattro residui esistenti (3 P2, 1 P3). Totale alla rilevazione **15 attività: 2 P1 / 11 P2 / 2 P3**. Il primo audit e le correzioni AUD-45–51 sopra sono conservati come storico.
+
+`REPRODUCED` indica un caso effettivamente osservato con dati sintetici; `CODE_REVIEW` un percorso individuato nel sorgente senza riproduzione del guasto; `PARTIAL_VERIFICATION` combina casi riprodotti e conseguenze ancora da verificare. I probe sono stati eseguiti in memoria con le classi compilate del progetto e input sintetici: gli esiti essenziali sono conservati sotto, senza nuove fixture o script persistiti. Non hanno modificato i progetti utente. I 46 test esistenti verdi non costituiscono regressioni dei nuovi difetti, aperti alla rilevazione e ora chiusi dalle regressioni nelle sezioni remediation.
+
+### AUD-52 — Impedire la cancellazione di piani con annotazioni
+
+**P1 · baseline REPRODUCED; completato**. Fonti: [ProjectEdits.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/edit/ProjectEdits.kt), [ModelValidator.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/validation/ModelValidator.kt), [ProjectSection.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/ProjectSection.kt), [StructureRackScreens.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/StructureRackScreens.kt).
+
+ProjectEdits.deleteArea (ProjectEdits.kt:51) controlla apparati, rack, collocazioni e tratte ma non le annotazioni. Probe in memoria: cancellazione consentita, annotazione conservata e pacchetto esportato non riapribile con INVALID_ANNOTATION_AREA (ModelValidator.kt:373).
+
+Probe: progetto valido prima della cancellazione (`issues=[]`); `deletion_allowed=true`, `retained_annotations=1`; dopo export/import, `saved_copy_reopens=false`, `issues=[INVALID_ANNOTATION_AREA]`. Il problema è il riferimento al piano eliminato, non l’assenza di un allegato.
+
+**Chiusura:** Rifiutare la cancellazione del piano referenziato, conservando dati e possibilità di riapertura/scambio. Verificare rifiuto senza mutazione e pacchetto valido; mantenere consentita la cancellazione di un piano realmente non referenziato.
+
+### AUD-53 — Rendere atomiche creazione Android e protezione richiesta
+
+**P1 · baseline CODE_REVIEW; completato**. Fonti: [ProjectViewModel.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt), [ProjectRepository.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectRepository.kt), [ProjectStore.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectStore.kt), [NewSiteWizard.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/onboarding/NewSiteWizard.kt).
+
+ProjectViewModel.finishNewSite salva progetto e password separatamente (ProjectViewModel.kt:256–257). Un guasto intermedio lascia una copia senza la protezione applicativa richiesta; buildProject genera un nuovo ID alla riprova. Rischio da codice, non guasto nativo riprodotto; la cifratura SQLCipher del database resta distinta.
+
+La copia parziale riguarda la protezione richiesta dal wizard. Il database Android resta cifrato con SQLCipher: non è stata osservata una copia del database in chiaro né una perdita reale. Il guasto fra i due salvataggi e i duplicati alla riprova richiedono una futura regressione con errore di persistenza.
+
+**Chiusura:** Creazione e protezione atomiche: nessuna copia parziale al guasto o annullamento e una sola copia alla riprova. Verificare creazione semplice/protetta, guasto fra i passi e password, senza duplicati.
+
+### AUD-54 — Conservare wizard Windows e bozza di rinomina Android al guasto
+
+**P2 · baseline CODE_REVIEW; completato**. Fonti: [DesktopAppState.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopAppState.kt), [ProjectDialogs.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/dialogs/ProjectDialogs.kt), [ProjectsScreen.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/ProjectsScreen.kt), [ProjectViewModel.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt).
+
+DesktopAppState.createProject azzera il dialogo prima della persistenza (DesktopAppState.kt:502–506); ProjectsScreen chiude la rinomina prima di vm.renameProject (ProjectsScreen.kt:111). I campi locali non restano disponibili al guasto. Percorsi fuori dal perimetro degli editor già corretti.
+
+Il wizard Windows conserva i campi in stato locale del dialogo; la rinomina Android chiude nel callback di conferma e avvia il comando senza attendere un esito. Sono flussi distinti dagli editor già chiusi nelle remediation precedenti; nessuna nuova matrice UI nativa eseguita.
+
+**Chiusura:** Conservare bozza, campi ed errore fino al successo; permettere correzione e riprova, chiudere soltanto dopo persistenza riuscita. Verificare entrambi i flussi, singolo salvataggio e risultati tardivi senza chiusure della schermata sbagliata.
+
+### AUD-55 — Rifiutare pacchetti con entry o metadati incoerenti
+
+**P2 · baseline REPRODUCED; completato**. Fonti: [PackageSerializer.kt](../shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/PackageSerializer.kt), [PackageModels.kt](../shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/PackageModels.kt), [DesktopStorageManager.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopStorageManager.kt).
+
+PackageSerializer.readPackage (PackageSerializer.kt:247) accetta project.json duplicati con ultima copia prevalente, manifest.projectId discordante, attachmentsEncrypted senza cifratura e progetto marcato protetto in ZIP non cifrato. Quattro pacchetti sintetici importati senza errori strutturali; controllo valido accettato.
+
+Probe del pacchetto valido: `accepted=true`, `structural=0`. Stesso esito per `duplicate_project`, `identity_mismatch`, `attachment_flag_without_encryption`, `protected_project_in_plain_package`; nel duplicato il nome importato diventa `Second duplicate wins`. Non è una prova di attacco su storage reale: occorre validare il contratto prima della conferma/import applicativo.
+
+**Chiusura:** Rifiutare strutturalmente duplicati e incoerenze fra identità, payload e flag di protezione. Conservare import dei pacchetti validi semplici/protetti; chiudere staging e payload a ogni rifiuto senza modificare lo storage locale.
+
+### AUD-56 — Segnalare dati Android illeggibili senza trasformarli in valori vuoti
+
+**P2 · baseline PARTIAL_VERIFICATION; completato**. Fonti: [NetworkMappers.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/mappers/NetworkMappers.kt), [StructureMappers.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/mappers/StructureMappers.kt), [ProjectStore.kt](../mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectStore.kt).
+
+NetworkMappers.kt:95–104 e 156–163 sostituiscono JSON VLAN tagged e membri LAG illeggibili con liste vuote: entrambi riprodotti. StructureMappers e altri mapper usano valori predefiniti per enum sconosciuti: questa parte è da codice. Un successivo salvataggio può riscrivere la rappresentazione alterata; nessuna perdita osservata su dati utente.
+
+Probe mapper: `valid_tagged=[10,20]`, `corrupt_tagged=[]`, `corrupt_lag_members=[]`. Le liste vuote sono riprodotte; i fallback enum e il rischio della successiva riscrittura sono da codice. Non è stata eseguita una riscrittura del database del dispositivo.
+
+**Chiusura:** Segnalare la lettura fallita e impedire salvataggi della rappresentazione alterata, preservando righe originali. Verificare JSON corrotto, enum sconosciuti, valori validi e riprova dopo correzione, con errore visibile e originali invariati.
+
+### AUD-57 — Allineare validazione rete e controllo dei riferimenti
+
+**P2 · baseline REPRODUCED; completato**. Fonti: [ModelValidator.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/validation/ModelValidator.kt), [FieldValidators.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/FieldValidators.kt), [EntityForms.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/EntityForms.kt).
+
+ModelValidator.kt:490–538 non verifica target dello scope VLAN, riferimento subnet.vlanId e validità CIDR oltre la barra. Probe: not-an-address/99, VLAN assente e scope DEVICE inesistente accettati senza avvisi; controllo valido accettato. FieldValidators.cidr applica controlli più completi nei form.
+
+Probe `valid_subnet`, `invalid_cidr`, `missing_vlan_reference` e `missing_scope_device`: tutti `accepted=true`, `issues=[]`. Il CIDR errato è `not-an-address/99`; gli ID mancanti sono UUID formalmente validi, ma non presenti nel progetto. La chiusura deve mantenere la possibilità di documentare dati realmente incompleti dove ammesso dal contratto.
+
+**Chiusura:** Rendere coerenti form e validazione progetto/import; controllare CIDR e riferimenti VLAN/scope, distinguendo errori strutturali e incompletezza documentale ammessa. Verificare limiti validi, dati incompleti ammessi e riferimenti invalidi prima di sostituire dati locali.
+
+### AUD-58 — Conservare testo XLSX con escaping ST_Xstring corretto
+
+**P2 · baseline REPRODUCED; completato**. Fonti: [XlsxExportManager.kt](../shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/XlsxExportManager.kt), [03-export-and-documents.md](../docs/03-export-and-documents.md).
+
+XlsxExportManager.escapeXml (XlsxExportManager.kt:76–91) gestisce solo le entità XML. U+0001 nel nome produce XML non valido in due fogli; la sequenza letterale _x0041_ resta non protetta. Probe su XLSX generato e parser XML; apertura Excel nativa non eseguita. Riferimento Microsoft ST_Xstring nel report.
+
+Tre XLSX generati in memoria: il controllo valido non ha errori XML; `SW` seguito da U+0001 e `north` produce `not well-formed (invalid token)` in `sheet1.xml` e `sheet5.xml`; `Literal _x0041_ device` conserva la sequenza non protetta (`LITERAL_ESCAPE_LEFT_UNESCAPED=True`). Parsing con `xml.etree.ElementTree` della libreria standard Python. L’interpretazione errata in Excel è un rischio dedotto dal formato, non un collaudo Excel eseguito.
+
+Fonti primarie consultate il 9 ottobre: [Microsoft ST_Xstring](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d34ae755-c53f-4a44-a363-c6dd3ee018a4), per caratteri di controllo e underscore che introducono `_xHHHH_`, e [W3C XML 1.0](https://www.w3.org/TR/xml/#charsets), per i caratteri ammessi nell’XML. La gestione di CR, LF e tab deve rispettare il contesto del testo della cella.
+
+**Chiusura:** Generare XML valido e conservare testo secondo ST_Xstring, incluse sequenze letterali _xHHHH_, controlli, Unicode e spazi/CR/LF/tab. Aggiungere regressioni nelle tre lingue, preservando testo originale e tipi delle celle.
+
+### AUD-59 — Controllare dimensioni delle tile Windows prima della decodifica
+
+**P2 · baseline CODE_REVIEW; completato**. Fonti: [DesktopCartographyManager.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopCartographyManager.kt), [08-floor-map.md](../docs/08-floor-map.md).
+
+DesktopCartographyManager.kt:104–106 chiama ImageIO.read prima di verificare 256×256 pixel. Il limite di 2 MiB sui byte compressi è già presente ma non limita l’allocazione dell’immagine decodificata. Nessun OOM provocato; il controllo Android di AUD-48 resta una chiusura distinta.
+
+La verifica 256×256 avviene dopo `ImageIO.read`: il limite sui byte della risposta non sostituisce il limite sui pixel. Il rischio di allocazione eccessiva deriva dall’ordine delle chiamate; nessun OOM provocato e nessuna nuova tile scaricata da servizi pubblici. La correzione Android AUD-48 resta valida nel suo perimetro.
+
+Fonte primaria consultata il 9 ottobre: [Oracle ImageReader](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageReader.html), API `getWidth`, `getHeight`, `read` e `dispose`, per verificare le dimensioni prima della decodifica.
+
+**Chiusura:** Verificare dimensioni con ImageReader prima di decodificare, conservando limite sui byte e rilascio risorse. Verificare tile normale, immagine compressa di dimensioni eccessive e input malformato tramite sorgente locale, con rifiuto prima dell’allocazione completa.
+
+### AUD-60 — Rendere riconoscibili gli errori della planimetria nei PDF Windows
+
+**P2 · baseline CODE_REVIEW; completato**. Fonti: [PdfReportWriter.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/report/PdfReportWriter.kt), [DesktopDocumentManager.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopDocumentManager.kt), [PlanMedia.kt](../pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/PlanMedia.kt).
+
+PdfReportWriter.kt:172 usa runCatching { planImage(area) }.getOrNull(): un errore di caricamento della planimetria viene trattato come assenza dello sfondo e il PDF può risultare riuscito. Nessuna riproduzione nativa eseguita.
+
+Il callback della planimetria può fallire nella lettura o decodifica di immagine/PDF; il writer converte l’eccezione in `null`. L’assenza legittima della planimetria e l’esclusione tramite filtri devono continuare a funzionare. Il guasto va reso riconoscibile nel flusso Documenti, senza una nuova omissione silenziosa.
+
+**Chiusura:** Distinguere planimetria assente da presente ma illeggibile e rendere visibile il fallimento, senza indicare completo un documento che omette lo sfondo richiesto. Verificare immagini/PDF illeggibili, sfondo valido, assenza legittima ed esclusione tramite filtri.
+
+### AUD-61 — Conservare pieghe salvate con coordinate uguali al default storico
+
+**P2 · baseline REPRODUCED; completato**. Fonti: [ObjectMap.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/model/ObjectMap.kt), [MapScene.kt](../shared/core/src/main/java/com/onlyfield/assetmanager/core/model/MapScene.kt), [MapSceneTest.kt](../shared/core/src/test/java/com/onlyfield/assetmanager/core/MapSceneTest.kt).
+
+CableRoute.bends (ObjectMap.kt:36–39) elimina il punto interno quando points coincide con LEGACY_DEFAULT, senza distinguere dati correnti. Probe: tratta corrente con tre punti (0.2,0.5), (0.5,0.5), (0.8,0.5) restituisce zero pieghe invece di una. MapSceneTest mantiene esplicitamente questa euristica.
+
+Probe su una tratta corrente esplicitamente valorizzata con i tre punti: `CURRENT_ROUTE_INTERIOR=1`, `VISIBLE_BENDS=0`. Le coordinate non identificano l’età dei dati. L’attuale test storico di `MapSceneTest` sostiene l’euristica, quindi il test verde non dimostra la conservazione di una piega corrente.
+
+**Chiusura:** Conservare tutti i punti esplicitamente salvati nelle tratte correnti, anche dopo spostamento degli estremi, persistenza e scambio .ofam. Verificare caso riprodotto e tratte rettilinee valide; limitare eventuale compatibilità storica ai dati realmente identificabili come tali.
+
+### AUD-62 — Eliminare il serializer di modelli senza consumatori applicativi
+
+**P3 · baseline CODE_REVIEW; completato**. Fonti: `DeviceModelSerializer.kt` (rimosso da AUD-62), `DeviceModelSerializerTest.kt` (rimosso da AUD-62), [PackageSerializer.kt](../shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/PackageSerializer.kt).
+
+DeviceModelSerializer.kt:6 è referenziato soltanto da DeviceModelSerializerTest; nessun consumatore applicativo o flusso di import autonomo individuato. I modelli viaggiano già nel progetto attraverso PackageSerializer e .ofam.
+
+Ricerca dei consumatori: `rg -n 'DeviceModelSerializer' shared mobile pc` trova soltanto l’oggetto e il suo test. Alla rilevazione la rimozione non era eseguita; ora completata nella remediation AUD-62. I modelli e le loro fixture nel flusso `.ofam` restano necessari.
+
+**Chiusura:** Eliminare DeviceModelSerializer e il test dedicato; verificare che i DeviceModel continuino a essere conservati nello scambio .ofam semplice e protetto. Mantenere compatibilità utilizzate e fixture utili.
+
+### Verifica e limiti del secondo audit
+
+Nella fase di analisi è stato eseguito:
+
+```powershell
+.\gradlew.bat :shared:exchange:test --tests '*PackageSerializerTest*' --tests '*ContractVersionTest*' --tests '*PasswordHasherTest*' :mobile:app:testDebugUnitTest --tests '*ProjectCommandTest*' --tests '*ProjectRepositoryTest*' --no-parallel --max-workers=1
+```
+
+Esito: **BUILD SUCCESSFUL in 1m 21s**, **46 test** (12 exchange e 34 Android JVM), zero fallimenti/errori/saltati. Probe in memoria distinti dalla suite: cancellazione/riapertura, quattro pacchetti incoerenti con controllo valido, mapper VLAN/LAG, rete, XML XLSX e pieghe. I report di `build/reports/repo-audit-20261009` appartengono al primo audit; non vengono presentati come archivio delle nuove riproduzioni.
+
+Baseline documentale prima dell’aggiornamento: 21 Markdown, 182 link locali validi, UTF-8 senza BOM e `git diff --check` superato. Le verifiche finali dell’aggiornamento sono registrate nella roadmap. Nessuna suite generale ripetuta per queste sole modifiche documentali.
+
+RES-13/19/23/24 conservano descrizioni e limitazioni: foto rinviate, scanner USB esclusi, riavvio normale già verificato distinto da arresto forzato/perdita improvvisa, matrici native ancora parziali e pulizie respinte non ritentate. Le compatibilità ancora usate e le fixture utili sono conservate; nessuna rimozione generica motivata dal nome “legacy”. Correzioni runtime, collaudi nativi, pulizie, commit e push restano fuori da questo intervento.
+
+## Remediation AUD-52 — Piani con annotazioni
+
+La cancellazione condivisa rifiuta anche i piani referenziati da annotazioni, senza mutare il progetto. PackageSerializerTest verifica rifiuto, conservazione della nota, cancellazione del piano vuoto e riapertura .ofam semplice/protetta. Baseline verde; finale .\gradlew.bat :shared:exchange:test --tests *PackageSerializerTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 5s, nessun fallimento. Prima compilazione della nuova fixture corretta per usare label e coordinate obbligatorie. Fonte ufficiale per verifica mirata: [Gradle JVM testing](https://docs.gradle.org/current/userguide/java_testing.html), consultata il 9 ottobre. Nessun collaudo nativo richiesto per il controllo condiviso.
+
+## Remediation AUD-53 — Creazione Android atomica
+
+ProjectRepository.createProject prepara il verificatore e salva progetto/inventario/protezione nella stessa transazione Room. Il wizard conserva ID alla riprova e blocca invii simultanei; un ID già esistente viene rifiutato. Baseline ImportedProtectionTest: BUILD SUCCESSFUL in 37s. Finale .\gradlew.bat :mobile:app:testDebugUnitTest --tests *ProjectCreationTest* --tests *ImportedProtectionTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 21s, 9 test, zero fallimenti/errori/saltati. Coperti creazione semplice/protetta, password errata, guasto dopo inserimento progetto, rollback verificatore/inventario, annullamento prima della transazione e riprova senza duplicati. Una prima fixture riutilizzava un ID sede tra progetti ed è stata corretta: il rifiuto ownership esistente resta intatto. Fonte: [Room withTransaction](https://developer.android.com/reference/androidx/room/RoomDatabaseKt), consultata il 9 ottobre. Prova Room JVM distinta da SQLCipher nativo; messaggi/focus del wizard protetto restano nella matrice RES-19.
+
+## Remediation AUD-54 — Bozze wizard e rinomina al guasto
+
+Il wizard Windows conserva lo stato in DesktopAppState durante la rimozione temporanea del dialogo per I/O; chiude e azzera i campi solo dopo commit riuscito. Rinomina Android usa EditSave: errore nel dialogo, campi conservati e callback ignorato dopo uscita dalla composizione. Baseline mirata verde; finale .\gradlew.bat :pc:app:test --tests *ProjectWizardSaveTest* :mobile:app:testDebugUnitTest --tests *ProjectCommandTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 26s. Prova Compose con storage inaccessibile e riprova protetta singola, prove Room di guasto/riprova e risultato tardivo. La compilazione Android della baseline includeva già il callback di rinomina appena aggiornato; la baseline Desktop era precedente. Collaudo EXE/focus e dialogo nativo Android restano in RES-23/19.
+
+## Remediation AUD-55 — Coerenza pacchetti .ofam
+
+Import rifiuta duplicati manifest/progetto/media, ID manifest discordante, payload plain/encrypted conflittuali, metadati crittografici in pacchetti semplici e progetto protetto in ZIP semplice. Ogni rifiuto è strutturale e chiude staging. Conservata compatibilità utilizzata: cifratura richiesta esplicitamente su progetto non protetto e vecchi allegati non cifrati dentro progetto cifrato restano ammessi. Baseline PackageSerializerTest/StagedPayloadTest verde; finale .\gradlew.bat :shared:exchange:test --tests *PackageMetadataTest* --tests *PackageSerializerTest* --tests *StagedPayloadTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 6s, zero fallimenti/errori/saltati. Nuove fixture includono duplicati reali, staging già presente, controlli validi semplici/protetti; nessun accesso a storage utente.
+
+## Remediation AUD-56 — Letture Android rigorose
+
+Rimossi i fallback dei cinque mapper: JSON VLAN/LAG illeggibile ed enum sconosciuti interrompono la lettura, senza costruire valori vuoti/predefiniti. Il comando edit segnala il guasto e non salva; righe e stato visibile precedente restano intatti. Baseline 37 prove verdi; finale .\gradlew.bat :mobile:app:testDebugUnitTest --tests *CorruptStoredDataTest* --tests *ProjectCommandTest* --tests *ProjectRepositoryTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL in 25s, 39 test, zero fallimenti/errori/saltati. Coperti i due JSON, tutti i 29 campi enum interessati, valori validi, riprova dopo correzione ed errore del comando. La prima fixture verificava la colonna legacy del modello mentre configurationJson corrente prevale; corretta per esercitare il formato legacy effettivamente letto. Fonte: [Kotlin enumValueOf](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/enum-value-of.html), consultata il 9 ottobre. Nessuna migrazione schema; collaudo messaggi/focus Android resta RES-19.
+
+## Remediation AUD-57 — Validazione rete e riferimenti
+
+ModelValidator riusa il controllo CIDR IPv4 dei form e controlla subnet.vlanId e scope VLAN/subnet per progetto/sede/apparato. Riferimenti inesistenti sono strutturali; destinazione SITE/DEVICE non rilevata resta documentale, con messaggi it/en/es. Baseline ModelValidatorTest/EntityFormsTest verde; verifica con NetworkValidationTest e DemoSeedTest: BUILD SUCCESSFUL in 34s; regressioni scope ampliate: BUILD SUCCESSFUL in 3s. Conservati limiti /0 e /32, incompletezza ammessa e demo valido; import semplici/protetti invalidi non restituiscono pacchetti. Fonte [RFC 4632](https://www.rfc-editor.org/rfc/rfc4632), consultata il 9 ottobre. Emersi e tracciati AUD-63 (VLAN referenziate: blocco richiesto dall’utente) e AUD-64 (scope nelle operazioni sede/apparato), da completare separatamente.
+
+## Remediation AUD-63 — Blocco cancellazione VLAN referenziata
+
+Applicata la decisione utente: ProjectEdits.deleteVlan rifiuta la cancellazione quando una subnet usa la VLAN, con messaggio it/en/es. Windows visualizza il rifiuto senza chiamare il salvataggio; Android lo riceve nel comando edit senza mutazione. Baseline Desktop ProjectEdits/FailedNetworkSave verde (28s); finale shared/exchange NetworkValidationTest + pc VlanDeletionUiTest + compileDebugKotlin: BUILD SUCCESSFUL in 13s. Android ProjectCommandTest: BUILD SUCCESSFUL in 20s. Verificati dati invariati, errore visibile, riprova dopo scollegamento esplicito della subnet, salvataggio singolo e .ofam semplice/protetto valido. Nessuna modifica automatica delle reti. Rimane distinto il collaudo visivo nativo RES-19/23.
+
+## Remediation AUD-58 — Testo XLSX conservato
+
+XLSX applica ST_Xstring al testo delle celle: protegge underscore iniziali delle sequenze letterali, codifica controlli/XML non validi e CR, conserva LF/tab, Unicode e spazi tramite xml:space=preserve. Originali e tipi numerici invariati. Baseline documentale verde; finale XlsxTextTest/LocalizedExportsTest/DocumentSelectionTest/DemoXlsxPathsTest: BUILD SUCCESSFUL in 6s, 7 test, zero fallimenti/errori/saltati. Tutte le parti XML parsate nelle tre lingue e testo ricostruito in un solo passaggio. Due tentativi iniziali della fixture cercavano erroneamente altezza rack nei fogli; dopo segnalazione e lettura del generatore, la prova numerica usa L2 (numero porte). Fonti consultate il 9 ottobre: [Microsoft ST_Xstring](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d34ae755-c53f-4a44-a363-c6dd3ee018a4) e [W3C XML 1.0](https://www.w3.org/TR/xml/#charsets). Apertura Excel nativa non eseguita.
+
+## Remediation AUD-59 — Tile Windows prima del decode
+
+Le tile Windows verificano 256x256 con ImageReader.getWidth/getHeight prima di read(0), con stream in memoria e reader.dispose in finally. Conservato limite 2 MiB anche per fetch iniettato. Baseline DesktopDocumentAndCartographyTest verde; finale TileDecodeTest + suite precedente: BUILD SUCCESSFUL in 5s, 6 test, zero fallimenti/errori/saltati. Sorgente HTTP locale della sessione chiusa al termine: tile valida, PNG 4096x4096 sotto il limite compresso, malformato e risposta oltre 2 MiB. Un PNG con solo header sovradimensionato verifica il rifiuto dimensioni prima dei pixel. Fonte [Oracle ImageReader](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageReader.html), consultata il 9 ottobre. Nessun download dal servizio pubblico né OOM provocato.
+
+## Remediation AUD-60 — Errori planimetria PDF Windows espliciti
+
+Planimetrie richieste ma illeggibili o senza payload interrompono PDF/stampa con errore; rimosse le due conversioni silenziose in sfondo assente. Documento/stream chiusi anche al fallimento. Sfondo assente, escluso dal filtro o sezione disattivata restano validi. Baseline DeliveryPdfTest/ReportPdfTest/FloorMediaTest verde; regressioni FloorPlanPdfFailureTest includono immagini/PDF corrotti, payload mancante dopo svuotamento del cache isolato, immagine e PDF validi, filtri e assenza. Dieci test, zero errori/fallimenti/skips: `:pc:app:test --tests '*FloorPlanPdfFailureTest*' --tests '*DeliveryPdfTest*' --tests '*ReportPdfTest*' --tests '*FloorMediaTest*' --no-parallel --max-workers=1`, BUILD SUCCESSFUL in 16s. Corretti un errore di compilazione della fixture e una prima simulazione che manteneva il payload nel cache. Fonti PDFBox 3 consultate il 9 ottobre. Interazione nativa stampa/focus resta RES-23.
+
+## Remediation AUD-61 — Pieghe esplicite conservate
+
+Rimossa l’euristica LEGACY_DEFAULT e la costante orfana: ogni punto intermedio salvato è una piega. Default a due punti ancora rettilineo. Baseline MapSceneTest verde; dopo modifica MapSceneTest e PackageSerializerTest verdi, DesktopStorageTest verde alla riprova con stato di protezione esplicito, ProjectRepositoryTest verde dopo correzione import della fixture (BUILD SUCCESSFUL in 21s). Verificati coordinate .2/.5/.8, estremi spostati e risalvataggio, working copy semplice/protetta, Room e .ofam semplice/protetto; stesso contenuto e ID. Nessuna migrazione Room/.ofam. Documentazione mappa aggiornata.
+
+## Remediation AUD-64 — Cancellazione e fusione bloccate per ambiti referenziati
+
+Policy conservativa confermata dall’utente: guard prima di cancellazione sede, cestino/sostituzione apparato e fusione di entrambi gli apparati quando referenziati da ambito VLAN/subnet. Nessuna rete modificata automaticamente, nessun record di cestino creato al rifiuto. Errori it/en/es; gestione rifiuto in inventario/mappa Windows e dialoghi sostituzione/fusione. NetworkScopeRetentionTest verifica entrambe le sorgenti VLAN/subnet, entrambi i dispositivi, sede vuota referenziata, target estraneo eliminabile, rimozione esplicita, ripristino e .ofam semplice/protetto. ProjectCommandTest verifica errori, Room/inventario/cestino invariati e riprova. Gradle mirato: BUILD SUCCESSFUL in 29s. NetworkScopeUiTest: messaggio Compose di cancellazione, zero callback di save/trash, riprova; fusione Windows semplice/protetta preserva file e undo/cestino, retry/undo riusciti: BUILD SUCCESSFUL in 7s. Baseline ha rilevato vecchia aspettativa di cancellazione VLAN referenziata in ProjectEditsTest; sostituita con rifiuto e disconnessione esplicita conformi ad AUD-63. Documentazione dominio aggiornata. Focus/matrice nativa resta RES-19/23.
+
+## Remediation AUD-62 — Serializer senza consumatori eliminato
+
+Ricerca completa dei consumatori conferma che DeviceModelSerializer era usato soltanto dal proprio test: entrambi eliminati. Modelli e fixture utili restano nel flusso del progetto. Baseline PackageSerializerTest/DeviceModelSerializerTest verde (BUILD SUCCESSFUL in 3s); dopo rimozione PackageSerializerTest e tutte le prove Demo verdi (BUILD SUCCESSFUL in 45s). Regressione .ofam semplice/protetto confronta l’intero progetto con modello, ID, metadati, template porte, PoE, hardware/layout/override e campi extra. Nessun consumer applicativo residuo, contratto/schema invariato. Documentazione dominio aggiornata; fonti dello scambio ZIP già consultate.
+
+## Chiusura della remediation AUD-52–64 — 9 ottobre 2026
+
+Completati e rimossi tutti i 13 task del secondo audit, inclusi AUD-63/64 emersi dalla validazione rete. Tracker con `remainingTasks=[]`; restano RES-13/19/23/24, **4 residui (0 P1 / 3 P2 / 1 P3)**. Documentazione dominio, workflow, export, mappa e linee guida allineata; fonti primarie nelle sezioni pertinenti.
+
+Verifica completa: **679 test, zero fallimenti/errori/saltati**: core 130, exchange 115, Windows 292, Android JVM 142. Core/exchange verdi nella prima esecuzione completa. Questa aveva quattro fallimenti Windows: tre casi della stessa fixture interop con numero VLAN al posto dell’UUID, e un selettore Compose che trovava due messaggi ora visibili. Fixture corretta con `vlan.id`, assert del messaggio nel dialogo specifico, diagnostica spostata negli assert; nessuna validazione indebolita. Riprova mirata verde in 33s, incluso wizard protetto Android con guasto, invii rapidi e riprova senza duplicati.
+
+Finale `.\gradlew.bat :pc:app:test :mobile:app:testDebugUnitTest :pc:app:assemble :mobile:app:assembleDebug --no-parallel --max-workers=1` → **BUILD SUCCESSFUL in 7m 2s**. Build Desktop e APK debug Android riuscite; nessuna installazione, rigenerazione portable o qualificazione hardware. Report XML iniziali falliti e finali conservati in `build/reports/tracker-followup-20261009`, riepilogo `verification.json` con hash APK.
+
+RES-19/23 includono esplicitamente i controlli nativi di wizard, rinomina, rifiuti di riferimenti rete e sfondi PDF. RES-13 mantiene gli scatti rinviati e i limiti hardware; RES-24 conserva tutte le pulizie storiche respinte, senza ritentativi. Nessun commit/push richiesto o eseguito.
+Controlli conclusivi: 21 Markdown e 221 collegamenti locali validi; 54 file modificati/nuovi verificati UTF-8 senza BOM. JSON, ID, riferimenti e dipendenze del tracker validi; `git diff --check` superato. Rimosso soltanto l’helper creato per questa sessione `build/tmp/task_updates_20261009.py`; nessuna pulizia storica ritentata. Diff completo rivisto, nessun lockfile/vendor/migrazione applicata modificato. Evidenza `build/reports/tracker-followup-20261009/document-validation.json`.

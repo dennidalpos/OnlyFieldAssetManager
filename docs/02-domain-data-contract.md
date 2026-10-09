@@ -4,7 +4,7 @@ AUD-19: schema Room v2 e formato `.ofam` v1 invariati. Il pacchetto scambiato es
 
 ## Modello
 
-**AUD-49 aperto:** la validazione di alcuni decimali accetta `NaN`/`Infinity`, mentre il serializer del pacchetto li rifiuta. Riprodotto sui carichi delle alimentazioni: modello strutturalmente valido ma salvataggio impossibile. Il controllo finitezza va consolidato nei form/modello senza modificare il formato JSON; evidenze nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md).
+AUD-49 completato: form e validatore rifiutano decimali non finiti senza cambiare il formato JSON; evidenze nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md).
 
 Un progetto contiene sedi, piani, apparati e porte, rack, cavi e percorsi disegnati, passaggi interni, rete logica, alimentazione, media, campi extra, badge, modelli e cestino locale. Il contenimento associa un solo genitore a un apparato o rack; cavi e cicli non sono ammessi.
 
@@ -89,3 +89,16 @@ Un catalogo ciclico genera POWER_FEED_CYCLE_DETECTED come STRUCTURAL_ERROR, con 
 ### AUD-49 — 9 ottobre 2026
 
 Numeri non finiti e overflow rifiutati dai form e dal modello per carichi W/VA, potenze PoE, budget hardware apparati/modelli, lunghezze, coordinate di posizionamenti/annotazioni/tratte. Errori it/en/es prima della scrittura: guard nei salvataggi Room, storage Windows ed export .ofam; validazioni strutturali indipendenti mantengono i rilievi documentali ammessi. JSON continua a rifiutare i numeri speciali. Il campo budget PoE usa il parser decimale condiviso e finito.
+
+## Integrità di modifica e scambio — 9 ottobre 2026
+
+AUD-52: un piano con annotazioni è referenziato e non può essere eliminato. AUD-57: CIDR IPv4 coerenti con i form (prefisso 0–32); UUID VLAN inesistenti e target di ambito espliciti inesistenti sono errori strutturali. Target sede/apparato omessi sono avvisi documentali. Ambito progetto senza target o con ID del progetto è valido. AUD-63: una VLAN usata da subnet non è eliminabile; per procedere occorre modificare esplicitamente le subnet.
+
+AUD-55: import `.ofam` rifiuta entry ZIP duplicate, ID progetto incoerente e metadati/payload di protezione incompatibili. La cifratura esplicita di un progetto originariamente semplice resta valida; compatibilità degli allegati nei pacchetti protetti preesistenti conservata. Payload temporanei chiusi anche in caso di rifiuto.
+
+AUD-56: enum o liste JSON corrotte nelle righe Room interrompono la lettura; nessuna sostituzione silenziosa con valori predefiniti. Il comando mostra l’errore e non salva, preservando i dati originali. Schema Room v2 e `.ofam` v1 invariati. Fonti primarie: [enumValueOf](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/enum-value-of.html), [ZIP JDK 21](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/zip/ZipInputStream.html), [CIDR RFC 4632](https://www.rfc-editor.org/rfc/rfc4632), consultate il 9 ottobre 2026.
+
+### Ambiti di rete e operazioni distruttive — AUD-64
+
+Policy confermata dall’utente: sedi referenziate da VLAN/subnet non eliminabili; apparati referenziati nell’ambito DEVICE non eliminabili, sostituibili o fondibili. La fusione controlla entrambi gli apparati prima di creare porte, cestino o copie. Le reti restano invariate; occorre rimuovere esplicitamente i riferimenti prima di riprovare. Sedi vuote/apparati non referenziati continuano a seguire i flussi ordinari, incluso ripristino e undo. Rifiuti visibili in inventario/mappa Windows e comandi Android; nessun nuovo schema o formato del cestino.
+AUD-62: rimosso il serializer autonomo dei modelli, privo di consumatori applicativi. Il catalogo DeviceModel continua a viaggiare nel progetto attraverso PackageSerializer, con ID, hardware, layout/override PoE, template porte e campi extra conservati nello scambio `.ofam` semplice/protetto. Nessun formato aggiuntivo o migrazione.

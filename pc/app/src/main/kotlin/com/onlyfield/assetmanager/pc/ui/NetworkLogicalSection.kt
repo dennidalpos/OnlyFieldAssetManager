@@ -61,6 +61,7 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
 
     val index = remember(project) { ProjectIndex(project) }
     var query by remember { mutableStateOf("") }
+    var deletionError by remember(project) { mutableStateOf<String?>(null) }
     var editing by remember { mutableStateOf<Vlan?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }
@@ -70,6 +71,7 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
         SectionHeader("VLAN", searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = i18n.text("text.7c4eb2cff540")) {
             Button(onClick = { changeDetail { editing = null; creating = true } }) { Text(i18n.text("text.62ba123ec0bc")) }
         }
+        deletionError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         if (vlans.isEmpty()) EmptyState(i18n.text("text.7de621e87842"), actionLabel = i18n.text("text.62ba123ec0bc"), onAction = { changeDetail { editing = null; creating = true } })
         else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(vlans, key = { it.id }) { v ->
@@ -77,7 +79,11 @@ private fun VlanTab(project: Project, onProjectUpdated: (Project, String) -> Uni
                 else "${v.scopeType.toDisplayString(i18n = i18n)}: ${index.entityName(v.scopeTargetId, i18n = i18n) ?: i18n.text("text.c0a49765082f")}"
                 ItemCard(title = i18n.text("text.15fd0dfb7614", v.vlanId, v.name), details = listOf(scope, v.description.orEmpty())) {
                     EditButton { changeDetail { creating = false; editing = v } }
-                    DeleteButton(i18n.text("text.da4da5c165af", v.vlanId), onDelete = { onProjectUpdated(ProjectEdits.deleteVlan(project, v.id), i18n.text("text.f3832376a5cb", v.vlanId)) })
+                    DeleteButton(i18n.text("text.da4da5c165af", v.vlanId), onDelete = {
+                        val updated = try { ProjectEdits.deleteVlan(project, v.id, i18n) }
+                        catch (e: IllegalArgumentException) { deletionError = e.message; null }
+                        if (updated != null) { deletionError = null; onProjectUpdated(updated, i18n.text("text.f3832376a5cb", v.vlanId)) }
+                    })
                 }
             }
         }

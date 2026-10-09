@@ -240,21 +240,23 @@ class ProjectViewModel internal constructor(
 
     /** Wizard state retained across rotation. */
     var newSite by mutableStateOf(NewSiteWizard())
+    private var newSiteProjectId = java.util.UUID.randomUUID().toString()
 
     fun startNewSite() {
         newSite = NewSiteWizard()
+        newSiteProjectId = java.util.UUID.randomUUID().toString()
         navigate(Screen.NewSite)
     }
 
     fun finishNewSite() {
         val wizard = newSite
-        if (!wizard.canProceed) return
+        if (!wizard.canProceed || busy != null) return
+        val projectId = newSiteProjectId
         launchCommand {
             operationBusy = i18n.text("text.e02d15067dea")
             try {
-                val p = wizard.buildProject()
-                repository.saveProject(p)
-                wizard.password?.let { repository.setProjectPassword(p.id, currentPassword = null, newPassword = it) }
+                val p = wizard.buildProject().copy(id = projectId)
+                repository.createProject(p, wizard.password)
                 if (commandSession == session) openProject(p.id)
                 notify(i18n.text("text.b0656bad125d", p.name))
             } catch (e: Exception) {
@@ -266,11 +268,20 @@ class ProjectViewModel internal constructor(
         }
     }
 
-    fun renameProject(projectId: String, newName: String) {
+    fun renameProject(projectId: String, newName: String, onResult: (String?) -> Unit = {}) {
         launchCommand {
-            repository.renameProject(projectId, newName.trim())
-            if (_project.value?.id == projectId) setProject(repository.getProjectById(projectId))
-            notify(i18n.text("text.7aec8adfe336"))
+            val result = try {
+                repository.renameProject(projectId, newName.trim())
+                if (commandSession == session && _project.value?.id == projectId) setProject(repository.getProjectById(projectId))
+                if (commandSession == session) notify(i18n.text("text.7aec8adfe336"))
+                null
+            } catch (e: Exception) {
+                if (e is kotlinx.coroutines.CancellationException) throw e
+                val error = i18n.text("text.9b6ca71eb272") + " (${e.message})"
+                if (commandSession == session) fail(error)
+                error
+            }
+            if (commandSession == session) onResult(result)
         }
     }
 

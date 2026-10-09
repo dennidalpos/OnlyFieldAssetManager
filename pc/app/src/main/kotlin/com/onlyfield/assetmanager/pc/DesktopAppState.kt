@@ -117,10 +117,12 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         set(value) { if (value != currentSection) requestChange { currentSection = value } }
 
     fun requestChange(action: () -> Unit) { if (!busy) detailSlot.requestChange(action) }
-    fun newProject() = requestChange { dialog = AppDialog.NewProject }
+    var newSiteWizard by mutableStateOf(NewSiteWizard())
+    fun newProject() = requestChange { newSiteWizard = NewSiteWizard(); dialog = AppDialog.NewProject }
     var dialog by mutableStateOf<AppDialog?>(null)
 
     fun dismissDialog() {
+        if (dialog == AppDialog.NewProject) newSiteWizard = NewSiteWizard()
         val pending = when (val current = dialog) {
             is AppDialog.Compare -> current.pkg
             is AppDialog.Merge -> current.pkg
@@ -322,11 +324,14 @@ class DesktopAppState(val storage: DesktopStorageManager) {
         }
     }
 
-    /** Floor plan background for documents; null without a plan or when it cannot be read. */
+    /** Null only when no background was requested; unreadable plans fail the document. */
     fun planImage(area: Area): java.awt.image.BufferedImage? {
-        val attachment = project?.attachments?.find { it.id == area.floorplanAttachmentId } ?: return null
-        val bytes = attachmentBytes(attachment) ?: return null
-        return runCatching { PlanMedia.bufferedImage(bytes, attachment.fileType == AttachmentType.PDF, area.floorplanPageIndex, i18n = i18n) }.getOrNull()
+        val id = area.floorplanAttachmentId ?: return null
+        val message = i18n.text("document.planUnreadable", area.name)
+        val attachment = project?.attachments?.find { it.id == id } ?: throw java.io.IOException(message)
+        val bytes = attachmentBytes(attachment) ?: throw java.io.IOException(message)
+        return PlanMedia.bufferedImage(bytes, attachment.fileType == AttachmentType.PDF, area.floorplanPageIndex, i18n = i18n)
+            ?: throw java.io.IOException(message)
     }
 
     fun attachmentBytes(attachment: Attachment): ByteArray? = project?.let { storage.attachmentBytes(it.id, attachment) }
@@ -502,8 +507,11 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     fun createProject(wizard: NewSiteWizard) {
         val newPassword = wizard.password
         val newProject = wizard.buildProject().copy(isPasswordProtected = newPassword != null)
-        dialog = null
-        open(newProject, null, newPassword, i18n.text("text.a5af7b4f324d", newProject.name))
+        val expectedDialog = dialog
+        if (open(newProject, null, newPassword, i18n.text("text.a5af7b4f324d", newProject.name)) && dialog == expectedDialog) {
+            dialog = null
+            newSiteWizard = NewSiteWizard()
+        }
     }
 
     fun closeProject() = requestChange { closeProjectNow() }

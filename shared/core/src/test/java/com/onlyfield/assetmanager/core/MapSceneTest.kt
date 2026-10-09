@@ -41,14 +41,22 @@ class MapSceneTest {
         assertFalse(nodes.getValue(rackRef).inactive)
     }
 
-    @Test fun defaultRouteIsStraightAndLegacyCentreBendIsIgnored() {
+    @Test fun defaultRouteIsStraightAndExplicitCentreBendSurvivesMovingEndpoints() {
         val c = Cable(deviceAId = sw.id, deviceBId = ap.id)
-        val legacy = project(c).copy(cableRoutes = listOf(CableRoute(cableId = c.id, areaId = area.id, points = CableRoute.LEGACY_DEFAULT)))
-        listOf(project(c), legacy).forEach { p ->
+        listOf(project(c), project(c).copy(cableRoutes = listOf(CableRoute(cableId = c.id, areaId = area.id)))).forEach { p ->
             val scene = MapScene.area(p, area.id)
             val link = scene.links.single()
             assertEquals(listOf(scene.node(link.a)!!.point, scene.node(link.b)!!.point), scene.points(link))
         }
+        val points = listOf(MapPoint(.2f, .5f), MapPoint(.5f, .5f), MapPoint(.8f, .5f))
+        val saved = project(c).copy(cableRoutes = listOf(CableRoute(cableId = c.id, areaId = area.id, points = points)))
+        val moved = ObjectMap.place(ObjectMap.place(saved, area.id, rackRef.type, rackRef.id, MapPoint(.1f, .2f)),
+            area.id, apRef.type, apRef.id, MapPoint(.9f, .8f))
+        val scene = MapScene.area(moved, area.id)
+        val link = scene.links.single()
+        assertEquals(listOf(MapPoint(.1f, .2f), points[1], MapPoint(.9f, .8f)), scene.points(link))
+        assertEquals(points, moved.cableRoutes.single().points)
+        assertEquals(listOf(points[1]), scene.route(moved, link, scene.points(link))!!.bends)
     }
 
     @Test fun crossFloorCableBecomesAStubAtTheBorder() {

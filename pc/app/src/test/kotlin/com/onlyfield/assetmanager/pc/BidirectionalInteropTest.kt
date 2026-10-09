@@ -87,7 +87,7 @@ class BidirectionalInteropTest {
         val cable = Cable(id = UUID.randomUUID().toString(), portAId = portId1, portBId = portId2, color = "BLUE", lengthValue = 5.0)
 
         val vlan = Vlan(vlanId = 10, name = "MGMT_VLAN", description = "Management Subnet")
-        val subnet = Subnet(cidrBlock = "10.0.1.0/24", gatewayIp = "10.0.1.1", vlanId = "10")
+        val subnet = Subnet(cidrBlock = "10.0.1.0/24", gatewayIp = "10.0.1.1", vlanId = vlan.id)
         val portVlan = PortVlanMembership(portId = portId1, mode = PortVlanMode.TAGGED, taggedVlanIds = listOf(10))
         val logicalInt = LogicalInterface(deviceId = devId1, name = "Vlan10", ipAddress = "10.0.1.10")
         val lagGroup = LagGroup(deviceId = devId1, name = "Po1", memberPortIds = listOf(portId1))
@@ -168,10 +168,7 @@ class BidirectionalInteropTest {
         exportedFile.writeBytes(exportedZipBytes)
 
         val desktopImportRes = storageManager.importPackageFromFile(exportedFile)
-        if (!desktopImportRes.validationResult.isValid) {
-            println("Validation failed with issues: " + desktopImportRes.validationResult.issues)
-        }
-        assertTrue("Desktop import should be valid", desktopImportRes.validationResult.isValid)
+        assertTrue("Desktop import should be valid: ${desktopImportRes.validationResult.issues}", desktopImportRes.validationResult.isValid)
 
         val importedPkg = desktopImportRes.pkg
         assertNotNull("Imported package should not be null", importedPkg)
@@ -273,9 +270,7 @@ class BidirectionalInteropTest {
         val (p1, _) = createFullDomainProject()
         val zip1 = PackageSerializer.exportPackage(p1)
         val import1 = PackageSerializer.importPackage(zip1)
-        if (!import1.validationResult.isValid) {
-            println("import1 issues: " + import1.validationResult.issues)
-        }
+        assertTrue("Project should be valid: ${import1.validationResult.issues}", import1.validationResult.isValid)
         val pkg1 = import1.pkg!!
 
         val compIdentical = ProjectComparisonEvaluator.evaluate(p1, pkg1.manifest, pkg1)

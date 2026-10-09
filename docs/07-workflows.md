@@ -141,3 +141,9 @@ Creazione e modifica conservano la bozza quando la sostituzione del pacchetto fa
 ### AUD-46 — 9 ottobre 2026
 
 Rete logica e cablaggio Windows chiudono gli editor soltanto dopo save riuscito e mostrano il guasto nella bozza. Alimentazioni/PoE/Badge, rete e cablaggio Android usano rememberEditSave: errori e campi conservati, chiusura sulla callback positiva, risultati ignorati dopo uscita dalla composizione. ID e campi nascosti delle modifiche preservati. Corretto anche il tipo sintetico non valido nella modifica dei cavi senza objectTypeId.
+
+## Creazione e bozze dopo errori — 9 ottobre 2026
+
+AUD-53: creazione Android scrive inventario e verificatore password nella stessa transazione Room. ID della procedura stabile fino a nuova bozza, invii ripetuti bloccati durante il lavoro; errore o cancellazione della transazione non lasciano progetti parziali. ID già esistente rifiutato. Fonte primaria: [Room withTransaction](https://developer.android.com/reference/androidx/room/RoomDatabaseKt), consultata il 9 ottobre 2026.
+
+AUD-54: bozza Windows della nuova sede conservata nello stato host durante il lavoro e dopo errore. La rinomina Android conserva editor e testo fino al salvataggio riuscito; callback di sessioni o editor chiusi non chiudono un nuovo editor. Errori visibili e retry possibile. Prove Compose/Robolectric nella [verifica](05-testing-and-benchmarks.md); focus e interazioni native restano in RES-19/23.

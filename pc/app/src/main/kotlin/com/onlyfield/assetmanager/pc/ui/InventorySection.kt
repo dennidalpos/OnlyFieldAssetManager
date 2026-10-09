@@ -54,6 +54,7 @@ fun InventorySection(
     var replaceTarget by remember { mutableStateOf<Device?>(null) }
     var mergeTarget by remember { mutableStateOf<Device?>(null) }
     var showBatch by remember { mutableStateOf(false) }
+    var operationError by remember(project) { mutableStateOf<String?>(null) }
 
     val filtered = remember(index, query, categoryFilter, areaFilter, statusFilter, i18n.locale) {
         index.devices.filter { d ->
@@ -67,6 +68,7 @@ fun InventorySection(
     LaunchedEffect(index) { selectedIds = selectedIds.filter { index.device(it) != null }.toSet() }
 
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        operationError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         SectionHeader(
             title = i18n.text("ux.nav.devices"),
             subtitle = i18n.text("text.e9f37f3828d1", filtered.size, index.devices.size),
@@ -167,9 +169,12 @@ fun InventorySection(
                             }
                         }
                         DeleteButton(dev.technicalName, label = i18n.text("text.dd41b3275173"), message = i18n.text("text.f509b29b1f58"), onDelete = {
-                            val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id, i18n = i18n)
-                            trashItem?.let(onTrashItemCreated)
-                            onProjectUpdated(updated, i18n.text("text.4e2629d50c9b", dev.technicalName))
+                            try {
+                                val (updated, trashItem) = ProjectEdits.deleteDeviceToTrash(project, dev.id, i18n = i18n)
+                                operationError = null
+                                trashItem?.let(onTrashItemCreated)
+                                onProjectUpdated(updated, i18n.text("text.4e2629d50c9b", dev.technicalName))
+                            } catch (e: IllegalStateException) { operationError = e.message }
                         })
                     }
                 }
@@ -202,16 +207,19 @@ fun InventorySection(
     }
 
     replaceTarget?.let { dev ->
-        ReplaceDialog(dev, onDismiss = { replaceTarget = null }) { name, category ->
-            val (updated, trashItem) = ProjectEdits.replaceDevice(project, dev.id, name, category, i18n = i18n)
-            trashItem?.let(onTrashItemCreated)
-            onProjectUpdated(updated, i18n.text("text.6dafb91fca82", dev.technicalName, name))
-            if (saveError() == null) replaceTarget = null
+        ReplaceDialog(dev, onDismiss = { replaceTarget = null; operationError = null }, error = operationError ?: saveError()) { name, category ->
+            try {
+                val (updated, trashItem) = ProjectEdits.replaceDevice(project, dev.id, name, category, i18n = i18n)
+                operationError = null
+                trashItem?.let(onTrashItemCreated)
+                onProjectUpdated(updated, i18n.text("text.6dafb91fca82", dev.technicalName, name))
+                if (saveError() == null) replaceTarget = null
+            } catch (e: IllegalStateException) { operationError = e.message }
         }
     }
 
     mergeTarget?.let { survivor ->
-        MergeDialog(index, survivor, onDismiss = { mergeTarget = null }) { duplicateId, choices ->
+        MergeDialog(index, survivor, onDismiss = { mergeTarget = null }, error = saveError()) { duplicateId, choices ->
             if (onMergeDevices(survivor.id, duplicateId, choices)) mergeTarget = null
         }
     }
@@ -245,7 +253,7 @@ private fun DeviceDialog(
 }
 
 @Composable
-private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (String, DeviceCategory) -> Unit) {
+private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, error: String?, onConfirm: (String, DeviceCategory) -> Unit) {
     val i18n = LocalMessages.current
 
     var name by remember(LocalDetailSlot.current?.editorVersion) { mutableStateOf("") }
@@ -259,13 +267,14 @@ private fun ReplaceDialog(device: Device, onDismiss: () -> Unit, onConfirm: (Str
         width = 520.dp
     ) {
         Text(i18n.text("text.dc43498aef85"))
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         FormField(name, { name = it }, i18n.text("text.9d9ce7aec419"))
         EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, category, { it.toDisplayString(i18n = i18n) }, { category = it })
     }
 }
 
 @Composable
-private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> Unit, onConfirm: (String, MergeDataChoices) -> Unit) {
+private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> Unit, error: String?, onConfirm: (String, MergeDataChoices) -> Unit) {
     val i18n = LocalMessages.current
 
     val candidates = index.devices.filter { it.id != survivor.id }
@@ -281,6 +290,7 @@ private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> 
         width = 600.dp
     ) {
         Text(i18n.text("text.7f27c2f83658"))
+        error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
         OptionPicker(
             label = i18n.text("text.505c57b1f96f"),
             options = candidates,

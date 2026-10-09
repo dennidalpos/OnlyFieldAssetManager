@@ -28,10 +28,14 @@ object ProjectEdits {
         updatedEpochMs = System.currentTimeMillis()
     )
 
-    /** Deletes an empty site or returns null. */
+    private fun hasNetworkScope(project: Project, type: VlanScopeType, targetId: String): Boolean =
+        project.vlans.any { it.scopeType == type && it.scopeTargetId == targetId } ||
+            project.subnets.any { it.scopeType == type && it.scopeTargetId == targetId }
+
+    /** Deletes an empty, unreferenced site or returns null. */
     fun deleteSite(project: Project, siteId: String): Project? {
         val site = project.sites.find { it.id == siteId } ?: return project
-        if (site.devices.isNotEmpty() || site.areas.isNotEmpty()) return null
+        if (site.devices.isNotEmpty() || site.areas.isNotEmpty() || hasNetworkScope(project, VlanScopeType.SITE, siteId)) return null
         return project.copy(sites = project.sites - site, updatedEpochMs = System.currentTimeMillis())
     }
 
@@ -51,7 +55,8 @@ object ProjectEdits {
     fun deleteArea(project: Project, areaId: String): Project? {
         val inUse = project.sites.any { site -> site.devices.any { it.areaId == areaId } } ||
             project.racks.any { it.areaId == areaId } ||
-            project.floorplanPlacements.any { it.areaId == areaId } || project.cableRoutes.any { it.areaId == areaId }
+            project.floorplanPlacements.any { it.areaId == areaId } || project.cableRoutes.any { it.areaId == areaId } ||
+            project.annotations.any { it.areaId == areaId }
         if (inUse) return null
         return project.copy(
             sites = project.sites.map { site ->
@@ -98,6 +103,7 @@ object ProjectEdits {
         val deviceSite = project.sites.find { site -> site.devices.any { it.id == deviceId } }
             ?: return Pair(project, null)
         val device = deviceSite.devices.find { it.id == deviceId } ?: return Pair(project, null)
+        check(!hasNetworkScope(project, VlanScopeType.DEVICE, deviceId)) { i18n.text("network.scopeInUse") }
 
         val retained = DeviceTrashData.capture(project, deviceId)
         val jsonStr = retained.snapshot(jsonSerializer, device)
@@ -239,6 +245,8 @@ object ProjectEdits {
         }
 
         if (survivingDev == null || duplicateDev == null) return Pair(project, null)
+        check(!hasNetworkScope(project, VlanScopeType.DEVICE, survivingDeviceId) &&
+            !hasNetworkScope(project, VlanScopeType.DEVICE, duplicateDeviceId)) { i18n.text("network.scopeInUse") }
 
         val mergedTechnicalName = if (choices.useTechnicalNameFromDuplicate) duplicateDev.technicalName else survivingDev.technicalName
         val mergedPhysicalLabel = if (choices.usePhysicalLabelFromDuplicate) duplicateDev.physicalLabel else survivingDev.physicalLabel
@@ -685,7 +693,8 @@ object ProjectEdits {
         )
     }
 
-    fun deleteVlan(project: Project, vlanId: String): Project {
+    fun deleteVlan(project: Project, vlanId: String, i18n: Messages = Messages()): Project {
+        require(project.subnets.none { it.vlanId == vlanId }) { i18n.text("network.vlanInUse") }
         return project.copy(
             vlans = project.vlans.filterNot { it.id == vlanId },
             updatedEpochMs = System.currentTimeMillis()
