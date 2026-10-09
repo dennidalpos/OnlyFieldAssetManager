@@ -1,8 +1,10 @@
 # Residui del repository — 9 ottobre 2026
 
-Audit del checkout corrente, comprese le modifiche locali al demo e ad `AGENTS.md`. **Sette nuovi rilievi aperti: un P1 e sei P2**. Conservati i quattro residui operativi RES-13/19/23/24: totale **11 attività, 1 P1 / 9 P2 / 1 P3**. Nessun P0 identificato. Priorità e stato corrente nel [tracker](../PROJECT_STATUS.json); chiusure precedenti nella [roadmap](../roadmap.md). Questo audit registra attività, senza correggere il runtime.
+**Stato dopo la remediation del 9 ottobre:** AUD-45–51 completati e rimossi dal [tracker](../PROJECT_STATUS.json). Restano **RES-13/19/23/24: quattro attività, 0 P1 / 3 P2 / 1 P3**. Chiusure, regressioni e limiti nella [roadmap](../roadmap.md) e nelle sezioni remediation sotto.
 
-## Perimetro e metodo
+L’audit iniziale identificava sette nuovi rilievi (un P1 e sei P2) oltre ai quattro residui operativi. Le riproduzioni e il perimetro iniziali sono conservati come evidenza storica; descrivono il codice precedente alle correzioni.
+
+## Perimetro e metodo dell’audit iniziale
 
 Inventariati tutti i **382 file versionati**, inclusi 309 sorgenti Kotlin, 161 applicativi in `src/main`. Quattro moduli Gradle e sorgenti UI condivisi in `shared/configurator`. Revisione trasversale di dominio/validazione/modifiche, persistenza e mapper, recupero, scambio/cifratura/media/import/fusione, editor e navigazione, mappe/configuratore, documenti, localizzazione, demo/fixture/test, build/CI/rilascio e documentazione. Approfonditi chiamanti, esiti di salvataggio e copertura dei punti sospetti; nessun segnaposto applicativo TODO/FIXME/HACK/NotImplemented individuato dalla ricerca.
 
@@ -10,23 +12,20 @@ Distinzione dell’evidenza: **riprodotto** con dati sintetici e toolchain del p
 
 Gli AUD precedenti sono confrontati con implementazione e chiusure, senza riaprire il loro contesto storico. AUD-44 riguarda Alimentazioni/PoE/Badge **Windows** già corretti: AUD-46 copre gli editor ancora esclusi. AUD-47 riguarda pagine/layout di stampa, senza riaprire le callback corrette da AUD-21. AUD-48 riguarda l’acquisizione prima del limite media, senza riaprire il rollback media già corretto.
 
-## Priorità e ordine
+## Attività ancora aperte
 
-P1: rischio di sovrascrittura dei dati; affrontare prima del packaging su un workspace già usato. P2: perdita di bozze, salvataggio, acquisizione e correttezza dei documenti. P3: pulizia verificata delle risorse sintetiche. Ordine suggerito: **AUD-45 → AUD-46 → AUD-49 → AUD-48 → AUD-47 → AUD-50 → AUD-51**, quindi completare i collaudi pertinenti. Le dipendenze di RES-19/23 riguardano la loro chiusura finale; i casi indipendenti possono proseguire.
+Ordine di remediation eseguito: AUD-45 → AUD-46 → AUD-49 → AUD-48 → AUD-47 → AUD-50 → AUD-51. Per i residui seguenti restano collaudi reali o pulizie storiche; non sono state ritentate le rimozioni precedentemente respinte.
 
 | Priorità | ID | Attività | Evidenza attuale |
 | --- | --- | --- | --- |
-| P1 | AUD-45 | Escludere i dati del runtime sorgente dall’assemblaggio portable | Riprodotto con Gradle Sync 9.7.1 |
-| P2 | AUD-46 | Conservare le bozze degli editor rete/cablaggio e moduli Android al save fallito | VLAN Windows riprodotta in dialogo e pannello; restante perimetro da codice |
-| P2 | AUD-49 | Rifiutare numeri non finiti prima del salvataggio | NaN e Infinity riprodotti, form/modello accettano e serializer rifiuta |
-| P2 | AUD-48 | Completare limiti e bordi dell’acquisizione cartografica Android | Risposta chunked oltre 2 MiB riprodotta; griglia/decode da codice |
-| P2 | AUD-47 | Rispettare pagine e attributi della stampa Android | Da codice e contratto Android; stampa nativa non eseguita |
-| P2 | AUD-50 | Eliminare la selezione legacy delle alimentazioni dal nome A/B nei documenti | Markdown e celle XLSX D2/E2 riprodotti |
-| P2 | AUD-51 | Applicare escaping coerente al testo utente Markdown | Nome apparato con pipe rompe la riga di inventario |
 | P2 | RES-13 | Fotocamera, scansione, multitouch e interruzioni improvvise | Parziale; normale riavvio già verificato, foto rinviate dall’utente |
 | P2 | RES-19 | Matrice UX completa Android | Parziale; TalkBack, rotazione reale e tablet fisici restano aperti |
 | P2 | RES-23 | Matrice EXE Windows e dialoghi nativi | Parziale; prove già concluse conservate |
 | P3 | RES-24 | Pulizia delle sole risorse sintetiche inventariate | Parziale; precedenti rimozioni bloccate non ritentate |
+
+## Rilievi iniziali, ora risolti
+
+Le sette sezioni seguenti documentano la baseline. Gli esiti correnti sono nelle sezioni remediation.
 
 ## AUD-45 — Il preserve del portable non impedisce la copia sopra i dati
 
@@ -116,3 +115,51 @@ Consultate il 9 ottobre 2026; applicazione al prodotto dedotta dal codice e dai 
 - [Android PrintDocumentAdapter](https://developer.android.com/reference/android/print/PrintDocumentAdapter): layout con nuovi attributi e scrittura delle pagine specificate.
 - [Android PrintedPdfDocument](https://developer.android.com/reference/android/print/pdf/PrintedPdfDocument): dimensioni e area contenuto determinate dagli attributi di stampa; riferimento di contratto, senza imporre una nuova dipendenza.
 - [GitHub Flavored Markdown, tables](https://github.github.com/gfm/#tables-extension-): pipe escapate anche negli span inline.
+
+### Remediation AUD-45, 9 ottobre
+
+La sorgente del Sync esclude data/** e la destinazione mantiene preserve(data/**); progetti, media e preferenze omonimi non vengono sovrascritti. ZIP privo di dati. AUD-45 rimosso dal tracker.
+
+Baseline isolata: hash delle preferenze destinatario modificato (errore atteso). Dopo la correzione: powershell -NoProfile -File tools/testing/portable-data.ps1 → PASS; fixture eliminata dal finally. .\gradlew.bat :pc:app:packagePortable --no-parallel --max-workers=1 → BUILD SUCCESSFUL. Hash dei dati in dist invariati; ZIP effettivo senza data/. La rigenerazione ha eliminato la vecchia fixture sintetica nel runtime sorgente: quattro file ripristinati con SHA-256 identico, un pacchetto di 43.584 byte senza copia identica reperibile. Utente informato: recupero non richiesto, tutto materiale di test. Report portable-source-restoration.json. Aggiunto controllo preventivo su createDistributable: un runtime con data/ blocca la rigenerazione prima della rimozione. Manifest in build/reports/tracker-remediation-20261009/portable-data-before.json. Fonte primaria: [Gradle Sync](https://docs.gradle.org/current/dsl/org.gradle.api.tasks.Sync.html), consultata il 9 ottobre.
+
+### Remediation AUD-46, 9 ottobre
+
+Rete logica e cablaggio Windows chiudono gli editor soltanto dopo save riuscito e mostrano il guasto nella bozza. Alimentazioni/PoE/Badge, rete e cablaggio Android usano rememberEditSave: errori e campi conservati, chiusura sulla callback positiva, risultati ignorati dopo uscita dalla composizione. ID e campi nascosti delle modifiche preservati. Corretto anche il tipo sintetico non valido nella modifica dei cavi senza objectTypeId.
+
+32 regressioni Compose Windows verdi: sei editor rete e due cablaggio, creazione/modifica e dialogo/pannello, guasto reale NOSHARE_DELETE, progetto/file/trash/history invariati, riprova singola, round-trip e undo completo. Baseline documentata: 30 casi riprodotti e due fixture picker errate, corrette prima della prova finale. Il cavo senza tipo introduceva il tipo non UUID cable e rendeva il pacchetto non importabile; fallback legacy corretto, round-trip verificato. Comando .\gradlew.bat :pc:app:test --tests *FailedNetworkSaveTest* :mobile:app:testDebugUnitTest --tests *SpecializedCommandTest* --no-parallel --max-workers=1: BUILD SUCCESSFUL. Le regressioni helper Android verificano errore/riprova e callback dismesse; compilazione delle schermate Android riuscita. Nessun nuovo collaudo nativo/AppRoot Android o EXE completo: criteri trasferiti esplicitamente a RES-19/23. Fonte primaria [stato Compose](https://developer.android.com/develop/ui/compose/state), consultata il 9 ottobre.
+
+### Remediation AUD-49, 9 ottobre
+
+Numeri non finiti e overflow rifiutati dai form e dal modello per carichi W/VA, potenze PoE, budget hardware apparati/modelli, lunghezze, coordinate di posizionamenti/annotazioni/tratte. Errori it/en/es prima della scrittura: guard nei salvataggi Room, storage Windows ed export .ofam; validazioni strutturali indipendenti mantengono i rilievi documentali ammessi. JSON continua a rifiutare i numeri speciali. Il campo budget PoE usa il parser decimale condiviso e finito.
+
+Baseline due regressioni rosse; prove finali NonFiniteValidationTest (due test, matrici NaN/Infinity/-Infinity/overflow e nove superfici numeriche), FinitePackageTest, ProjectRepositoryTest.nonFiniteUpdateLeavesRoomProjectUnchanged e NonFiniteSaveTest: cinque test verdi. Valori finiti con punto/virgola e pacchetto .ofam in round-trip; stream export vuoto, progetto Room e file/history Windows invariati al rifiuto. Comandi Gradle mirati con --no-parallel --max-workers=1: BUILD SUCCESSFUL. Fonti [Kotlin isFinite](https://kotlinlang.org/api/core/kotlin-stdlib/kotlin/is-finite.html), consultata il 9 ottobre. Residui UI nativi delle bozze gia in RES-19/23.
+
+### Remediation AUD-48, 9 ottobre
+
+Tile Android limitati a 2 MiB durante la lettura, connessione disconnessa in finally. Dimensioni 256x256 verificate prima del decode; bitmap individuali e risultato sempre riciclati, anche a guasto parziale. La griglia usa wrap X e clamp Y ai bordi; input geografici non finiti o fuori range rifiutati. Rimossa la costante italiana legacy NO_NETWORK_MESSAGE dal modulo Android; messaggi it/en/es conservati.
+
+Baseline HTTP locale: risposta chunked oltre 2 MiB accettata. .\gradlew.bat :mobile:app:testDebugUnitTest --tests *Cartograph* --no-parallel --max-workers=1: BUILD SUCCESSFUL, sei test. Soglia esatta ammessa, oltre soglia rifiutato con/senza Content-Length; immagini 512x256, non immagini e payload sovradimensionati rifiutati; errore al quinto tile interrompe il risultato; griglie zoom 1/17 ai quattro bordi e attribuzione PNG 768x768 verificate con Robolectric. Server locale chiuso dal finally, nessun download pubblico o collaudo OOM rivendicato. Fonti [BitmapFactory.Options](https://developer.android.com/reference/android/graphics/BitmapFactory.Options#inJustDecodeBounds), [HttpURLConnection](https://developer.android.com/reference/java/net/HttpURLConnection#disconnect()), consultate il 9 ottobre.
+
+### Remediation AUD-47, 9 ottobre
+
+La stampa Android calcola geometria e paginazione dagli attributi di sistema: formato, orientamento e margini. Il layout viene misurato senza conservare pagine PDF; la scrittura genera soltanto le pagine richieste, preservando numerazione originale e restituendo intervalli effettivi ordinati e uniti. Export PDF ordinario A4 conservato. Layout e scrittura lavorano fuori Main, callback singola su Main; cancellazione controllata durante la generazione e destinazione chiusa anche prima del lavoro.
+
+Baseline: onLayout dichiara PAGE_COUNT_UNKNOWN (regressione riprodotta). Gradle :mobile:app:testDebugUnitTest --tests "*PrintAdapterTest*" e assembleDebug/assembleDebugAndroidTest: BUILD SUCCESSFUL; 3 regressioni JVM. adb install -r (senza disinstallazione) e am instrument -e class com.onlyfield.assetmanager.PrintPdfNativeTest: OK (1 test), Moto g86. PDF reali A4 verticale e A5 orizzontale, margini asimmetrici, 160 apparati e scheda rack: dimensioni, bounding box, testo completo, pagina singola/intervallo/intervalli disgiunti e sovrapposti, conteggio e intervalli restituiti coerenti. File persistenti Android invariati per SHA-256; fixture cache rimossa. Evidenze: build/reports/tracker-remediation-20261009/print-native.txt. Fonti primarie: [PrintDocumentAdapter](https://developer.android.com/reference/android/print/PrintDocumentAdapter) e [PrintedPdfDocument](https://developer.android.com/reference/android/print/pdf/PrintedPdfDocument), consultate il 9 ottobre.
+
+### Remediation AUD-50, 9 ottobre
+
+Markdown e foglio XLSX Alimentazione adottano una riga per ogni record, senza selezione dal nome A/B: apparato, nome/circuito, tipo, sorgente, presa/uscita, tensione, carico VA/W, autonomia osservata, fonte/data del rilievo e note. XLSX conserva celle numeriche per tensione/carichi/autonomia; PoE e badge restano distinti dai record, compresi badge su target non apparato. PDF Android/Windows enumerano gli stessi dettagli. I filtri selezionano le alimentazioni del consumatore; si risolve solo il nome della sorgente esterna come contesto, senza esportarne inventario o altri record. Nessuna autonomia calcolata.
+
+Baseline PowerDocumentTest: 2 test falliti per circuiti personalizzati omessi. Dopo: test mirati exchange (PowerDocumentTest/DocumentExportTest/DocumentSelectionTest), report Windows e PrintAdapterTest: BUILD SUCCESSFUL; nuova regressione PDF Windows PowerReportTest verde. Android build debug/test verde; am instrument SurveyPdfTest,PrintPdfNativeTest → OK (4 tests): PDF reali con tipi PRIMARY_A, SECONDARY_B, UPS, PDU, diretta, OTHER, UNKNOWN, sorgente esterna al filtro e campi completi, tre lingue. Database/preferenze Android invariati per SHA-256 (3 file); cambiato il solo marcatore runtime profileInstalled dopo install -r. Evidenze power-and-print-native.txt e android-after-power.json nella cartella remediation. Fonti: contratto PowerFeed corrente, selezione DocumentSelection verificata dalle regressioni; [GFM tabelle](https://github.github.com/gfm/#tables-extension-), consultato il 9 ottobre.
+
+### Remediation AUD-51, 9 ottobre
+
+Escaping Markdown applicato a testo utente in titoli, metadati, inventario, hardware, rack, cablaggio, VLAN, alimentazioni, badge, attribuzioni, note e avvisi. CR/LF normalizzati in spazi soltanto nel documento; punteggiatura Markdown/HTML e backslash resi letterali. Gli span usano delimitatori adeguati ai backtick del contenuto; le pipe sono esterne agli span per mantenere tabelle e backslash anche nei renderer GFM. Testo del progetto invariato. Rimossi i quattro messaggi legacy delle colonne A/B non più usati.
+
+Baseline MarkdownEscapingTest: intestazione CR/LF introdotta dal testo utente (regressione riprodotta). Gradle exchange: 12 regressioni documenti/filtri/lingue verdi prima delle prove ai bordi; MarkdownEscapingTest ora 2 test, BUILD SUCCESSFUL. tools/testing/markdown-content.ps1 → PASS it/en/es, 7 tabelle ciascuna: parser Markdig di ConvertFrom-Markdown verifica intestazioni, liste, markup, righe/colonne e testo letterale rispetto al controllo; PASS anche 7 casi span (pipe, backslash adiacenti, delimitatori backtick, spazi e CR/LF). Fixture/evidenze in shared/exchange/build/reports/markdown-*.md; nessuna dipendenza aggiunta. Fonte primaria [GFM](https://github.github.com/gfm/) e sezioni tabelle/escape/code span, consultate il 9 ottobre.
+
+### Verifica finale
+
+643 test JVM/Compose e quattro prove native PDF verdi; APK compilate. Comandi, risultati e limiti nella roadmap e nella guida di verifica. Restano i quattro residui indicati sopra, senza nuovi task runtime. Packaging protegge i dati destinatari e rifiuta la rigenerazione con data/ sorgente; nessun recupero pendente per la vecchia fixture sintetica, come confermato dall’utente.
+
+Pulizia finale della remediation: il controllo automatico ha respinto la rimozione dei soli build/tmp/remediation_docs.py, build/tmp/__pycache__/remediation_docs.cpython-313.pyc e della directory cache se vuota, con motivo blocked by policy. Nessuna rimozione eseguita o ritentata. Due file inventariati con dimensioni/SHA-256 in build/reports/tracker-remediation-20261009/cleanup-blocked-inventory.json; aggiunti a RES-24. I report restano conservati.

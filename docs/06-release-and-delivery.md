@@ -2,7 +2,7 @@
 
 ## Build locale
 
-**AUD-45 aperto:** l’assemblaggio portable conserva i dati destinatari dalla cancellazione, ma può sovrascriverli copiando `data/` dal runtime sorgente già usato. Evitare packaging su una `dist` popolata fino alla correzione; riprodotto su fixture isolate, nessun dato utente toccato. L’esclusione dal solo ZIP non protegge la directory di distribuzione. Evidenza e chiusura nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md).
+L’assemblaggio portable esclude `data/**` dalla sorgente e conserva `data/**` nella destinazione. Un runtime già usato non introduce progetti, media o preferenze nella distribuzione. Anche lo ZIP esclude i dati. Regressione ripetibile: `powershell -NoProfile -File tools/testing/portable-data.ps1`, con runtime sintetico contaminato e destinazione popolata; verifica hash, inventario e ZIP usando le definizioni dei task di produzione. AUD-45 corretto e verificato il 9 ottobre 2026; [semantica Gradle Sync](https://docs.gradle.org/current/dsl/org.gradle.api.tasks.Sync.html) consultata nella stessa data.
 
 ```powershell
 .\gradlew.bat :pc:app:packagePortable
@@ -19,3 +19,5 @@ La pubblicazione reale su tag è verificata dalla [release v1.0.1](https://githu
 ## Risorse di test Windows — AUD-22
 
 processTestResources copia la sola fixtures/v1_sample_project.json nel classpath test. Il JAR principale non include la fixture; distribuzione e comando portable invariati. Le prove non dipendono dalla directory corrente. [Gradle ProcessResources](https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html), consultato il 6 ottobre 2026.
+
+La rigenerazione createDistributable rifiuta un runtime sorgente contenente data/ prima di rimuoverlo. Conservare e spostare quei dati prima di rigenerare; usare l’EXE in dist per le sessioni applicative. Il controllo non cancella o sposta dati automaticamente.

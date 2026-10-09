@@ -60,7 +60,7 @@ object XlsxExportManager {
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet4.xml"))
-            zip.write(buildSheet4Xml(selectedProject, filteredDeviceIds, i18n = i18n).toByteArray(Charsets.UTF_8))
+            zip.write(buildSheet4Xml(selectedProject, project, i18n = i18n).toByteArray(Charsets.UTF_8))
             zip.closeEntry()
 
             zip.putNextEntry(ZipEntry("xl/worksheets/sheet5.xml"))
@@ -335,49 +335,29 @@ $SHEET_HEAD  <sheetData>
         return sb.toString()
     }
 
-    private fun buildSheet4Xml(project: Project, filteredDeviceIds: Set<String>, i18n: Messages = Messages()): String {
-        val sb = StringBuilder()
-        sb.append("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+    private fun buildSheet4Xml(project: Project, original: Project, i18n: Messages): String {
+        val sb = StringBuilder("""<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
 $SHEET_HEAD  <sheetData>
 """)
-
-        val headers = listOf(i18n.text("text.cf301d95d32c"), i18n.text("text.f57beb90828a"), i18n.text("text.649eace2ae87"), i18n.text("text.f9876f4c6cfa"), i18n.text("text.12873ee7733c"), i18n.text("text.64f63dbe7bbe"), i18n.text("text.af354b531994"))
-        sb.append("<row r=\"1\">")
-        headers.forEachIndexed { idx, h ->
-            val colLetter = ('A' + idx).toString()
-            sb.append(cellStr(colLetter, 1, h))
-        }
-        sb.append("</row>\n")
-
-        val allDevices = project.sites.flatMap { it.devices }.filter { filteredDeviceIds.contains(it.id) }
-
-        var rowIdx = 2
-        for (dev in allDevices) {
-            val feeds = project.powerFeeds.filter { it.deviceId == dev.id }
-            val feedA = feeds.find { it.feedName == "A" }?.let { "${it.feedType.toDisplayString(i18n)} (${it.sourceOutletDescription ?: "-"})" } ?: "-"
-            val feedB = feeds.find { it.feedName == "B" }?.let { "${it.feedType.toDisplayString(i18n)} (${it.sourceOutletDescription ?: "-"})" } ?: "-"
-
-            val va = feeds.mapNotNull { it.loadVa }.sum()
-            val w = feeds.mapNotNull { it.loadWatts }.sum()
-
-            val badges = project.documentBadges.filter { it.targetId == dev.id }.joinToString(", ") { it.label }
-
-            val poe = project.poeMappings.filter { poe -> dev.ports.any { it.id == poe.portId } }
-                .joinToString("; ") { "${it.role.toDisplayString(i18n)} ${it.standard.toDisplayString(i18n)}" }
-
-            sb.append("<row r=\"$rowIdx\">")
-            sb.append(cellStr("A", rowIdx, dev.technicalName))
-            sb.append(cellStr("B", rowIdx, if (va > 0) i18n.text("text.1df071e9be6a", va) else "-"))
-            sb.append(cellStr("C", rowIdx, if (w > 0) i18n.text("text.cd49315c743a", w) else "-"))
-            sb.append(cellStr("D", rowIdx, feedA))
-            sb.append(cellStr("E", rowIdx, feedB))
-            sb.append(cellStr("F", rowIdx, poe.ifEmpty { "-" }))
-            sb.append(cellStr("G", rowIdx, badges.ifEmpty { "-" }))
+        val index = com.onlyfield.assetmanager.core.display.ProjectIndex(original)
+        fun row(number: Int, values: List<String>, numeric: Set<Int> = emptySet()) {
+            sb.append("<row r=\"$number\">")
+            values.forEachIndexed { n, value ->
+                val column = ('A' + n).toString()
+                sb.append(if (n in numeric) cellNum(column, number, value.toDoubleOrNull()) else cellStr(column, number, value))
+            }
             sb.append("</row>\n")
-            rowIdx++
         }
-
+        row(1, PowerFeedRows.headers(i18n))
+        var number = 1
+        project.powerFeeds.forEach { row(++number, PowerFeedRows.values(it, index, i18n), setOf(5, 6, 7, 8)) }
+        number += 2
+        row(number, listOf(i18n.text("text.cf301d95d32c"), i18n.text("text.64f63dbe7bbe"), i18n.text("text.af354b531994")))
+        project.poeMappings.forEach { poe -> row(++number, listOf(index.portLabel(poe.portId),
+            "${poe.role.toDisplayString(i18n)} ${poe.standard.toDisplayString(i18n)}", "-")) }
+        project.documentBadges.forEach { badge -> row(++number,
+            listOf(index.targetLabel(badge.targetType, badge.targetId, i18n), "-", badge.label)) }
         sb.append("  </sheetData>\n</worksheet>")
         return sb.toString()
     }

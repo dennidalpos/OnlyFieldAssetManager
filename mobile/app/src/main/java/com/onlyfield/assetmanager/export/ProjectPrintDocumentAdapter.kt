@@ -2,6 +2,7 @@ package com.onlyfield.assetmanager.export
 
 import com.onlyfield.assetmanager.core.i18n.Messages
 
+import android.content.Context
 import android.os.Bundle
 import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
@@ -12,7 +13,6 @@ import android.print.PrintDocumentInfo
 import com.onlyfield.assetmanager.core.model.ExportFilterConfig
 import com.onlyfield.assetmanager.core.model.Project
 import com.onlyfield.assetmanager.core.model.ReportSelection
-import java.io.FileOutputStream
 import kotlinx.coroutines.*
 import android.os.Handler
 import android.os.Looper
@@ -20,11 +20,13 @@ import java.util.concurrent.atomic.AtomicBoolean
 
 /** Android print adapter for preview, printer selection and PDF output. */
 class ProjectPrintDocumentAdapter(
+    private val context: Context,
     private val project: Project,
     private val filterConfig: ExportFilterConfig = ExportFilterConfig(),
     private val reportSelection: ReportSelection = ReportSelection(),
     private val i18n: Messages = Messages()
 ) : PrintDocumentAdapter() {
+    private var attributes: PrintAttributes? = null
     private val worker = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onLayout(
@@ -39,12 +41,47 @@ class ProjectPrintDocumentAdapter(
             return
         }
 
-        val info = PrintDocumentInfo.Builder("Documento_${project.name}.pdf")
-            .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT)
-            .setPageCount(PrintDocumentInfo.PAGE_COUNT_UNKNOWN)
-            .build()
-
-        callback?.onLayoutFinished(info, newAttributes != oldAttributes)
+        if (newAttributes == null) {
+            callback?.onLayoutFailed(i18n.text("text.6a0fbef6bf9b"))
+            return
+        }
+        attributes = null
+        val delivered = AtomicBoolean()
+        val job = worker.launch {
+            var count = 0
+            var failure: String? = null
+            var cancelled = false
+            try {
+                count = PdfExportManager.layoutPrint(context, newAttributes, project, filterConfig, reportSelection, i18n) {
+                    ensureActive()
+                    cancellationSignal?.throwIfCanceled()
+                }
+            } catch (_: CancellationException) {
+                cancelled = true
+            } catch (e: Exception) {
+                failure = e.message ?: i18n.text("text.6a0fbef6bf9b")
+            }
+            cancelled = cancelled || !isActive || cancellationSignal?.isCanceled == true
+            withContext(NonCancellable + Dispatchers.Main) {
+                if (!delivered.compareAndSet(false, true)) return@withContext
+                when {
+                    cancelled -> callback?.onLayoutCancelled()
+                    failure != null -> callback?.onLayoutFailed(failure)
+                    else -> {
+                        attributes = newAttributes
+                        val info = PrintDocumentInfo.Builder("Documento_${project.name}.pdf")
+                            .setContentType(PrintDocumentInfo.CONTENT_TYPE_DOCUMENT).setPageCount(count).build()
+                        callback?.onLayoutFinished(info, newAttributes != oldAttributes)
+                    }
+                }
+            }
+        }
+        job.invokeOnCompletion { cause ->
+            if (cause is CancellationException) Handler(Looper.getMainLooper()).post {
+                if (delivered.compareAndSet(false, true)) callback?.onLayoutCancelled()
+            }
+        }
+        cancellationSignal?.setOnCancelListener { job.cancel() }
     }
 
     override fun onWrite(
@@ -58,18 +95,28 @@ class ProjectPrintDocumentAdapter(
             return
         }
         if (cancellationSignal?.isCanceled == true) {
+            destination.close()
             callback?.onWriteCancelled()
             return
         }
 
+        val layoutAttributes = attributes
+        if (layoutAttributes == null || pages.isNullOrEmpty()) {
+            destination.close()
+            callback?.onWriteFailed(i18n.text("text.6a0fbef6bf9b"))
+            return
+        }
+        val requested = pages.copyOf()
         val delivered = AtomicBoolean()
         val job = worker.launch {
+            var written: Array<PageRange> = emptyArray()
             var failure: String? = null
             var cancelled = false
             try {
                 ensureActive()
-                FileOutputStream(destination.fileDescriptor).use { outputStream ->
-                    PdfExportManager.exportCompositeReportPdfToStream(project, filterConfig, reportSelection, outputStream, i18n)
+                ParcelFileDescriptor.AutoCloseOutputStream(destination).use { outputStream ->
+                    written = PdfExportManager.writePrint(context, layoutAttributes, requested, project, filterConfig,
+                        reportSelection, outputStream, i18n) { ensureActive(); cancellationSignal?.throwIfCanceled() }
                 }
             } catch (_: CancellationException) {
                 cancelled = true
@@ -82,12 +129,13 @@ class ProjectPrintDocumentAdapter(
                 when {
                     cancelled -> callback?.onWriteCancelled()
                     failure != null -> callback?.onWriteFailed(failure)
-                    else -> callback?.onWriteFinished(arrayOf(PageRange.ALL_PAGES))
+                    else -> callback?.onWriteFinished(written)
                 }
             }
         }
         job.invokeOnCompletion { cause ->
             if (cause is CancellationException) Handler(Looper.getMainLooper()).post {
+                destination.close()
                 if (delivered.compareAndSet(false, true)) callback?.onWriteCancelled()
             }
         }

@@ -40,7 +40,7 @@ class CartographicMapManagerTest {
             CartographicMapManager.fetchTileBytes("http://127.0.0.1:65534/nonexistent_tile.png", timeoutMs = 500)
             fail("Dovrebbe sollevare OfflineMapException")
         } catch (e: OfflineMapException) {
-            assertEquals(CartographicMapManager.NO_NETWORK_MESSAGE, e.message)
+            assertEquals(com.onlyfield.assetmanager.core.i18n.Messages().text("map.network.android"), e.message)
         }
     }
 

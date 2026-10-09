@@ -6,7 +6,7 @@
 
 Gli export descrivono inventario (con sede, gruppo e stato operativo), porte e cablaggio, rete, alimentazione, media e campi documentali. Le credenziali sono escluse. Il testo libero viene esportato come testo, evitando formule XLSX interpretate.
 
-Limiti emersi nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md), ancora aperti: **AUD-47**, stampa Android ignora intervalli di pagine e attributi di layout; **AUD-50**, Markdown/XLSX cercano alimentazioni dal nome A/B e omettono quelle con nomi personalizzati dalle colonne dedicate; **AUD-51**, escaping Markdown incompleto per testo utente. La generazione PDF e i collaudi di callback già acquisiti non dimostrano la correttezza di questi percorsi.
+AUD-47/50/51 dell’[audit del 9 ottobre](repo-residuals-2026-10-09.md) corretti: stampa Android conforme agli intervalli e al layout richiesti, alimentazioni complete in Markdown/XLSX/PDF ed escaping del testo utente. Restano i collaudi dei dialoghi/spooler e della stampa fisica in RES-19/23; esiti dettagliati sotto.
 
 ## Filtri comuni
 
@@ -50,3 +50,15 @@ Observation.effectiveStatus considera il rilievo assente Da verificare; gli stat
 Le note del rilievo di apparati, porte e cavi sono conservate; XLSX le presenta nel foglio Note e osservazioni, PDF nella sezione note quando selezionata. Markdown e XLSX includono gli avvisi documentali; nei PDF gli avvisi seguono le sezioni scelte. DocumentSelection valida i riferimenti del progetto originale e filtra gli avvisi per oggetti, sezioni e classificazioni esportati: escludere un estremo dal filtro non crea un falso avviso di cavo scollegato. I percorsi Desktop conservano gli avvisi dei segmenti esterni necessari al contesto. Credenziali e avvisi delle credenziali restano esclusi; un allegato da rivedere escluso con reviewRequiredConfirmed=false non compare nemmeno negli avvisi.
 
 Regressioni it/en/es su rilievo assente, stati espliciti, note, filtri e sezioni disattivate. Il PDF Android reale è stato generato e il testo estratto su Pixel 9 API 37; questo non verifica la stampa fisica o la matrice UX. Fonti primarie consultate il 6 ottobre 2026: [PdfDocument](https://developer.android.com/reference/android/graphics/pdf/PdfDocument), [PdfRenderer.Page e getTextContents](https://developer.android.com/reference/android/graphics/pdf/PdfRenderer.Page). Evidenze e comandi in [verifica](05-testing-and-benchmarks.md).
+
+### AUD-47 — 9 ottobre 2026
+
+La stampa Android calcola geometria e paginazione dagli attributi di sistema: formato, orientamento e margini. Il layout viene misurato senza conservare pagine PDF; la scrittura genera soltanto le pagine richieste, preservando numerazione originale e restituendo intervalli effettivi ordinati e uniti. Export PDF ordinario A4 conservato. Layout e scrittura lavorano fuori Main, callback singola su Main; cancellazione controllata durante la generazione e destinazione chiusa anche prima del lavoro.
+
+### AUD-50 — 9 ottobre 2026
+
+Markdown e foglio XLSX Alimentazione adottano una riga per ogni record, senza selezione dal nome A/B: apparato, nome/circuito, tipo, sorgente, presa/uscita, tensione, carico VA/W, autonomia osservata, fonte/data del rilievo e note. XLSX conserva celle numeriche per tensione/carichi/autonomia; PoE e badge restano distinti dai record, compresi badge su target non apparato. PDF Android/Windows enumerano gli stessi dettagli. I filtri selezionano le alimentazioni del consumatore; si risolve solo il nome della sorgente esterna come contesto, senza esportarne inventario o altri record. Nessuna autonomia calcolata.
+
+### AUD-51 — 9 ottobre 2026
+
+Escaping Markdown applicato a testo utente in titoli, metadati, inventario, hardware, rack, cablaggio, VLAN, alimentazioni, badge, attribuzioni, note e avvisi. CR/LF normalizzati in spazi soltanto nel documento; punteggiatura Markdown/HTML e backslash resi letterali. Gli span usano delimitatori adeguati ai backtick del contenuto; le pipe sono esterne agli span per mantenere tabelle e backslash anche nei renderer GFM. Testo del progetto invariato. Rimossi i quattro messaggi legacy delle colonne A/B non più usati.

@@ -86,22 +86,25 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     }
 
     if (newCable || cableDialog != null) {
+        val save = rememberEditSave(vm, newCable, cableDialog)
         var draft by remember(cableDialog) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forCable(project, cableDialog)) }
         EditScreen(configuratorTitle(project, draft, i18n), { newCable = false; cableDialog = null }, {
-            vm.edit(configuratorTitle(project, draft, i18n)) { draft.apply(it, i18n) }; newCable = false; cableDialog = null
+            save.save(configuratorTitle(project, draft, i18n), { newCable = false; cableDialog = null }) { draft.apply(it, i18n) }
         }, validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), confirmLabel = configuratorAction(project, draft, i18n)) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             ObjectFields(project, draft) { draft = it }
         }
     }
     if (newMap || mapDialog != null) {
         val m = mapDialog
+        val save = rememberEditSave(vm, newMap, m)
         var form by remember(m) { mutableStateOf(PanelMappingForm.from(m)) }
         val errors = form.errors(i18n = i18n)
         EditScreen(if (m == null) i18n.text("text.985706a0b378") else i18n.text("text.cedf7d64c712"), { newMap = false; mapDialog = null }, {
-            newMap = false; mapDialog = null
             val saved = form.toMapping(m)
-            vm.edit(i18n.text("text.c64f4269ee7c")) { if (m == null) ProjectEdits.addPanelMapping(it, saved) else ProjectEdits.updatePanelMapping(it, saved) }
+            save.save(i18n.text("text.c64f4269ee7c"), { newMap = false; mapDialog = null }) { if (m == null) ProjectEdits.addPanelMapping(it, saved) else ProjectEdits.updatePanelMapping(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             PortPicker(i18n.text("text.87af12314823"), index, form.portAId, { form = form.copy(portAId = it) }, noneLabel = null, error = errors["portAId"].takeIf { form.portAId != null })
             PortPicker(i18n.text("text.dcc43f317d0c"), index, form.portBId, { form = form.copy(portBId = it) }, noneLabel = i18n.text("text.f56b9cfaeb27"), error = errors["portBId"])
             LabeledCheckbox(form.isUnknownPassage, { form = form.copy(isUnknownPassage = it) }, i18n.text("text.8c5c99642be7"))

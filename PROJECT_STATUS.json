@@ -1,132 +1,17 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-09",
-  "currentPhase": "Audit completo del repository del 9 ottobre: 7 nuovi rilievi aperti AUD-45–51 (1 P1, 6 P2), oltre a RES-13/19/23/24. Totale 11 attività: 1 P1, 9 P2, 1 P3. Difetti registrati, nessuna correzione runtime applicata in questo audit.",
-  "activeTask": null,
-  "nextSession": "Riprendere da main, docs/repo-residuals-2026-10-09.md e dal tracker corrente. Demo Comune del 9 ottobre e AGENTS.md aggiornati; audit concluso con 11 attività aperte/parziali (1 P1, 9 P2, 1 P3), nessuna correzione runtime dell’audit applicata. Ordine: AUD-45 → AUD-46 → AUD-49 → AUD-48 → AUD-47 → AUD-50 → AUD-51; poi completare i collaudi pertinenti RES-13/19/23 e la pulizia verificata RES-24. Non eseguire packagePortable su dist popolata prima di AUD-45: preserve non impedisce la sovrascrittura di data dalla sorgente. Non ripetere suite già verdi senza nuovi problemi e non dedurre collaudi nativi dai probe. Evidenze locali ignorate da Git in build/reports/demo-seed-20261009 e build/reports/repo-audit-20261009: conservarle insieme a dati, backup, chiavi, app/demo e report storici; non sono incluse nel commit. I 7 probe JUnit e il probe Gradle confermano difetti, non correzioni; 5 prove esistenti verdi, documentazione/tracker validati. Pulizia delle tre directory build/tmp/repo-audit-20261009-portable/network/data respinta dal controllo automatico: inventario e criteri in RES-24, nessun ritentativo delle pulizie bloccate. Utente ha richiesto commit e push su main per questa consegna; SHA ed esito remoto verificabili nella cronologia Git. Questa richiesta non autorizza commit/push delle attività della prossima sessione.",
-  "remainingTasks": [
-    {
-      "id": "AUD-45",
-      "title": "Proteggere i dati durante l’assemblaggio portable",
-      "status": "OPEN",
-      "priority": "P1",
-      "evidenceLevel": "REPRODUCED",
-      "description": "assemblePortable copia anche data dal runtime generato; preserve(data/**) evita la rimozione ma non la sovrascrittura da sorgente. Il runtime contiene già dati sintetici storici RES-24. Probe isolato Gradle 9.7.1: file omonimo destinatario sovrascritto, file presente solo in destinazione conservato. Il successivo ZIP esclude data, ma ciò non protegge la directory portable. Nessun packaging reale su dist o perdita di dati utente osservata nell’audit.",
-      "closureCriteria": "Escludere data dalla sorgente Sync e preservare i dati destinatari. Regressione con sorgente contaminata e destinazione popolata, inclusi file omonimi: hash di progetti/media/preferenze invariati, nessun dato sorgente introdotto, ZIP privo di dati. Verificare prima su fixture isolate, poi packaging previsto.",
-      "references": [
-        "pc/app/build.gradle.kts",
-        "docs/06-release-and-delivery.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-46",
-      "title": "Conservare le bozze al save fallito negli editor ancora esclusi",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "PARTIAL_VERIFICATION",
-      "description": "Rete logica Windows e Android, cablaggio/mappature pannello su entrambe le piattaforme e Alimentazioni/PoE/Badge Android chiudono ancora la bozza prima dell’esito o dopo callback Unit anche al fallimento. Due probe Compose Windows riproducono VLAN in dialogo e pannello: errore presente e progetto/file/history invariati, bozza scomparsa. Altri editor da codice; Android non collaudato nativamente. AUD-44 resta chiuso per Alimentazioni/PoE/Badge Windows già corretti.",
-      "closureCriteria": "Usare i meccanismi di conferma save già presenti. Coprire creazione/modifica e dialogo/pannello di tutti i moduli elencati: errore mantiene campi/selezioni/ID/dati nascosti; riprova salva una sola volta e chiude; undo ripristina il progetto completo. Verificare gli esiti anche nelle matrici native RES-19/23 senza dedurli dai soli probe.",
-      "references": [
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/NetworkLogicalSection.kt",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/CablingSection.kt",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/NetworkPowerScreens.kt",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/CablingScreen.kt",
-        "docs/07-workflows.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-49",
-      "title": "Rifiutare numeri non finiti prima del salvataggio",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "REPRODUCED",
-      "description": "FieldValidators.decimal/parseDecimal e la validazione del modello accettano valori non finiti nei carichi. Due probe PowerFeedForm con NaN e Infinity: nessun errore del form, progetto strutturalmente valido, exportPackage fallisce con SerializationException. Il formato JSON attuale rifiuta i numeri speciali. Con AUD-46 il fallimento può anche far perdere la bozza.",
-      "closureCriteria": "Controllo di finitezza coerente nei form e nel modello, con revisione dei campi decimali interessati (potenze, PoE, lunghezze e coordinate pertinenti). Errori localizzati prima della scrittura, bozze conservate, round-trip dei valori finiti. Non abilitare numeri speciali nel JSON per aggirare il difetto.",
-      "references": [
-        "shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/FieldValidators.kt",
-        "shared/core/src/main/java/com/onlyfield/assetmanager/core/forms/EntityForms.kt",
-        "shared/core/src/main/java/com/onlyfield/assetmanager/core/validation/ModelValidator.kt",
-        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/PackageSerializer.kt",
-        "docs/02-domain-data-contract.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-48",
-      "title": "Completare limiti e bordi dell’acquisizione cartografica Android",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "PARTIAL_VERIFICATION",
-      "description": "fetchTileBytes Android usa readBytes senza limite: probe HTTP locale chunked da 2.097.153 byte interamente accettato; Desktop limita a 2 MiB. Da codice: decode senza controllo preventivo dimensioni, connessione senza disconnect esplicito, griglia 3×3 center±1 senza wrap X/clamp Y. Il limite sul PNG finale arriva dopo acquisizione e decode. Nessun OOM, leak o download pubblico riprodotto. Costante NO_NETWORK_MESSAGE italiana residua in una sola asserzione.",
-      "closureCriteria": "Limitare la risposta durante la lettura e le dimensioni prima del decode; gestire risorse e fallimenti parziali; usare coordinate valide ai bordi. Prove locali su chunked, Content-Length assente, risposte/immagini sovradimensionate, errore a metà griglia, zoom basso e bordi geografici. Preservare attribuzione/localizzazione e progetto al guasto; consolidare la costante legacy nel perimetro.",
-      "references": [
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/cartography/CartographicMapManager.kt",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopCartographyManager.kt",
-        "docs/08-floor-map.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-47",
-      "title": "Rispettare pagine e attributi della stampa Android",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "CODE_REVIEW",
-      "description": "ProjectPrintDocumentAdapter.onWrite ignora pages, genera l’intero documento e dichiara ALL_PAGES; onLayout usa newAttributes solo per il flag cambiato. PdfExportManager produce A4 fisso 595×842 senza formato/orientamento/margini del sistema. Contratto Android verificato su fonti primarie; comportamento nativo su spooler/stampante non collaudato. Le callback/errori/cancellazione già corrette da AUD-21 restano acquisite.",
-      "closureCriteria": "Regressioni dell’adapter e collaudo nativo multipagina con pagina singola, intervallo e intervalli disgiunti: PDF e callback coerenti. Nuovi formato/orientamento/margini producono il layout richiesto senza tagli. Preservare cancellazione, errori e completamento singolo; registrare esiti in RES-19.",
-      "references": [
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/export/ProjectPrintDocumentAdapter.kt",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/export/PdfExportManager.kt",
-        "docs/03-export-and-documents.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-50",
-      "title": "Eliminare la selezione legacy delle alimentazioni dal nome A/B nei documenti",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "REPRODUCED",
-      "description": "Markdown e XLSX scelgono le alimentazioni con feedName == A/B invece del tipo e non elencano tutti i record o il dispositivo sorgente. Nomi personalizzati sono ammessi e presenti nel demo. Probe con PRIMARY_A/SECONDARY_B chiamati Ingresso A/B: prese assenti dal Markdown, celle XLSX D2/E2 del foglio alimentazione uguali a '-'. PDF enumera i record, quindi i formati divergono; nessun problema di filtro coinvolto.",
-      "closureCriteria": "Definire la presentazione dei record multipli e documentare tutte le alimentazioni pertinenti con nome/tipo/sorgente e campi disponibili. Eliminare il vincolo sul nome convenzionale; regressioni nomi personalizzati, più sorgenti, tipi UPS/PDU/diretta/altro, filtri e tre lingue; parità delle informazioni previste nei formati.",
-      "references": [
-        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/MarkdownExportManager.kt",
-        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/XlsxExportManager.kt",
-        "docs/03-export-and-documents.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-51",
-      "title": "Applicare escaping coerente al testo utente Markdown",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "REPRODUCED",
-      "description": "Inventario e altri blocchi Markdown interpolano testo utente senza escaping; l’helper è applicato soltanto ad hardware e note. Probe con nome apparato valido SW|north: riga inventario a sette colonne con nove pipe non escapate anziché otto. A capo/backtick e altri contesti restano da verificare; nessuna esecuzione di codice o esposizione credenziali dedotta.",
-      "closureCriteria": "Escaping contestuale uniforme per celle, titoli, elenchi e span di codice senza modificare il testo memorizzato. Provare pipe/backslash/backtick/CR/LF nei principali campi e tre lingue: numero colonne e struttura invariati, nessuna riga/intestazione introdotta dal contenuto.",
-      "references": [
-        "shared/exchange/src/main/java/com/onlyfield/assetmanager/exchange/MarkdownExportManager.kt",
-        "docs/03-export-and-documents.md",
-        "docs/repo-residuals-2026-10-09.md"
-      ],
-      "dependsOn": []
-    }
-  ],
+  "currentPhase": "Consegna per cambio sessione del 9 ottobre: AUD-45–51 completati, 0 task runtime e 4 residui aperti (0 P1, 3 P2, 1 P3). Chiusure ed evidenze nella roadmap.",
+  "activeTask": "RES-19",
+  "nextSession": "Ripartire dai soli RES-13/19/23/24; AUD-45–51 completati e rimossi. Priorità RES-19: matrice AppRoot/editor rete-cablaggio/alimentazione con guasto/riprova/undo, cartografia, spooler, TalkBack, rotazione e tablet. Scatti reali RES-13 rinviati dall’utente; scanner USB esclusi. RES-23 richiede collaudo EXE/password/focus/stampa. Non ritentare pulizie respinte RES-24. Conservare report, dati, backup e chiavi. Suite corrente 643 test verdi, quattro prove PDF native verdi; evidenze in roadmap e build/reports/tracker-remediation-20261009 (ignorate da Git, disponibili in questo checkout). Non ripetere prove già verdi senza nuovi problemi. Consegna su main autorizzata dall’utente per cambio sessione; SHA ed esito verificabili in Git. Questa richiesta non autorizza commit/push della prossima sessione.",
+  "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-13",
       "title": "Collaudo hardware manuale",
       "status": "PARTIAL",
-      "description": "Restano scatti reali con fotocamera integrata (FOTO-01–04, serie, annullamento/permesso negato, rotazione e scambio cifrato), scansione QR/barcode tramite fotocamera (QR-01–03), gesti multitouch (TOUCH-01–02), recupero dopo arresto forzato/perdita improvvisa di alimentazione durante scrittura. Scatti reali rinviati dall’utente; lettori USB e scanner esterni esclusi definitivamente. Recupero SQLCipher/Keystore dopo riavvio normale del dispositivo completato, cinque scenari isolati; esiti in roadmap e build/reports/res13-reboot-20261008. Non chiude le interruzioni improvvise o la UX AppRoot.",
-      "closureCriteria": "Checklist hardware aggiornata al perimetro approvato: fotocamera integrata e gesti, esiti ed evidenze. Verificare recupero isolato con chiave Keystore; distinguere riavvio processo, riavvio dispositivo e interruzione fisica. Nessun collaudo di lettori USB/scanner esterni richiesto.",
+      "description": "Restano scatti reali con fotocamera integrata (FOTO-01–04, serie, annullamento/permesso negato, rotazione e scambio cifrato), scansione QR/barcode tramite fotocamera (QR-01–03), gesti multitouch (TOUCH-01–02) e recupero dopo arresto forzato/perdita improvvisa di alimentazione durante scrittura. Scatti reali rinviati dall’utente; lettori USB e scanner esterni esclusi definitivamente. Prove di recupero già concluse nella roadmap; nessun collaudo improvviso dedotto dal riavvio normale.",
+      "closureCriteria": "Completare la checklist della fotocamera integrata e dei gesti con evidenze reali. Verificare recupero isolato SQLCipher/Keystore dopo arresto forzato e interruzione improvvisa, distinguendoli dal riavvio normale già verificato. Nessun collaudo di lettori USB/scanner esterni richiesto.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
       "references": [
@@ -139,7 +24,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Proseguire la matrice completa UX-01–06 su Android: 360/412 dp, chiaro/scuro, testo 1,0/1,3, tastiera aperta, rotazione, TalkBack audio e focus. Restano intera AppRoot/editor/persistenza, configuratore con trascinamento/ridimensionamento/tratte posteriori, zoom a due dita, moncone/Vai a/passanti/ponti radio, collegamenti logici, percorso/topologia/Altri moduli e Demo Comune con mappe dense. Verificare messaggi/riprova dei flussi asincroni e del pannello occupato sopra i form, import con molti avvisi, password/recupero, fusione/rifiuto per ciclo, ripristino con contesto assente/cambiato/collisioni e ID appartenenti ad altro progetto, stampa Android con annullamento/callback. Le prove native isolate già concluse non coprono questa matrice. Moto g86 riconnesso: evidenze finali recuperate e verificate, dati/chiavi/backup invariati e app riaperta. Dettagli/esiti completati in checklist e roadmap. Revisione UI/UX dell’8 ottobre: navigazione adattiva, scheda espandibile e stato mappa implementati. Matrici Compose e prove native isolate documentate nell’audit UI/UX; restano rotazione reale, TalkBack audio/focus e matrice integrale AppRoot/editor/EXE, inclusi tablet fisici.",
+      "description": "Completare UX-01–06 su Android: 360/412 dp, chiaro/scuro, testo 1,0/1,3, tastiera aperta, rotazione reale, TalkBack audio/focus e tablet fisici. Restano intera AppRoot/editor/persistenza, configuratore con trascinamento/ridimensionamento/tratte posteriori, zoom a due dita, moncone/Vai a/passanti/ponti radio, collegamenti logici, percorso/topologia/Altri moduli e Demo Comune densa. Verificare messaggi/riprova asincroni, pannello occupato sopra i form, import con molti avvisi, password/recupero, fusione/rifiuto per ciclo e ripristino con contesto assente/cambiato/collisioni o ID esterni. AUD-46: creazione/modifica nativa di VLAN, subnet, interfacce, WAN/VPN, configurazioni, campi extra, cavi, permutazioni, alimentazioni, PoE e badge con guasto/riprova/undo. AUD-48: messaggi/riprova cartografia e progetto invariato al download fallito in AppRoot. AUD-47: dialogo spooler, cambio attributi interattivo e annullamento durante anteprima/stampa; callback dello spooler e stampante fisica ancora da collaudare. I PDF reali e le prove isolate già concluse sono nella roadmap e non chiudono questa matrice.",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
@@ -150,18 +35,13 @@
         "docs/ui-restyling-2026-10-09.md",
         "docs/repo-residuals-2026-10-09.md"
       ],
-      "dependsOn": [
-        "AUD-46",
-        "AUD-49",
-        "AUD-48",
-        "AUD-47"
-      ]
+      "dependsOn": []
     },
     {
       "id": "RES-23",
       "title": "Collaudo visivo Windows delle operazioni in background",
       "status": "PARTIAL",
-      "description": "Restano la matrice completa mouse/tastiera/focus durante salvataggio (oltre ai Ctrl+N/Ctrl+W verificati), editor/picker e layout non ancora collaudati, password errata/riprova, guasto del cambio password e focus dopo recupero bloccato/riprova, fusione con testo ingrandito, trasferimento porte/configurazioni/alimentazioni/campi extra, ripristino rifiutato per ciclo e riprova, errore reale del motore di stampa. Nessuna stampa fisica eseguita. Impostazione manuale password e riapertura corretta con PDF cifrato completate; gli scenari password restanti richiedono interazione dell’utente. Scenari completati e AUD-43/44 corretti registrati nella roadmap, senza estendere gli esiti a superfici diverse. Ultimo report res23-editors-20261008; 219 test Windows verdi, EXE/helper chiusi. Prove automatiche/host isolati non sostituiscono i collaudi mancanti. Revisione UI/UX dell’8 ottobre: navigazione adattiva, scheda espandibile e stato mappa implementati. Matrici Compose e prove native isolate documentate nell’audit UI/UX; restano rotazione reale, TalkBack audio/focus e matrice integrale AppRoot/editor/EXE, inclusi tablet fisici.",
+      "description": "Restano matrice EXE mouse/tastiera/focus durante salvataggio, editor/picker/layout non ancora collaudati, password errata/riprova, guasto del cambio password e focus dopo recupero bloccato/riprova, fusione con testo ingrandito, trasferimento porte/configurazioni/alimentazioni/campi extra, ripristino rifiutato per ciclo e riprova, errore reale del motore di stampa e stampa fisica. I flussi password richiedono interazione dell’utente senza acquisire segreti. AUD-46: collaudo EXE di rete e cablaggio dopo guasto/riprova/undo e focus. Prove Compose e scenari nativi già conclusi sono nella roadmap; non sostituiscono i collaudi mancanti.",
       "closureCriteria": "Verifiche manuali Windows registrate; pannello leggibile, nessuna modifica durante il salvataggio, dialoghi e stampa annullabili senza perdita dei dati.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
@@ -172,18 +52,14 @@
         "docs/ui-restyling-2026-10-09.md",
         "docs/repo-residuals-2026-10-09.md"
       ],
-      "dependsOn": [
-        "AUD-45",
-        "AUD-46",
-        "AUD-49"
-      ]
+      "dependsOn": []
     },
     {
       "id": "RES-24",
       "title": "Pulizia finale delle risorse di collaudo",
       "status": "PARTIAL",
-      "description": "Pulizie storiche respinte dal controllo automatico, non ritentate: build/import-benchmark, build/native-window-app, build/native-window-exports, sei helper Python in build/, .kotlin e .kotlin/sessions vuote, build/tmp/res23-20261007 e quattro fixture JUnit esatte elencate nei criteri. I log build/task-verification/emulator.log ed emulator-error.log restano vincolati all’emulatore della sessione originaria; nessun processo altrui terminato. Pulizia telefono completata: evidenze esportate/verificate, APK test rimosso, dati/chiavi/backup invariati e app riaperta. Scratch res23-20261007 riusato, EXE/helper chiusi, report conservati. Inventari storici in roadmap e build/reports/aud36-scratch-inventory.json; mantenere evidenze/app/demo/backup/media/chiavi. Nuova pulizia respinta in questa sessione, non ritentata: pc/app/build/compose/binaries/main/app/OnlyFieldAssetManager/data (copia minima sintetica AUD-43) e build/reports/res23-editors-20261008/apply-model-entities-before.json (probe invalido con target/other null, non evidenza). Inventario cleanup-blocked-inventory.json; fixture e scratch conservati, tutti gli EXE chiusi. Runtime AUD-44 e fixture sintetica in build/tmp/aud44-native-20261008 conservati; inventario aud44-fixture-inventory.json, nessuna pulizia tentata. Nuovo collaudo recovery dopo riavvio completato: fixture isolata rimossa dal test, APK test disinstallato, hash dati/chiavi/backup invariati e MainActivity riaperta. Report conservati. Collaudo UI/UX concluso: APK test della revisione rimosso, MainActivity riaperta; evidenze nuove conservate in build/reports/ux-native-20261008. Nessuna pulizia delle risorse storiche ritentata. Audit del 9 ottobre: controllo automatico ha respinto la rimozione delle sole tre directory build/tmp/repo-audit-20261009-portable, build/tmp/repo-audit-20261009-network e build/tmp/repo-audit-20261009-data con motivo blocked by policy; nessun ritentativo. Sorgenti dei probe e XML già archiviati in build/reports/repo-audit-20261009; inventario cleanup-blocked-inventory.json. Queste directory contengono solo scratch/probe e dati sintetici della sessione.",
-      "closureCriteria": "Rimuovere solo le risorse sintetiche verificate quando la pulizia è consentita o manualmente: le tre directory e sei helper citati, .kotlin/.kotlin/sessions vuote, build/tmp/res23-20261007. Chiudere l’emulatore dalla sessione originaria o manualmente prima di eliminare i due log e build/task-verification. Quattro fixture JUnit: C:/Users/Utente/AppData/Local/Temp/junit10286553091186025830, junit11592642661752598349, junit4438272577723122568, junit6556371108130799667 (ultimo inventario 6708 byte, soli dati sintetici; riverificare prima della rimozione). Conservare tutti i report e backup. Quando consentito o manualmente, rimuovere anche la nuova data del runtime generato indicata nella descrizione dopo controllo con cleanup-blocked-inventory.json, e il solo probe invalido apply-model-entities-before.json. Preservare la baseline corretta apply-model-undo-baseline.json e tutti gli altri report. Rimuovere il solo runtime/fixture sintetico AUD-44 dopo riverifica inventario, preservando i report. Quando consentito o manualmente, rimuovere anche le tre directory repo-audit-20261009-portable/network/data sopra elencate dopo riverifica dell’inventario; conservare interamente build/reports/repo-audit-20261009.",
+      "description": "Pulizie storiche respinte dal controllo automatico, non ritentare: build/import-benchmark, build/native-window-app, build/native-window-exports, sei helper Python in build/, .kotlin/.kotlin/sessions vuote, build/tmp/res23-20261007 e quattro fixture JUnit elencate nei criteri. Log build/task-verification/emulator.log ed emulator-error.log vincolati all’emulatore della sessione originaria. Restano la fixture sintetica del runtime pc/app/build/compose/binaries/main/app/OnlyFieldAssetManager/data e il solo probe invalido build/reports/res23-editors-20261008/apply-model-entities-before.json, il runtime/fixture AUD-44 in build/tmp/aud44-native-20261008 e le tre directory build/tmp/repo-audit-20261009-portable/network/data respinte nell’audit. Riverificare gli inventari aud36-scratch-inventory.json, cleanup-blocked-inventory.json e aud44-fixture-inventory.json prima di eventuale pulizia manuale/consentita. Preservare report, app/demo, backup, media e chiavi; non terminare processi di altre sessioni. Pulizie completate e incidente della fixture sintetica AUD-45 documentati nella roadmap; nessun recupero richiesto per il pacchetto di test mancante. Nuova pulizia della remediation respinta con blocked by policy: build/tmp/remediation_docs.py, build/tmp/__pycache__/remediation_docs.cpython-313.pyc e directory __pycache__ solo se vuota. Nessun ritentativo; inventario esatto in build/reports/tracker-remediation-20261009/cleanup-blocked-inventory.json.",
+      "closureCriteria": "Rimuovere solo le risorse sintetiche verificate quando la pulizia è consentita o manualmente: le tre directory e sei helper citati, .kotlin/.kotlin/sessions vuote, build/tmp/res23-20261007. Chiudere l’emulatore dalla sessione originaria o manualmente prima di eliminare i due log e build/task-verification. Quattro fixture JUnit: C:/Users/Utente/AppData/Local/Temp/junit10286553091186025830, junit11592642661752598349, junit4438272577723122568, junit6556371108130799667 (ultimo inventario 6708 byte, soli dati sintetici; riverificare prima della rimozione). Conservare tutti i report e backup. Quando consentito o manualmente, rimuovere anche la nuova data del runtime generato indicata nella descrizione dopo controllo con cleanup-blocked-inventory.json, e il solo probe invalido apply-model-entities-before.json. Preservare la baseline corretta apply-model-undo-baseline.json e tutti gli altri report. Rimuovere il solo runtime/fixture sintetico AUD-44 dopo riverifica inventario, preservando i report. Quando consentito o manualmente, rimuovere anche le tre directory repo-audit-20261009-portable/network/data sopra elencate dopo riverifica dell’inventario; conservare interamente build/reports/repo-audit-20261009. Quando consentito o manualmente, rimuovere solo i due file della remediation inventariati e __pycache__ se vuota, preservando gli altri scratch/report.",
       "priority": "P3",
       "evidenceLevel": "PARTIAL_VERIFICATION",
       "references": [

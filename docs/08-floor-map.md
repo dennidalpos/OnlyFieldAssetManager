@@ -109,3 +109,7 @@ I form sede/piano, MapObjectPicker e PlanChooser della mappa conservano bozza e 
 
 
 AUD-39 (7 ottobre): il form di download conserva coordinate, zoom e nome dopo errore della sorgente o salvataggio fallito; la stessa conferma consente di riprovare. Download e import allegati chiudono dopo il successo e non pubblicano esiti verso una bozza/sessione dismessa. Prova nativa con PNG e sorgente sintetici, repository reale; server pubblico non collaudato. Evidenze nella roadmap e in RES-19.
+
+### AUD-48 — 9 ottobre 2026
+
+Tile Android limitati a 2 MiB durante la lettura, connessione disconnessa in finally. Dimensioni 256x256 verificate prima del decode; bitmap individuali e risultato sempre riciclati, anche a guasto parziale. La griglia usa wrap X e clamp Y ai bordi; input geografici non finiti o fuori range rifiutati. Rimossa la costante italiana legacy NO_NETWORK_MESSAGE dal modulo Android; messaggi it/en/es conservati.

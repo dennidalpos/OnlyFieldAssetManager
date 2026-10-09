@@ -66,12 +66,13 @@ class DocumentSelectionTest {
             }
             for (d in listOf(chosen, otherFloor, otherCategory, outside)) {
                 val included = d.id in selected
-                assertEquals("Markdown inventory ${d.technicalName}: $filter", included, md.contains("${d.technicalName}-PORT"))
+                val markdownName = d.technicalName.replace("_", "\\_")
+                assertEquals("Markdown inventory ${d.technicalName}: $filter", included, md.contains("${markdownName}-PORT"))
                 assertEquals("XLSX inventory ${d.technicalName}: $filter", included, sheets.getValue("xl/worksheets/sheet1.xml").contains(d.technicalName))
-                assertEquals(included, md.contains("${d.technicalName}_ATTACHMENT"))
+                assertEquals(included, md.contains("${markdownName}\\_ATTACHMENT"))
                 assertEquals(included, sheets.getValue("xl/worksheets/sheet5.xml").contains("${d.technicalName}_ATTACHMENT"))
             }
-            assertFalse(md.contains("SITE_B_VLAN"))
+            assertFalse(md.contains("SITE\\_B\\_VLAN"))
             assertFalse(sheets.getValue("xl/worksheets/sheet3.xml").contains("SITE_B_VLAN"))
         }
     }

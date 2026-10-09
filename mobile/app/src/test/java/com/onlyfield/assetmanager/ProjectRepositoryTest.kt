@@ -58,6 +58,22 @@ class ProjectRepositoryTest {
         db.close()
     }
 
+    @Test fun nonFiniteUpdateLeavesRoomProjectUnchanged() = runBlocking {
+        val device = Device(technicalName = "Finite device", mountingType = com.onlyfield.assetmanager.core.model.MountingType.OUT_OF_RACK)
+        val initial = Project(name = "Finite project", createdEpochMs = 1, updatedEpochMs = 1,
+            sites = listOf(Site(name = "Site", devices = listOf(device))))
+        repository.saveProject(initial)
+        for (value in listOf(Double.NaN, Double.POSITIVE_INFINITY, Double.NEGATIVE_INFINITY)) {
+            try {
+                repository.saveProject(initial.copy(powerFeeds = listOf(com.onlyfield.assetmanager.core.model.PowerFeed(
+                    deviceId = device.id, feedName = "Invalid feed", loadWatts = value))))
+                org.junit.Assert.fail("Non-finite value saved")
+            } catch (_: IllegalArgumentException) {
+                assertEquals(initial, repository.getProjectById(initial.id))
+            }
+        }
+    }
+
     @Test
     fun testSaveAndReloadProjectPreservesAllDataAndIds() = runBlocking {
         val projId = UUID.randomUUID().toString()

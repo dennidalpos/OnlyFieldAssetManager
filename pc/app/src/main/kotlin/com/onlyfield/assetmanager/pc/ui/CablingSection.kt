@@ -21,7 +21,7 @@ import com.onlyfield.assetmanager.pc.ui.components.*
 import com.onlyfield.assetmanager.core.forms.PanelMappingForm
 
 @Composable
-fun CablingSection(project: Project, onProjectUpdated: (Project, String) -> Unit) {
+fun CablingSection(project: Project, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String? = { null }) {
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
@@ -32,8 +32,8 @@ fun CablingSection(project: Project, onProjectUpdated: (Project, String) -> Unit
             tab
         ) { tab = it }
         when (tab) {
-            0 -> CablesTab(project, index, onProjectUpdated)
-            1 -> MappingsTab(project, index, onProjectUpdated)
+            0 -> CablesTab(project, index, onProjectUpdated, saveError)
+            1 -> MappingsTab(project, index, onProjectUpdated, saveError)
         }
     }
 }
@@ -70,7 +70,7 @@ fun PortPicker(
 }
 
 @Composable
-private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     var query by remember { mutableStateOf("") }
@@ -83,11 +83,11 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(i18n.text("text.d80a762409b3"), searchQuery = query, onSearchChange = { query = it }, searchPlaceholder = i18n.text("text.7a29a24c6681")) {
-            Button(onClick = { changeDetail { creating = true } }) { Text(i18n.text("text.f72283c631b5")) }
+            Button(onClick = { changeDetail { editing = null; creating = true } }) { Text(i18n.text("text.f72283c631b5")) }
         }
         if (cables.isEmpty()) {
             EmptyState(if (project.cables.isEmpty()) i18n.text("text.9fbf0fecd44a") else i18n.text("text.bcc05b916ded"),
-                actionLabel = i18n.text("text.f72283c631b5").takeIf { project.cables.isEmpty() }, onAction = { creating = true })
+                actionLabel = i18n.text("text.f72283c631b5").takeIf { project.cables.isEmpty() }, onAction = { changeDetail { editing = null; creating = true } })
         } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(cables.sortedForDisplay(i18n) { it.codeOrLabel.orEmpty() }, key = { it.id }) { cable ->
                 ItemCard(
@@ -102,7 +102,7 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
                         cable.notes.orEmpty()
                     )
                 ) {
-                    EditButton { editing = cable }
+                    EditButton { changeDetail { creating = false; editing = cable } }
                     DeleteButton(cable.codeOrLabel ?: i18n.text("text.89dbe18e8407"), onDelete = { onProjectUpdated(ProjectEdits.deleteCable(project, cable.id), i18n.text("text.20c7dd63256f")) })
                 }
             }
@@ -113,13 +113,17 @@ private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
         var draft by remember(LocalDetailSlot.current?.editorVersion, editing) { mutableStateOf(com.onlyfield.assetmanager.core.forms.MapObjectDraft.forCable(project, editing)) }
         EditPanel(title = configuratorTitle(project, draft, i18n), confirmLabel = configuratorAction(project, draft, i18n), onDismiss = { creating = false; editing = null }, width = 800.dp,
             validationMessage = configuratorValidation(project, draft, i18n), confirmEnabled = draft.errors(project, i18n).isEmpty(), onConfirm = {
-                onProjectUpdated(draft.apply(project, i18n), configuratorTitle(project, draft, i18n)); creating = false; editing = null
-            }) { ObjectFields(project, draft) { draft = it } }
+                onProjectUpdated(draft.apply(project, i18n), configuratorTitle(project, draft, i18n))
+                if (saveError() == null) { creating = false; editing = null }
+            }) {
+                saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                ObjectFields(project, draft) { draft = it }
+            }
     }
 }
 
 @Composable
-private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit) {
+private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
     var editing by remember { mutableStateOf<PanelMapping?>(null) }
@@ -128,10 +132,10 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(i18n.text("text.66cdda39c617"), subtitle = i18n.text("text.dbb1113ac371")) {
-            Button(onClick = { changeDetail { creating = true } }) { Text(i18n.text("text.8c5385b5431b")) }
+            Button(onClick = { changeDetail { editing = null; creating = true } }) { Text(i18n.text("text.8c5385b5431b")) }
         }
         if (project.panelMappings.isEmpty()) {
-            EmptyState(i18n.text("text.65ca63c9b90c"), actionLabel = i18n.text("text.8c5385b5431b"), onAction = { creating = true })
+            EmptyState(i18n.text("text.65ca63c9b90c"), actionLabel = i18n.text("text.8c5385b5431b"), onAction = { changeDetail { editing = null; creating = true } })
         } else LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             items(project.panelMappings, key = { it.id }) { m ->
                 ItemCard(
@@ -139,7 +143,7 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
                     details = emptyList(),
                     badge = if (m.isUnknownPassage) i18n.text("text.8c5c99642be7") else null
                 ) {
-                    EditButton { editing = m }
+                    EditButton { changeDetail { creating = false; editing = m } }
                     DeleteButton("permutazione", onDelete = { onProjectUpdated(ProjectEdits.deletePanelMapping(project, m.id), i18n.text("text.838b61a43b92")) })
                 }
             }
@@ -156,11 +160,12 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
             confirmEnabled = errors.isEmpty(),
             onConfirm = {
                 val saved = form.toMapping(m)
-                creating = false; editing = null
                 onProjectUpdated(if (m == null) ProjectEdits.addPanelMapping(project, saved) else ProjectEdits.updatePanelMapping(project, saved), i18n.text("text.c64f4269ee7c"))
+                if (saveError() == null) { creating = false; editing = null }
             },
             width = 640.dp
         ) {
+            saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             PortPicker(i18n.text("text.87af12314823"), index, form.portAId, { form = form.copy(portAId = it) }, noneLabel = null, error = errors["portAId"])
             PortPicker(i18n.text("text.dcc43f317d0c"), index, form.portBId, { form = form.copy(portBId = it) }, noneLabel = i18n.text("text.f56b9cfaeb27"), error = errors["portBId"])
             LabeledCheckbox(form.isUnknownPassage, { form = form.copy(isUnknownPassage = it) }, i18n.text("text.a4e483155a37"))

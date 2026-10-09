@@ -112,11 +112,13 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         val v = t.item
         var form by remember(t) { mutableStateOf(VlanForm.from(v)) }
         val taken = project.vlans.filter { it.id != v?.id && it.scopeType == VlanScopeType.PROJECT }.map { it.vlanId }.toSet()
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(taken, i18n = i18n)
         EditScreen(if (v == null) i18n.text("text.864bdda898fc") else i18n.text("text.7413bdc75d86"), { vlan = null }, {
-            vlan = null; val saved = form.toVlan(v)
-            vm.edit(i18n.text("text.9c856115c4fc", saved.vlanId)) { if (v == null) ProjectEdits.addVlan(it, saved) else ProjectEdits.updateVlan(it, saved) }
+            val saved = form.toVlan(v)
+            save.save(i18n.text("text.9c856115c4fc", saved.vlanId), { vlan = null }) { if (v == null) ProjectEdits.addVlan(it, saved) else ProjectEdits.updateVlan(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(form.vlanId, { form = form.copy(vlanId = it) }, i18n.text("text.21d0e8b7d284"), error = errors["vlanId"], hint = "1–4094", kind = FieldKind.NUMBER)
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), error = errors["name"])
             EnumPicker(i18n.text("text.03cbc24f25f2"), VlanScopeType.entries, form.scopeType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(scopeType = it, scopeTargetId = null) })
@@ -132,11 +134,13 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     subnet?.let { t ->
         val s = t.item
         var form by remember(t) { mutableStateOf(SubnetForm.from(s)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (s == null) i18n.text("text.5c8aa6f5ef27") else i18n.text("text.0db1e97aa029"), { subnet = null }, {
-            subnet = null; val saved = form.toSubnet(s)
-            vm.edit(i18n.text("text.be84c37df37d")) { if (s == null) ProjectEdits.addSubnet(it, saved) else ProjectEdits.updateSubnet(it, saved) }
+            val saved = form.toSubnet(s)
+            save.save(i18n.text("text.be84c37df37d"), { subnet = null }) { if (s == null) ProjectEdits.addSubnet(it, saved) else ProjectEdits.updateSubnet(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, i18n.text("text.a1f614a904b2"), error = errors["cidrBlock"], hint = i18n.text("text.ee4725fa1904"), kind = FieldKind.IP)
             FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, i18n.text("text.41ed52921661"), error = errors["gatewayIp"], kind = FieldKind.IP)
             OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
@@ -149,11 +153,13 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     iface?.let { t ->
         val i = t.item
         var form by remember(t) { mutableStateOf(LogicalInterfaceForm.from(i)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (i == null) i18n.text("text.80f149c18ac7") else i18n.text("text.a4d9c2f8f102"), { iface = null }, {
-            iface = null; val saved = form.toInterface(i)
-            vm.edit(i18n.text("text.4292a16c17ce")) { if (i == null) ProjectEdits.addLogicalInterface(it, saved) else ProjectEdits.updateLogicalInterface(it, saved) }
+            val saved = form.toInterface(i)
+            save.save(i18n.text("text.4292a16c17ce"), { iface = null }) { if (i == null) ProjectEdits.addLogicalInterface(it, saved) else ProjectEdits.updateLogicalInterface(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.e7f2c0e68768"), index, form.deviceId, { form = form.copy(deviceId = it) })
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), error = errors["name"], hint = i18n.text("text.4575ffa32f9c"))
             FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, i18n.text("text.ebb396f2d486"), error = errors["ipAddress"], kind = FieldKind.IP)
@@ -168,11 +174,13 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     wan?.let { t ->
         val c = t.item
         var form by remember(t) { mutableStateOf(WanForm.from(c)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (c == null) i18n.text("text.cfcfd59f1b90") else i18n.text("text.716af1fcb21e"), { wan = null }, {
-            wan = null; val saved = form.toConnection(c)
-            vm.edit(i18n.text("text.ec170e822ebb")) { if (c == null) ProjectEdits.addWanVpnConnection(it, saved) else ProjectEdits.updateWanVpnConnection(it, saved) }
+            val saved = form.toConnection(c)
+            save.save(i18n.text("text.ec170e822ebb"), { wan = null }) { if (c == null) ProjectEdits.addWanVpnConnection(it, saved) else ProjectEdits.updateWanVpnConnection(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.656e4a65e6cc"), error = errors["name"])
             EnumPicker(i18n.text("text.3868d2843d59"), WanVpnType.entries, form.type, { it.toDisplayString(i18n = i18n) }, { form = form.copy(type = it) })
             FormField(form.provider, { form = form.copy(provider = it) }, i18n.text("text.ad528b8d1f72"))
@@ -187,11 +195,13 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     config?.let { t ->
         val c = t.item
         var form by remember(t) { mutableStateOf(DeviceConfigForm.from(c)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (c == null) i18n.text("text.66b4e494cd62") else i18n.text("text.dfff9fc66812"), { config = null }, {
-            config = null; val saved = form.toConfig(c)
-            vm.edit(i18n.text("text.b2ed6f265907")) { if (c == null) ProjectEdits.addDeviceConfiguration(it, saved) else ProjectEdits.updateDeviceConfiguration(it, saved) }
+            val saved = form.toConfig(c)
+            save.save(i18n.text("text.b2ed6f265907"), { config = null }) { if (c == null) ProjectEdits.addDeviceConfiguration(it, saved) else ProjectEdits.updateDeviceConfiguration(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.e7f2c0e68768"), index, form.deviceId, { form = form.copy(deviceId = it) })
             FormField(form.title, { form = form.copy(title = it) }, i18n.text("text.b03a74353bbd"), error = errors["title"])
             val markDirty = LocalMarkDirty.current
@@ -203,11 +213,13 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
     extra?.let { t ->
         val f = t.item
         var form by remember(t) { mutableStateOf(ExtraFieldForm.from(f)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (f == null) i18n.text("text.84b0d716f809") else i18n.text("text.d6c18565dd61"), { extra = null }, {
-            extra = null; val saved = form.toField(f, project.id)
-            vm.edit(i18n.text("text.b24051277c7c")) { if (f == null) ProjectEdits.addCustomExtraField(it, saved) else ProjectEdits.updateCustomExtraField(it, saved) }
+            val saved = form.toField(f, project.id)
+            save.save(i18n.text("text.b24051277c7c"), { extra = null }) { if (f == null) ProjectEdits.addCustomExtraField(it, saved) else ProjectEdits.updateCustomExtraField(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             TargetPicker(index, form.target, { form = form.copy(target = it) })
             FormField(form.key, { form = form.copy(key = it) }, i18n.text("text.4702cf978b67"), error = errors["key"], hint = i18n.text("text.08d801a474bf"))
             EnumPicker(i18n.text("text.3868d2843d59"), CustomFieldType.entries, form.fieldType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(fieldType = it) })
@@ -270,11 +282,13 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     feed?.let { t ->
         val f = t.item
         var form by remember(t) { mutableStateOf(PowerFeedForm.from(f)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (f == null) i18n.text("text.4caa90bd8cd8") else i18n.text("text.ef9307d35ec6"), { feed = null }, {
-            feed = null; val saved = form.toFeed(f)
-            vm.edit(i18n.text("text.4237371feb41")) { if (f == null) ProjectEdits.addPowerFeed(it, saved) else ProjectEdits.updatePowerFeed(it, saved) }
+            val saved = form.toFeed(f)
+            save.save(i18n.text("text.4237371feb41"), { feed = null }) { if (f == null) ProjectEdits.addPowerFeed(it, saved) else ProjectEdits.updatePowerFeed(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.a814bcd8ca15"), index, form.deviceId, { form = form.copy(deviceId = it) })
             FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), error = errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
             EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) })
@@ -291,11 +305,13 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     poe?.let { t ->
         val p = t.item
         var form by remember(t) { mutableStateOf(PoeForm.from(p)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (p == null) i18n.text("text.129c22f2302d") else i18n.text("text.7b99bcd56c82"), { poe = null }, {
-            poe = null; val saved = form.toMapping(p)
-            vm.edit(i18n.text("text.f22a08c0aa60")) { ProjectEdits.addOrUpdatePoeMapping(it, saved) }
+            val saved = form.toMapping(p)
+            save.save(i18n.text("text.f22a08c0aa60"), { poe = null }) { ProjectEdits.addOrUpdatePoeMapping(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             PortPicker(i18n.text("text.57c2ec879203"), index, form.portId, { form = form.copy(portId = it) }, noneLabel = null)
             EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) })
             EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) })
@@ -306,11 +322,13 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     badge?.let { t ->
         val b = t.item
         var form by remember(t) { mutableStateOf(BadgeForm.from(b)) }
+        val save = rememberEditSave(vm, t)
         val errors = form.errors(i18n = i18n)
         EditScreen(if (b == null) i18n.text("text.66060a3a6be2") else i18n.text("text.6720d0dc04c9"), { badge = null }, {
-            badge = null; val saved = form.toBadge(b, project.id)
-            vm.edit(i18n.text("text.6b86c681c041")) { if (b == null) ProjectEdits.addDocumentBadge(it, saved) else ProjectEdits.updateDocumentBadge(it, saved) }
+            val saved = form.toBadge(b, project.id)
+            save.save(i18n.text("text.6b86c681c041"), { badge = null }) { if (b == null) ProjectEdits.addDocumentBadge(it, saved) else ProjectEdits.updateDocumentBadge(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
+            save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             TargetPicker(index, form.target, { form = form.copy(target = it) })
             FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), error = errors["label"])
             EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) })

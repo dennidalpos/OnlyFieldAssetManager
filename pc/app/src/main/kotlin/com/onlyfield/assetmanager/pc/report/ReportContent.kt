@@ -161,11 +161,16 @@ object ReportContent {
 
         if (selection.includePowerAndBadges && (selectedProject.powerFeeds.isNotEmpty() || selectedProject.poeMappings.isNotEmpty() || selectedProject.documentBadges.isNotEmpty())) {
             heading(i18n.text("text.acedc1948e5f"))
-            selectedProject.powerFeeds.forEach { f ->
-                val source = f.sourceDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: f.sourceOutletDescription
-                val load = listOfNotNull(f.loadWatts?.let { i18n.text("text.cd49315c743a", it) }, f.observedRuntimeMinutes?.let { i18n.text("text.2dc280aa0f83", it) }).joinToString(", ")
-                item("${index.deviceName(f.deviceId, i18n = i18n)} · ${f.feedName} (${f.feedType.toDisplayString(i18n = i18n)})" +
-                    (source?.let { i18n.text("text.a863d2c56b73", it) } ?: "") + (if (load.isNotEmpty()) " — $load" else ""))
+            val sourceIndex = ProjectIndex(project)
+            selectedProject.powerFeeds.forEach { feed ->
+                val sourceId = project.powerFeeds.firstOrNull { it.id == feed.id }?.sourceDeviceId
+                val details = listOfNotNull(sourceId?.let { sourceIndex.deviceName(it, i18n = i18n) }, feed.sourceOutletDescription,
+                    feed.voltageVolts?.let { "$it V" }, feed.loadVa?.let { "$it VA" }, feed.loadWatts?.let { "$it W" },
+                    feed.observedRuntimeMinutes?.let { i18n.text("text.2dc280aa0f83", it) },
+                    feed.observedSource?.let { "${i18n.text("document.observedSource")}: $it" },
+                    feed.observedEpochMs?.let { "${i18n.text("document.observedDate")}: ${java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", i18n.locale).format(java.util.Date(it))}" }, feed.notes)
+                item("${index.deviceName(feed.deviceId, i18n = i18n)} · ${feed.feedName} (${feed.feedType.toDisplayString(i18n)})" +
+                    details.joinToString(" · ", prefix = if (details.isEmpty()) "" else " · "))
             }
             selectedProject.poeMappings.forEach { p -> item(i18n.text("text.cb79585925c3", index.portLabel(p.portId), p.role.toDisplayString(i18n = i18n), p.standard.toDisplayString(i18n = i18n))) }
             selectedProject.documentBadges.forEach { b -> item(i18n.text("text.3b424f3a179d", b.label, index.targetLabel(b.targetType, b.targetId, i18n = i18n))) }

@@ -16,6 +16,27 @@ import java.util.Date
 /** Writes filtered Markdown without credentials. */
 object MarkdownExportManager {
 
+    private fun singleLine(value: String) = value.replace("\r\n", " ").replace('\r', ' ').replace('\n', ' ')
+
+    private fun escaped(value: String?) = buildString {
+        for (character in singleLine(value.orEmpty())) {
+            if (character in "\\`*_{}[]()#+!|<>~&") append('\\')
+            append(character)
+        }
+    }
+
+    // Keep table separators outside code spans so renderers preserve literal backslashes.
+    private fun code(value: String): String = singleLine(value).split('|').joinToString("\\|") {
+        if (it.isEmpty()) "" else codePart(it)
+    }
+
+    private fun codePart(text: String): String {
+        val delimiter = "`".repeat((Regex("`+").findAll(text).maxOfOrNull { it.value.length } ?: 0) + 1)
+        val pad = if (text.startsWith('`') || text.endsWith('`') ||
+            (text.startsWith(' ') && text.endsWith(' ') && text.isNotBlank())) " " else ""
+        return "$delimiter$pad$text$pad$delimiter"
+    }
+
     fun exportMarkdownToStream(
         project: Project,
         filterConfig: ExportFilterConfig,
@@ -32,13 +53,13 @@ object MarkdownExportManager {
 
         val sb = StringBuilder()
 
-        sb.append(i18n.text("text.51d55eca0da1", filterConfig.titleOverride ?: selectedProject.name))
-        sb.append(i18n.text("text.a9f159e06d8c", selectedProject.name))
+        sb.append(i18n.text("text.51d55eca0da1", escaped(filterConfig.titleOverride ?: selectedProject.name)))
+        sb.append(i18n.text("text.a9f159e06d8c", escaped(selectedProject.name)))
         if (selectedProject.description != null) {
-            sb.append(i18n.text("text.928cda9b0882", selectedProject.description))
+            sb.append(i18n.text("text.928cda9b0882", escaped(selectedProject.description)))
         }
         sb.append(i18n.text("text.5079451365c9", dateStr))
-        sb.append(i18n.text("text.2fc8bcdb6d41", filterConfig.authorName))
+        sb.append(i18n.text("text.2fc8bcdb6d41", escaped(filterConfig.authorName)))
         sb.append(i18n.text("text.bb00e8824c7e", if (filterConfig.includeConfidential) i18n.text("text.de50b753caa5") else i18n.text("text.067d356a24e8")))
 
         sb.append("---\n\n")
@@ -66,13 +87,12 @@ object MarkdownExportManager {
             val rackLoc = if (dev.rackId != null) i18n.text("text.6a25a1235a6f", rackName, dev.positionU ?: "-") else i18n.text("text.3f03be4817b0")
             val statusStr = dev.observation.effectiveStatus().toDisplayString(i18n)
 
-            sb.append("| **${dev.technicalName}** | `${dev.ipAddress ?: "-"}` | ${dev.category.toDisplayString(i18n)} | $rackLoc | ${dev.ports.size} | ${dev.operationalStatus.toDisplayString(i18n)} | `$statusStr` |\n")
+            sb.append("| **${escaped(dev.technicalName)}** | ${code(dev.ipAddress ?: "-")} | ${dev.category.toDisplayString(i18n)} | ${escaped(rackLoc)} | ${dev.ports.size} | ${dev.operationalStatus.toDisplayString(i18n)} | `$statusStr` |\n")
         }
         sb.append("\n")
 
         sb.append("## ${i18n.text("config.title")}\n\n")
         val graph = com.onlyfield.assetmanager.core.model.ConnectionGraph(project)
-        fun escaped(value: String) = value.replace("|", "\\|").replace("\n", " ")
         filteredDevices.forEach { device ->
             sb.append("### ${escaped(device.technicalName)}\n\n")
             sb.append("${i18n.text("config.features")}: ${escaped(device.hardware.features.joinToString(", "))}\n\n")
@@ -91,7 +111,7 @@ object MarkdownExportManager {
             sb.append(i18n.text("text.6ebb98387f5e"))
             for (rack in selectedProject.racks) {
                 val devicesInRack = filteredDevices.filter { it.rackId == rack.id }
-                sb.append(i18n.text("text.9d606200307f", rack.name, rack.heightU))
+                sb.append(i18n.text("text.9d606200307f", escaped(rack.name), rack.heightU))
                 sb.append("${i18n.text("config.depth")}: ${rack.depthMm ?: "-"}; ${i18n.text("config.mountDepth")}: ${rack.mountingDepthMm ?: "-"}\n\n")
                 if (devicesInRack.isEmpty()) {
                     sb.append(i18n.text("text.63850e0d2ec8"))
@@ -99,7 +119,7 @@ object MarkdownExportManager {
                     sb.append(i18n.text("text.26a1e997de6d"))
                     sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
                     for (dev in devicesInRack.sortedByDescending { it.positionU ?: 0 }) {
-                        sb.append(i18n.text("text.7a8d1ba5decb", dev.positionU ?: "-", dev.rackSide.toDisplayString(i18n), dev.technicalName, dev.category.toDisplayString(i18n), dev.ports.size))
+                        sb.append(i18n.text("text.7a8d1ba5decb", dev.positionU ?: "-", dev.rackSide.toDisplayString(i18n), escaped(dev.technicalName), dev.category.toDisplayString(i18n), dev.ports.size))
                     }
                     sb.append("\n")
                 }
@@ -130,7 +150,7 @@ object MarkdownExportManager {
                     else -> i18n.text("text.ba7cc7a170dd")
                 }
 
-                sb.append("| ${cable.codeOrLabel ?: cable.id.take(8)} | $endpointAStr | ${cable.medium.toDisplayString(i18n)} | ${cable.color ?: "-"} | $endpointBStr | `${(portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)} · ${cable.observation.effectiveStatus().toDisplayString(i18n)}` |\n")
+                sb.append("| ${escaped(cable.codeOrLabel ?: cable.id.take(8))} | ${escaped(endpointAStr)} | ${cable.medium.toDisplayString(i18n)} | ${escaped(cable.color ?: "-")} | ${escaped(endpointBStr)} | `${(portA?.endpointStatus ?: com.onlyfield.assetmanager.core.model.EndpointStatus.UNKNOWN).toDisplayString(i18n)} · ${cable.observation.effectiveStatus().toDisplayString(i18n)}` |\n")
             }
             sb.append("\n")
         }
@@ -142,31 +162,29 @@ object MarkdownExportManager {
 
             for (vlan in selectedProject.vlans) {
                 val subnetsForVlan = selectedProject.subnets.filter { it.vlanId == vlan.id }
-                val cidrs = subnetsForVlan.joinToString(", ") { "`${it.cidrBlock}`" }
-                val gateways = subnetsForVlan.mapNotNull { it.gatewayIp }.joinToString(", ") { "`$it`" }
+                val cidrs = subnetsForVlan.joinToString(", ") { code(it.cidrBlock) }
+                val gateways = subnetsForVlan.mapNotNull { it.gatewayIp }.joinToString(", ") { code(it) }
 
-                sb.append("| **${vlan.vlanId}** | ${vlan.name} | ${vlan.scopeType.toDisplayString(i18n)} | ${cidrs.ifEmpty { "-" }} | ${gateways.ifEmpty { "-" }} |\n")
+                sb.append("| **${vlan.vlanId}** | ${escaped(vlan.name)} | ${vlan.scopeType.toDisplayString(i18n)} | ${cidrs.ifEmpty { "-" }} | ${gateways.ifEmpty { "-" }} |\n")
             }
             sb.append("\n")
         }
 
-        if (selectedProject.powerFeeds.isNotEmpty() || selectedProject.documentBadges.isNotEmpty()) {
+        if (selectedProject.powerFeeds.isNotEmpty() || selectedProject.poeMappings.isNotEmpty() || selectedProject.documentBadges.isNotEmpty()) {
             sb.append(i18n.text("text.1577688da00d"))
-            sb.append(i18n.text("text.083528e3bd57"))
-            sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
-
-            for (dev in filteredDevices) {
-                val feeds = selectedProject.powerFeeds.filter { it.deviceId == dev.id }
-                val feedA = feeds.find { it.feedName == "A" }?.let { "${it.feedType.toDisplayString(i18n)} (${it.sourceOutletDescription ?: "-"})" } ?: "-"
-                val feedB = feeds.find { it.feedName == "B" }?.let { "${it.feedType.toDisplayString(i18n)} (${it.sourceOutletDescription ?: "-"})" } ?: "-"
-
-                val va = feeds.mapNotNull { it.loadVa }.sum()
-                val w = feeds.mapNotNull { it.loadWatts }.sum()
-                val loadStr = if (va > 0 || w > 0) i18n.text("text.12cb5c0da8a5", va, w) else "-"
-
-                val badges = selectedProject.documentBadges.filter { it.targetId == dev.id }.joinToString(", ") { "`${it.label}`" }
-
-                sb.append("| **${dev.technicalName}** | $feedA | $feedB | $loadStr | ${badges.ifEmpty { "-" }} |\n")
+            val index = com.onlyfield.assetmanager.core.display.ProjectIndex(project)
+            val headers = PowerFeedRows.headers(i18n)
+            sb.append("| " + headers.joinToString(" | ") + " |\n")
+            sb.append("| " + headers.joinToString(" | ") { "---" } + " |\n")
+            selectedProject.powerFeeds.forEach { feed ->
+                sb.append("| " + PowerFeedRows.values(feed, index, i18n).joinToString(" | ", transform = ::escaped) + " |\n")
+            }
+            sb.append("\n")
+            selectedProject.poeMappings.forEach { poe ->
+                sb.append("- " + escaped(i18n.text("text.cb79585925c3", index.portLabel(poe.portId), poe.role.toDisplayString(i18n), poe.standard.toDisplayString(i18n))) + "\n")
+            }
+            selectedProject.documentBadges.forEach { badge ->
+                sb.append("- " + escaped(i18n.text("text.3b424f3a179d", badge.label, index.targetLabel(badge.targetType, badge.targetId, i18n))) + "\n")
             }
             sb.append("\n")
         }
@@ -178,8 +196,8 @@ object MarkdownExportManager {
                 AttachmentClassification.CONFIDENTIAL -> "[${att.classification.toDisplayString(i18n)}]"
                 AttachmentClassification.REVIEW_REQUIRED -> i18n.text("text.f69c1736c6b2")
             }
-            val attrNote = if (!att.attributionText.isNullOrBlank()) i18n.text("text.8e1a6699510b", att.attributionText) else ""
-            sb.append("- **${att.name}** $classBadge (`${att.originalFileName}`)$attrNote\n")
+            val attrNote = if (!att.attributionText.isNullOrBlank()) i18n.text("text.8e1a6699510b", escaped(att.attributionText)) else ""
+            sb.append("- **${escaped(att.name)}** $classBadge (${code(att.originalFileName)})$attrNote\n")
         }
 
         val notes = scope.observations.filter { !it.observation?.notes.isNullOrBlank() }

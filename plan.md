@@ -1,6 +1,6 @@
 # Piano prodotto
 
-Aggiornato al 6 ottobre 2026 dopo confronto con il codice.
+Aggiornato al 9 ottobre 2026 dopo remediation e verifica del codice.
 
 ## Obiettivo e limiti
 
@@ -71,7 +71,7 @@ Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](ro
 
 ## Stato
 
-L’audit completo del repository del 9 ottobre identifica sette nuovi rilievi AUD-45–51 oltre ai quattro collaudi/pulizie già aperti: 11 attività, 1 P1 / 9 P2 / 1 P3. Priorità, dipendenze e criteri di chiusura nel [tracker](PROJECT_STATUS.json); evidenze e limiti nel [report corrente](docs/repo-residuals-2026-10-09.md). Il [report precedente](docs/repo-residuals-2026-10-05.md) conserva lo storico delle correzioni. Le funzionalità dichiarate implementate restano distinte dalle correzioni e dai collaudi da eseguire.
+AUD-45–51 completati e rimossi dal [tracker](PROJECT_STATUS.json): protezione dati del portable, bozze al guasto, numeri finiti, cartografia Android, stampa selettiva e documenti completi/escapati. Restano **quattro residui, 3 P2 e 1 P3**: hardware, matrice UX Android, collaudo EXE Windows e pulizie storiche. I collaudi manuali non sono dedotti dalle suite automatiche. Evidenze e limiti nel [report corrente](docs/repo-residuals-2026-10-09.md) e nella [roadmap](roadmap.md); il [report precedente](docs/repo-residuals-2026-10-05.md) conserva lo storico.
 
 Le funzionalità previste sono implementate; l’audit ha rilevato difetti e flussi da completare nei confini di persistenza, scambio e media. Lo stato aperto è mantenuto esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile è in [roadmap.md](roadmap.md).
 
@@ -131,6 +131,6 @@ AUD-41 (8 ottobre): la continuazione della serie foto Android attende la fine de
 
 AUD-42 (8 ottobre) completato: footer della scheda rapida condivisa senza sovrapposizione fra Chiudi e Scollega anche quando Dettagli non è fornito. Matrice nativa del configuratore su moto g86 API 36 verde; nessun nuovo contratto. RES-19 resta parziale per gli scenari ancora elencati nella checklist.
 
-UX-04 verificato sul componente Android l'8 ottobre: ricerca modelli e conferma della riduzione di un gruppo collegato nella matrice LocalDensity 360/412 dp, chiaro/scuro, testo 1,0/1,3. Nessuna modifica al runtime; editor completo, tastiera aperta e TalkBack restano in RES-19. Copia delle evidenze e pulizia dell'APK test pendenti dopo scollegamento del telefono.
+UX-04 verificato sul componente Android l'8 ottobre: ricerca modelli e conferma della riduzione di un gruppo collegato nella matrice LocalDensity 360/412 dp, chiaro/scuro, testo 1,0/1,3. Nessuna modifica al runtime; editor completo, tastiera aperta e TalkBack restano in RES-19. Evidenze recuperate e APK test rimosso; restano soltanto i collaudi della matrice aperta.
 
 Seed demo (8 ottobre) rigenerato su richiesta: rete comunale più laboratorio con casi importabili e avvisi documentali intenzionali, 14 modelli e sette allegati sintetici. Le casistiche e la rigenerazione sono documentate nella guida di verifica; nessun cambio a Room v2, formato .ofam v1 o funzioni runtime. Pacchetto, 18 prove demo, una prova PDF e APK test aggiornato verificati. L'ampliamento del dataset non chiude i collaudi nativi RES-13/19/23/24 e non sostituisce la demo installata.

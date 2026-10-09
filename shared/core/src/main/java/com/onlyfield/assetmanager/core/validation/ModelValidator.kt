@@ -32,6 +32,7 @@ object ModelValidator {
 
     fun validateProject(project: Project, i18n: Messages = Messages()): ValidationResult {
         val issues = mutableListOf<ValidationIssue>()
+        validateFiniteNumbers(project, issues, i18n)
         val seenIds = mutableSetOf<String>()
         issues += ObjectHierarchy.errors(project, i18n = i18n).map { ValidationIssue("INVALID_OBJECT_CONTAINMENT", it, ValidationSeverity.STRUCTURAL_ERROR) }
 
@@ -998,6 +999,31 @@ object ModelValidator {
             changesSummary = summaries,
             isProhibitedFieldAttempted = false
         )
+    }
+
+    fun requireFiniteNumbers(project: Project, i18n: Messages = Messages()) {
+        val issues = mutableListOf<ValidationIssue>()
+        validateFiniteNumbers(project, issues, i18n)
+        require(issues.isEmpty()) { issues.joinToString("; ") { it.message } }
+    }
+
+    private fun validateFiniteNumbers(project: Project, issues: MutableList<ValidationIssue>, i18n: Messages) {
+        fun check(id: String, field: String, vararg values: Double?) {
+            if (values.any { it != null && !it.isFinite() }) {
+                issues += ValidationIssue("NON_FINITE_NUMBER", i18n.text("validation.finite", field), ValidationSeverity.STRUCTURAL_ERROR, id)
+            }
+        }
+        project.sites.flatMap { it.devices }.forEach { check(it.id, i18n.text("config.poeBudget"), it.hardware.poeBudgetWatts) }
+        project.deviceModels.forEach { check(it.id, i18n.text("config.poeBudget"), it.hardware.poeBudgetWatts) }
+        project.cables.forEach { check(it.id, i18n.text("config.length"), it.lengthValue) }
+        project.powerFeeds.forEach {
+            check(it.id, i18n.text("text.eb98296d7970"), it.loadWatts)
+            check(it.id, i18n.text("text.e821b548ca4b"), it.loadVa)
+        }
+        project.poeMappings.forEach { check(it.id, i18n.text("text.548f9030240c"), it.allocatedPowerWatts) }
+        project.floorplanPlacements.forEach { check(it.id, i18n.text("validation.coordinates"), it.xRatio.toDouble(), it.yRatio.toDouble()) }
+        project.annotations.forEach { check(it.id, i18n.text("validation.coordinates"), it.x1Ratio.toDouble(), it.y1Ratio.toDouble(), it.x2Ratio.toDouble(), it.y2Ratio.toDouble()) }
+        project.cableRoutes.forEach { route -> route.points.forEach { check(route.id, i18n.text("validation.coordinates"), it.x.toDouble(), it.y.toDouble()) } }
     }
 
     private fun String?.isNull_or_blank(): Boolean = this == null || this.trim().isEmpty()

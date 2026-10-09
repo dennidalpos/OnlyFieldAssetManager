@@ -38,7 +38,11 @@ class SurveyPdfTest {
         val context = ApplicationProvider.getApplicationContext<Context>()
         val file = File.createTempFile("survey-test-", ".pdf", context.cacheDir)
         try {
-            file.outputStream().use(write)
+            var closed = false
+            val output = object : java.io.FilterOutputStream(file.outputStream()) {
+                override fun close() { closed = true; super.close() }
+            }
+            output.use { write(it); assertTrue("PDF export must close its output", closed) }
             return ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { descriptor ->
                 PdfRenderer(descriptor).use { renderer ->
                     assertTrue(renderer.pageCount > 0)
@@ -79,4 +83,28 @@ class SurveyPdfTest {
         val result = compact(text { PdfExportManager.exportCompositeReportPdfToStream(project, ExportFilterConfig(), selection, it) })
         listOf("SURVEY-", "NOTE-", "LOOSE-PORT", "LOOSE-CABLE", "EXCLUDED-DEVICE").forEach { assertFalse(result.contains(it)) }
     }
+    @Test fun powerPdfContainsAllCustomFeedFieldsAndExternalSourceInThreeLanguages() {
+        val target = Device(technicalName = "Power consumer")
+        val source = Device(technicalName = "External power source")
+        val site = Site(name = "Selected", devices = listOf(target))
+        val feeds = PowerFeedType.entries.mapIndexed { n, type -> PowerFeed(deviceId = target.id,
+            feedName = "Circuit-$n", feedType = type, sourceDeviceId = source.id, sourceOutletDescription = "Outlet-$n",
+            voltageVolts = 230, loadVa = 80.0 + n, loadWatts = 60.0 + n, observedRuntimeMinutes = 10 + n,
+            observedSource = "Meter-$n", observedEpochMs = 1700000000000L, notes = "Note-$n") }
+        val powerProject = Project(name = "Power", createdEpochMs = 0, updatedEpochMs = 0,
+            sites = listOf(site, Site(name = "Other", devices = listOf(source))),
+            powerFeeds = feeds + PowerFeed(deviceId = source.id, feedName = "EXCLUDED-FEED"))
+        for (language in listOf("it", "en", "es")) {
+            val i18n = Messages(Locale.forLanguageTag(language))
+            val content = compact(text { PdfExportManager.exportCompositeReportPdfToStream(powerProject,
+                ExportFilterConfig(selectedSiteId = site.id), ReportSelection(includeInventoryTable = false,
+                    includeNotesAndAttachments = false), it, i18n) })
+            for (feed in feeds) for (value in listOf(feed.feedName, feed.feedType.toDisplayString(i18n), source.technicalName,
+                feed.sourceOutletDescription!!, "230 V", "${feed.loadVa} VA", "${feed.loadWatts} W",
+                i18n.text("text.2dc280aa0f83", feed.observedRuntimeMinutes!!), feed.observedSource!!, feed.notes!!, "2023"))
+                assertTrue("$language missing $value", content.contains(compact(value)))
+            assertFalse(content.contains("EXCLUDED-FEED"))
+        }
+    }
+
 }

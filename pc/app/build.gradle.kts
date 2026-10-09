@@ -76,11 +76,22 @@ compose.desktop {
 val portableAppName = "OnlyFieldAssetManager"
 val portableDistDir = rootProject.layout.projectDirectory.dir("dist")
 
+tasks.matching { it.name == "createDistributable" }.configureEach {
+    doFirst {
+        val runtimeData = layout.buildDirectory.dir("compose/binaries/main/app/$portableAppName/data").get().asFile
+        check(!runtimeData.exists()) {
+            "Runtime data must be backed up and moved before regenerating the app: $runtimeData"
+        }
+    }
+}
+
 val assemblePortable = tasks.register<Sync>("assemblePortable") {
     group = "distribution"
     description = "Builds the portable Windows x64 folder with the .exe in its root under dist/."
     dependsOn("createDistributable")
-    from(layout.buildDirectory.dir("compose/binaries/main/app/$portableAppName"))
+    from(layout.buildDirectory.dir("compose/binaries/main/app/$portableAppName")) {
+        exclude("data/**")
+    }
     into(portableDistDir.dir(portableAppName))
     preserve { include("data/**") }
 }

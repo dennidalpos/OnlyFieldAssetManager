@@ -69,7 +69,7 @@ internal class DocumentExports(private val load: suspend (String) -> Project?, p
         val project = getProjectById(projectId) ?: return@withContext false
         val printManager = context.getSystemService(android.content.Context.PRINT_SERVICE) as? android.print.PrintManager ?: return@withContext false
         val jobName = "Report_${project.name}"
-        val adapter = ProjectPrintDocumentAdapter(project, filterConfig, selection, i18n)
+        val adapter = ProjectPrintDocumentAdapter(context, project, filterConfig, selection, i18n)
         withContext(Dispatchers.Main) { printManager.print(jobName, adapter, null) }
         return@withContext true
     }

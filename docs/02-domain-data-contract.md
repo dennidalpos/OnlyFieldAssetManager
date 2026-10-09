@@ -85,3 +85,7 @@ AUD-29: se nuove alimentazioni tra gli apparati rimasti rendono ciclici i record
 Validazione del catalogo, fusione e ripristino usano un unico controllo del grafo nel modello condiviso. Ogni sorgente concorre al controllo, indipendentemente dall’ordine; nessuna ricorsione e nessuna deduplicazione dei record. Più alimentazioni verso la stessa sorgente non costituiscono da sole un ciclo. Il controllo riguarda tutti i collegamenti, compresi auto-riferimenti e cicli nascosti dietro sorgenti alternative.
 
 Un catalogo ciclico genera POWER_FEED_CYCLE_DETECTED come STRUCTURAL_ERROR, con un messaggio sul grafo del progetto; l’import non restituisce un pacchetto utilizzabile. Fusione e ripristino conservano progetto/cestino sul rifiuto e permettono riprova dopo correzione. Eliminato il precedente percorso che seguiva la sola prima sorgente; nessuna modifica allo schema Room v2 o allo scambio .ofam v1.
+
+### AUD-49 — 9 ottobre 2026
+
+Numeri non finiti e overflow rifiutati dai form e dal modello per carichi W/VA, potenze PoE, budget hardware apparati/modelli, lunghezze, coordinate di posizionamenti/annotazioni/tratte. Errori it/en/es prima della scrittura: guard nei salvataggi Room, storage Windows ed export .ofam; validazioni strutturali indipendenti mantengono i rilievi documentali ammessi. JSON continua a rifiutare i numeri speciali. Il campo budget PoE usa il parser decimale condiviso e finito.

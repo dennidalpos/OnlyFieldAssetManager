@@ -44,7 +44,7 @@ object FieldValidators {
     }
 
     /** Parses dot or comma decimals. */
-    fun parseDecimal(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()
+    fun parseDecimal(text: String): Double? = text.trim().replace(',', '.').toDoubleOrNull()?.takeIf { it.isFinite() }
 
     fun parseInt(text: String): Int? = text.trim().toIntOrNull()
 

@@ -108,6 +108,7 @@ object PackageSerializer {
         exportedEpochMs: Long = System.currentTimeMillis(),
         i18n: Messages = Messages(),
     ) {
+        ModelValidator.requireFiniteNumbers(project, i18n)
         val projectJsonBytes = jsonConfig.encodeToString(Project.serializer(), project).toByteArray(Charsets.UTF_8)
         val limits = PackageImportLimits()
         require(projectJsonBytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }

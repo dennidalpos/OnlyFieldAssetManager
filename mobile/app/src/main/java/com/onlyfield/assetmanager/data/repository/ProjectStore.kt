@@ -93,6 +93,7 @@ internal class ProjectStore(private val db: AppDatabase) {
 
     /** Replaces the project atomically; ordinary edits retain its verifier. */
     suspend fun save(project: Project, importedHash: String? = null) {
+        com.onlyfield.assetmanager.core.validation.ModelValidator.requireFiniteNumbers(project)
         db.withTransaction {
             checkOwnership(project)
             val existing = projectDao.getProjectById(project.id)

@@ -263,8 +263,8 @@ private fun SectionContent(state: DesktopAppState) {
         AppSection.FLOORPLANS -> FloorHomeSection(state)
         AppSection.CREDENTIALS -> CredentialsSection(project, update, saveError = { state.error })
         AppSection.MEDIA -> FloorplanMediaSection(project, update, state::addAttachment, state::attachmentBytes, state::hasAttachment, state::openAttachment, state.hasPassword, state::addMapSnapshot, saveError = { state.error })
-        AppSection.CABLING -> CablingSection(project, update)
-        AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary)
+        AppSection.CABLING -> CablingSection(project, update, { state.error })
+        AppSection.NETWORK -> NetworkLogicalSection(project, update, state.showSecondary, { state.error })
         AppSection.POWER -> PowerBadgeSection(project, update, state.showSecondary, { state.error })
         AppSection.TRASH -> TrashBatchSection(project, state.trash, state::restoreTrash) { state.trash = it }
         AppSection.PROJECT -> EmptyState("")

@@ -311,6 +311,7 @@ class ProjectViewModel internal constructor(
                 val after = transform(before)
                 require(after.id == projectId)
                 if (after != before) {
+                    com.onlyfield.assetmanager.core.validation.ModelValidator.requireFiniteNumbers(after, i18n)
                     val saved = after.copy(updatedEpochMs = System.currentTimeMillis())
                     repository.saveProject(saved)
                     coroutineContext.ensureActive()

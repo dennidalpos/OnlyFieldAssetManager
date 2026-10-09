@@ -12,7 +12,7 @@
 - Reuse `OnlyFieldTheme`, `AppSpacing` and `ContentDialog`; text forms max 640 dp, technical canvases exempt. Dialogs use window/IME bounds.
 - Forms `copy()` to retain hidden fields; close drafts after successful save.
 - `core.i18n.Messages`: UTF-8 it/en/es, Italian default; capture at generation start, preserve user text.
-- `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data beside EXE. `prepare-release.ps1` needs an empty output dir.
+- `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data beside EXE. Regeneration refuses runtime data/. `prepare-release.ps1` needs an empty output dir.
 - Native tests: `adb install -r` + `adb shell am instrument`; connected Gradle tests uninstall app/data. Require instrumentation `OK`.
 - Checks: `docs/05-testing-and-benchmarks.md`; simulated widths cannot verify TalkBack/rotation/tablets.
 - Demo: `.\gradlew.bat :shared:exchange:demoPackage --no-parallel --max-workers=1`; checks: `.\gradlew.bat :shared:exchange:test --tests '*Demo*' --no-parallel --max-workers=1`.

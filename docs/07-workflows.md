@@ -137,3 +137,7 @@ RES-23 (8 ottobre): l'editor completo del nuovo rack nell'EXE conserva bozza/nom
 ## Salvataggio Alimentazioni/PoE/Badge Windows
 
 Creazione e modifica conservano la bozza quando la sostituzione del pacchetto fallisce. Errore leggibile nel pannello/dialogo, selezioni e campi nascosti conservati; Nuovo/Modifica passa dalla conferma di scarto esistente. Rilasciato il blocco, Salva registra una sola modifica annullabile e chiude il form. AUD-44 verificato con dodici regressioni e collaudo della nuova alimentazione nell’EXE; dettagli nella roadmap.
+
+### AUD-46 — 9 ottobre 2026
+
+Rete logica e cablaggio Windows chiudono gli editor soltanto dopo save riuscito e mostrano il guasto nella bozza. Alimentazioni/PoE/Badge, rete e cablaggio Android usano rememberEditSave: errori e campi conservati, chiusura sulla callback positiva, risultati ignorati dopo uscita dalla composizione. ID e campi nascosti delle modifiche preservati. Corretto anche il tipo sintetico non valido nella modifica dei cavi senza objectTypeId.

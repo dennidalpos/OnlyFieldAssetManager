@@ -404,6 +404,7 @@ class DesktopStorageManager(
         recoverableAttachments: List<Attachment> = emptyList(),
         recoveryPassword: String? = password,
     ): File = withProjectLock(project.id) {
+        com.onlyfield.assetmanager.core.validation.ModelValidator.requireFiniteNumbers(project, i18n)
         recoverProject(project.id, recoveryPassword)
         val status = checkDataDirectoryStatus()
         if (!status.isWritable) {

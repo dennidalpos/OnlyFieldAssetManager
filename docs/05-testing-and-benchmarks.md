@@ -1,6 +1,6 @@
 # Verifica
 
-La revisione corrente dei residui, le quattro riproduzioni di difetti e i limiti delle prove aggiuntive Android sono nel [report dell’audit repository](repo-residuals-2026-10-05.md). Le evidenze di seguito restano la cronologia delle verifiche già svolte; lo stato aperto è nel [tracker](../PROJECT_STATUS.json).
+Remediation corrente ed esiti sono nel [report del 9 ottobre](repo-residuals-2026-10-09.md); il [report precedente](repo-residuals-2026-10-05.md) conserva la baseline storica. Le evidenze di seguito distinguono prove automatiche/native e collaudi manuali ancora aperti nel [tracker](../PROJECT_STATUS.json).
 
 ## Suite automatica
 
@@ -613,7 +613,7 @@ Fonti ufficiali consultate il 7 ottobre: [stato e ciclo di vita Compose](https:/
 
 Creazione/modifica/applicazione modello e creazione/modifica credenziale chiudono la bozza soltanto dopo il save riuscito; l'errore è nel form. DesktopApp inoltra l'errore corrente. Gli overload precedenti preservano i chiamanti, incluse le lambda finali; nessuna nuova dipendenza, schema o formato.
 
-Baseline FailedEditorSaveTest: 8 prove verdi, BUILD SUCCESSFUL in 28s. Dieci regressioni nuove riproducono la bozza scomparsa, con file .ofam sintetico bloccato tramite NOSHARE_DELETE; catalogo, byte e history restano invariati sul guasto. Prima compilazione della fixture corretta con arrayOf<Any>; un comando di modifica respinto dal parser PowerShell ha causato un secondo giro sul codice invariato, poi applicate patch puntuali. Il controllo dei consumatori ha rilevato la lambda finale CredentialsSection nel test preesistente: overload compatibile mantenuto.
+Baseline FailedEditorSaveTest: 8 prove verdi, BUILD SUCCESSFUL in 28s. Dieci regressioni nuove riproducono la bozza scomparsa, con file .ofam sintetico bloccato tramite NOSHARE_DELETE; catalogo, byte e history restano invariati sul guasto. Prima compilazione della fixture corretta con `arrayOf<Any>`; un comando di modifica respinto dal parser PowerShell ha causato un secondo giro sul codice invariato, poi applicate patch puntuali. Il controllo dei consumatori ha rilevato la lambda finale CredentialsSection nel test preesistente: overload compatibile mantenuto.
 
 Finale mirato: 18 prove verdi, BUILD SUCCESSFUL in 41s. Suite ` .\gradlew.bat :pc:app:test --no-parallel --max-workers=1 `: **203 test, zero fallimenti/errori/saltati**, BUILD SUCCESSFUL in 4m 53s. Evidenze in build/reports/aud38-baseline, aud38-red, aud38-targeted e aud38-full. I dieci casi coprono sia FormDialog sia MasterDetailHost, selezioni e campi conservati, segreti esclusivamente sintetici, riprova senza duplicati, lettura del pacchetto persistito e un solo undo.
 
@@ -833,3 +833,19 @@ Riavvio normale con journal pendenti completato e rimosso dalle attività aperte
 ## Revisione UI/UX — 8 ottobre 2026
 
 Matrice mappa 360/412/600/840/1024 dp con entrambi i temi e testo 1,0/1,3 verificata su host PC e Android isolato. Footer porte e tastiera Android verificati; cancellazioni con errore/riprova conservate. Nove scenari nativi distinti verdi; dimensioni tramite LocalDensity. Vedere [esiti, comandi e limiti](ui-ux-audit-2026-10-08.md). Restano aperti RES-19/23 per TalkBack, rotazione reale, tablet fisici e intera AppRoot/EXE.
+
+## Verifica finale della remediation — 9 ottobre 2026
+
+AUD-45–51 completati, tracker ridotto ai soli RES-13/19/23/24 (3 P2, 1 P3). Criteri nativi non eseguiti trasferiti ai residui, senza dedurre la matrice AppRoot/EXE dai test.
+
+`.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:assembleDebug :mobile:app:assembleDebugAndroidTest --no-parallel --max-workers=1` → BUILD SUCCESSFUL in 7m 44s: **643 test**, 130 core + 101 exchange + 282 Windows + 130 Android JVM, zero fallimenti/errori/saltati. Conteggi conservati in build/reports/tracker-remediation-20261009/final-suite.json; i report Gradle dei successivi comandi mirati descrivono il relativo sottoinsieme.
+
+Revisione finale: export PDF ordinario mantiene la chiusura dello stream; PrintAdapterTest e MarkdownEscapingTest rieseguiti, BUILD SUCCESSFUL. APK principale/test ricompilati; install -r e am instrument SurveyPdfTest,PrintPdfNativeTest → **OK (4 tests), 4,638s**, moto g86 5G Android API 36. Verificati anche gli stream chiusi. Destinazioni/fixture PDF pulite nel finally; database/preferenze principali (3 file) SHA-256 invariati prima della riapertura. Solo profileInstalled cambia con la nuova APK, non è un dato utente. APK test della sessione rimosso (Success), MainActivity riaperta (Status: ok). Evidenze final-native.txt/final-native-state.json.
+
+`pwsh -NoProfile -File tools/testing/markdown-content.ps1` → PASS nelle tre lingue e nei sette casi ai bordi degli span. Usa ConvertFrom-Markdown già presente, senza dipendenze nuove. Per rigenerare le fixture eseguire prima `.\gradlew.bat :shared:exchange:test --tests '*MarkdownEscapingTest*' --no-parallel --max-workers=1`. `powershell -NoProfile -File tools/testing/portable-data.ps1` già verificato dopo il controllo preventivo del runtime, PASS; nessun packaging ripetuto sulla sorgente popolata.
+
+Documentazione di dominio aggiornata ad ogni chiusura, riepiloghi README/plan/audit riallineati. Stato storico spostato fuori dalle descrizioni operative del tracker. Nessun commit/push o pubblicazione; nessuna pulizia storica respinta ritentata.
+
+Pulizia finale della remediation: il controllo automatico ha respinto la rimozione dei soli build/tmp/remediation_docs.py, build/tmp/__pycache__/remediation_docs.cpython-313.pyc e della directory cache se vuota, con motivo blocked by policy. Nessuna rimozione eseguita o ritentata. Due file inventariati con dimensioni/SHA-256 in build/reports/tracker-remediation-20261009/cleanup-blocked-inventory.json; aggiunti a RES-24. I report restano conservati.
+
+Controlli documentali finali: 21 Markdown renderizzati, 182 link locali validi; 55 file modificati/nuovi UTF-8 senza BOM. Tracker con quattro ID unici, riferimenti/dipendenze validi e nessun AUD completato; git diff --check superato. Diff finale rivisto, nessun lockfile/generated/vendor modificato. La sola pulizia respinta resta in RES-24.

@@ -146,7 +146,7 @@ data class MapObjectDraft(
         fun rack(project: Project, siteId: String, areaId: String, id: String) = MapObjectDraft(id = id, type = ObjectCatalog.builtins.first { it.kind == ObjectKind.RACK }, siteId = siteId, areaId = areaId, rack = RackForm.from(project.racks.first { it.id == id }), extraFields = project.customExtraFields.filter { it.targetId == id }, parentRef = ObjectHierarchy.parent(project, ObjectRef(PlacementTargetType.RACK, id)))
         fun cable(project: Project, siteId: String, areaId: String, id: String, i18n: Messages = Messages()): MapObjectDraft {
             val c = project.cables.first { it.id == id }
-            return MapObjectDraft(id = id, type = ObjectCatalog.type(project, c.objectTypeId) ?: ObjectType("cable", i18n.text("text.89dbe18e8407"), kind = ObjectKind.CABLE), siteId = siteId, areaId = areaId, cable = CableForm.from(c), deviceAId = c.deviceAId, deviceBId = c.deviceBId, extraFields = project.customExtraFields.filter { it.targetId == id })
+            return MapObjectDraft(id = id, type = ObjectCatalog.type(project, c.objectTypeId) ?: ObjectType("legacy", i18n.text("text.89dbe18e8407"), kind = ObjectKind.CABLE), siteId = siteId, areaId = areaId, cable = CableForm.from(c), deviceAId = c.deviceAId, deviceBId = c.deviceBId, extraFields = project.customExtraFields.filter { it.targetId == id })
         }
     }
 }
