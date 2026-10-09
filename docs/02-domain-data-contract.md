@@ -4,6 +4,8 @@ AUD-19: schema Room v2 e formato `.ofam` v1 invariati. Il pacchetto scambiato es
 
 ## Modello
 
+**AUD-49 aperto:** la validazione di alcuni decimali accetta `NaN`/`Infinity`, mentre il serializer del pacchetto li rifiuta. Riprodotto sui carichi delle alimentazioni: modello strutturalmente valido ma salvataggio impossibile. Il controllo finitezza va consolidato nei form/modello senza modificare il formato JSON; evidenze nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md).
+
 Un progetto contiene sedi, piani, apparati e porte, rack, cavi e percorsi disegnati, passaggi interni, rete logica, alimentazione, media, campi extra, badge, modelli e cestino locale. Il contenimento associa un solo genitore a un apparato o rack; cavi e cicli non sono ammessi.
 
 La gerarchia geografica è Sede → Piano (`Site.areas`). Una sede (`Site`) ha nome, codice, gruppo facoltativo (raggruppamento libero, ad esempio «Scuole») e indirizzo; contiene i propri piani e apparati. Il piano dell'apparato (`Device.areaId`) è facoltativo: senza piano né rack il validatore produce l'avviso `UNPOSITIONED_DEVICE`. Gli elenchi delle sedi sono ordinati per gruppo e poi per nome.

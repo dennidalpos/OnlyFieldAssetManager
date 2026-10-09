@@ -1144,3 +1144,33 @@ Evidenze conservate in `build/reports/restyling-20261009` e `pc/app/build/report
 ## Passaggio di consegne restyling — 9 ottobre 2026
 
 Tracker aggiornato per cambio sessione. L’utente ha richiesto commit e push su main dell’intero restyling; SHA ed esito remoto da verificare nella cronologia Git. Ripartire dal resoconto UI e dai residui RES-13/19/23/24, senza ripetere verifiche gia verdi in assenza di nuovi problemi. I report e le anteprime ignorati da Git restano locali nei percorsi documentati: conservarli insieme a dati, backup e fixture storiche. Nessuna autorizzazione a commit/push delle attivita della sessione successiva.
+
+## Aggiornamento dati demo — 9 ottobre 2026
+
+Rigenerato `fixtures/demo/onlyfield-demo.ofam` con le API correnti: 366 apparati, 8 rack, 1007 cavi, 14 modelli e 7 allegati. Gli ultimi cambiamenti UI non richiedono nuovi campi o modifiche al formato. Descrizione e guida incorporata aggiornate con sei percorsi per mappa densa, dettagli Espandi/Riduci, contesto conservato, mappe interne, configuratore 8/48 porte, percorsi e moduli. PNG sintetici allineati alla palette blu/turchese; data fissa di revisione 2026-10-09T00:00:00Z condivisa da progetto, rilievi ed export.
+
+Baseline: 18 prove demo verdi, `BUILD SUCCESSFUL in 47s`. Generazione: `:shared:exchange:demoPackage --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 7s`; validazione e reimportazione in memoria prima della scrittura. Finale: `:shared:exchange:test --tests '*Demo*' --no-parallel --max-workers=1`, `BUILD SUCCESSFUL in 39s`, 18 prove senza fallimenti/errori/saltati. Guida estratta e ispezionata, senza testi tagliati. Pacchetto 529.332 byte, SHA-256 `c1ee0a6b1d7f2f2eabb9ddd106d619fd53f81c31f839e44577f295b245dc603a`. Evidenze in `build/reports/demo-seed-20261009`.
+
+Aggiornati documentazione di verifica e tracker; nessuna attività implementativa aperta. Questa revisione aggiorna la fixture del repository; copie installate e dati locali conservati. Importazione nativa della revisione non eseguita, residui RES-13/19/23/24 invariati. Nessun commit o push.
+
+## Audit completo del repository — 9 ottobre 2026
+
+Inventariati 382 file versionati, 309 sorgenti Kotlin di cui 161 applicativi. Revisione trasversale di codice, chiamanti, test/fixture/demo, documentazione, tracker e build/CI/rilascio; nessun segnaposto applicativo TODO/FIXME/HACK/NotImplemented individuato. [Report corrente](docs/repo-residuals-2026-10-09.md) con evidenze, fonti primarie, limiti, legacy da conservare e criteri di chiusura.
+
+Registrati sette nuovi rilievi AUD-45–51: P1 assemblaggio portable può sovrascrivere dati destinatari dalla sorgente; P2 bozze ancora perse in editor esclusi dalle correzioni, decimali non finiti, acquisizione cartografica Android, selezione pagine/layout stampa Android, alimentazioni selezionate dal nome A/B nei documenti ed escaping Markdown. Totale tracker: 11 attività aperte/parziali, 1 P1 / 9 P2 / 1 P3; RES-13/19/23/24 conservati e deduplicati. Dipendenze aggiunte alla chiusura finale RES-19/23; casi indipendenti possono proseguire. Nessun rilievo corretto durante questo audit.
+
+Probe Gradle Sync isolato: `BUILD SUCCESSFUL in 4s`, file omonimo sovrascritto e file destinatario aggiuntivo preservato. VLAN Windows in dialogo/pannello con guasto reale della sostituzione del pacchetto: `BUILD SUCCESSFUL in 5s`, 2 casi confermano perdita della bozza a progetto/file/history invariati. Comando finale exchange/Android con probe e prove esistenti: `BUILD SUCCESSFUL in 3s`, 10 casi. Totale JUnit mirato 12 casi (7 probe dei difetti, 5 prove esistenti), zero fallimenti/errori/saltati. Gli esiti verdi dei probe confermano i difetti, non la correzione. Harness temporanei corretti dopo firma MasterDetailHost errata e source set Android senza test; dettagli nel report.
+
+Evidenze archiviate in `build/reports/repo-audit-20261009`: XML, sorgenti/init script dei probe, inventario e controlli documentali. Nessuna suite generale o qualificazione nativa nuova; nessun packaging su dist, modifica di dati utente, installazione, commit o push. Documenti di dominio, flussi, export, mappe, rilascio e verifica allineati; report precedente mantenuto come storico. Conservati demo/AGENTS e aggiornamenti locali già presenti.
+
+Il controllo automatico ha respinto la rimozione delle tre directory scratch `build/tmp/repo-audit-20261009-portable`, `repo-audit-20261009-network` e `repo-audit-20261009-data`, motivo `blocked by policy`, prima dell’esecuzione. Nessun ritentativo; percorsi/inventario aggiunti a RES-24. Copie dei probe ed evidenze conservate nel report; rimozione da completare quando consentita o manualmente senza toccare le risorse storiche.
+
+Verifica documentale: `build/reports/repo-audit-20261009/validate-audit.ps1` completato con esito zero; 21 Markdown, 181 collegamenti locali esistenti, UTF-8 senza BOM, 11 ID unici, priorità 1/9/1, riferimenti presenti e dipendenze acicliche. XML archiviate ricontrollate: 12 casi, zero fallimenti/errori/saltati. `git diff --check` superato; descrizioni dei quattro residui precedenti preservate, SHA-256 della fixture demo invariato rispetto all’aggiornamento di questa sessione.
+
+## Passaggio di consegne demo e audit — 9 ottobre 2026
+
+Utente ha richiesto commit e push su main per cambio sessione. Consegna comprende seed e pacchetto Demo Comune aggiornati, AGENTS.md consolidato, audit AUD-45–51 e documentazione/tracker allineati. Il branch main è stato verificato allineato a origin/main prima del commit. SHA ed esito del push della consegna sono verificabili in Git; questa richiesta non autorizza commit/push del lavoro della prossima sessione.
+
+Ripartire dal report del 9 ottobre e da AUD-45 (protezione dati durante packaging), poi seguire l’ordine del tracker. Restano 11 attività, 1 P1 / 9 P2 / 1 P3; nessun difetto dell’audit corretto. Non ripetere test già verdi senza nuovi problemi; validazione documentale rieseguita per la consegna. Nessuna nuova build, installazione o prova nativa necessaria per questo passaggio documentale.
+
+Evidenze locali ignorate da Git conservate in `build/reports/demo-seed-20261009` e `build/reports/repo-audit-20261009`, oltre ai report storici: non fanno parte del commit. Le tre directory scratch dell’audit restano inventariate in RES-24 dopo rifiuto automatico della pulizia, senza ritentativi. Conservare dati, chiavi, backup, app/demo e fixture dei collaudi precedenti.

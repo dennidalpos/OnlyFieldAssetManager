@@ -2,6 +2,8 @@
 
 Revisione e correzioni aggiornate all’8 ottobre 2026; il nome del report conserva la data di avvio.
 
+Stato corrente nel [nuovo audit del 9 ottobre](repo-residuals-2026-10-09.md) e nel [tracker](../PROJECT_STATUS.json). Le chiusure di questo report restano storiche; AUD-44, completato l’8 ottobre per Alimentazioni/PoE/Badge Windows, è documentato nella roadmap. I nuovi AUD-45–51 non riaprono automaticamente i rilievi precedenti.
+
 Revisione iniziale del checkout `82fe4e2`, successiva all’audit registrato in [audit-2026-10-05.md](audit-2026-10-05.md). L’audit ha identificato 11 nuovi rilievi e 4 collaudi/pulizie preesistenti (inizialmente 4 P1, 9 P2, 2 P3), senza P0. Aggiornamento 8 ottobre: AUD-12–43 chiusi; restano 4 attività aperte/parziali, RES-13/19/23/24 (3 P2, 1 P3). I rilievi iniziali conservano evidenza e contesto storico; chiusure in [roadmap](../roadmap.md), lavoro ancora aperto nel [tracker](../PROJECT_STATUS.json).
 
 ## Perimetro, fonti e limiti

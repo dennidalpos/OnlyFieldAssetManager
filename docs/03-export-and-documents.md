@@ -6,6 +6,8 @@
 
 Gli export descrivono inventario (con sede, gruppo e stato operativo), porte e cablaggio, rete, alimentazione, media e campi documentali. Le credenziali sono escluse. Il testo libero viene esportato come testo, evitando formule XLSX interpretate.
 
+Limiti emersi nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md), ancora aperti: **AUD-47**, stampa Android ignora intervalli di pagine e attributi di layout; **AUD-50**, Markdown/XLSX cercano alimentazioni dal nome A/B e omettono quelle con nomi personalizzati dalle colonne dedicate; **AUD-51**, escaping Markdown incompleto per testo utente. La generazione PDF e i collaudi di callback già acquisiti non dimostrano la correttezza di questi percorsi.
+
 ## Filtri comuni
 
 `DocumentSelection` applica sede, piano effettivo (anche ereditato da rack/contenitori), categoria e classificazione a inventario, rack, rete, alimentazione, allegati e disegni. Rete e allegati con ambito progetto restano comuni; quelli associati a sedi o oggetti esclusi non compaiono. Le planimetrie riservate non sono disegnate senza inclusione esplicita. Nei percorsi XLSX/PDF e nella topologia sono presenti anche estremi e passanti esterni necessari a spiegare un percorso che tocca un apparato selezionato; non altre reti. I nodi esterni della topologia PDF sono grigi.

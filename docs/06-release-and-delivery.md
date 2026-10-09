@@ -2,6 +2,8 @@
 
 ## Build locale
 
+**AUD-45 aperto:** l’assemblaggio portable conserva i dati destinatari dalla cancellazione, ma può sovrascriverli copiando `data/` dal runtime sorgente già usato. Evitare packaging su una `dist` popolata fino alla correzione; riprodotto su fixture isolate, nessun dato utente toccato. L’esclusione dal solo ZIP non protegge la directory di distribuzione. Evidenza e chiusura nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md).
+
 ```powershell
 .\gradlew.bat :pc:app:packagePortable
 ```

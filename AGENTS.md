@@ -2,28 +2,27 @@
 
 ## Workflow & Guidelines
 
-- Entry `README.md`; docs `docs/`, decisions `plan.md`, evidence `roadmap.md`.
-- Documentation is in Italian.
-- `PROJECT_STATUS.json`: open work only; completions in `roadmap.md`. Update domain docs per task.
+- Italian docs: `README.md`, `docs/`, decisions `plan.md`, evidence `roadmap.md`.
+- `PROJECT_STATUS.json`: open work; completions in `roadmap.md`. Update domain docs.
 - Core/exchange have no Android UI/Context dependency.
-- Room v2; bump version on schema edits. ProjectStore rejects IDs owned by another project before deletion. Only `fallbackToDestructiveMigration(true)`, both directions; downgrade-only fallback breaks upgrades.
-- Hardware layouts/PoE overrides use hardware JSON, not Room columns.
-- Apps compile `shared/configurator`; hardware/ports/continuity: `core.forms`, `core.model.ConnectionGraph`.
-- Maps: `core.model.MapScene/ObjectMap/ObjectHierarchy`, `configurator.map.MapWorkspace`. Rendering: Android PdfRenderer, Desktop PDFBox 3.0.8.
-- Shared edits/forms/labels/wizard: `core.edit`, `core.forms`, `core.display`, `core.onboarding`. Forms `copy()` entities to preserve hidden fields.
-- `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data next to EXE.
+- Room v2: bump on schema edits. ProjectStore rejects foreign IDs before deletion. Use only `fallbackToDestructiveMigration(true)` both directions.
+- Hardware layouts/PoE overrides belong in hardware JSON, not Room columns.
+- Shared UI: `shared/configurator`; hardware: `core.forms`, `core.model.ConnectionGraph`.
+- `MapWorkspace` uses host `MapUiState`: camera/selection/containers survive view/size changes; outside Room/.ofam.
+- Reuse `OnlyFieldTheme`, `AppSpacing` and `ContentDialog`; text forms max 640 dp, technical canvases exempt. Dialogs use window/IME bounds.
+- Forms `copy()` to retain hidden fields; close drafts after successful save.
 - `core.i18n.Messages`: UTF-8 it/en/es, Italian default; capture at generation start, preserve user text.
-- `prepare-release.ps1` needs empty output.
-- Native tests: use `adb install -r` + `adb shell am instrument`; Gradle connected tests uninstall app/data.
-- Tests: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest --no-parallel --max-workers=1`.
+- `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data beside EXE. `prepare-release.ps1` needs an empty output dir.
+- Native tests: `adb install -r` + `adb shell am instrument`; connected Gradle tests uninstall app/data. Require instrumentation `OK`.
+- Checks: `docs/05-testing-and-benchmarks.md`; simulated widths cannot verify TalkBack/rotation/tablets.
+- Demo: `.\gradlew.bat :shared:exchange:demoPackage --no-parallel --max-workers=1`; checks: `.\gradlew.bat :shared:exchange:test --tests '*Demo*' --no-parallel --max-workers=1`.
+- DemoSeed/DemoMedia → `fixtures/demo/onlyfield-demo.ofam`: fixed date/project ID, regenerated entity IDs; separate import into apps.
 
 ## Application Boundaries & Constraints
 
-- Offline-first Android 14+ APK and Windows 11 x64 portable editor.
-- Exchange: ZIP packages `.ofam` version 1 with optional AES-256-GCM / PBKDF2 encryption.
-- Manual exchange; no server, automatic sync or automatic merge.
-- Credentials stay in project, never documents. Password also protects local Windows media: encrypted package, bounded RAM and encrypted staging; no plaintext temporary files. Close imported `ProjectPackage` after use/cancellation.
-- `STRUCTURAL_ERROR` blocks import; `DOCUMENTARY_WARNING` does not block saving.
-- Package limits: ZIP 256 MiB, plaintext file 32 MiB, expanded 512 MiB, 10,000 entries; KDF max 1,000,000. Document filters use `exchange.DocumentSelection`.
-- Recovery: encrypted `.recovery` journals; never discard pending backups. Android recovery key is Keystore-wrapped.
-- Android: worker I/O, ordered commands, transactional reads; map drafts await save outcome. `DesktopIo`: worker, AWT secondary loop and busy editing gate.
+- Offline Android 14+; Windows 11 x64 portable. Manual .ofam v1 ZIP exchange; no server/sync/automatic merge.
+- AES-256-GCM/PBKDF2 optional protection. Credentials never enter documents. Protected Windows media: bounded RAM/encrypted staging, no plaintext temps. Close imports (`ProjectPackage`).
+- `STRUCTURAL_ERROR` blocks import; `DOCUMENTARY_WARNING` permits saving. Filters: `exchange.DocumentSelection`.
+- Limits: ZIP 256 MiB, file 32 MiB, expanded 512 MiB, 10,000 entries; KDF max 1,000,000.
+- Recovery: encrypted .recovery journals; preserve pending backups. Android key is Keystore-wrapped.
+- Android: worker I/O, ordered commands, transactional reads. `DesktopIo`: worker, AWT secondary loop, busy editing gate.

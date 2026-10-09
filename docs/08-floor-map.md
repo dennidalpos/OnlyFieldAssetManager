@@ -82,6 +82,8 @@ Un piano può usare un'immagine o una pagina PDF scelta da un allegato. Android 
 
 Le mappe cartografiche vengono scaricate solo su richiesta e salvate come allegati con attribuzione. L'uso successivo, l'export e lo scambio restano offline.
 
+**AUD-48 aperto:** acquisizione Android senza limite della risposta HTTP né controllo preventivo delle dimensioni decodificate; la griglia ai bordi non applica wrap X/clamp Y. Riprodotta una risposta locale chunked oltre 2 MiB accettata; bordi/decode verificati da codice, nessun esaurimento RAM o download pubblico riprodotto. Evidenze e criteri nell’[audit del 9 ottobre](repo-residuals-2026-10-09.md).
+
 ## Fonti
 
 - [Classi di dimensione della finestra](https://developer.android.com/develop/ui/compose/layouts/adaptive/use-window-size-classes)

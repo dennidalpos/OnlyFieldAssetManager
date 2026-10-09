@@ -22,7 +22,7 @@ Le regressioni dell'audit sono permanenti: `ImportedProtectionTest` verifica la 
 .\gradlew.bat :shared:exchange:demoPackage
 ```
 
-Contenuto aggiornato l'8 ottobre 2026 («Demo Comune», **366 apparati, 8 rack, 1007 cavi, 14 modelli, 7 allegati**):
+Contenuto aggiornato il 9 ottobre 2026 («Demo Comune», **366 apparati, 8 rack, 1007 cavi, 14 modelli, 7 allegati**):
 
 - **Comune – Municipio** (CED, Piano terra, Primo piano, Copertura, Laboratorio collaudi). Il rack CED è il centro stella. Contiene: patch panel fibra PPF-COM-CED (24 LC), SW-COM-CORE (24 RJ45 + 12 SFP+), FW-COM-01, RTR-COM-01, ONT-COM-01, due server, NAS, UPS e PDU sul retro. La catena WAN è ONT → router → firewall → core.
 - **Teatro comunale** (Piano terra): ONT e router propri con linea FTTH e VPN verso il firewall del Municipio (collegamenti logici). Il cavo della presa PR-TEA-PT-01 passa per la scatola di giunzione GB-TEA-PT-01.
@@ -60,14 +60,19 @@ Il laboratorio aggiunge dieci apparati e un rack senza cambiare i percorsi comun
 | Rilievi e stati operativi | Inventario e filtri | Verificato/da verificare/conflitto/non rilevato; in servizio/spento/dismesso/da verificare. Il sensore non è rilevato; gli stati operativi dei tre apparati precedenti restano disponibili. |
 | Foto/allegati e filtri documentali | Progetto, area, rack, apparato, cavo e porta | Sette PNG con payload/checksum, tutti i sei target; quattro condivisibili, uno riservato, due da revisionare. Campi extra condivisibile/riservato e annotazione da revisionare. |
 | Mappa e percorso disegnato | Laboratorio, cavo `AP-COM-LAB-01` | Planimetria, annotazioni e cavo con due curve; mappa densa del Municipio per zoom/pan/selezione. |
+| Navigazione e restyling | Allegato di progetto `Guida-demo` | Sei percorsi di prova: mappa densa, Espandi/Riduci e contesto conservato, mappe interne, configuratore 8/48 porte, percorsi fisici e moduli. Guida e PNG nella palette blu/turchese attuale. |
 
-I PNG sono illustrazioni di prova, non fotografie o rilievi architettonici reali. `DemoMedia` li genera in memoria con il JDK, senza dipendenze nuove; fonte primaria consultata l'8 ottobre: [Java ImageIO](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageIO.html). Il seed usa timestamp sintetici fissi e mantiene l'ID del progetto demo; le entità vengono rigenerate. L'importazione nella propria copia locale segue il normale confronto/sostituzione dell'app.
+I PNG sono illustrazioni di prova, non fotografie o rilievi architettonici reali. `DemoMedia` li genera in memoria con il JDK, senza dipendenze nuove; fonte primaria consultata l'8 ottobre: [Java ImageIO](https://docs.oracle.com/en/java/javase/21/docs/api/java.desktop/javax/imageio/ImageIO.html). Il seed usa il timestamp sintetico fisso della revisione, `2026-10-09T00:00:00Z`, per progetto, rilievi ed export; mantiene l'ID del progetto demo, mentre le altre entità vengono rigenerate. L'importazione nella propria copia locale segue il normale confronto/sostituzione dell'app.
 
 Il progetto è costruito con le stesse bozze delle app (`DemoSeed`, nei test di `:shared:exchange`). Il comando di generazione valida la struttura e reimporta in memoria il pacchetto completo prima di scriverlo. `DemoSeedTest` verifica anche il file generato, immagini decodificabili, classificazioni, applicazione modello senza cambiare ID porte/cavi e scambio semplice/cifrato con checksum.
 
 Verifica dell'8 ottobre: baseline 13 prove demo verdi; dopo l'ampliamento **18 prove demo + una prova PDF Desktop**, zero fallimenti/errori/saltati. Generazione `BUILD SUCCESSFUL in 6s`; prove demo e `:mobile:app:assembleDebugAndroidTest` `BUILD SUCCESSFUL in 45s`; PDF `BUILD SUCCESSFUL in 12s`. APK test compilato con fixture aggiornata; prove native Android di importazione non rieseguite. Fonte per il filtro mirato: [Gradle JVM testing](https://docs.gradle.org/current/userguide/java_testing.html). Report locali in `build/reports/demo-seed-20261008`; pacchetto 489.823 byte, SHA-256 `fabda66be2d7545a1357b8f3a2af14b2742b9e35b9fd6c557eacbe56eeb4dc33`. Anteprime sintetiche ispezionate; demo installata, dati e backup conservati. RES-13/19/23/24 restano aperti.
 
+Verifica del 9 ottobre: baseline **18 prove demo** verdi (`BUILD SUCCESSFUL in 47s`); generazione `BUILD SUCCESSFUL in 7s`; finale `.\gradlew.bat :shared:exchange:test --tests '*Demo*' --no-parallel --max-workers=1` → `BUILD SUCCESSFUL in 39s`, **18 prove**, zero fallimenti/errori/saltati. Coperti struttura, scambio semplice/cifrato, media/checksum, percorsi, topologia e XLSX. Guida estratta dal pacchetto e ispezionata, testi senza tagli. Pacchetto aggiornato: 529.332 byte, SHA-256 `c1ee0a6b1d7f2f2eabb9ddd106d619fd53f81c31f839e44577f295b245dc603a`; report in `build/reports/demo-seed-20261009`. Aggiornata solo la fixture importabile: nessuna reimportazione nelle copie Android/Windows installate. Collaudo nativo della nuova revisione non eseguito; RES-13/19/23/24 restano aperti.
+
 ## Limiti noti
+
+Nuovo [audit repository del 9 ottobre](repo-residuals-2026-10-09.md): AUD-45–51 aperti, oltre a RES-13/19/23/24. Verifica mirata su dati sintetici: 7 probe JUnit che confermano difetti e 5 prove esistenti, zero errori/fallimenti/saltati; inoltre probe Gradle Sync. Un probe verde non dimostra la correzione. Evidenze in `build/reports/repo-audit-20261009`; nessuna suite generale o nuova qualificazione nativa eseguita. Prima della chiusura RES-19/23 completare le correzioni pertinenti indicate nelle dipendenze del tracker.
 
 - Il collaudo su telefono, multitouch, fotocamera integrata e scansione tramite fotocamera richiede hardware reale (lettori USB e scanner esterni esclusi per decisione utente): [checklist](testing/hardware-checklist.md).
 - RES-17 chiuso: suite nativa API 37 verde con Espresso 3.7.0; la checklist hardware e visiva rimane distinta.

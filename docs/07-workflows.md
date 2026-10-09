@@ -2,6 +2,8 @@
 
 ## Progetto e modifiche
 
+L’[audit del 9 ottobre](repo-residuals-2026-10-09.md) distingue gli editor già corretti da quelli ancora incompleti: **AUD-46** copre rete logica e cablaggio/mappature su entrambe le piattaforme, più Alimentazioni/PoE/Badge Android. Al save fallito possono chiudere la bozza; VLAN Windows riprodotta in dialogo e pannello. Alimentazioni/PoE/Badge Windows di AUD-44 restano corretti. **AUD-49** riguarda i decimali non finiti accettati dai form/modello e rifiutati al salvataggio.
+
 Il wizard crea progetto, sedi e almeno un piano; la password e facoltativa. Le app navigano progetto, sede, piano e mappa; le sedi sono elencate per gruppo. Le modifiche passano da una bozza: uscita, cambio elemento, cambio lingua o chiusura chiedono conferma se la bozza e sporca.
 
 Android usa editor a pagina intera; Desktop usa elenco e pannello laterale con `Ctrl+S` ed `Esc`; nelle finestre strette il pannello occupa lo spazio disponibile mantenendo la bozza. Entrambe le app offrono annullamento a un passo e selettori di entita, senza scegliere implicitamente il primo elemento disponibile.

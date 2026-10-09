@@ -29,7 +29,10 @@ object DemoSeed {
     /** Cabled outlets per floor: 36 × 2 ports = 72 of the 96 panel ports. */
     const val OUTLETS = 36
 
-    fun build(now: Long = 1_760_000_000_000): Project {
+    /** Fixed revision date: 2026-10-09T00:00:00Z, shared by observations and export metadata. */
+    const val REVISION_EPOCH_MS = 1_791_504_000_000L
+
+    fun build(now: Long = REVISION_EPOCH_MS): Project {
         val com = Site(name = "Comune – Municipio", code = "COM", group = "Sedi comunali", address = "Piazza del Municipio 1", areas = listOf(
             Area(name = "CED", floor = "-1"), Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2"),
             Area(name = "Laboratorio collaudi", floor = "0", description = "Casi sintetici: porte, modelli, contenitori e rilievi da verificare")))
@@ -37,7 +40,7 @@ object DemoSeed {
         val med = Site(name = "Scuola media", code = "MED", group = "Scuole", address = "Via delle Scuole 10", areas = listOf(
             Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
         val mat = Site(name = "Scuola materna", code = "MAT", group = "Scuole", address = "Via dei Giardini 3", areas = listOf(Area(name = "Piano terra", floor = "0"), Area(name = "Copertura", floor = "1")))
-        var p = Project(id = "d0000000-0000-0000-0000-000000000001", name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna",
+        var p = Project(id = "d0000000-0000-0000-0000-000000000001", name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna. Revisione 9 ottobre 2026: mappe dense e interne, dettagli espandibili, configuratore e moduli; percorsi di prova nell'allegato Guida-demo.",
             createdEpochMs = now, updatedEpochMs = now, sites = listOf(com, tea, med, mat))
 
         fun add(draft: MapObjectDraft): String { p = draft.apply(p, i18n); return draft.id }
@@ -277,7 +280,7 @@ object DemoSeed {
         val project = build()
         val validation = ModelValidator.validateProject(project)
         check(validation.isValid) { validation.issues.toString() }
-        val bytes = PackageSerializer.exportPackage(project, DemoMedia.payloads(project), exportedEpochMs = 1_760_000_000_000)
+        val bytes = PackageSerializer.exportPackage(project, DemoMedia.payloads(project), exportedEpochMs = REVISION_EPOCH_MS)
         PackageSerializer.importPackage(bytes).pkg?.use { check(it.project == project && it.attachments.size == project.attachments.size) }
             ?: error("Generated demo could not be imported")
         check(out.parentFile.isDirectory || out.parentFile.mkdirs())

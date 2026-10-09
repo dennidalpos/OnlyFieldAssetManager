@@ -71,7 +71,7 @@ Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](ro
 
 ## Stato
 
-L’audit completo del repository del 5 ottobre identifica 11 nuovi rilievi oltre ai quattro collaudi/pulizie già aperti. Priorità, dipendenze e criteri di chiusura nel [tracker](PROJECT_STATUS.json); evidenze e limiti nel [report dei residui](docs/repo-residuals-2026-10-05.md). Le funzionalità dichiarate implementate restano distinte dalle correzioni e dai collaudi da eseguire.
+L’audit completo del repository del 9 ottobre identifica sette nuovi rilievi AUD-45–51 oltre ai quattro collaudi/pulizie già aperti: 11 attività, 1 P1 / 9 P2 / 1 P3. Priorità, dipendenze e criteri di chiusura nel [tracker](PROJECT_STATUS.json); evidenze e limiti nel [report corrente](docs/repo-residuals-2026-10-09.md). Il [report precedente](docs/repo-residuals-2026-10-05.md) conserva lo storico delle correzioni. Le funzionalità dichiarate implementate restano distinte dalle correzioni e dai collaudi da eseguire.
 
 Le funzionalità previste sono implementate; l’audit ha rilevato difetti e flussi da completare nei confini di persistenza, scambio e media. Lo stato aperto è mantenuto esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile è in [roadmap.md](roadmap.md).
 

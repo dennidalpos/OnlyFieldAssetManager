@@ -22,6 +22,7 @@ Editor offline per censire e documentare infrastrutture di rete e telecomunicazi
 - [Localizzazione](docs/09-localization.md)
 - [Configuratore](docs/10-object-configurator.md)
 - [Tema e restyling Android/Windows](docs/ui-restyling-2026-10-09.md)
-- [Residui e priorità dell’audit repository](docs/repo-residuals-2026-10-05.md)
+- [Residui e priorità dell’audit repository del 9 ottobre](docs/repo-residuals-2026-10-09.md)
+- [Audit precedente e storico delle correzioni](docs/repo-residuals-2026-10-05.md)
 
 Le decisioni e i limiti di prodotto sono in [plan.md](plan.md); le evidenze e i residui sono in [roadmap.md](roadmap.md) e [PROJECT_STATUS.json](PROJECT_STATUS.json).
