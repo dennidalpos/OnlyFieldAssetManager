@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import com.onlyfield.assetmanager.exchange.MergeSide
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -65,46 +66,52 @@ fun AppRoot(vm: ProjectViewModel, onExit: () -> Unit) {
                 val p = project
                 val overlays = remember { mutableIntStateOf(0) }
                 val tabbed = p != null && screen != Screen.Projects && screen != Screen.NewSite
+                val navigationVisible = tabbed && overlays.intValue == 0
                 val selectedTab = mainTabFor(screen)
                 val takePhoto = com.onlyfield.assetmanager.ui.components.rememberPhotoCapture(vm)
                 CompositionLocalProvider(LocalOverlayCount provides overlays,
                     com.onlyfield.assetmanager.configurator.LocalPhotoAction provides { type, id -> takePhoto(type, id) }) {
-                BoxWithConstraints(Modifier.fillMaxSize()) {
-                val rail = maxWidth >= 600.dp && maxHeight >= 480.dp
-                Row(Modifier.fillMaxSize()) {
-                if (tabbed && rail) MainNavigationRail(selectedTab, enabled = overlays.intValue == 0) { vm.openTab(it) }
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                // The bar owns the bottom inset; screens above it must not pad for it again.
-                Box(Modifier.weight(1f).then(if (tabbed && !rail) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
-                if (screen == Screen.NewSite) {
-                    NewSiteScreen(vm, snackbar)
-                } else if (p == null || screen == Screen.Projects) {
-                    ProjectsScreen(vm, snackbar)
-                } else when (screen) {
-                    Screen.Home -> FloorHomeScreen(vm, p, snackbar)
-                    Screen.ProjectTools -> ProjectToolsScreen(vm, p, snackbar)
-                    Screen.Inventory -> InventoryScreen(vm, p, snackbar)
-                    is Screen.DeviceDetail -> DeviceDetailScreen(vm, p, screen.deviceId, snackbar)
-                    Screen.Structure -> StructureScreen(vm, p, snackbar)
-                    Screen.Racks -> RacksScreen(vm, p, snackbar)
-                    is Screen.RackDetail -> RackDetailScreen(vm, p, screen.rackId, snackbar)
-                    Screen.Models -> ModelsScreen(vm, p, snackbar)
-                    Screen.Cabling -> CablingScreen(vm, p, snackbar)
-                    Screen.Network -> NetworkScreen(vm, p, snackbar)
-                    Screen.Power -> PowerScreen(vm, p, snackbar)
-                    Screen.Attachments -> AttachmentsScreen(vm, p, snackbar)
-                    Screen.Floorplan -> FloorHomeScreen(vm, p, snackbar)
-                    Screen.Credentials -> CredentialsScreen(vm, p, snackbar)
-                    Screen.Trash -> TrashScreen(vm, snackbar)
-                    Screen.Documents -> DocumentsScreen(vm, p, snackbar)
-                    Screen.Issues -> IssuesScreen(vm, p, snackbar)
-                    Screen.Projects, Screen.NewSite -> Unit
-                }
-                }
-                if (tabbed && !rail) MainNavigationBar(selectedTab, enabled = overlays.intValue == 0) { vm.openTab(it) }
-                }
-                }
-                }
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                        val rail = maxWidth >= 600.dp && maxHeight >= 480.dp
+                        Row(Modifier.fillMaxSize()) {
+                            if (navigationVisible && rail) MainNavigationRail(selectedTab) { vm.openTab(it) }
+                            Column(Modifier.weight(1f).fillMaxHeight()) {
+                                // The bar owns the bottom inset; screens above it must not pad for it again.
+                                Box(Modifier.weight(1f).then(if (navigationVisible && !rail) Modifier.consumeWindowInsets(WindowInsets.navigationBars) else Modifier)) {
+                                    key(p?.id) {
+                                        val screens = rememberSaveableStateHolder()
+                                        screens.SaveableStateProvider(screen.toString()) {
+                                            if (screen == Screen.NewSite) {
+                                                NewSiteScreen(vm, snackbar)
+                                            } else if (p == null || screen == Screen.Projects) {
+                                                ProjectsScreen(vm, snackbar)
+                                            } else when (screen) {
+                                                Screen.Home -> FloorHomeScreen(vm, p, snackbar)
+                                                Screen.ProjectTools -> ProjectToolsScreen(vm, p, snackbar)
+                                                Screen.Inventory -> InventoryScreen(vm, p, snackbar)
+                                                is Screen.DeviceDetail -> DeviceDetailScreen(vm, p, screen.deviceId, snackbar)
+                                                Screen.Structure -> StructureScreen(vm, p, snackbar)
+                                                Screen.Racks -> RacksScreen(vm, p, snackbar)
+                                                is Screen.RackDetail -> RackDetailScreen(vm, p, screen.rackId, snackbar)
+                                                Screen.Models -> ModelsScreen(vm, p, snackbar)
+                                                Screen.Cabling -> CablingScreen(vm, p, snackbar)
+                                                Screen.Network -> NetworkScreen(vm, p, snackbar)
+                                                Screen.Power -> PowerScreen(vm, p, snackbar)
+                                                Screen.Attachments -> AttachmentsScreen(vm, p, snackbar)
+                                                Screen.Floorplan -> FloorHomeScreen(vm, p, snackbar)
+                                                Screen.Credentials -> CredentialsScreen(vm, p, snackbar)
+                                                Screen.Trash -> TrashScreen(vm, snackbar)
+                                                Screen.Documents -> DocumentsScreen(vm, p, snackbar)
+                                                Screen.Issues -> IssuesScreen(vm, p, snackbar)
+                                                Screen.Projects, Screen.NewSite -> Unit
+                                            }
+                                        }
+                                    }
+                                }
+                                if (navigationVisible && !rail) MainNavigationBar(selectedTab) { vm.openTab(it) }
+                            }
+                        }
+                    }
                 }
             }
             ImportDialogs(vm, importState)
@@ -189,7 +196,7 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
                         Text("${conflict.kindLabel}: ${conflict.name}", fontWeight = FontWeight.SemiBold)
                         Text(conflict.localizedDescription(i18n))
-                        conflict.differences(i18n = i18n).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
+                        conflict.differences(i18n = i18n).forEach { Text("â€¢ $it", style = MaterialTheme.typography.bodySmall) }
                         if (state.result.autoApplied > 0) Text(i18n.text("text.cdaed04f8505", state.result.autoApplied), style = MaterialTheme.typography.bodySmall)
                     }
                 },

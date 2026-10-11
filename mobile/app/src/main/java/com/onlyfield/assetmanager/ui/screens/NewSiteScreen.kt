@@ -34,9 +34,19 @@ fun NewSiteScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
         onBack = { vm.back() },
         snackbarHost = snackbar,
         busy = vm.busy,
+        bottomBar = {
+            ActionFooter {
+                if (!w.isFirst) OutlinedButton(onClick = { vm.back() }) { Text(i18n.text("text.80426885bb74")) }
+                if (w.step.skippable && !w.isLast) TextButton(onClick = { vm.newSite = w.skip() }) { Text(i18n.text("text.fb397a42956c")) }
+                Button(
+                    enabled = w.canProceed && vm.busy == null,
+                    onClick = { if (w.isLast) vm.finishNewSite() else vm.newSite = w.next() }
+                ) { Text(if (w.isLast) i18n.text("text.6c4a7984bdc6") else i18n.text("text.29ddfd8a8643")) }
+            }
+        },
     ) { padding ->
         Column(
-            Modifier.padding(padding).fillMaxSize().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
+            Modifier.padding(padding).consumeWindowInsets(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             LinearProgressIndicator(progress = { w.stepNumber / w.stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
@@ -57,15 +67,7 @@ fun NewSiteScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
                     }
                 }
             }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (!w.isFirst) OutlinedButton(onClick = { vm.back() }) { Text(i18n.text("text.80426885bb74")) }
-                Spacer(Modifier.weight(1f))
-                if (w.step.skippable && !w.isLast) TextButton(onClick = { vm.newSite = w.skip() }) { Text(i18n.text("text.fb397a42956c")) }
-                Button(
-                    enabled = w.canProceed && vm.busy == null,
-                    onClick = { if (w.isLast) vm.finishNewSite() else vm.newSite = w.next() }
-                ) { Text(if (w.isLast) i18n.text("text.6c4a7984bdc6") else i18n.text("text.29ddfd8a8643")) }
-            }
+
         }
     }
 }

@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
@@ -32,7 +33,7 @@ fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> U
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
-    var tab by remember { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         val labels = listOf(i18n.text("text.370b792df123", project.powerFeeds.size), i18n.text("text.ffaf43588488", project.poeMappings.size), i18n.text("text.605ad6ef80b0", project.documentBadges.size))
         // Badges are an optional module: no tab until used or "Other modules" is open.
@@ -51,7 +52,7 @@ fun PowerBadgeSection(project: Project, onProjectUpdated: (Project, String) -> U
 private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<PowerFeed?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }

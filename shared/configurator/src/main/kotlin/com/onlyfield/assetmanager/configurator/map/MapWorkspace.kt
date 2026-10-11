@@ -120,7 +120,12 @@ fun MapWorkspace(
             Box(Modifier.weight(1f)) {
                 var open by remember { mutableStateOf(false) }
                 TextButton(onClick = { open = true }) {
-                    Text((listOf(siteName) + levels).filter { it.isNotBlank() }.joinToString(" / "), maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+                    Column(Modifier.weight(1f, fill = false)) {
+                        Text(levels.last(), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text((listOf(project.name, siteName) + levels.dropLast(1)).filter { it.isNotBlank() }.joinToString(" / "),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                     Icon(SymbolIcons.expand, null)
                 }
                 DropdownMenu(open, { open = false }) {
@@ -140,12 +145,13 @@ fun MapWorkspace(
                 Button(onClick = { actions.add(container, null) }) { Text(addLabel) }
                 if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen; state.expanded = listOpen }, label = { Text(i18n.text("map.list")) })
                 OverflowActions(i18n, tools)
-            } else Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) { trail(); onSearch?.let { search -> SymbolButton(SymbolIcons.search, i18n.text("search.action"), search) }; OverflowActions(i18n, tools) }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Button(onClick = { actions.add(container, null) }, modifier = Modifier.weight(1f)) { Text(addLabel) }
-                    FilterChip(selected = listOpen, onClick = { listOpen = !listOpen; state.expanded = listOpen }, label = { Text(i18n.text("map.list")) })
-                }
+            } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                trail()
+                onSearch?.let { search -> SymbolButton(SymbolIcons.search, i18n.text("search.action"), search) }
+                SymbolButton(SymbolIcons.add, addLabel) { actions.add(container, null) }
+                OverflowActions(i18n, listOf(PaneAction(i18n.text("map.list")) {
+                    listOpen = !listOpen; state.expanded = listOpen
+                }) + tools)
             }
         }
         BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {

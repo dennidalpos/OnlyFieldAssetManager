@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -43,7 +44,7 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
 
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
-    var tab by remember { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(0) }
     var vlan by remember { mutableStateOf<EditTarget<Vlan>?>(null) }
     var subnet by remember { mutableStateOf<EditTarget<Subnet>?>(null) }
     var iface by remember { mutableStateOf<EditTarget<LogicalInterface>?>(null) }
@@ -235,7 +236,7 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
 
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
-    var tab by remember { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(0) }
     var feed by remember { mutableStateOf<EditTarget<PowerFeed>?>(null) }
     var poe by remember { mutableStateOf<EditTarget<PoeMapping>?>(null) }
     var badge by remember { mutableStateOf<EditTarget<DocumentBadge>?>(null) }

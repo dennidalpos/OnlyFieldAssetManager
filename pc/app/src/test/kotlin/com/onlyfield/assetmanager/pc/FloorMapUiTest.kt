@@ -103,11 +103,11 @@ class FloorMapUiTest {
             rule.onNodeWithText("Modem").assertIsDisplayed()
             rule.onNodeWithText("Annulla").performClick()
             rule.runOnIdle { assertEquals(1, state.project!!.sites.first().devices.size) }
-            rule.onNodeWithText("BU-A / Terra").performClick()
+            rule.onNode(hasText("Terra") and hasClickAction()).performClick()
             rule.onNodeWithText("BU-A").performClick()
             rule.onNodeWithText("Primo · 0 oggetti").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
-            rule.onNodeWithText("BU-A / Primo").performClick()
+            rule.onNode(hasText("Primo") and hasClickAction()).performClick()
             rule.onNodeWithText("BU-A").performClick()
             rule.onNodeWithText("Sito").performClick()
             rule.onNodeWithText("Aggiungi sede").performClick()

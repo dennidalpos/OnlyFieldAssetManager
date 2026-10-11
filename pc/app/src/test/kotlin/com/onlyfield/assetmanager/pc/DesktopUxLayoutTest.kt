@@ -71,7 +71,7 @@ class DesktopUxLayoutTest(private val width: Int, private val height: Int, priva
     }
 
     private fun ComposeUiTest.capture(name: String) {
-        val output = File("build/reports/restyling/$width-$height-$dark-$font-$name.png")
+        val output = File("build/reports/ux-20261011/$width-$height-$dark-$font-$name.png")
         output.parentFile.mkdirs()
         Image.makeFromBitmap(onRoot().captureToImage().asSkiaBitmap()).use { image ->
             image.encodeToData()!!.use { output.writeBytes(it.bytes) }

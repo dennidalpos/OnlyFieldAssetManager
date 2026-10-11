@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -40,10 +41,12 @@ fun InventorySection(
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
 
-    var query by remember { mutableStateOf("") }
-    var categoryFilter by remember { mutableStateOf<DeviceCategory?>(null) }
-    var areaFilter by remember { mutableStateOf<Area?>(null) }
-    var statusFilter by remember { mutableStateOf<OperationalStatus?>(null) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var categoryFilter by rememberSaveable { mutableStateOf<DeviceCategory?>(null) }
+    var areaId by rememberSaveable { mutableStateOf<String?>(null) }
+    val areaFilter = index.areas.find { it.id == areaId }
+    var filtersOpen by remember { mutableStateOf(false) }
+    var statusFilter by rememberSaveable { mutableStateOf<OperationalStatus?>(null) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
     var editing by remember { mutableStateOf<Device?>(null) }
@@ -60,7 +63,7 @@ fun InventorySection(
         index.devices.filter { d ->
             matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress, d.serialNumber) &&
                 (categoryFilter == null || d.category == categoryFilter) &&
-                (areaFilter == null || d.areaId == areaFilter?.id) &&
+                (areaFilter == null || d.areaId == areaFilter.id) &&
                 (statusFilter == null || d.operationalStatus == statusFilter)
         }.sortedForDisplay(i18n) { it.technicalName }
     }
@@ -84,27 +87,31 @@ fun InventorySection(
                 }
             }
         ) {
+            FilterAction(listOfNotNull(categoryFilter, areaFilter, statusFilter).size, i18n) { filtersOpen = true }
             Button(onClick = { changeDetail { creating = true } }, enabled = project.sites.isNotEmpty()) { Text(i18n.text("text.8650e4573818")) }
         }
 
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ActiveFilters(listOfNotNull(
+            categoryFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { categoryFilter = null } },
+            areaFilter?.let { ActiveFilter(it.name) { areaId = null } },
+            statusFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { statusFilter = null } }
+        ), i18n) { categoryFilter = null; areaId = null; statusFilter = null }
+        if (filtersOpen) FiltersDialog(i18n, { filtersOpen = false }, { categoryFilter = null; areaId = null; statusFilter = null }) {
             OptionPicker(
                 label = i18n.text("text.54276aa0307f"),
                 options = DeviceCategory.entries,
                 selected = categoryFilter,
                 optionLabel = { it.toDisplayString(i18n = i18n) },
                 onSelected = { categoryFilter = it },
-                noneLabel = i18n.text("text.d67bee20ea14"),
-                modifier = Modifier.widthIn(max = 240.dp)
+                noneLabel = i18n.text("text.d67bee20ea14")
             )
             OptionPicker(
                 label = i18n.text("text.024dc204d7ba"),
                 options = index.areas,
                 selected = areaFilter,
                 optionLabel = { it.name },
-                onSelected = { areaFilter = it },
-                noneLabel = i18n.text("text.4c852ffc6db0"),
-                modifier = Modifier.widthIn(max = 240.dp)
+                onSelected = { areaId = it?.id },
+                noneLabel = i18n.text("text.4c852ffc6db0")
             )
             OptionPicker(
                 label = i18n.text("device.status"),
@@ -112,9 +119,10 @@ fun InventorySection(
                 selected = statusFilter,
                 optionLabel = { it.toDisplayString(i18n = i18n) },
                 onSelected = { statusFilter = it },
-                noneLabel = i18n.text("status.filterAll"),
-                modifier = Modifier.widthIn(max = 240.dp)
+                noneLabel = i18n.text("status.filterAll")
             )
+        }
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (selectedIds.isNotEmpty()) {
                 Text(i18n.text("text.a3de97a5039a", selectedIds.size), fontWeight = FontWeight.SemiBold)
                 OutlinedButton(onClick = { changeDetail { showBatch = true } }) { Text(i18n.text("text.12fea36b47a9")) }
@@ -128,7 +136,7 @@ fun InventorySection(
             project.sites.isEmpty() -> EmptyState(i18n.text("text.d07b43aa8cb1"))
             index.devices.isEmpty() -> EmptyState(i18n.text("text.acc21f707eb1"))
             filtered.isEmpty() -> EmptyState(i18n.text("text.4e750f66126c"), actionLabel = i18n.text("text.c4483e052140"), onAction = {
-                query = ""; categoryFilter = null; areaFilter = null; statusFilter = null
+                query = ""; categoryFilter = null; areaId = null; statusFilter = null
             })
             else -> LazyColumn(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(filtered, key = { it.id }) { dev ->

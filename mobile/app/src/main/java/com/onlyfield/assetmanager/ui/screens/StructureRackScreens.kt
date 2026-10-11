@@ -15,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.core.display.sitesForDisplay
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
@@ -134,22 +135,25 @@ fun RacksScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
     val save = rememberEditSave(vm, creating, editingNew)
     val confirm = LocalConfirm.current
     AppScaffold(
-        i18n.text("text.4cd265c2b8c6"), onBack = { vm.back() }, snackbarHost = snackbar, subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
+        i18n.text("ux.nav.inventory"), onBack = null, snackbarHost = snackbar, subtitle = i18n.plural("text.2c2d174aee1f", project.racks.size),
         floatingActionButton = { ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Default.Add, null) }, text = { Text(i18n.text("text.4cd265c2b8c6")) }) }
     ) { padding ->
-        if (project.racks.isEmpty()) EmptyState(i18n.text("text.cc75d410beeb"), Modifier.padding(padding), i18n.text("text.3f21051ccc3f")) { creating = true }
-        else LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(project.racks.sortedForDisplay(i18n) { it.name }, key = { it.id }) { r ->
-                ItemCard(
-                    title = r.name,
-                    details = listOf(i18n.text("text.4abc2837dcad", index.areaName(r.areaId, i18n.text("text.0eb949b8ab9b")), RackLayout.usedUnits(r, index.devices), r.heightU)),
-                    menu = listOf(MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
-                        confirm(ConfirmRequest(i18n.text("text.87fc0efddabf", r.name), i18n.text("text.309921cb8d51"), i18n.text("text.dd41b3275173")) {
-                            vm.moveToTrash("RACK", r.id, r.name)
-                        })
-                    }),
-                    onClick = { vm.navigate(Screen.RackDetail(r.id)) }
-                )
+        Column(Modifier.padding(padding).fillMaxSize()) {
+            InventoryTabs(true, i18n) { vm.openInventory(if (it) Screen.Racks else Screen.Inventory) }
+            if (project.racks.isEmpty()) EmptyState(i18n.text("text.cc75d410beeb"), Modifier, i18n.text("text.3f21051ccc3f")) { creating = true }
+            else LazyColumn(Modifier.weight(1f), contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(project.racks.sortedForDisplay(i18n) { it.name }, key = { it.id }) { r ->
+                    ItemCard(
+                        title = r.name,
+                        details = listOf(i18n.text("text.4abc2837dcad", index.areaName(r.areaId, i18n.text("text.0eb949b8ab9b")), RackLayout.usedUnits(r, index.devices), r.heightU)),
+                        menu = listOf(MenuAction(i18n.text("text.dd41b3275173"), destructive = true) {
+                            confirm(ConfirmRequest(i18n.text("text.87fc0efddabf", r.name), i18n.text("text.309921cb8d51"), i18n.text("text.dd41b3275173")) {
+                                vm.moveToTrash("RACK", r.id, r.name)
+                            })
+                        }),
+                        onClick = { vm.navigate(Screen.RackDetail(r.id)) }
+                    )
+                }
             }
         }
     }
@@ -175,7 +179,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     }
     var editing by remember { mutableStateOf(false) }
     var placing by remember { mutableStateOf(false) }
-    var side by remember { mutableStateOf(RackSide.FRONT) }
+    var side by rememberSaveable { mutableStateOf(RackSide.FRONT) }
     var addingAt by remember { mutableStateOf<Int?>(null) }
     var editingNew by remember { mutableStateOf<com.onlyfield.assetmanager.core.forms.MapObjectDraft?>(null) }
     val save = rememberEditSave(vm, addingAt, placing, editingNew)

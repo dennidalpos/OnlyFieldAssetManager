@@ -196,7 +196,7 @@ fun ItemCard(
         border = BorderStroke(1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant)
     ) {
         FlowRow(
-            modifier = Modifier.padding(AppSpacing.content).fillMaxWidth(),
+            modifier = Modifier.padding(AppSpacing.inset).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {

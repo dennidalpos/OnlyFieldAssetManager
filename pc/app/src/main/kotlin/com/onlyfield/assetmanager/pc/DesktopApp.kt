@@ -9,6 +9,8 @@ import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import com.onlyfield.assetmanager.configurator.ProjectArea
+import com.onlyfield.assetmanager.configurator.InventoryTabs
 import com.onlyfield.assetmanager.configurator.ProjectDestination
 import com.onlyfield.assetmanager.configurator.theme.OnlyFieldTheme
 import com.onlyfield.assetmanager.configurator.theme.BrandMark
@@ -17,6 +19,8 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -106,60 +110,79 @@ private fun DesktopAppState.navigate(destination: ProjectDestination) {
     if (target != null) section = target else requestChange { dialog = AppDialog.Documents }
 }
 
+private val AppSection.area: ProjectArea get() = when (this) {
+    AppSection.FLOORPLANS -> ProjectArea.MAP
+    AppSection.INVENTORY, AppSection.RACKS -> ProjectArea.INVENTORY
+    AppSection.CABLING -> ProjectArea.CABLING
+    else -> ProjectArea.PROJECT
+}
+
+private fun DesktopAppState.openArea(area: ProjectArea) {
+    section = when (area) {
+        ProjectArea.MAP -> AppSection.FLOORPLANS
+        ProjectArea.INVENTORY -> inventorySection
+        ProjectArea.CABLING -> AppSection.CABLING
+        ProjectArea.PROJECT -> AppSection.OVERVIEW
+    }
+}
+
 @Composable
 private fun ProjectSidebar(state: DesktopAppState) {
-    val i18n = LocalMessages.current
+    val i18n = state.i18n
     Surface(Modifier.width(208.dp).fillMaxHeight(), color = MaterialTheme.colorScheme.surfaceContainer) {
         Column(Modifier.verticalScroll(rememberScrollState()).padding(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val project = state.project
-            ProjectDestination.entries.filter { project == null || it.shown(project, state.showSecondary) }.groupBy { it.groupKey }.forEach { (group, entries) ->
-                Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 12.dp, top = 16.dp, bottom = 4.dp))
-                entries.forEach { destination ->
-                    NavigationDrawerItem(label = { Text(destination.title(i18n)) }, selected = destination.appSection() == state.section,
-                        onClick = { state.navigate(destination) }, icon = { Icon(destination.icon, null, Modifier.size(20.dp)) },
-                        shape = MaterialTheme.shapes.small, modifier = Modifier.heightIn(min = 44.dp))
+            ProjectArea.entries.forEach { area ->
+                NavigationDrawerItem(label = { Text(i18n.text(area.labelKey)) }, selected = state.section.area == area,
+                    onClick = { state.openArea(area) }, icon = { Icon(area.icon, null) }, shape = MaterialTheme.shapes.small)
+                if (state.section.area == area && area == ProjectArea.PROJECT && state.section != AppSection.OVERVIEW) {
+                    ProjectModules(state)
                 }
             }
-            // Unused optional modules stay behind one entry.
-            val hidden = project?.let { SecondaryModule.hidden(it) }.orEmpty()
-            if (hidden.isNotEmpty()) NavigationDrawerItem(
-                label = { Column {
-                    Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules"))
-                    Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                } },
-                selected = false, onClick = { state.showSecondary = !state.showSecondary }, icon = { Icon(SymbolIcons.category, null, Modifier.size(20.dp)) },
-                shape = MaterialTheme.shapes.small, modifier = Modifier.heightIn(min = 44.dp))
         }
     }
 }
 
 @Composable
 private fun ProjectRail(state: DesktopAppState) {
-    val i18n = state.i18n
-    NavigationRail(Modifier.width(104.dp).fillMaxHeight().verticalScroll(rememberScrollState()), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
-        ProjectDestination.entries.filter { it.primary }.forEach { destination ->
-            NavigationRailItem(selected = destination.appSection() == state.section,
-                onClick = { state.navigate(destination) }, icon = { Icon(destination.icon, null) },
-                label = { Text(destination.title(i18n), maxLines = 2, style = MaterialTheme.typography.labelSmall) })
+    NavigationRail(Modifier.testTag("main-navigation").width(104.dp).fillMaxHeight().verticalScroll(rememberScrollState()), containerColor = MaterialTheme.colorScheme.surfaceContainer) {
+        ProjectArea.entries.forEach { area ->
+            NavigationRailItem(selected = state.section.area == area, onClick = { state.openArea(area) },
+                icon = { Icon(area.icon, null) },
+                label = { Text(state.i18n.text(area.labelKey), maxLines = 2, style = MaterialTheme.typography.labelSmall) })
         }
-        var open by remember { mutableStateOf(false) }
-        Box {
-            NavigationRailItem(selected = ProjectDestination.entries.none { it.primary && it.appSection() == state.section },
-                onClick = { open = true }, icon = { Icon(SymbolIcons.settings, null) },
-                label = { Text(i18n.text("ux.nav.projectHome"), style = MaterialTheme.typography.labelSmall) })
-            DropdownMenu(open, { open = false }, Modifier.heightIn(max = 560.dp)) {
-                ProjectDestination.entries.filter { !it.primary && state.project?.let { p -> it.shown(p, state.showSecondary) } != false }
-                    .groupBy { it.groupKey }.forEach { (group, destinations) ->
-                        Text(i18n.text(group), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(16.dp))
-                        destinations.forEach { destination ->
-                            DropdownMenuItem(text = { Text(destination.title(i18n)) }, leadingIcon = { Icon(destination.icon, null) },
-                                onClick = { open = false; state.navigate(destination) })
-                        }
-                    }
-                DropdownMenuItem(text = { Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules")) },
-                    onClick = { state.showSecondary = !state.showSecondary })
+    }
+}
+
+@Composable
+private fun ProjectModules(state: DesktopAppState) {
+    val project = state.project ?: return
+    val i18n = state.i18n
+    ProjectDestination.entries.filter { it.area == ProjectArea.PROJECT && it.shown(project, state.showSecondary) }
+        .groupBy { it.groupKey }.forEach { (group, destinations) ->
+            Text(i18n.text(group), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp))
+            destinations.forEach { destination ->
+                ListItem(headlineContent = { Text(destination.title(i18n)) }, leadingContent = { Icon(destination.icon, null) },
+                    modifier = Modifier.fillMaxWidth().clickable { state.navigate(destination) })
             }
         }
+    val hidden = SecondaryModule.hidden(project)
+    if (hidden.isNotEmpty()) ListItem(
+        headlineContent = { Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules")) },
+        supportingContent = { Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }) },
+        leadingContent = { Icon(SymbolIcons.category, null) },
+        modifier = Modifier.fillMaxWidth().clickable { state.showSecondary = !state.showSecondary })
+}
+
+@Composable
+private fun ProjectOverview(state: DesktopAppState) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(state.i18n.text("ux.nav.projectHome"), style = MaterialTheme.typography.titleLarge)
+        if (state.issues.isNotEmpty()) ListItem(
+            headlineContent = { Text(state.i18n.text("text.48139e9146f0", state.errorCount, state.warningCount)) },
+            leadingContent = { Icon(SymbolIcons.description, null) },
+            modifier = Modifier.fillMaxWidth().clickable { state.dialog = AppDialog.Validation })
+        ProjectModules(state)
     }
 }
 
@@ -250,6 +273,21 @@ private fun StatusBar(state: DesktopAppState) {
 
 @Composable
 private fun SectionContent(state: DesktopAppState) {
+    key(state.project?.id) {
+        val screens = rememberSaveableStateHolder()
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (state.section.area == ProjectArea.INVENTORY) InventoryTabs(state.section == AppSection.RACKS, state.i18n) {
+                state.section = if (it) AppSection.RACKS else AppSection.INVENTORY
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                screens.SaveableStateProvider(state.section.name) { SectionBody(state) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SectionBody(state: DesktopAppState) {
     val project = state.project
     if (project == null || state.section == AppSection.PROJECT) {
         ProjectSection(state)
@@ -257,6 +295,7 @@ private fun SectionContent(state: DesktopAppState) {
     }
     val update = state::update
     when (state.section) {
+        AppSection.OVERVIEW -> ProjectOverview(state)
         AppSection.INVENTORY -> InventorySection(project, update, state::addToTrash, state::mergeDevices, saveError = { state.error })
         AppSection.RACKS -> RackSection(project, update, state::addToTrash, saveError = { state.error })
         AppSection.MODELS -> DeviceModelsSection(project, update, saveError = { state.error })

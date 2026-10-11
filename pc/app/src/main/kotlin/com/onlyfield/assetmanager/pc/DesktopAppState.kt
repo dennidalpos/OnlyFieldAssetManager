@@ -29,6 +29,7 @@ import java.io.File
 
 /** Editor areas in navigation order. */
 enum class AppSection(private val titleKey: String, val icon: ImageVector, val needsProject: Boolean = true) {
+    OVERVIEW("ux.nav.projectHome", SymbolIcons.settings),
     INVENTORY("text.a26fdd05a46b", SymbolIcons.inventory2),
     RACKS("text.4cd265c2b8c6", SymbolIcons.dns),
     MODELS("text.7351fc8f354e", SymbolIcons.category),
@@ -111,10 +112,15 @@ class DesktopAppState(val storage: DesktopStorageManager) {
     /** "Other modules" opened: unused optional modules are listed too (session only). */
     var showSecondary by mutableStateOf(false)
     val detailSlot = com.onlyfield.assetmanager.pc.ui.components.DetailSlot()
+    var inventorySection by mutableStateOf(AppSection.INVENTORY)
+        private set
     private var currentSection by mutableStateOf(AppSection.PROJECT)
     var section: AppSection
         get() = currentSection
-        set(value) { if (value != currentSection) requestChange { currentSection = value } }
+        set(value) { if (value != currentSection) requestChange {
+            currentSection = value
+            if (value == AppSection.INVENTORY || value == AppSection.RACKS) inventorySection = value
+        } }
 
     fun requestChange(action: () -> Unit) { if (!busy) detailSlot.requestChange(action) }
     var newSiteWizard by mutableStateOf(NewSiteWizard())
@@ -471,6 +477,7 @@ class DesktopAppState(val storage: DesktopStorageManager) {
             trashState = loadedTrash
             issues = runIo { ModelValidator.validateProject(openedProject, i18n = i18n).issues }
             mapUiState.clear()
+            inventorySection = AppSection.INVENTORY
             selectedSiteId = null
             selectedAreaId = null
             currentSection = AppSection.FLOORPLANS

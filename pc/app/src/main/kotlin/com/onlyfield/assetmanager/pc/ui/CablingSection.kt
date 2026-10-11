@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
@@ -25,7 +26,7 @@ fun CablingSection(project: Project, onProjectUpdated: (Project, String) -> Unit
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
-    var tab by remember { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SubTabs(
             listOf(i18n.text("text.bc2fc31a1e0f", project.cables.size), i18n.text("text.3a84102d29b6", project.panelMappings.size)),
@@ -73,7 +74,7 @@ fun PortPicker(
 private fun CablesTab(project: Project, index: ProjectIndex, onProjectUpdated: (Project, String) -> Unit, saveError: () -> String?) {
     val i18n = LocalMessages.current
 
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<Cable?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }

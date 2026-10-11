@@ -3,6 +3,18 @@ package com.onlyfield.assetmanager.configurator
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.Project
 
+/** Shared top-level navigation; destinations remain independently addressable. */
+enum class ProjectArea(val labelKey: String) {
+    MAP("ux.nav.map"), INVENTORY("ux.nav.inventory"), CABLING("text.3b40d8bd6081"), PROJECT("ux.nav.projectHome");
+
+    val icon get() = when (this) {
+        MAP -> SymbolIcons.map
+        INVENTORY -> SymbolIcons.inventory2
+        CABLING -> SymbolIcons.cable
+        PROJECT -> SymbolIcons.settings
+    }
+}
+
 enum class ProjectDestination(val labelKey: String, val groupKey: String) {
     MAP("ux.nav.map", "ux.nav.work"),
     DEVICES("ux.nav.devices", "ux.nav.work"),
@@ -19,8 +31,12 @@ enum class ProjectDestination(val labelKey: String, val groupKey: String) {
 
     fun title(i18n: Messages): String = i18n.text(labelKey)
 
-    /** Everyday work areas: bottom bar on phones, top of the sidebar on PC. */
-    val primary get() = groupKey == "ux.nav.work"
+    val area get() = when (this) {
+        MAP -> ProjectArea.MAP
+        DEVICES, RACKS -> ProjectArea.INVENTORY
+        CABLING -> ProjectArea.CABLING
+        else -> ProjectArea.PROJECT
+    }
 
     val icon get() = when (this) {
         MAP -> SymbolIcons.map

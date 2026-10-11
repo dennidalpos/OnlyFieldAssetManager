@@ -28,7 +28,7 @@ OnlyFieldAssetManager gestisce inventario, posizione, cablaggio, rete logica, al
 
 ## Configuratore visivo — 5 ottobre 2026
 
-- Navigazione: Mappa, Dispositivi, Rack, Cablaggio e Progetto. Android usa rail da 600 dp con altezza almeno 480 dp; Windows sidebar da 1200 dp, altrimenti rail. Gli editor conservano la navigazione; Android la disabilita fino alla chiusura della bozza.
+- Navigazione aggiornata l’11 ottobre: Mappa, Inventario (Dispositivi e Rack), Cablaggio e Progetto. Android usa rail da 600 dp con altezza almeno 480 dp; Windows sidebar da 1200 dp, altrimenti rail. Android nasconde la navigazione negli editor a pagina intera e nello scanner. Ricerca, filtri e stato degli elenchi restano nella sessione del progetto. Dettagli in [audit adattivo](docs/ui-ux-audit-2026-10-11.md).
 - Spaziature condivise 4/8/12/16/24 dp, form testuali entro 640 dp, disegni tecnici liberi. Eliminazione nel menu secondario con conferma; Foto diretta.
 - Colori per tipo coerenti su mappa, topologia e schede; selezione contrastante, nome completo e canvas contenuto nel riquadro.
 - Inserimento uniforme: tipo → disegno/preset/nome → Aggiungi. Riquadri, menu aperti evidenziati e azioni principali raccolte.

@@ -68,7 +68,7 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
                     leadingContent = { Icon(SymbolIcons.description, null, tint = if (errors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) },
                     modifier = Modifier.fillMaxWidth().clickable { vm.navigate(Screen.Issues) })
             }
-            ProjectDestination.entries.filterNot { it.primary }.filter { it.shown(project, vm.showSecondary) }.groupBy { it.groupKey }.forEach { (group, destinations) ->
+            ProjectDestination.entries.filter { it.area == com.onlyfield.assetmanager.configurator.ProjectArea.PROJECT }.filter { it.shown(project, vm.showSecondary) }.groupBy { it.groupKey }.forEach { (group, destinations) ->
                 item { GroupHeader(i18n.text(group)) }
                 items(destinations) { destination ->
                     val screen = when (destination) {

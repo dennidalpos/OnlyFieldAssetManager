@@ -9,6 +9,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
@@ -27,8 +28,8 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
 
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
-    var tab by remember { mutableStateOf(0) }
-    var query by remember { mutableStateOf("") }
+    var tab by rememberSaveable { mutableStateOf(0) }
+    var query by rememberSaveable { mutableStateOf("") }
     var cableDialog by remember { mutableStateOf<Cable?>(null) }
     var newCable by remember { mutableStateOf(false) }
     var mapDialog by remember { mutableStateOf<PanelMapping?>(null) }

@@ -18,6 +18,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
@@ -43,9 +44,9 @@ fun RackSection(
 
     val index = remember(project) { ProjectIndex(project) }
     val confirm = LocalConfirm.current
-    var query by remember { mutableStateOf("") }
-    var selectedRackId by remember { mutableStateOf(project.racks.firstOrNull()?.id) }
-    var side by remember { mutableStateOf(RackSide.FRONT) }
+    var query by rememberSaveable { mutableStateOf("") }
+    var selectedRackId by rememberSaveable { mutableStateOf(project.racks.firstOrNull()?.id) }
+    var side by rememberSaveable { mutableStateOf(RackSide.FRONT) }
     var editing by remember { mutableStateOf<Rack?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }

@@ -32,7 +32,7 @@ class VisualThemeNativeTest {
     @get:Rule val rule = createComposeRule()
     private val context = InstrumentationRegistry.getInstrumentation().targetContext
     private val output by lazy {
-        File(checkNotNull(context.getExternalFilesDir(null)), "restyling-evidence").apply { check(mkdirs() || isDirectory) }
+        File(checkNotNull(context.getExternalFilesDir(null)), "ux-20261011-evidence").apply { check(mkdirs() || isDirectory) }
     }
 
     @Test fun projectsAndInventoryRemainReadableAcrossThemesAndWidths() {
@@ -71,7 +71,7 @@ class VisualThemeNativeTest {
                     rule.waitUntil(10_000) { vm.project.value != null && vm.busy == null }
                     rule.runOnIdle { vm.openTab(Screen.Inventory) }
                 }
-                for (w in listOf(360, 412, 600, 840)) for (d in listOf(false, true)) for (f in listOf(1f, 1.3f)) {
+                for (w in listOf(360, 412, 600, 840, 1024)) for (d in listOf(false, true)) for (f in listOf(1f, 1.3f)) {
                     rule.runOnIdle { width = w; dark = d; font = f }
                     if (screen == "projects") {
                         rule.onNodeWithText(vm.i18n.text("text.d5555c9b8e0b", project.name)).assertIsDisplayed()
@@ -79,7 +79,7 @@ class VisualThemeNativeTest {
                     } else {
                         rule.waitUntil(5_000) {
                             val root = rule.onRoot().fetchSemanticsNode().boundsInRoot
-                            val navigation = rule.onAllNodes(hasText(vm.i18n.text("ux.nav.devices")) and hasClickAction())
+                            val navigation = rule.onAllNodes(hasText(vm.i18n.text("ux.nav.inventory")) and hasClickAction())
                                 .fetchSemanticsNodes().singleOrNull()
                             navigation != null && (navigation.boundsInRoot.top < root.height / 2) == (w >= 600)
                         }

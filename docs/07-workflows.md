@@ -40,14 +40,14 @@ Le destinazioni hanno gli stessi gruppi e nomi sulle due piattaforme:
 
 | Gruppo | Destinazioni, in ordine |
 | --- | --- |
-| Lavoro | Mappa, Dispositivi, Rack, Cablaggio |
+| Lavoro | Mappa, Inventario (Dispositivi e Rack), Cablaggio |
 | Dati tecnici | Rete, Alimentazione |
 | Supporto | Modelli, Allegati, Documenti, Credenziali |
 | Progetto | Struttura e impostazioni, Cestino |
 
-**Moduli secondari** (`configurator.SecondaryModule`): Credenziali, Configurazioni apparati (scheda di Rete) e Badge documentali (scheda di Alimentazione) restano nel modello e negli export, ma compaiono solo se il progetto li usa. Altrimenti una sola voce **Altri moduli**, in fondo alla barra laterale su Windows e in Progetto su Android, li elenca e li mostra per la sessione; **Nascondi i moduli non usati** li richiude. Su Windows `Ctrl+5` apre comunque le Credenziali. La videosorveglianza non ha una schermata propria.
+**Moduli secondari** (`configurator.SecondaryModule`): Credenziali, Configurazioni apparati (scheda di Rete) e Badge documentali (scheda di Alimentazione) restano nel modello e negli export, ma compaiono solo se il progetto li usa. Altrimenti una sola voce **Altri moduli**, in Progetto su entrambe le piattaforme, li elenca e li mostra per la sessione; **Nascondi i moduli non usati** li richiude. Su Windows `Ctrl+5` apre comunque le Credenziali. La videosorveglianza non ha una schermata propria.
 
-**Android.** Cinque accessi: Mappa, Dispositivi, Rack, Cablaggio e Progetto. Barra inferiore nelle finestre compatte; rail da 600 dp di larghezza con almeno 480 dp di altezza. La scelta di una voce svuota lo stack sopra la mappa.
+**Android.** Quattro accessi: Mappa, Inventario, Cablaggio e Progetto. Inventario raggruppa Dispositivi e Rack e riapre l’ultima vista usata. Barra inferiore nelle finestre compatte; rail da 600 dp di larghezza con almeno 480 dp di altezza. La scelta di una voce svuota lo stack sopra la mappa.
 
 Progetto contiene:
 
@@ -55,17 +55,17 @@ Progetto contiene:
 - gli altri gruppi, con icone;
 - Azioni progetto: Esporta, Importa, password e Chiudi progetto.
 
-La navigazione resta visibile e viene disabilitata mentre è aperto un editor a pagina intera o lo scanner, conservando la bozza. Le sottoschede sono fisse fino a tre; oltre diventano un menu Vista.
+La navigazione scompare mentre è aperto un editor a pagina intera o lo scanner, lasciando più spazio alla bozza. Le sottoschede sono fisse fino a tre; oltre diventano un menu Vista.
 
-**Windows.** La barra laterale misura 208 dp e mostra le icone delle destinazioni. È estesa da 1200 dp di finestra; sotto tale soglia usa una rail da 104 dp con cinque accessi, indipendentemente dall’apertura dell’editor. Operazioni progetto elenca Esporta, Importa, password, poi Nuovo sito e Chiudi progetto.
+**Windows.** La barra laterale misura 208 dp e mostra le icone delle destinazioni. È estesa da 1200 dp di finestra; sotto tale soglia usa una rail da 104 dp con quattro accessi, indipendentemente dall’apertura dell’editor. Operazioni progetto elenca Esporta, Importa, password, poi Nuovo sito e Chiudi progetto.
 
 Le scorciatoie Windows mantengono le associazioni: `Ctrl+1` Dispositivi, `Ctrl+2` Rack, `Ctrl+3` Modelli, `Ctrl+4` Mappa, `Ctrl+5` Credenziali, `Ctrl+6` Allegati, `Ctrl+7` Cablaggio, `Ctrl+8` Rete, `Ctrl+9` Alimentazione.
 
-Gli elenchi nominali e i selettori usano il nome nella lingua corrente per ordinare copie di presentazione. L'ordine salvato resta invariato. VLAN, porte e unità rack conservano l'ordinamento tecnico; il cestino mostra prima le eliminazioni recenti. Inventario filtra anche per stato operativo (su Android il filtro compare quando esistono apparati non in servizio), distingue assenza di dati da ricerca senza risultati e mostra nome, collocazione e un riepilogo breve.
+Gli elenchi nominali e i selettori usano il nome nella lingua corrente per ordinare copie di presentazione. L'ordine salvato resta invariato. VLAN, porte e unità rack conservano l'ordinamento tecnico; il cestino mostra prima le eliminazioni recenti. Ricerca, filtri e posizioni degli elenchi si conservano passando tra le sezioni del progetto. I filtri di Inventario si aprono dal pulsante Filtri; quelli attivi restano visibili e rimovibili. Inventario filtra anche per stato operativo, distingue assenza di dati da ricerca senza risultati e mostra nome, collocazione e un riepilogo breve.
 
 ## Editor e configuratori
 
-Il [restyling del 9 ottobre](ui-restyling-2026-10-09.md) uniforma palette chiara/scura, titoli, pannelli e controlli su Android e Windows. Nella lista progetti Android, Importa si trova sotto il pannello Continua; senza progetti resta fra le azioni iniziali. Le destinazioni e i flussi di salvataggio non cambiano.
+Il [restyling del 9 ottobre](ui-restyling-2026-10-09.md) uniforma palette chiara/scura, titoli, pannelli e controlli su Android e Windows. Nella lista progetti Android, Importa si trova sotto il pannello Continua; senza progetti resta fra le azioni iniziali. La [revisione dell’11 ottobre](ui-ux-audit-2026-10-11.md) riordina le destinazioni in quattro aree, compatta schede e intestazione mappa e mantiene le azioni di Documenti e del wizard visibili sopra la tastiera.
 
 Ogni editor ha un titolo operativo, ad esempio Aggiungi dispositivo, Modifica dispositivo · nome o Configura porte · nome. Intestazione compatta e azioni Salva/Annulla restano separate dal corpo scorrevole. Form testuali centrati entro 640 dp; disegni tecnici a larghezza disponibile. Margini pagina 16/24 dp, campi distanti 16 dp e gruppi 24 dp. Il salvataggio usa Aggiungi, Salva modifiche o Applica secondo l'operazione; Annulla modifiche chiude la bozza, mentre l'annullamento dell'ultima operazione resta un comando distinto.
 

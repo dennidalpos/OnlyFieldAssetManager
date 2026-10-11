@@ -112,6 +112,8 @@ class ProjectViewModel internal constructor(
     var recentSearch by mutableStateOf<List<String>>(emptyList())
     /** "Other modules" opened: unused optional modules are listed too (session only). */
     var showSecondary by mutableStateOf(false)
+    var inventoryScreen: Screen by mutableStateOf(Screen.Inventory)
+        private set
 
     private var operationBusy by mutableStateOf<String?>(null)
     private var pendingCommands by mutableStateOf(0)
@@ -156,7 +158,14 @@ class ProjectViewModel internal constructor(
     val currentScreen: Screen get() = backStack.last()
 
     fun navigate(screen: Screen) {
+        if (screen == Screen.Inventory || screen == Screen.Racks) inventoryScreen = screen
         backStack.add(screen)
+    }
+
+    fun openInventory(screen: Screen) {
+        require(screen == Screen.Inventory || screen == Screen.Racks)
+        inventoryScreen = screen
+        openTab(screen)
     }
 
     /** Bottom-bar tab: drops everything above the map, then opens [screen] (the map itself stays). */
@@ -164,7 +173,7 @@ class ProjectViewModel internal constructor(
         val home = backStack.indexOf(Screen.Home)
         if (home < 0) return
         while (backStack.lastIndex > home) backStack.removeAt(backStack.lastIndex)
-        if (screen != Screen.Home) backStack.add(screen)
+        if (screen != Screen.Home) backStack.add(if (screen == Screen.Inventory) inventoryScreen else screen)
     }
 
     /** Returns false at the root. */
@@ -208,6 +217,7 @@ class ProjectViewModel internal constructor(
                 return@launchCommand
             }
             mapUiState.clear()
+            inventoryScreen = Screen.Inventory
             selectedSiteId = null
             selectedAreaId = null
             setProject(p)

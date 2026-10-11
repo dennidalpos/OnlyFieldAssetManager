@@ -11,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -33,8 +34,10 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
 
     val index = remember(project) { ProjectIndex(project) }
     var query by rememberSaveableString()
-    var areaFilter by remember { mutableStateOf<Area?>(null) }
-    var statusFilter by remember { mutableStateOf<OperationalStatus?>(null) }
+    var areaId by rememberSaveable { mutableStateOf<String?>(null) }
+    val areaFilter = index.areas.find { it.id == areaId }
+    var statusFilter by rememberSaveable { mutableStateOf<OperationalStatus?>(null) }
+    var filtersOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
     var creating by remember { mutableStateOf(false) }
@@ -44,14 +47,14 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val save = rememberEditSave(vm, creating, editingNew)
 
     val devices = index.devices.filter {
-        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter?.id) &&
+        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter.id) &&
             (statusFilter == null || it.operationalStatus == statusFilter)
     }.sortedForDisplay(i18n) { it.technicalName }
 
     AppScaffold(
-        title = i18n.text("ux.nav.devices"),
+        title = i18n.text("ux.nav.inventory"),
         subtitle = i18n.text("text.e9f37f3828d1", devices.size, index.devices.size),
-        onBack = { vm.back() },
+        onBack = null,
         snackbarHost = snackbar,
         actions = {
             if (selecting) {
@@ -66,17 +69,18 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     ) { padding ->
         Column(Modifier.padding(padding).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SearchField(query, { query = it }, i18n.text("text.ddf4aaf4dd0a"))
-            if (index.areas.isNotEmpty()) {
-                OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, areaFilter, { it.name }, { areaFilter = it }, noneLabel = i18n.text("text.4c852ffc6db0"))
+            InventoryTabs(false, i18n) { vm.openInventory(if (it) Screen.Racks else Screen.Inventory) }
+            Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                SearchField(query, { query = it }, i18n.text("text.ddf4aaf4dd0a"), Modifier.weight(1f))
+                FilterAction(listOfNotNull(areaFilter, statusFilter).size, i18n) { filtersOpen = true }
             }
-            // Only when statuses differ, to keep the phone list lean.
-            if (statusFilter != null || index.devices.any { it.operationalStatus != OperationalStatus.IN_SERVICE }) {
-                OptionPicker(i18n.text("device.status"), OperationalStatus.entries, statusFilter, { it.toDisplayString(i18n = i18n) }, { statusFilter = it }, noneLabel = i18n.text("status.filterAll"))
-            }
+            ActiveFilters(listOfNotNull(
+                areaFilter?.let { ActiveFilter(it.name) { areaId = null } },
+                statusFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { statusFilter = null } }
+            ), i18n) { areaId = null; statusFilter = null }
             when {
                 index.devices.isEmpty() -> EmptyState(i18n.text("text.8d6015db495b"))
-                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaFilter = null; statusFilter = null })
+                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaId = null; statusFilter = null })
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(devices, key = { it.id }) { d ->
                         ItemCard(
@@ -107,6 +111,10 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     }
 
+    if (filtersOpen) FiltersDialog(i18n, { filtersOpen = false }, { areaId = null; statusFilter = null }) {
+        if (index.areas.isNotEmpty()) OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, areaFilter, { it.name }, { areaId = it?.id }, noneLabel = i18n.text("text.4c852ffc6db0"))
+        OptionPicker(i18n.text("device.status"), OperationalStatus.entries, statusFilter, { it.toDisplayString(i18n) }, { statusFilter = it }, noneLabel = i18n.text("status.filterAll"))
+    }
     if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { inventoryDeviceDraft(project, null).withType(it) },
         onAdd = { draft -> save.save(i18n.text("quick.added", QuickAdd.name(draft)), { creating = false }) { draft.apply(it, i18n) } },
         onEdit = { draft -> creating = false; editingNew = draft }, filter = { it.kind == ObjectKind.DEVICE }, error = save.error)

@@ -73,13 +73,15 @@ fun AppScaffold(
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
     busy: String? = null,
+    bottomBar: @Composable () -> Unit = {},
+    showTopBar: Boolean = true,
     content: @Composable (PaddingValues) -> Unit,
 ) {
     val i18n = LocalMessages.current
 
     Scaffold(
         topBar = {
-            Column {
+            if (showTopBar) Column {
                 TopAppBar(
                     title = {
                         Column {
@@ -99,11 +101,27 @@ fun AppScaffold(
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
         floatingActionButton = floatingActionButton,
+        bottomBar = bottomBar,
         content = content
     )
 }
 
 data class MenuAction(val label: String, val destructive: Boolean = false, val onClick: () -> Unit)
+
+/** Persistent actions above system bars and the keyboard. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ActionFooter(message: String? = null, actions: @Composable () -> Unit) {
+    Surface(tonalElevation = 2.dp) {
+        Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding()
+            .padding(horizontal = AppSpacing.content, vertical = AppSpacing.small),
+            verticalArrangement = Arrangement.spacedBy(AppSpacing.small)) {
+            message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+            FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
+                verticalArrangement = Arrangement.spacedBy(8.dp)) { actions() }
+        }
+    }
+}
 
 /** Secondary actions, with destructive entries separated and confirmed by the caller. */
 @Composable
@@ -122,6 +140,7 @@ fun OverflowMenu(actions: List<MenuAction>, contentDescription: String = LocalMe
 
 
 /** List entity with primary and secondary actions. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun ItemCard(
     title: String,
@@ -137,11 +156,13 @@ fun ItemCard(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
     ) {
-        Row(modifier = Modifier.padding(AppSpacing.content), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.inset)) {
+        Row(modifier = Modifier.padding(AppSpacing.inset), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(AppSpacing.small)) {
             leading?.invoke()
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                badge?.let { Tag(it) }
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    badge?.let { Tag(it) }
+                }
                 details.filter { it.isNotBlank() }.forEach {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }

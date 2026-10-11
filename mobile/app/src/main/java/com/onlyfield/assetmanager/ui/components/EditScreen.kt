@@ -13,13 +13,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 
 /** Marks an [EditScreen] form as dirty. */
 val LocalMarkDirty = staticCompositionLocalOf<() -> Unit> { {} }
 
 /** Full-page editor that guards dirty-form discard. */
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditScreen(
     title: String,
@@ -47,14 +46,9 @@ fun EditScreen(
                 )
             },
             bottomBar = {
-                Surface(tonalElevation = 2.dp) {
-                    Column(Modifier.fillMaxWidth().navigationBarsPadding().imePadding().padding(horizontal = AppSpacing.content, vertical = AppSpacing.small), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (!confirmEnabled) Text(validationMessage ?: i18n.text("ux.completeRequired"), style = MaterialTheme.typography.bodySmall)
-                        FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, androidx.compose.ui.Alignment.End), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextButton(onClick = close) { Text(i18n.text("ux.cancelChanges")) }
-                            Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) }
-                        }
-                    }
+                ActionFooter(if (!confirmEnabled) validationMessage ?: i18n.text("ux.completeRequired") else null) {
+                    TextButton(onClick = close) { Text(i18n.text("ux.cancelChanges")) }
+                    Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) }
                 }
             }
         ) { padding ->

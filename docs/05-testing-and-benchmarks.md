@@ -946,3 +946,7 @@ Preparazione Android guidata: prima di `adb install -r` conservati APK installat
 Completati 11 editor nel vero EXE semplice/chiaro 1348×854: 22 scenari di guasto/riprova e 11 undo della modifica. Bozze e pacchetti conservati al guasto; singolo record, ID e altri campi verificati, progetto integralmente ripristinato dall’undo. Esiti, limiti e prossimi casi nella [matrice nativa Windows](testing/windows-native-matrix.md). Evidenze in `build/reports/res23-network-native-20261009`; nessun difetto applicativo o suite JVM ripetuta.
 
 RES-23 resta parziale per varianti/editor completi, operazioni lunghe, protezione/recupero, fusione/rifiuti e stampa. Android non disponibile per dichiarazione utente: rotazione fisica ancora non eseguita. EXE chiuso e helper della sessione rilasciati; inventario del runtime conservato aggiornato senza ritentare le pulizie storiche respinte (RES-24).
+
+## Revisione adattiva — 11 ottobre 2026
+
+L’[audit adattivo](ui-ux-audit-2026-10-11.md) registra comandi, matrici e limiti: 34 test desktop, 3 localizzazione e 5 prove native superati; build Android riuscita. Nuove regressioni AdaptiveNavigationTest e AdaptiveNavigationNativeTest verificano quattro aree, filtri/ricerca conservati, bozza e azioni con tastiera. Evidenze `build/reports/ux-20261011`, senza sostituire quelle storiche. Densità simulate sul telefono non verificano tablet, rotazione fisica o TalkBack; RES-19/23 restano parziali.
