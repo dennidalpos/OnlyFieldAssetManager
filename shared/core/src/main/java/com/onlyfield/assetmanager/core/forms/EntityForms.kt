@@ -31,6 +31,10 @@ data class DeviceForm(
     val notes: String = "",
     val hardware: HardwareSpec = HardwareSpec(),
     val operationalStatus: OperationalStatus = OperationalStatus.IN_SERVICE,
+    val management: DeviceManagement = DeviceManagement.MANAGED,
+    val supplierName: String = "",
+    val supplierContact: String = "",
+    val contractReference: String = "",
 ) {
     fun errors(rackHeightU: Int?, i18n: Messages = Messages()): Map<String, String> = buildMap {
         FieldValidators.required(technicalName, i18n.text("text.4f1b2dcbe4ce"), i18n = i18n)?.let { put("technicalName", it) }
@@ -75,6 +79,10 @@ data class DeviceForm(
             observation = observation,
             hardware = hardware,
             operationalStatus = operationalStatus,
+            management = management,
+            supplierName = supplierName.orNull(),
+            supplierContact = supplierContact.orNull(),
+            contractReference = contractReference.orNull(),
         )
     }
 
@@ -101,6 +109,10 @@ data class DeviceForm(
                 notes = it.observation?.notes.orEmpty(),
                 hardware = it.hardware,
                 operationalStatus = it.operationalStatus,
+                management = it.management,
+                supplierName = it.supplierName.orEmpty(),
+                supplierContact = it.supplierContact.orEmpty(),
+                contractReference = it.contractReference.orEmpty(),
             )
         } ?: DeviceForm(siteId = siteId)
     }

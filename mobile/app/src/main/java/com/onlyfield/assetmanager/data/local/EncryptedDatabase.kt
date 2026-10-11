@@ -22,7 +22,7 @@ object EncryptedDatabase {
     private const val KEY_FILE = "db_key.bin"
     private const val GCM_IV_BYTES = 12
 
-    /** Greenfield v2: recreate test data on version changes; never reuse a version after schema edits. */
+    /** Greenfield v3: recreate test data on version changes; never reuse a version after schema edits. */
     fun open(context: Context): AppDatabase {
         System.loadLibrary("sqlcipher")
         val app = context.applicationContext

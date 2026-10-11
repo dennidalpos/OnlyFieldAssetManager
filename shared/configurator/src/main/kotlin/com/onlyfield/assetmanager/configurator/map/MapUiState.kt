@@ -7,6 +7,7 @@ import com.onlyfield.assetmanager.core.model.*
 class MapUiState {
     private var projectId: String? = null
     private val floors = mutableMapOf<String, FloorUiState>()
+    var homeView by mutableStateOf(MapHomeView.DIAGRAM)
 
     fun floor(project: Project, areaId: String): FloorUiState {
         if (projectId != project.id) {

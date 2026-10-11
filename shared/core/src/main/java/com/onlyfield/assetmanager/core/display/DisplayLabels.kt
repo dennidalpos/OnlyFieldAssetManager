@@ -15,6 +15,7 @@ fun ObservationStatus.toDisplayString(i18n: Messages = Messages()): String = whe
 }
 
 fun OperationalStatus.toDisplayString(i18n: Messages = Messages()): String = i18n.text("status.$name")
+fun DeviceManagement.toDisplayString(i18n: Messages = Messages()): String = i18n.text("management.$name")
 
 fun EndpointStatus.toDisplayString(i18n: Messages = Messages()): String = when (this) {
     EndpointStatus.CONNECTED -> i18n.text("text.67f964220772")

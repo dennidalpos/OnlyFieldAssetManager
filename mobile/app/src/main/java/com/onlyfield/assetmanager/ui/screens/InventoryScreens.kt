@@ -37,6 +37,7 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var areaId by rememberSaveable { mutableStateOf<String?>(null) }
     val areaFilter = index.areas.find { it.id == areaId }
     var statusFilter by rememberSaveable { mutableStateOf<OperationalStatus?>(null) }
+    var managementFilter by rememberSaveable { mutableStateOf<DeviceManagement?>(null) }
     var filtersOpen by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
     var selected by remember { mutableStateOf(setOf<String>()) }
@@ -47,8 +48,8 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val save = rememberEditSave(vm, creating, editingNew)
 
     val devices = index.devices.filter {
-        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber) && (areaFilter == null || it.areaId == areaFilter.id) &&
-            (statusFilter == null || it.operationalStatus == statusFilter)
+        matchesQuery(query, it.technicalName, it.physicalLabel, it.alias, it.ipAddress, it.macAddress, it.serialNumber, it.supplierName) && (areaFilter == null || it.areaId == areaFilter.id) &&
+            (statusFilter == null || it.operationalStatus == statusFilter) && (managementFilter == null || it.management == managementFilter)
     }.sortedForDisplay(i18n) { it.technicalName }
 
     AppScaffold(
@@ -72,15 +73,16 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             InventoryTabs(false, i18n) { vm.openInventory(if (it) Screen.Racks else Screen.Inventory) }
             Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SearchField(query, { query = it }, i18n.text("text.ddf4aaf4dd0a"), Modifier.weight(1f))
-                FilterAction(listOfNotNull(areaFilter, statusFilter).size, i18n) { filtersOpen = true }
+                FilterAction(listOfNotNull(areaFilter, statusFilter, managementFilter).size, i18n) { filtersOpen = true }
             }
             ActiveFilters(listOfNotNull(
                 areaFilter?.let { ActiveFilter(it.name) { areaId = null } },
-                statusFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { statusFilter = null } }
-            ), i18n) { areaId = null; statusFilter = null }
+                statusFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { statusFilter = null } },
+                managementFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { managementFilter = null } }
+            ), i18n) { areaId = null; statusFilter = null; managementFilter = null }
             when {
                 index.devices.isEmpty() -> EmptyState(i18n.text("text.8d6015db495b"))
-                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaId = null; statusFilter = null })
+                devices.isEmpty() -> EmptyState(i18n.text("ux.noResults"), actionLabel = i18n.text("text.c4483e052140"), onAction = { query = ""; areaId = null; statusFilter = null; managementFilter = null })
                 else -> LazyColumn(contentPadding = PaddingValues(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(devices, key = { it.id }) { d ->
                         ItemCard(
@@ -90,7 +92,8 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                                 listOfNotNull(d.areaId?.let { index.areaName(it) }, d.rackId?.let { i18n.text("text.f5ba7982ad75", index.rackName(it)) + (d.positionU?.let { u -> i18n.text("text.bf28e779d560", u) } ?: "") })
                                     .joinToString(" › "),
                                 listOfNotNull(d.ipAddress, i18n.plural("text.53a2e3b94696", d.ports.size),
-                                    d.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.toDisplayString(i18n)).joinToString(" · ")
+                                    d.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.toDisplayString(i18n),
+                                    d.takeIf { it.thirdParty }?.let { listOfNotNull(it.management.toDisplayString(i18n), it.supplierName).joinToString(": ") }).joinToString(" · ")
                             ),
                             leading = if (selecting) {
                                 { Checkbox(checked = d.id in selected, onCheckedChange = { selected = if (it) selected + d.id else selected - d.id }) }
@@ -111,9 +114,10 @@ fun InventoryScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     }
 
-    if (filtersOpen) FiltersDialog(i18n, { filtersOpen = false }, { areaId = null; statusFilter = null }) {
+    if (filtersOpen) FiltersDialog(i18n, { filtersOpen = false }, { areaId = null; statusFilter = null; managementFilter = null }) {
         if (index.areas.isNotEmpty()) OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, areaFilter, { it.name }, { areaId = it?.id }, noneLabel = i18n.text("text.4c852ffc6db0"))
         OptionPicker(i18n.text("device.status"), OperationalStatus.entries, statusFilter, { it.toDisplayString(i18n) }, { statusFilter = it }, noneLabel = i18n.text("status.filterAll"))
+        OptionPicker(i18n.text("device.management"), DeviceManagement.entries, managementFilter, { it.toDisplayString(i18n) }, { managementFilter = it }, noneLabel = i18n.text("management.filterAll"))
     }
     if (creating) ObjectPickerDialog(project, i18n, null, { creating = false }, base = { inventoryDeviceDraft(project, null).withType(it) },
         onAdd = { draft -> save.save(i18n.text("quick.added", QuickAdd.name(draft)), { creating = false }) { draft.apply(it, i18n) } },
@@ -203,6 +207,12 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                         InfoRow("IP", device.ipAddress)
                         InfoRow("MAC", device.macAddress)
                         InfoRow(i18n.text("text.488b09e885d9"), device.serialNumber)
+                        if (device.thirdParty) {
+                            InfoRow(i18n.text("device.management"), device.management.toDisplayString(i18n))
+                            InfoRow(i18n.text("device.supplier"), device.supplierName)
+                            InfoRow(i18n.text("device.supplierContact"), device.supplierContact)
+                            InfoRow(i18n.text("device.contract"), device.contractReference)
+                        }
                         InfoRow(i18n.text("text.90c2d339a9d5"), project.deviceModels.find { it.id == device.deviceModelId }?.name)
                         InfoRow(i18n.text("text.9ac631f3dde4"), device.observation?.status?.toDisplayString(i18n = i18n))
                         device.observation?.notes?.let { Text(it, style = MaterialTheme.typography.bodySmall) }

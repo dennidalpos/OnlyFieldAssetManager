@@ -123,3 +123,9 @@ Il database conserva le tabelle esistenti. Il JSON hardware aggiunge i campi fac
 Revisione UI/UX (8 ottobre): `PortQuickDialog` usa `ContentDialog`, con titolo compatto, corpo scorrevole e azioni persistenti. Foto/Collega/Inserisci passaggio/Scollega sono nel corpo; Chiudi e Dettagli porta nel footer. Il disegno interno non ripete la cornice; la legenda è richiudibile. AUD-42 aveva eliminato la sovrapposizione dei precedenti gruppi di azioni. Non si affiancano più un blocco su più righe e un secondo blocco di altezza diversa negli slot di AlertDialog: senza Dettagli, Chiudi poteva sovrapporsi a Scollega. Salva e Indietro restano fissi durante la configurazione. Regressione nativa rossa prima della correzione, poi matrice 360/412 dp, temi chiaro/scuro e testo 1,0/1,3 verde, con e senza Dettagli. Perimetro e limiti in [roadmap.md](../roadmap.md).
 
 UX-04 Android (8 ottobre): ricerca di un modello tra 12 e riduzione di un gruppo collegato verificate nelle otto combinazioni su host isolato. Il filtro non cambia la bozza; la scelta applica il modello. La riduzione richiede conferma, conserva gli ID delle porte rimaste e del cavo e lascia aperto l'estremo della porta rimossa. Nessuna modifica al runtime per questa verifica; tastiera aperta, TalkBack e editor completo restano in RES-19.
+
+## Gestione e fornitore — 11 ottobre 2026
+
+La sezione **Gestione** dell'editor dell'apparato sceglie chi lo gestisce. Con un valore diverso da «Gestito dal tecnico» si aprono Fornitore / gestore, Contatto e Riferimento contratto; i fornitori già scritti su altri apparati compaiono come pulsanti e compilano i tre campi con un tocco. La sezione si apre già espansa per gli apparati di terzi.
+
+Gli apparati di terzi hanno un contorno tratteggiato in planimetria e in topologia, la dicitura di gestione e fornitore negli elenchi e nella scheda, e un filtro **Gestione** in Inventario su entrambe le piattaforme.

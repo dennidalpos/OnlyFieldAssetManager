@@ -134,3 +134,16 @@ AUD-42 (8 ottobre) completato: footer della scheda rapida condivisa senza sovrap
 UX-04 verificato sul componente Android l'8 ottobre: ricerca modelli e conferma della riduzione di un gruppo collegato nella matrice LocalDensity 360/412 dp, chiaro/scuro, testo 1,0/1,3. Nessuna modifica al runtime; editor completo, tastiera aperta e TalkBack restano in RES-19. Evidenze recuperate e APK test rimosso; restano soltanto i collaudi della matrice aperta.
 
 Seed demo (8 ottobre) rigenerato su richiesta: rete comunale più laboratorio con casi importabili e avvisi documentali intenzionali, 14 modelli e sette allegati sintetici. Le casistiche e la rigenerazione sono documentate nella guida di verifica; nessun cambio a Room v2, formato .ofam v1 o funzioni runtime. Pacchetto, 18 prove demo, una prova PDF e APK test aggiornato verificati. L'ampliamento del dataset non chiude i collaudi nativi RES-13/19/23/24 e non sostituisce la demo installata.
+
+## Evoluzione: viste grafiche principali — 11 ottobre 2026
+
+Obiettivo confermato dall'utente: mappare in modo rapido e intuitivo dal telefono reti fisiche e logiche, apparati interconnessi, censimento e apparati di fornitori o non gestiti dal tecnico, anche su più sedi collegate. Le rappresentazioni grafiche sono la vista principale; le viste di dettaglio restano selezionabili.
+
+Decisioni (risposte dell'utente):
+
+- **Vista iniziale a livelli grafici**: progetto = schema delle sedi interconnesse; sede = topologia fisica; piano = planimetria. Selettore di vista in alto; con una sola sede si apre direttamente la sede.
+- **Vista logica**: riquadri per subnet/VLAN con gli apparati che vi appartengono, gateway evidenziato, router/firewall che uniscono i riquadri, WAN/VPN verso l'esterno.
+- **Apparati di terzi**: campo Gestione (gestito dal tecnico / fornitore / cliente / sconosciuto) con nome fornitore, contatto e riferimento contratto facoltativi; evidenza in tutte le viste grafiche e filtro negli elenchi. Comporta un incremento dello schema Room e un nuovo campo nel contratto `.ofam` (ammesso: applicazione in sviluppo).
+- **Ordine**: prima i rilievi AUD-65–70, poi le viste.
+
+Stato: AUD-65–70 corretti; GFX-01 (vista a livelli), GFX-02 (schema sedi), GFX-03 (vista logica) e GFX-04 (gestione e fornitore, Room v3) implementati l'11 ottobre. Aperto GFX-05: demo con sedi interconnesse, subnet e apparati di terzi, e selettore di vista anche al livello del piano. Prove native Android in RES-19. Restano validi i limiti dell'intervista del 5 ottobre: nessuna mappa geografica delle sedi, nessuna scoperta automatica, nessun import da altri strumenti.

@@ -50,7 +50,8 @@ class GlobalSearch(project: Project, i18n: Messages = Messages()) {
         for (d in index.devices) {
             out += Candidate(hit(HitKind.DEVICE, d.id, d.technicalName, ObjectRef(PlacementTargetType.DEVICE, d.id)), listOf(
                 i18n.text("config.name") to d.technicalName, i18n.text("config.label") to d.physicalLabel, i18n.text("search.alias") to d.alias,
-                "IP" to d.ipAddress, "MAC" to d.macAddress, i18n.text("search.serial") to d.serialNumber))
+                "IP" to d.ipAddress, "MAC" to d.macAddress, i18n.text("search.serial") to d.serialNumber,
+                i18n.text("device.supplier") to d.supplierName))
         }
         for (r in project.racks) out += Candidate(hit(HitKind.RACK, r.id, r.name, ObjectRef(PlacementTargetType.RACK, r.id)), listOf(i18n.text("config.name") to r.name))
         for (p in index.ports) {

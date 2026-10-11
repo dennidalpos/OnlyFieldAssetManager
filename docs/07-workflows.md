@@ -2,7 +2,7 @@
 
 ## Progetto e modifiche
 
-L’[audit del 9 ottobre](repo-residuals-2026-10-09.md) distingue gli editor già corretti da quelli ancora incompleti: **AUD-46** copre rete logica e cablaggio/mappature su entrambe le piattaforme, più Alimentazioni/PoE/Badge Android. Al save fallito possono chiudere la bozza; VLAN Windows riprodotta in dialogo e pannello. Alimentazioni/PoE/Badge Windows di AUD-44 restano corretti. **AUD-49** riguarda i decimali non finiti accettati dai form/modello e rifiutati al salvataggio.
+Stato corrente: tutti gli editor conservano la bozza quando il salvataggio fallisce e i decimali non finiti sono rifiutati già dai form. Storico: i difetti rilevati dall’[audit del 9 ottobre](repo-residuals-2026-10-09.md) su rete logica, cablaggio/mappature e Alimentazioni/PoE/Badge Android (**AUD-46**) e sui decimali non finiti (**AUD-49**) sono stati corretti lo stesso giorno; dettagli nella sezione AUD-46 più sotto e nella roadmap.
 
 Il wizard crea progetto, sedi e almeno un piano; la password e facoltativa. Le app navigano progetto, sede, piano e mappa; le sedi sono elencate per gruppo. Le modifiche passano da una bozza: uscita, cambio elemento, cambio lingua o chiusura chiedono conferma se la bozza e sporca.
 
@@ -13,6 +13,8 @@ Android usa editor a pagina intera; Desktop usa elenco e pannello laterale con `
 **Confronto prima dell’import.** Il pacchetto viene confrontato con la copia locale dello stesso ID, anche se è chiusa o è aperto un altro progetto. Una versione precedente mostra un avviso; la sostituzione richiede conferma e annullare conserva la copia locale. Fusione disponibile solo per lo stesso progetto. Su Windows, se la copia chiusa usa una password diversa, occorre sbloccarla prima del confronto; la fusione conserva la password locale.
 
 **Import Android.** Creazione e sostituzione usano la password del pacchetto ricevuto per le successive riaperture. Se il pacchetto non è protetto, la copia sostituita diventa non protetta. La fusione mantiene la password e lo stato di protezione locali.
+
+**Base di fusione (AUD-68).** Se la base locale manca o non è leggibile, entrambe le app lo dichiarano e ogni differenza diventa un conflitto da rivedere: su Android l’avviso compare nel dialogo dei conflitti e nel messaggio finale. La base illeggibile non viene cancellata né riscritta dalla sola lettura; annullare lascia tutto invariato.
 
 AUD-18: annullamento, nuova richiesta e chiusura del ViewModel invalidano l'import in corso, compresa la fusione. Nessuna conferma o Review tardiva riapre il progetto; una seconda conferma non avvia un altro salvataggio. Il pacchetto appartiene al worker, poi alla Review o al comando di conferma/fusione, e viene chiuso al termine di ciascun percorso. Annullare prima del commit lascia la copia precedente; un commit già iniziato termina nel blocco non cancellabile e resta durevole, senza pubblicazione UI tardiva.
 
@@ -45,7 +47,7 @@ Le destinazioni hanno gli stessi gruppi e nomi sulle due piattaforme:
 | Supporto | Modelli, Allegati, Documenti, Credenziali |
 | Progetto | Struttura e impostazioni, Cestino |
 
-**Moduli secondari** (`configurator.SecondaryModule`): Credenziali, Configurazioni apparati (scheda di Rete) e Badge documentali (scheda di Alimentazione) restano nel modello e negli export, ma compaiono solo se il progetto li usa. Altrimenti una sola voce **Altri moduli**, in Progetto su entrambe le piattaforme, li elenca e li mostra per la sessione; **Nascondi i moduli non usati** li richiude. Su Windows `Ctrl+5` apre comunque le Credenziali. La videosorveglianza non ha una schermata propria.
+**Moduli secondari** (`configurator.SecondaryModule`): Credenziali, Configurazioni apparati (scheda di Rete) e Badge documentali (scheda di Alimentazione) restano nel modello e negli export, ma compaiono solo se il progetto li usa. Altrimenti una sola voce **Altri moduli**, in Progetto su entrambe le piattaforme, li elenca e li mostra per la sessione; **Nascondi i moduli non usati** li richiude. Su Windows, con una bozza modificata aperta, nascondere i moduli chiede prima Continua a modificare/Scarta (AUD-65). Su Windows `Ctrl+5` apre comunque le Credenziali. La videosorveglianza non ha una schermata propria.
 
 **Android.** Quattro accessi: Mappa, Inventario, Cablaggio e Progetto. Inventario raggruppa Dispositivi e Rack e riapre l’ultima vista usata. Barra inferiore nelle finestre compatte; rail da 600 dp di larghezza con almeno 480 dp di altezza. La scelta di una voce svuota lo stack sopra la mappa.
 
@@ -61,7 +63,7 @@ La navigazione scompare mentre è aperto un editor a pagina intera o lo scanner,
 
 Le scorciatoie Windows mantengono le associazioni: `Ctrl+1` Dispositivi, `Ctrl+2` Rack, `Ctrl+3` Modelli, `Ctrl+4` Mappa, `Ctrl+5` Credenziali, `Ctrl+6` Allegati, `Ctrl+7` Cablaggio, `Ctrl+8` Rete, `Ctrl+9` Alimentazione.
 
-Gli elenchi nominali e i selettori usano il nome nella lingua corrente per ordinare copie di presentazione. L'ordine salvato resta invariato. VLAN, porte e unità rack conservano l'ordinamento tecnico; il cestino mostra prima le eliminazioni recenti. Ricerca, filtri e posizioni degli elenchi si conservano passando tra le sezioni del progetto. I filtri di Inventario si aprono dal pulsante Filtri; quelli attivi restano visibili e rimovibili. Inventario filtra anche per stato operativo, distingue assenza di dati da ricerca senza risultati e mostra nome, collocazione e un riepilogo breve.
+Gli elenchi nominali e i selettori usano il nome nella lingua corrente per ordinare copie di presentazione. L'ordine salvato resta invariato. VLAN, porte e unità rack conservano l'ordinamento tecnico; il cestino mostra prima le eliminazioni recenti. Ricerca, filtri e posizioni degli elenchi si conservano passando tra le sezioni del progetto e, su Windows, fra le sottoschede di Rete e Alimentazione (AUD-66); gli editor chiusi non vengono riaperti. Su Android Documenti conserva formato, autore, titolo e sezioni per la sessione del progetto; le conferme su contenuti riservati o da rivedere vanno ridate a ogni ingresso (AUD-67). I filtri di Inventario si aprono dal pulsante Filtri; quelli attivi restano visibili e rimovibili. Inventario filtra anche per stato operativo, distingue assenza di dati da ricerca senza risultati e mostra nome, collocazione e un riepilogo breve.
 
 ## Editor e configuratori
 

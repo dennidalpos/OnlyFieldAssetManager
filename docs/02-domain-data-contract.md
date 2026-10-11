@@ -102,3 +102,12 @@ AUD-56: enum o liste JSON corrotte nelle righe Room interrompono la lettura; nes
 
 Policy confermata dall’utente: sedi referenziate da VLAN/subnet non eliminabili; apparati referenziati nell’ambito DEVICE non eliminabili, sostituibili o fondibili. La fusione controlla entrambi gli apparati prima di creare porte, cestino o copie. Le reti restano invariate; occorre rimuovere esplicitamente i riferimenti prima di riprovare. Sedi vuote/apparati non referenziati continuano a seguire i flussi ordinari, incluso ripristino e undo. Rifiuti visibili in inventario/mappa Windows e comandi Android; nessun nuovo schema o formato del cestino.
 AUD-62: rimosso il serializer autonomo dei modelli, privo di consumatori applicativi. Il catalogo DeviceModel continua a viaggiare nel progetto attraverso PackageSerializer, con ID, hardware, layout/override PoE, template porte e campi extra conservati nello scambio `.ofam` semplice/protetto. Nessun formato aggiuntivo o migrazione.
+
+## Gestione e fornitore degli apparati — 11 ottobre 2026
+
+Ogni apparato dichiara chi lo gestisce: `Device.management` vale `MANAGED` (gestito dal tecnico, valore iniziale), `SUPPLIER`, `CUSTOMER` o `UNKNOWN`. Per gli apparati non gestiti dal tecnico sono facoltativi `supplierName` (fornitore o gestore), `supplierContact` e `contractReference`. `Device.thirdParty` è vero per ogni valore diverso da `MANAGED`.
+
+- **Scambio**: i quattro campi sono facoltativi nel JSON del progetto; il formato `.ofam` resta v1 (campi sconosciuti ignorati, valori iniziali in lettura).
+- **Android**: quattro colonne in `devices`, schema Room **v3** esportato in `mobile/app/schemas`. La migrazione è distruttiva in entrambe le direzioni: prima di installare una versione con schema diverso i progetti locali vanno esportati in `.ofam` e reimportati dopo.
+- **Form**: i dati del fornitore restano memorizzati anche se la gestione torna a «Gestito dal tecnico»; in quel caso non compaiono in disegni, elenchi ed export.
+- **Export**: colonne Gestione, Fornitore / gestore, Contatto e Riferimento contratto nel foglio Inventario XLSX; sezione «Apparati non gestiti dal tecnico» nel Markdown; gestione e fornitore accanto all'apparato nei PDF.

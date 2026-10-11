@@ -279,6 +279,7 @@ object PdfExportManager {
         fun device(device: Device, location: String = "") {
             text("${device.technicalName} · ${device.category.toDisplayString(i18n)} · ${device.operationalStatus.toDisplayString(i18n)} · " +
                 device.observation.effectiveStatus().toDisplayString(i18n) +
+                device.takeIf { it.thirdParty }?.let { " · " + listOfNotNull(it.management.toDisplayString(i18n), it.supplierName, it.supplierContact, it.contractReference).joinToString(" ") }.orEmpty() +
                 location.takeIf { it.isNotBlank() }?.let { "\n$it" }.orEmpty())
         }
 

@@ -9,9 +9,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.onlyfield.assetmanager.core.display.toDisplayString
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.semantics.Role
@@ -39,16 +44,12 @@ private val NodeHeight = 48.dp
 private val ColumnGap = 12.dp
 private val RowGap = 44.dp
 
-/**
- * Physical topology of the active devices (passives collapsed into the links), full screen.
- * Rows follow the viewport width, so only vertical scrolling is ever needed; a tap opens the device.
- */
+/** Full-screen [TopologyView] with site and floor filters. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TopologyDialog(project: Project, i18n: Messages, siteId: String?, areaId: String?, onOpen: (Device) -> Unit, onClose: () -> Unit) {
     var site by remember { mutableStateOf(siteId) }
     var area by remember { mutableStateOf(areaId) }
-    var endpoints by remember { mutableStateOf(false) }
     Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(Modifier.fillMaxSize()) {
             Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -56,10 +57,9 @@ fun TopologyDialog(project: Project, i18n: Messages, siteId: String?, areaId: St
                     Text(i18n.text("topology.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
                     TextButton(onClick = onClose) { Text(i18n.text("ux.close")) }
                 }
-                // Filters wrap instead of scrolling sideways.
                 val sites = remember(project) { listOf<Site?>(null) + project.sites.sitesForDisplay(i18n) }
                 val current = project.sites.find { it.id == site }
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                TopologyView(project, i18n, site, area, onOpen, Modifier.weight(1f)) {
                     ValueMenu(i18n.text("topology.site"), current, sites, { it?.displayName() ?: i18n.text("topology.allSites") }, Modifier.widthIn(min = 160.dp, max = 280.dp)) {
                         site = it?.id; area = null
                     }
@@ -68,22 +68,39 @@ fun TopologyDialog(project: Project, i18n: Messages, siteId: String?, areaId: St
                         ValueMenu(i18n.text("topology.floor"), current.areas.find { it.id == area }, areas, { it?.name ?: i18n.text("topology.allFloors") },
                             Modifier.widthIn(min = 160.dp, max = 280.dp)) { area = it?.id }
                     }
-                    Row(Modifier.toggleable(endpoints, role = Role.Switch) { endpoints = it }.heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Switch(endpoints, null); Text(i18n.text("topology.endpoints"))
-                    }
                 }
-                BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-                    val width = maxWidth
-                    val perRow = ((width + ColumnGap) / (NodeWidth + ColumnGap)).toInt().coerceAtLeast(1)
-                    val topology = remember(project, site, area, perRow, endpoints) { PhysicalTopology.build(project, site, area, perRow, foldEndpoints = !endpoints) }
-                    Column {
-                        Text(i18n.text("topology.summary", topology.nodes.count { !it.outside } + topology.folded.values.sumOf { it.size }, topology.links.size, topology.stubs.values.sum()),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (topology.nodes.isEmpty()) Text(i18n.text("topology.empty"), Modifier.padding(top = 16.dp))
-                        else TopologyCanvas(project, topology, i18n, width, onOpen)
-                    }
-                }
+            }
+        }
+    }
+}
+
+/**
+ * Physical topology of the active devices (passives collapsed into the links).
+ * Rows follow the available width, so only vertical scrolling is ever needed; a tap opens the device.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TopologyView(project: Project, i18n: Messages, siteId: String?, areaId: String?, onOpen: (Device) -> Unit, modifier: Modifier = Modifier,
+                 filters: @Composable FlowRowScope.() -> Unit = {}) {
+    var endpoints by rememberSaveable { mutableStateOf(false) }
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Filters wrap instead of scrolling sideways.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            filters()
+            Row(Modifier.toggleable(endpoints, role = Role.Switch) { endpoints = it }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Switch(endpoints, null); Text(i18n.text("topology.endpoints"))
+            }
+        }
+        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+            val width = maxWidth
+            val perRow = ((width + ColumnGap) / (NodeWidth + ColumnGap)).toInt().coerceAtLeast(1)
+            val topology = remember(project, siteId, areaId, perRow, endpoints) { PhysicalTopology.build(project, siteId, areaId, perRow, foldEndpoints = !endpoints) }
+            Column {
+                Text(i18n.text("topology.summary", topology.nodes.count { !it.outside } + topology.folded.values.sumOf { it.size }, topology.links.size, topology.stubs.values.sum()),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (topology.nodes.isEmpty()) Text(i18n.text("topology.empty"), Modifier.padding(top = 16.dp))
+                else TopologyCanvas(project, topology, i18n, width, onOpen)
             }
         }
     }
@@ -101,6 +118,7 @@ private fun TopologyCanvas(project: Project, topology: Topology, i18n: Messages,
         n.device.id to DpOffset(left + (NodeWidth + ColumnGap) * n.column + NodeWidth / 2, rowStep * n.row + NodeHeight / 2)
     }
     val line = MaterialTheme.colorScheme.outline
+    val outline = MaterialTheme.colorScheme.onSurface
     val radio = MaterialTheme.colorScheme.tertiary
     Box(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
         Box(Modifier.width(width).height(height)) {
@@ -130,9 +148,15 @@ private fun TopologyCanvas(project: Project, topology: Topology, i18n: Messages,
                     contentColor = androidx.compose.ui.graphics.Color.White,
                     tonalElevation = 1.dp,
                     modifier = Modifier.offset(c.x - NodeWidth / 2, c.y - NodeHeight / 2).size(NodeWidth, NodeHeight).alpha(if (faded) .5f else 1f)
+                        // Not managed by the technician: dashed outline, as on the floor plan.
+                        .then(if (node.device.thirdParty) Modifier.drawWithContent {
+                            drawContent()
+                            drawRoundRect(outline, style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f))), cornerRadius = CornerRadius(8.dp.toPx()))
+                        } else Modifier)
                         .clickable(role = Role.Button) { onOpen(node.device) }
                         .semantics(mergeDescendants = true) {
-                            contentDescription = listOfNotNull(node.device.technicalName, place.ifBlank { null }, i18n.plural("topology.links", links),
+                            contentDescription = listOfNotNull(node.device.technicalName, place.ifBlank { null },
+                                node.device.takeIf { it.thirdParty }?.let { d -> listOfNotNull(d.management.toDisplayString(i18n), d.supplierName).joinToString(" ") }, i18n.plural("topology.links", links),
                                 endpointsHere.takeIf { it > 0 }?.let { i18n.plural("topology.folded", it) }, stubs.takeIf { it > 0 }?.let { i18n.plural("topology.stubs", it) }).joinToString(", ")
                         },
                 ) {

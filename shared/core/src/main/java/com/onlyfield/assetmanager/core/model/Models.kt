@@ -165,7 +165,19 @@ data class Device(
     val objectTypeId: String? = null,
     val hardware: HardwareSpec = HardwareSpec(),
     val operationalStatus: OperationalStatus = OperationalStatus.IN_SERVICE,
-)
+    val management: DeviceManagement = DeviceManagement.MANAGED,
+    /** Who runs a device the technician does not manage, how to reach them, and under which contract. */
+    val supplierName: String? = null,
+    val supplierContact: String? = null,
+    val contractReference: String? = null,
+) {
+    /** Surveyed but run by someone else (or by nobody known): marked in every drawing. */
+    val thirdParty: Boolean get() = management != DeviceManagement.MANAGED
+}
+
+/** Who runs a device: the surveying technician, a supplier (carrier, vendor, integrator), the customer, or not known yet. */
+@Serializable
+enum class DeviceManagement { MANAGED, SUPPLIER, CUSTOMER, UNKNOWN }
 
 @Serializable
 enum class AttachmentClassification {

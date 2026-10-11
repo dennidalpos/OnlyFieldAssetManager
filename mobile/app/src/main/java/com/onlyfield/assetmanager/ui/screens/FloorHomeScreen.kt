@@ -1,20 +1,13 @@
 package com.onlyfield.assetmanager.ui.screens
 
-import com.onlyfield.assetmanager.configurator.theme.Button
-import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import com.onlyfield.assetmanager.core.display.sitesForDisplay
-import com.onlyfield.assetmanager.core.display.displayName
-import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.ui.graphics.ImageBitmap
@@ -38,9 +31,13 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val i18n = LocalMessages.current
 
     val context = LocalContext.current
-    val site = project.sites.find { it.id == vm.selectedSiteId }
+    val selectedSite = project.sites.find { it.id == vm.selectedSiteId }
+    // A single site is opened directly: its drawing is the project's first screen.
+    val site = selectedSite ?: project.sites.singleOrNull()
     val area = site?.let { it.areas.find { it.id == vm.selectedAreaId } }
-    var addingStructure by remember { mutableStateOf(false) }
+    val manySites = project.sites.size > 1
+    // New structure being named: true for a site, false for a floor of [site].
+    var addingSite by remember { mutableStateOf<Boolean?>(null) }
     var adding by remember { mutableStateOf<Pair<ObjectRef?, MapPoint?>?>(null) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
     // Object to select after "Go to"; cleared when the user picks a floor by hand.
@@ -78,8 +75,8 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
         else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
     }
-    fun back() { when { area != null && vm.mapUiState.floor(project, area.id).let { it.expanded && !it.wideDetails } -> vm.mapUiState.floor(project, area.id).expanded = false; area != null -> vm.selectedAreaId = null; site != null -> vm.selectedSiteId = null; else -> vm.back() } }
-    BackHandler(enabled = site != null) { back() }
+    fun back() { when { area != null && vm.mapUiState.floor(project, area.id).let { it.expanded && !it.wideDetails } -> vm.mapUiState.floor(project, area.id).expanded = false; area != null -> vm.selectedAreaId = null; selectedSite != null && manySites -> vm.selectedSiteId = null; else -> vm.back() } }
+    BackHandler(enabled = area != null || (selectedSite != null && manySites)) { back() }
     LaunchedEffect(attachment?.id, area?.floorplanPageIndex) {
         image = null; imageError = null
         if (attachment != null) {
@@ -100,18 +97,13 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         actions = { if (area == null) IconButton(onClick = { searching = true }) { Icon(androidx.compose.material.icons.Icons.Default.Search, i18n.text("search.action")) } }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(if (area == null) 16.dp else 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (area == null) {
-                Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.titleLarge)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(onClick = { saveError = null; addingStructure = true }, enabled = vm.busy == null) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
-                    OutlinedButton(onClick = { topology = true }) { Text(i18n.text("topology.title")) }
-                }
-                LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (site == null) items(project.sites.sitesForDisplay(i18n), key = { it.id }) { b ->
-                        ItemCard(b.displayName(), listOf(i18n.text("text.e326a5ebe3a5", b.areas.size)), onClick = { vm.selectedSiteId = b.id; vm.selectedAreaId = null })
-                    } else items(site.areas.sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
-                        ItemCard(a.name, listOf(i18n.plural("text.76188f884c68", ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)), onClick = { focus = null; vm.selectedAreaId = a.id })
-                    }
-                }
+                MapHome(project, i18n, site, vm.mapUiState,
+                    onSite = { vm.selectedSiteId = it.id; vm.selectedAreaId = null },
+                    onFloor = { focus = null; vm.selectedAreaId = it.id },
+                    onDevice = ::openDevice,
+                    onAddSite = { if (vm.busy == null) { saveError = null; addingSite = true } },
+                    onAddFloor = { if (vm.busy == null) { saveError = null; addingSite = false } },
+                    modifier = Modifier.weight(1f), onTopology = { topology = true })
             } else {
                 imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 MapWorkspace(project, area.id, image, i18n, MapActions(
@@ -143,10 +135,11 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     }
     if (searching) GlobalSearchDialog(project, i18n, vm.recentSearch, ::openHit) { searching = false }
     if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
-    if (addingStructure) {
+    addingSite?.let { requested ->
+        val newSite = requested || site == null
         var name by remember { mutableStateOf("") }
-        EditScreen(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { if (vm.busy == null) addingStructure = false }, {
-            save(i18n.text("text.ad31ce615e92"), { addingStructure = false }) { if (site == null) ProjectEdits.addSite(it, name.trim()) else ProjectEdits.addArea(it, site.id, Area(name = name.trim())) }
+        EditScreen(if (newSite) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site!!.name), { if (vm.busy == null) addingSite = null }, {
+            save(i18n.text("text.ad31ce615e92"), { addingSite = null }) { if (newSite) ProjectEdits.addSite(it, name.trim()) else ProjectEdits.addArea(it, site!!.id, Area(name = name.trim())) }
         }, confirmEnabled = name.isNotBlank() && vm.busy == null) {
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
             saveError?.let { Text(it, color = MaterialTheme.colorScheme.error) }

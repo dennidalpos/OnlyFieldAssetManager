@@ -227,6 +227,26 @@ class ImportLifecycleTest {
         runBlocking { assertEquals("Local", repository.getProjectById(project.id)!!.name) }
     }
 
+    /** AUD-68: the review names a missing or unreadable base; reading never rewrites the stored one. */
+    @Test fun mergeReviewReportsMissingOrUnreadableBaseAndKeepsIt() {
+        runBlocking { repository.saveProject(project.copy(name = "Local")) }
+        fun baseNote(): String? {
+            vm.startImport(context.contentResolver, source())
+            await { vm.busy == null }
+            vm.startMerge()
+            await { vm.busy == null }
+            return (vm.importState.value as ImportState.Merging).baseNote.also { vm.cancelImport() }
+        }
+        fun store(json: String) = runBlocking { db.projectDao().saveSyncSnapshot(com.onlyfield.assetmanager.data.local.SyncSnapshotEntity(project.id, json, 1L)) }
+        assertEquals(vm.i18n.text("merge.baseUnavailable"), baseNote())
+        store("{")
+        assertEquals(vm.i18n.text("merge.baseUnreadable"), baseNote())
+        runBlocking { assertEquals("{", db.projectDao().getSyncSnapshot(project.id)!!.projectJson) }
+        store(PackageSerializer.jsonConfig.encodeToString(Project.serializer(), project.copy(name = "Base")))
+        assertNull(baseNote())
+        runBlocking { assertEquals("Local", repository.getProjectById(project.id)!!.name) }
+    }
+
     @Test fun doubleConfirmationCommitsOnceAndClosesThePackageAfterSlowSave() {
         vm.startImport(context.contentResolver, source())
         await { vm.busy == null }

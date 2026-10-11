@@ -276,6 +276,24 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
                     Field(i18n.text("config.serial"), d.serialNumber) { change(draft.copy(device = d.copy(serialNumber = it))) }
                     Field(i18n.text("config.alias"), d.alias) { change(draft.copy(device = d.copy(alias = it))) }
                 }
+                val thirdParty = d.management != DeviceManagement.MANAGED
+                ConfiguratorSection(i18n.text("device.management"), initiallyExpanded = thirdParty,
+                    summary = listOf(d.management.toDisplayString(i18n), d.supplierName.takeIf { thirdParty }.orEmpty()).filter { it.isNotBlank() }.joinToString(" · ")) {
+                    Pick(i18n.text("device.management"), d.management, DeviceManagement.entries, i18n, { it.toDisplayString(i18n) }, allowClear = false) { it?.let { m -> change(draft.copy(device = d.copy(management = m))) } }
+                    if (thirdParty) {
+                        // Suppliers already typed on other devices fill the three fields with one tap.
+                        val known = remember(preview) { preview.sites.flatMap { it.devices }.filter { it.id != draft.id && !it.supplierName.isNullOrBlank() }.distinctBy { it.supplierName!!.trim().lowercase() } }
+                        if (d.supplierName.isBlank() && known.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            known.take(6).forEach { k ->
+                                AssistChip({ change(draft.copy(device = d.copy(supplierName = k.supplierName.orEmpty(), supplierContact = k.supplierContact.orEmpty(), contractReference = k.contractReference.orEmpty()))) },
+                                    { Text(k.supplierName.orEmpty(), maxLines = 1) }, Modifier.heightIn(min = 48.dp))
+                            }
+                        }
+                        Field(i18n.text("device.supplier"), d.supplierName) { change(draft.copy(device = d.copy(supplierName = it))) }
+                        Field(i18n.text("device.supplierContact"), d.supplierContact) { change(draft.copy(device = d.copy(supplierContact = it))) }
+                        Field(i18n.text("device.contract"), d.contractReference) { change(draft.copy(device = d.copy(contractReference = it))) }
+                    }
+                }
             }
             if (modelEditor || ObjectCatalog.builtins.none { it.id == draft.type.id } || cells.any { it.poeCapable != null || it.poe != null }) ConfiguratorSection(i18n.text("ux.hardware"), error = if (modelEditor) errors["heightU"] else null) {
                 // Built-in types fix the category and the container role; only custom and legacy types expose them.

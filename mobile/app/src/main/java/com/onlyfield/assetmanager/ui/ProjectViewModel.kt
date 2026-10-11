@@ -61,7 +61,8 @@ sealed interface ImportState {
     data class NeedsPassword(val uri: Uri, val wrongPassword: Boolean = false) : ImportState
     data class Review(val evaluation: PackageImportEvaluation) : ImportState
     /** Merge conflicts resolved one at a time. */
-    data class Merging(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap()) : ImportState {
+    /** [baseNote]: why the merge ran without its base (missing or unreadable). */
+    data class Merging(val pkg: ProjectPackage, val result: MergeResult, val choices: Map<MergeKey, MergeSide> = emptyMap(), val baseNote: String? = null) : ImportState {
         val current: MergeConflict? get() = result.conflicts.getOrNull(choices.size)
     }
 }
@@ -631,14 +632,19 @@ class ProjectViewModel internal constructor(
         importJob = launchCommand {
             try {
                 val local = repository.getProjectById(pkg.project.id) ?: error(i18n.text("text.03d3a4092bb0"))
+                // Without a usable base every difference becomes a conflict: say so instead of merging silently.
+                var baseNote: String? = null
+                val base = try { repository.getSyncBase(pkg.project.id) }
+                    catch (e: com.onlyfield.assetmanager.data.repository.UnreadableMergeBase) { baseNote = i18n.text("merge.baseUnreadable"); null }
+                if (base == null && baseNote == null) baseNote = i18n.text("merge.baseUnavailable")
                 val result = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
-                    ProjectMerger.merge(repository.getSyncBase(pkg.project.id), local, pkg.project, i18n = i18n)
+                    ProjectMerger.merge(base, local, pkg.project, i18n = i18n)
                 }
                 kotlinx.coroutines.currentCoroutineContext().ensureActive()
                 if (request != importRequest) return@launchCommand
-                if (result.conflicts.isEmpty()) saveMerge(ImportState.Merging(pkg, result), request)
+                if (result.conflicts.isEmpty()) saveMerge(ImportState.Merging(pkg, result, baseNote = baseNote), request)
                 else {
-                    _importState.value = ImportState.Merging(pkg, result)
+                    _importState.value = ImportState.Merging(pkg, result, baseNote = baseNote)
                     transferred = true
                 }
             } catch (e: Exception) {
@@ -675,7 +681,7 @@ class ProjectViewModel internal constructor(
         repository.importMergedPackage(merging.pkg, merged)
         if (request == importRequest && commandSession == session) {
             openProject(merging.pkg.project.id)
-            notify(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size))
+            notify(listOfNotNull(i18n.text("text.123fb31b11bf", merging.result.autoApplied, merging.choices.size), merging.baseNote).joinToString(" "))
         }
     }
 

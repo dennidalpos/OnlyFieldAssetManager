@@ -327,7 +327,11 @@ internal class ProjectStore(private val db: AppDatabase) {
         projectDao.saveSyncSnapshot(com.onlyfield.assetmanager.data.local.SyncSnapshotEntity(project.id, json, saved))
     }
 
+    /** Null when no base was saved; an unreadable one throws [UnreadableMergeBase] and stays stored. */
     suspend fun loadBase(projectId: String): Project? = projectDao.getSyncSnapshot(projectId)?.let {
-        runCatching { PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), it.projectJson) }.getOrNull()
+        try { PackageSerializer.jsonConfig.decodeFromString(Project.serializer(), it.projectJson) }
+        catch (e: IllegalArgumentException) { throw UnreadableMergeBase(e) }
     }
 }
+
+class UnreadableMergeBase(cause: Throwable) : Exception(cause)

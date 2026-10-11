@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -42,13 +43,16 @@ fun NetworkLogicalSection(project: Project, onProjectUpdated: (Project, String) 
         val shown = visibleTabs(labels.size, project, showSecondary, mapOf(4 to SecondaryModule.CONFIGURATIONS))
         if (tab !in shown) tab = shown.first()
         SubTabs(shown.map(labels::get), shown.indexOf(tab)) { tab = shown[it] }
-        when (tab) {
-            0 -> VlanTab(project, onProjectUpdated, saveError)
-            1 -> SubnetTab(project, onProjectUpdated, saveError)
-            2 -> InterfacesTab(project, index, onProjectUpdated, saveError)
-            3 -> WanTab(project, index, onProjectUpdated, saveError)
-            4 -> ConfigsTab(project, index, onProjectUpdated, saveError)
-            5 -> ExtraFieldsTab(project, index, onProjectUpdated, saveError)
+        // Search and scroll of each sub-tab survive switching; open editors do not.
+        rememberSaveableStateHolder().SaveableStateProvider(tab) {
+            when (tab) {
+                0 -> VlanTab(project, onProjectUpdated, saveError)
+                1 -> SubnetTab(project, onProjectUpdated, saveError)
+                2 -> InterfacesTab(project, index, onProjectUpdated, saveError)
+                3 -> WanTab(project, index, onProjectUpdated, saveError)
+                4 -> ConfigsTab(project, index, onProjectUpdated, saveError)
+                5 -> ExtraFieldsTab(project, index, onProjectUpdated, saveError)
+            }
         }
     }
 }

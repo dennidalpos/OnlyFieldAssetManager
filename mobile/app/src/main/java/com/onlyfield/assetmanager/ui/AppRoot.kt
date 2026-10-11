@@ -194,9 +194,10 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
                 title = { Text(i18n.text("text.e81e208100f0", state.choices.size + 1, state.result.conflicts.size)) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        state.baseNote?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall) }
                         Text("${conflict.kindLabel}: ${conflict.name}", fontWeight = FontWeight.SemiBold)
                         Text(conflict.localizedDescription(i18n))
-                        conflict.differences(i18n = i18n).forEach { Text("â€¢ $it", style = MaterialTheme.typography.bodySmall) }
+                        conflict.differences(i18n = i18n).forEach { Text("• $it", style = MaterialTheme.typography.bodySmall) }
                         if (state.result.autoApplied > 0) Text(i18n.text("text.cdaed04f8505", state.result.autoApplied), style = MaterialTheme.typography.bodySmall)
                     }
                 },

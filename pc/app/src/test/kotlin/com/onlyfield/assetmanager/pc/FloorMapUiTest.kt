@@ -95,6 +95,8 @@ class FloorMapUiTest {
             val empty = Site(name = "BU-B")
             state.createProject(NewSiteWizard(draft = NewSiteDraft(projectName = "Sito", sites = listOf(site, empty))))
             rule.setContent { MaterialTheme { Box(Modifier.size(900.dp, 700.dp)) { FloorHomeSection(state) } } }
+            // The drawing is the default view: this flow walks the list.
+            rule.onNodeWithText("Elenco").performClick()
             rule.onNodeWithText("BU-A · 2 piani / zone").performClick()
             rule.onNodeWithText("Terra · 1 oggetti").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()

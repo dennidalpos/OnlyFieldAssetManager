@@ -109,6 +109,8 @@ data class SceneNode(
     val internalCables: List<String>,
     /** Device switched off or decommissioned: drawn faded. */
     val inactive: Boolean = false,
+    /** Device not managed by the technician: drawn with a dashed ring. */
+    val thirdParty: Boolean = false,
 )
 
 /**
@@ -244,7 +246,8 @@ data class MapScene(val areaId: String, val container: ObjectRef?, val nodes: Li
                 SceneNode(ref, lookup.name(ref), glyph, point,
                     isContainer = children.isNotEmpty() || lookup.canContain(ref), childCount = children.size,
                     portsUsed = ports.count { graph.occupied(it.id) }, portsTotal = ports.size, internalCables = internal[ref].orEmpty(),
-                    inactive = devices[ref.id]?.operationalStatus.let { it == OperationalStatus.OFF || it == OperationalStatus.DECOMMISSIONED })
+                    inactive = devices[ref.id]?.operationalStatus.let { it == OperationalStatus.OFF || it == OperationalStatus.DECOMMISSIONED },
+                    thirdParty = devices[ref.id]?.thirdParty == true)
             }
             return MapScene(areaId, container, nodes, links, ObjectMap.floorSite(project, areaId).ifBlank { null })
         }

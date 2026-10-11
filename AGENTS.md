@@ -5,7 +5,7 @@
 - Italian docs: `README.md`, `docs/`, decisions `plan.md`, evidence `roadmap.md`.
 - `PROJECT_STATUS.json`: open work; completions in `roadmap.md`. Update domain docs.
 - Core/exchange have no Android UI/Context dependency.
-- Room v2: bump on schema edits. ProjectStore rejects foreign IDs before deletion. Use only `fallbackToDestructiveMigration(true)` both directions.
+- Room v3: bump on schema edits. ProjectStore rejects foreign IDs before deletion. Use only `fallbackToDestructiveMigration(true)` both directions.
 - Hardware layouts/PoE overrides belong in hardware JSON, not Room columns.
 - Shared UI: `shared/configurator`; hardware: `core.forms`, `core.model.ConnectionGraph`.
 - `MapWorkspace` uses host `MapUiState`: camera/selection/containers survive view/size changes; outside Room/.ofam.

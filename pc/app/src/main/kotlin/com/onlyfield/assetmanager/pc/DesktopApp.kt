@@ -171,7 +171,8 @@ private fun ProjectModules(state: DesktopAppState) {
         headlineContent = { Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules")) },
         supportingContent = { Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }) },
         leadingContent = { Icon(SymbolIcons.category, null) },
-        modifier = Modifier.fillMaxWidth().clickable { state.showSecondary = !state.showSecondary })
+        // Hiding removes optional tabs: an open draft goes through the discard guard first.
+        modifier = Modifier.fillMaxWidth().clickable { state.requestChange { state.showSecondary = !state.showSecondary } })
 }
 
 @Composable

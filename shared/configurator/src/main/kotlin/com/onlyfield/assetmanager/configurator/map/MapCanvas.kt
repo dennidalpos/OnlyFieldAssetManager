@@ -22,6 +22,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
@@ -333,6 +334,8 @@ private fun DrawScope.drawNodes(scene: MapScene, screen: (MapPoint) -> Offset, s
             drawRoundRect(color.copy(alpha = .35f), c - Offset(r - unit * 2, r + unit * 2), Size(r * 2, r * 2), CornerRadius(unit * 1.5f))
             drawRoundRect(color, c - Offset(r, r), Size(r * 2, r * 2), CornerRadius(unit * 1.5f))
         } else drawCircle(color, radius * .85f, c)
+        // Not managed by the technician: dashed ring, readable at any zoom and without colour.
+        if (node.thirdParty) drawCircle(onSurface, radius + unit * 3, c, style = Stroke(unit * 1.5f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(unit * 3, unit * 2))))
         if (node.portsTotal > 0) {
             val sweep = 360f * node.portsUsed / node.portsTotal
             val r = radius + unit

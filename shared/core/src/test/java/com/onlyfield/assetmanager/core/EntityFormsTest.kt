@@ -9,6 +9,16 @@ import org.junit.Test
 class EntityFormsTest {
 
     @Test
+    fun deviceEditKeepsManagementAndSupplier() {
+        val original = Device(technicalName = "ONT-01", management = DeviceManagement.SUPPLIER, supplierName = "TIM", supplierContact = "800 000 000", contractReference = "CT-1")
+        assertEquals(original, DeviceForm.from(original, "s1").toDevice(original, "Test"))
+        // Back to managed: the supplier data stays for a later change of mind, the marker goes.
+        val managed = DeviceForm.from(original, "s1").copy(management = DeviceManagement.MANAGED).toDevice(original, "Test")
+        assertFalse(managed.thirdParty)
+        assertEquals("TIM", managed.supplierName)
+    }
+
+    @Test
     fun deviceEditPreservesHiddenFields() {
         val obs = Observation("Android", 1000L, ObservationStatus.VERIFIED, "ok")
         val original = Device(

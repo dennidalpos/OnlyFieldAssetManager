@@ -1,103 +1,22 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-11",
-  "currentPhase": "Audit residui post revisione UI/UX: 6 nuovi rilievi aperti e 4 residui operativi; priorità alla protezione delle bozze.",
+  "currentPhase": "Viste grafiche principali implementate (GFX-01–04) e AUD-65–70 corretti; restano demo/selettore di piano (GFX-05) e i collaudi nativi.",
   "activeTask": null,
-  "nextSession": "Handoff audit residui dell’11 ottobre su main: iniziare da AUD-65 (bozza persa nascondendo moduli), poi AUD-66/67/68. Dettagli e criteri in docs/repo-residuals-2026-10-11.md; probe/XML locali in build/reports/repo-residuals-20261011. AUD-69/70 seguono per localizzazione e documentazione. Preservare RES-13/19/23/24, report e backup; non ripetere pulizie respinte. Commit e push autorizzati dall’utente per il cambio sessione.",
+  "nextSession": "Handoff dell’11 ottobre su main (commit e push autorizzati dall’utente per il cambio sessione): suite JVM finale 690 test verdi. Schema Room v3 distruttivo: prima di installare il nuovo APK esportare in .ofam i progetti presenti sul telefono. Poi collaudo nativo della nuova Mappa (schema sedi, topologia di sede, Logica, Elenco, Indietro con una o più sedi), dell’editor Gestione/fornitore e del ritorno a Documenti (RES-19); EXE in RES-23. GFX-05: rigenerare la demo con sedi interconnesse, subnet/VLAN e apparati di terzi e valutare il selettore di vista al livello del piano. Decisioni in plan.md «Evoluzione: viste grafiche principali». Preservare RES-13/19/23/24, report e backup; non ripetere pulizie respinte.",
   "remainingTasks": [
     {
-      "id": "AUD-65",
-      "title": "Proteggere la bozza quando si nascondono i moduli opzionali",
-      "status": "OPEN",
-      "priority": "P1",
-      "evidenceLevel": "REPRODUCED",
-      "description": "Windows: Nascondi i moduli non usati cambia showSecondary direttamente. Con Configurazioni vuote e una nuova configurazione modificata, la scheda viene rimossa e la bozza scompare senza conferma. Riprodotto su DesktopApp; Badge usa lo stesso percorso di rimozione, da coprire nella correzione.",
-      "closureCriteria": "Applicare il guard delle modifiche prima del cambio visibilità. Verificare Continua a modificare/Scarta su Configurazioni e Badge, finestra larga/stretta; nessuna perdita o salvataggio implicito.",
-      "references": [
-        "docs/repo-residuals-2026-10-11.md",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopApp.kt:174",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/NetworkLogicalSection.kt:43",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/PowerBadgeSection.kt:41"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-66",
-      "title": "Completare la conservazione dello stato di consultazione",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "REPRODUCED",
-      "description": "Riprodotto Windows: ricerca VLAN persa passando a Subnet e tornando. Il SaveableStateHolder copre AppSection, non le sottoschede condizionali. Da codice restano query Modelli e scheda Allegati Windows in remember semplice. La promessa di conservazione degli elenchi è quindi parziale.",
-      "closureCriteria": "Preservare ricerca, scheda e scroll nel perimetro approvato, con isolamento tra progetti e ripristino coerente dopo cancellazioni; prove di andata/ritorno fra sottoschede e sezioni, senza conservare editor dismessi.",
-      "references": [
-        "docs/repo-residuals-2026-10-11.md",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopApp.kt:283",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/NetworkLogicalSection.kt:45",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/DeviceModelsSection.kt:29",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/FloorplanMediaSection.kt:50"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-67",
-      "title": "Conservare le opzioni Documenti Android durante la navigazione",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "CODE_CONFIRMED",
-      "description": "Formato, autore, titolo, selezione sezioni e opzioni Documenti usano remember. Passando a un’altra area e tornando vengono reinizializzati: il SaveableStateProvider esterno non conserva remember semplice. La prova nativa precedente verificava il footer con tastiera, non questo percorso.",
-      "closureCriteria": "Conservare la bozza delle opzioni per progetto durante la sessione o proteggere esplicitamente lo scarto; verificare andata/ritorno e cambio progetto. Non ripristinare conferme di contenuti riservati/rivedibili contro un insieme di allegati cambiato.",
-      "references": [
-        "docs/repo-residuals-2026-10-11.md",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/DocumentsScreen.kt:33",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/AppRoot.kt:83"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-68",
-      "title": "Segnalare la base di fusione Android assente o illeggibile",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "CODE_CONFIRMED",
-      "description": "ProjectStore.loadBase converte qualsiasi errore di decodifica in null; startMerge usa il risultato senza segnalare la perdita della base. Windows mostra merge.baseUnavailable o errore di lettura. Il merger resta conservativo e richiede conflitti per differenze: non è dimostrata perdita automatica di dati.",
-      "closureCriteria": "Distinguere assenza e corruzione, rendere visibile il passaggio alla revisione completa e non cancellare la base illeggibile per sola lettura. Provare base valida/assente/corrotta, annullamento e riprova; conservare la politica di fusione confermata.",
-      "references": [
-        "docs/repo-residuals-2026-10-11.md",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectStore.kt:330",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt:635",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopAppState.kt:645"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-69",
-      "title": "Localizzare l’autore predefinito dei documenti Android",
+      "id": "GFX-05",
+      "title": "Demo e selettore di vista al livello del piano",
       "status": "OPEN",
       "priority": "P3",
       "evidenceLevel": "CODE_CONFIRMED",
-      "description": "DocumentsScreen.filter usa il letterale italiano Tecnico quando autore è vuoto; Windows usa la chiave localizzata text.2bf644bed677. PDF e Markdown Android ricevono quindi il fallback italiano anche in inglese/spagnolo.",
-      "closureCriteria": "Usare la chiave esistente e verificare autore vuoto it/en/es e testo autore esplicito invariato nei documenti.",
+      "description": "La fixture demo non contiene WAN/VPN fra sedi con apparati di terzi né esempi di gestione fornitore: le nuove viste si vedono solo in parte. Al livello del piano la topologia resta nel menu strumenti e la vista logica non è raggiungibile senza tornare alla sede.",
+      "closureCriteria": "DemoSeed con almeno un apparato di fornitore, un collegamento WAN/VPN fra due sedi e subnet con gateway; fixture rigenerata con i comandi demo e prove '*Demo*' verdi. Decidere con l’utente se portare Schema/Logica nell’intestazione della mappa di piano senza affollare il telefono.",
       "references": [
-        "docs/repo-residuals-2026-10-11.md",
-        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/DocumentsScreen.kt:44",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/dialogs/ProjectDialogs.kt:278"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "AUD-70",
-      "title": "Allineare workflow e perimetri delle verifiche allo stato corrente",
-      "status": "OPEN",
-      "priority": "P3",
-      "evidenceLevel": "CODE_CONFIRMED",
-      "description": "docs/07-workflows.md apre descrivendo AUD-46 e AUD-49 come ancora difettosi ma più avanti ne documenta la correzione. RES-19 mescola AppRoot indicata genericamente come aperta con prove già concluse. Le prove dell’11 ottobre non coprono wizard con tastiera, reset tra progetti o scroll; la chiusura UX-08 va letta nel perimetro effettivamente verificato.",
-      "closureCriteria": "Rimuovere affermazioni correnti contraddittorie preservando lo storico; distinguere scenari verificati e pendenti. Integrare prove mirate wizard/tastiera, scroll e isolamento progetto nella verifica della remediation, senza dichiarare tablet/rotazione/TalkBack dai test simulati.",
-      "references": [
-        "docs/repo-residuals-2026-10-11.md",
-        "docs/07-workflows.md:5",
-        "docs/07-workflows.md:141",
-        "docs/ui-ux-audit-2026-10-11.md",
-        "PROJECT_STATUS.json"
+        "plan.md",
+        "docs/08-floor-map.md",
+        "shared/exchange/src/test/java/com/onlyfield/assetmanager/exchange/DemoSeed.kt"
       ],
       "dependsOn": []
     }
@@ -121,7 +40,7 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Completare UX-01–06 su Android: 360/412 dp, chiaro/scuro, testo 1,0/1,3, tastiera aperta, rotazione reale, TalkBack audio/focus e tablet fisici. Restano intera AppRoot/editor/persistenza, configuratore con trascinamento/ridimensionamento/tratte posteriori, zoom a due dita, moncone/Vai a/passanti/ponti radio, collegamenti logici, percorso/topologia/Altri moduli e Demo Comune densa. Verificare messaggi/riprova asincroni, pannello occupato sopra i form, import con molti avvisi, password/recupero, fusione/rifiuto per ciclo e ripristino con contesto assente/cambiato/collisioni o ID esterni. AUD-46: creazione/modifica nativa di VLAN, subnet, interfacce, WAN/VPN, configurazioni, campi extra, cavi, permutazioni, alimentazioni, PoE e badge con guasto/riprova/undo. AUD-48: messaggi/riprova cartografia e progetto invariato al download fallito in AppRoot. AUD-47: dialogo spooler, cambio attributi interattivo e annullamento durante anteprima/stampa; callback dello spooler e stampante fisica ancora da collaudare. I PDF reali e le prove isolate già concluse sono nella roadmap e non chiudono questa matrice. AUD-53/54/63/64: includere wizard protetto, rinomina con errore/riprova e rifiuti per riferimenti di rete nella matrice nativa; verifiche Room/comandi già registrate. Telefono dichiarato non disponibile il 9 ottobre: rotazione fisica della bozza RES19 Rotation Draft ancora non eseguita; TalkBack dichiarato non disponibile. Preparazione e backup del 9 ottobre documentati nella roadmap, evidenze in build/reports/res19-guided-20261009. Revisione dell’11 ottobre: AppRoot/navigazione, filtri/ricerca, salvataggio editor e footer Documenti con tastiera verificati su moto g86 API 36 con dati isolati; matrice progetti/inventario/mappa a densità simulate e configuratore denso superata. Non ripetere questi perimetri senza nuove modifiche; rotazione fisica, TalkBack, tablet e scenari restanti sono ancora aperti.",
+      "description": "Completare UX-01–06 su Android: 360/412 dp, chiaro/scuro, testo 1,0/1,3, tastiera aperta, rotazione reale, TalkBack audio/focus e tablet fisici. Restano editor/persistenza negli scenari non coperti l’11 ottobre, configuratore con trascinamento/ridimensionamento/tratte posteriori, zoom a due dita, moncone/Vai a/passanti/ponti radio, collegamenti logici, percorso/topologia/Altri moduli e Demo Comune densa. Verificare messaggi/riprova asincroni, pannello occupato sopra i form, import con molti avvisi, password/recupero, fusione/rifiuto per ciclo e ripristino con contesto assente/cambiato/collisioni o ID esterni. AUD-46: creazione/modifica nativa di VLAN, subnet, interfacce, WAN/VPN, configurazioni, campi extra, cavi, permutazioni, alimentazioni, PoE e badge con guasto/riprova/undo. AUD-48: messaggi/riprova cartografia e progetto invariato al download fallito in AppRoot. AUD-47: dialogo spooler, cambio attributi interattivo e annullamento durante anteprima/stampa; callback dello spooler e stampante fisica ancora da collaudare. I PDF reali e le prove isolate già concluse sono nella roadmap e non chiudono questa matrice. AUD-53/54/63/64: includere wizard protetto, rinomina con errore/riprova e rifiuti per riferimenti di rete nella matrice nativa; verifiche Room/comandi già registrate. Telefono dichiarato non disponibile il 9 ottobre: rotazione fisica della bozza RES19 Rotation Draft ancora non eseguita; TalkBack dichiarato non disponibile. Preparazione e backup del 9 ottobre documentati nella roadmap, evidenze in build/reports/res19-guided-20261009. Revisione dell’11 ottobre: AppRoot/navigazione, filtri/ricerca, salvataggio editor e footer Documenti con tastiera verificati su moto g86 API 36 con dati isolati; matrice progetti/inventario/mappa a densità simulate e configuratore denso superata. Non ripetere questi perimetri senza nuove modifiche; rotazione fisica, TalkBack, tablet e scenari restanti sono ancora aperti. Dall’evoluzione grafica dell’11 ottobre: verificare su telefono la nuova apertura della Mappa (MapHome: schema sedi, topologia di sede, selettore Schema/Logica/Elenco, vista logica, editor Gestione/fornitore con suggerimenti, contorno degli apparati di terzi, ritorno Indietro con una o più sedi) e il ritorno a Documenti con opzioni conservate (AUD-67); wizard con tastiera, scroll e isolamento fra progetti restano da provare (AUD-70).",
       "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
@@ -139,7 +58,7 @@
       "id": "RES-23",
       "title": "Collaudo visivo Windows delle operazioni in background",
       "status": "PARTIAL",
-      "description": "Restano i casi della tabella aperta in docs/testing/windows-native-matrix.md: varianti native di tema/dimensione/testo/pannello-dialogo/focus e progetto protetto degli editor AUD-46; rete/cablaggio completi e varianti dei moduli; matrice mouse/tastiera/focus e blocco input nei salvataggi lunghi. Protezione: wizard protetto dopo errore, password errata/riprova, guasto cambio password, focus dopo recupero bloccato/riprova, con interazione utente senza acquisire segreti (disponibilità chiesta, senza risposta). Fusione con testo ingrandito e trasferimento porte/configurazioni/alimentazioni/campi extra; ripristino rifiutato per ciclo e riprova; rifiuti VLAN/sedi/apparati/fusione (AUD-63/64). Messaggio nativo di sfondo PDF illeggibile (AUD-60), errore reale del motore di stampa e stampa fisica. Esiti nativi conclusi nella matrice/roadmap: esclusi dal lavoro aperto solo nei perimetri verificati. Le prove Compose non chiudono questi collaudi.",
+      "description": "Restano i casi della tabella aperta in docs/testing/windows-native-matrix.md: varianti native di tema/dimensione/testo/pannello-dialogo/focus e progetto protetto degli editor AUD-46; rete/cablaggio completi e varianti dei moduli; matrice mouse/tastiera/focus e blocco input nei salvataggi lunghi. Protezione: wizard protetto dopo errore, password errata/riprova, guasto cambio password, focus dopo recupero bloccato/riprova, con interazione utente senza acquisire segreti (disponibilità chiesta, senza risposta). Fusione con testo ingrandito e trasferimento porte/configurazioni/alimentazioni/campi extra; ripristino rifiutato per ciclo e riprova; rifiuti VLAN/sedi/apparati/fusione (AUD-63/64). Messaggio nativo di sfondo PDF illeggibile (AUD-60), errore reale del motore di stampa e stampa fisica. Esiti nativi conclusi nella matrice/roadmap: esclusi dal lavoro aperto solo nei perimetri verificati. Le prove Compose non chiudono questi collaudi. Dall’evoluzione grafica dell’11 ottobre: nuova Mappa (MapHome), vista logica e sezione Gestione verificate solo con prove Compose, non nell’EXE.",
       "closureCriteria": "Verifiche manuali Windows registrate; pannello leggibile, nessuna modifica durante il salvataggio, dialoghi e stampa annullabili senza perdita dei dati.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",

@@ -950,3 +950,11 @@ RES-23 resta parziale per varianti/editor completi, operazioni lunghe, protezion
 ## Revisione adattiva — 11 ottobre 2026
 
 L’[audit adattivo](ui-ux-audit-2026-10-11.md) registra comandi, matrici e limiti: 34 test desktop, 3 localizzazione e 5 prove native superati; build Android riuscita. Nuove regressioni AdaptiveNavigationTest e AdaptiveNavigationNativeTest verificano quattro aree, filtri/ricerca conservati, bozza e azioni con tastiera. Evidenze `build/reports/ux-20261011`, senza sostituire quelle storiche. Densità simulate sul telefono non verificano tablet, rotazione fisica o TalkBack; RES-19/23 restano parziali.
+
+## AUD-65–70 e viste grafiche — 11 ottobre 2026
+
+Suite JVM completa sullo stato finale: `.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:compileDebugAndroidTestKotlin --no-parallel --max-workers=1` — BUILD SUCCESSFUL in 8m 6s, 151 suite, 690 test, zero fallimenti.
+
+Nuove prove: `SecondaryModulesUiTest` (bozza Configurazione/Badge protetta quando si nascondono i moduli, ricerche conservate fra sottoschede e sezioni), `ImportLifecycleTest` (base di fusione assente, illeggibile e valida), `SiteTopologyTest`, `LogicalTopologyTest`, `EntityFormsTest` (gestione e fornitore conservati dal form), `ProjectRepositoryTest` (round-trip Room v3 dei nuovi campi), `TopologyUiTest` (schema sedi, topologia di sede, vista logica, contorno degli apparati di terzi, con rese in `build/reports/visual-configurator/map-home-*.png`).
+
+Limiti: nessuna prova nativa Android o EXE delle nuove viste; AUD-67 (opzioni Documenti) e AUD-69 (autore localizzato) verificati per compilazione e lettura del codice. Le rese usano il tema dei test, non `OnlyFieldTheme`. Perimetri pendenti in RES-19/23.

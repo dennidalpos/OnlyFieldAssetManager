@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -47,7 +48,7 @@ fun FloorplanMediaSection(
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
-    var tab by remember { mutableStateOf(0) }
+    var tab by rememberSaveable { mutableStateOf(0) }
     Column(modifier = Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         SubTabs(listOf(i18n.text("text.690325ff1b4c", project.attachments.size), i18n.text("text.2ebfe0133d0c")), tab) { tab = it }
         when (tab) {

@@ -1523,3 +1523,35 @@ Baseline verde; corretta la misurazione a larghezza zero delle schede Inventario
 ## Audit residui post revisione UI/UX — 11 ottobre 2026
 
 Baseline a87f232, inventario 412 file; audit mirato di percorsi incompleti e legacy con confronto dello storico. Aperti AUD-65–70: 1 P1, 3 P2, 2 P3. Con RES-13/19/23/24 restano 10 attività (1 P1 / 6 P2 / 3 P3). Priorità AUD-65: nascondere moduli opzionali perde la bozza Windows senza conferma. AUD-66: ricerca VLAN persa fra sottoschede. Due probe Compose confermano i difetti, BUILD SUCCESSFUL in 14s; verde significa riproduzione, non correzione. Altri rilievi da codice: stato Documenti Android, base di fusione non segnalata, autore italiano residuo e documentazione incoerente. [Report e criteri](docs/repo-residuals-2026-10-11.md); sorgente/XML locali in build/reports/repo-residuals-20261011. Probe temporanei rimossi dai sorgenti, runtime invariato. Handoff richiesto dall’utente: commit e push su main del report e tracker.
+
+## AUD-65–70 corretti — 11 ottobre 2026
+
+- **AUD-65**: «Nascondi i moduli non usati» passa dal controllo delle modifiche (`DesktopAppState.requestChange`). Con una bozza modificata di Configurazione o Badge compare Continua a modificare/Scarta; nessun salvataggio implicito. Nelle finestre strette la voce sta solo nella panoramica di Progetto, raggiunta tramite il cambio sezione già protetto.
+- **AUD-66**: le sottoschede di Rete e Alimentazione Windows hanno un proprio `SaveableStateHolder`; ricerca Modelli e scheda Allegati usano `rememberSaveable`. Gli editor restano in `remember` e non vengono riaperti.
+- **AUD-67**: Documenti Android conserva formato, autore, titolo e sezioni con `rememberSaveable` dentro il contenitore per progetto. Le due conferme su contenuti riservati/da rivedere restano volutamente in `remember`: vanno ridate a ogni ingresso.
+- **AUD-68**: `ProjectStore.loadBase` restituisce null solo quando la base manca e lancia `UnreadableMergeBase` quando non è decodificabile, senza toccarla. `startMerge` mostra `merge.baseUnavailable` o il nuovo `merge.baseUnreadable` nel dialogo dei conflitti e nel messaggio finale.
+- **AUD-69**: autore predefinito dalla chiave `text.2bf644bed677`. Corretto anche il punto elenco con codifica errata nel dialogo dei conflitti Android.
+- **AUD-70**: `docs/07-workflows.md` non descrive più AUD-46/49 come difetti correnti; perimetri non verificati (wizard con tastiera, scroll, isolamento fra progetti) riportati in RES-19.
+
+Verifica: `.\gradlew.bat :pc:app:test --tests '*SecondaryModulesUiTest' :mobile:app:testDebugUnitTest --tests '*ImportLifecycleTest' --no-parallel --max-workers=1` — BUILD SUCCESSFUL, 5 + 9 test, zero fallimenti. Nuove regressioni: bozza Configurazione e Badge protetta, ricerche conservate fra sottoschede e sezioni, base di fusione assente/illeggibile/valida con base conservata. AUD-67 e AUD-69 verificati per compilazione e lettura del codice; il ritorno nativo a Documenti resta nella matrice RES-19. Fonte: [salvataggio dello stato UI in Compose](https://developer.android.com/develop/ui/compose/state-saving), consultata l'11 ottobre 2026.
+
+## Viste grafiche principali — 11 ottobre 2026
+
+Obiettivo e decisioni in [plan.md](plan.md) («Evoluzione: viste grafiche principali»).
+
+- **GFX-01/02**: `configurator.map.MapHome` sostituisce gli elenchi di sedi e piani su Android e Windows. Progetto: schema delle sedi con collegamenti (cavi fra sedi, ponti radio, WAN/VPN, nodi esterni) da `core.forms.SiteTopology`; sede: piani e topologia fisica in linea (`TopologyView`, estratta dal dialogo). Selettore Schema/Logica/Elenco per sessione; una sola sede si apre direttamente; Indietro Android adeguato.
+- **GFX-03**: `core.forms.LogicalTopologies` e `LogicalView`: riquadri per subnet/VLAN, appartenenza da IP dell'apparato, interfacce logiche e porta di accesso a cui l'apparato è cablato; gateway per primo, apparati presenti in più reti con bordo, apparati senza rete e WAN/VPN in coda.
+- **GFX-04**: `Device.management` con fornitore, contatto e contratto; schema Room v3 (distruttivo), `.ofam` v1 invariato. Sezione Gestione nell'editor con suggerimento dei fornitori già usati, contorno tratteggiato in planimetria e topologia, filtro e ricerca in Inventario e ricerca globale, colonne XLSX, sezione Markdown e riga nei PDF.
+
+Verifica: Suite JVM completa dopo GFX-01/02/04 (`:shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest`, più compilazione dei test strumentati): BUILD SUCCESSFUL in 8m 9s, 150 suite, 687 test, zero fallimenti. Dopo GFX-03 e la ricerca per fornitore: 57 test mirati verdi (LogicalTopologyTest, SiteTopologyTest, EntityFormsTest, GlobalSearchTest, MessagesTest, TopologyUiTest, FloorMapUiTest, AdaptiveMapUiTest, GlobalSearchUiTest, MapNavigationUiTest, LocalizedUiTest) e compilazione Android riuscita. Rese controllate su `pc/app/build/reports/visual-configurator/map-home-*.png`. Non eseguiti: prove native Android della nuova Mappa, rotazione, TalkBack, EXE; la fixture demo non è stata rigenerata e non contiene apparati di terzi. Dettagli di dominio in [02-domain-data-contract.md](docs/02-domain-data-contract.md), viste in [08-floor-map.md](docs/08-floor-map.md).
+
+### Handoff — 11 ottobre 2026
+
+Cambio sessione richiesto dall'utente: commit e push su `main` di AUD-65–70, viste grafiche GFX-01–04, schema Room v3, documentazione e tracker. Suite JVM completa ripetuta sullo stato finale (`.\gradlew.bat :shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:compileDebugAndroidTestKotlin --no-parallel --max-workers=1`): BUILD SUCCESSFUL in 8m 6s, 151 suite, 690 test, zero fallimenti, errori o saltati.
+
+Note per la prossima sessione:
+
+- **Prima di installare il nuovo APK** esportare in `.ofam` i progetti presenti sul telefono: lo schema Room v3 ricrea il database locale.
+- Collaudo nativo ancora da fare: nuova Mappa (schema sedi, topologia di sede, Logica, Elenco, Indietro con una o più sedi), sezione Gestione/fornitore, ritorno a Documenti (RES-19); EXE (RES-23).
+- GFX-05 aperto: demo con sedi interconnesse, subnet/VLAN e apparati di terzi; decidere con l'utente il selettore di vista al livello del piano.
+- RES-13/19/23/24 invariati; nessuna pulizia storica ritentata. Rese di controllo in `pc/app/build/reports/visual-configurator/map-home-*.png`, locali e non versionate.

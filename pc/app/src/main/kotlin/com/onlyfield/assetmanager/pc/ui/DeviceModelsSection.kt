@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -26,7 +27,7 @@ fun DeviceModelsSection(project: Project, onProjectUpdated: (Project, String) ->
     val i18n = LocalMessages.current
 
     val index = remember(project) { ProjectIndex(project) }
-    var query by remember { mutableStateOf("") }
+    var query by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<DeviceModel?>(null) }
     val changeDetail = LocalDetailChange.current
     var creating by remember { mutableStateOf(false) }

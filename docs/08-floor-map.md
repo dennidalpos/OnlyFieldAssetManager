@@ -65,9 +65,29 @@ L'inserimento è rapido e usa un'unica finestra (`ObjectPickerDialog`, descritto
 
 Il risultato scelto apre la mappa sul suo piano, anche di un'altra sede, con i contenitori aperti e l'oggetto selezionato (lo stesso arrivo di Vai a). Porte e cavi selezionano l'apparato a cui appartengono. Un oggetto senza piano si apre nell'editor. Con il campo vuoto la finestra elenca gli ultimi otto elementi aperti nella sessione.
 
+## Vista grafica principale — 11 ottobre 2026
+
+Sopra il livello del piano la scheda Mappa apre un disegno, non un elenco (`configurator.map.MapHome`, condiviso da Android e Windows). **Schema** è la vista iniziale; **Logica** raggruppa gli apparati per rete; **Elenco** mostra sedi e piani come prima. La scelta vale per la sessione (`MapUiState.homeView`).
+
+- **Progetto**: le sedi sono nodi (codice o nome, piani e apparati attivi) e i collegamenti sono linee: continua per i cavi che attraversano due sedi, tratteggio lungo per i ponti radio, tratteggio corto per le sole WAN/VPN. Un capo WAN/VPN senza apparato censito diventa un nodo **Esterno** con il nome della descrizione o del fornitore, condiviso fra le sedi che lo usano (`core.forms.SiteTopology`). Sotto il disegno, **Collegamenti tra sedi** elenca ogni coppia con cavi e connessioni. Il tocco su una sede la apre.
+- **Sede**: i piani sono pulsanti che aprono la planimetria; sotto, la topologia fisica della sede in linea (`TopologyView`). Il tocco su un apparato lo seleziona sulla mappa del suo piano.
+- Un progetto con una sola sede apre direttamente la sede; **Aggiungi sede** resta accanto ad **Aggiungi piano**.
+- **Topologia**, al livello progetto, apre la topologia degli apparati di tutte le sedi.
+
+Le WAN/VPN prive di apparato a entrambi i capi non sono collocabili e restano nell'elenco di Rete.
+
+**Logica** (`LogicalView`, dati da `core.forms.LogicalTopologies`) vale per il progetto o per la sede aperta:
+
+- un riquadro per subnet (con la sua VLAN, se collegata) e uno per ogni VLAN senza subnet, in ordine di VLAN; i riquadri vuoti restano visibili al livello progetto, nella sede solo se la subnet è assegnata a quella sede;
+- un apparato entra in una subnet per il proprio IP o per un'interfaccia logica (IP, CIDR o VLAN); con intervalli annidati vale la subnet più specifica. Senza indirizzi, entra nella VLAN della porta di accesso a cui è cablato, seguendo il percorso fisico oltre i passanti;
+- il gateway (IP uguale al gateway della subnet) è il primo; gli apparati presenti in più riquadri hanno un bordo e la dicitura «più reti»;
+- in coda: apparati attivi senza rete e le WAN/VPN che terminano su un apparato in vista. Il tocco su un apparato lo apre come nella topologia.
+
+Gli apparati non gestiti dal tecnico hanno un contorno tratteggiato in planimetria e in topologia (`SceneNode.thirdParty`, `Device.thirdParty`); dettagli in [10-object-configurator.md](10-object-configurator.md).
+
 ## Topologia fisica
 
-**Topologia** (pulsante nell'intestazione su Windows; sopra l'elenco di sedi e piani e tra gli strumenti della mappa su Android) apre a schermo intero `configurator.map.TopologyDialog`, filtrato su sede e piano correnti.
+**Topologia** (al livello progetto della vista grafica e tra gli strumenti della mappa di piano) apre a schermo intero `configurator.map.TopologyDialog`, filtrato su sede e piano correnti; la stessa vista è in linea nella pagina della sede.
 
 - `core.forms.PhysicalTopology` usa solo gli apparati attivi: un collegamento unisce due apparati raggiunti da un percorso completo (`PathSchematics`), con i passanti nascosti; il numero di percorsi rende la linea più spessa, il ponte radio è tratteggiato. I percorsi che non arrivano a un altro apparato attivo sono contati sull'apparato come percorsi aperti (`⋯N`).
 - Ogni rete collegata è una fascia di righe, a livelli in ampiezza dall'apparato più a monte (ONT o modem, router o firewall, poi lo switch con più collegamenti); gli apparati senza collegamenti chiudono il disegno. Le righe si adattano alla larghezza della finestra, quindi si scorre solo in verticale.

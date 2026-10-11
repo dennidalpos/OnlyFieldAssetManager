@@ -12,6 +12,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.rememberSaveable
+import kotlinx.serialization.json.Json
 import com.onlyfield.assetmanager.configurator.ConfiguratorSection
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,23 +28,28 @@ import com.onlyfield.assetmanager.ui.components.*
 
 private enum class DocFormat(private val labelKey: String) { PDF("text.f172f84f7cb2"), XLSX("text.48d53635551c"), MARKDOWN("text.0e52f6b9d025"), PRINT("text.cd69ebaf5932") ; fun localizedLabel(i18n: Messages) = i18n.text(labelKey) }
 
+private val SelectionSaver = Saver<ReportSelection, String>(
+    { Json.encodeToString(ReportSelection.serializer(), it) }, { Json.decodeFromString(ReportSelection.serializer(), it) })
+
 @Composable
 fun DocumentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
     val i18n = LocalMessages.current
 
     val context = LocalContext.current
-    var format by remember { mutableStateOf(DocFormat.PDF) }
-    var author by remember { mutableStateOf("") }
-    var title by remember { mutableStateOf("") }
+    // Options survive leaving the screen (per project, session only).
+    var format by rememberSaveable { mutableStateOf(DocFormat.PDF) }
+    var author by rememberSaveable { mutableStateOf("") }
+    var title by rememberSaveable { mutableStateOf("") }
+    var selection by rememberSaveable(stateSaver = SelectionSaver) { mutableStateOf(ReportSelection()) }
+    // Confidentiality consents are asked again on every visit: the attachments may have changed meanwhile.
     var includeConfidential by remember { mutableStateOf(false) }
     var reviewConfirmed by remember { mutableStateOf(false) }
-    var selection by remember { mutableStateOf(ReportSelection()) }
     val needsReview = project.attachments.any { it.classification == AttachmentClassification.REVIEW_REQUIRED }
 
     fun filter() = ExportFilterConfig(
         includeConfidential = includeConfidential,
         reviewRequiredConfirmed = !needsReview || reviewConfirmed,
-        authorName = author.ifBlank { "Tecnico" },
+        authorName = author.ifBlank { i18n.text("text.2bf644bed677") },
         titleOverride = title.ifBlank { null }
     )
     val baseName = safeFileName(project.name)

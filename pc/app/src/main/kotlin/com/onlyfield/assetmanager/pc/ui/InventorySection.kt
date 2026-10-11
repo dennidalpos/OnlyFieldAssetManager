@@ -47,6 +47,7 @@ fun InventorySection(
     val areaFilter = index.areas.find { it.id == areaId }
     var filtersOpen by remember { mutableStateOf(false) }
     var statusFilter by rememberSaveable { mutableStateOf<OperationalStatus?>(null) }
+    var managementFilter by rememberSaveable { mutableStateOf<DeviceManagement?>(null) }
     var selectedIds by remember { mutableStateOf(setOf<String>()) }
 
     var editing by remember { mutableStateOf<Device?>(null) }
@@ -59,12 +60,13 @@ fun InventorySection(
     var showBatch by remember { mutableStateOf(false) }
     var operationError by remember(project) { mutableStateOf<String?>(null) }
 
-    val filtered = remember(index, query, categoryFilter, areaFilter, statusFilter, i18n.locale) {
+    val filtered = remember(index, query, categoryFilter, areaFilter, statusFilter, managementFilter, i18n.locale) {
         index.devices.filter { d ->
-            matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress, d.serialNumber) &&
+            matchesQuery(query, d.technicalName, d.physicalLabel, d.alias, d.ipAddress, d.macAddress, d.serialNumber, d.supplierName) &&
                 (categoryFilter == null || d.category == categoryFilter) &&
                 (areaFilter == null || d.areaId == areaFilter.id) &&
-                (statusFilter == null || d.operationalStatus == statusFilter)
+                (statusFilter == null || d.operationalStatus == statusFilter) &&
+                (managementFilter == null || d.management == managementFilter)
         }.sortedForDisplay(i18n) { it.technicalName }
     }
     // Drop selections of devices that no longer exist.
@@ -87,16 +89,17 @@ fun InventorySection(
                 }
             }
         ) {
-            FilterAction(listOfNotNull(categoryFilter, areaFilter, statusFilter).size, i18n) { filtersOpen = true }
+            FilterAction(listOfNotNull(categoryFilter, areaFilter, statusFilter, managementFilter).size, i18n) { filtersOpen = true }
             Button(onClick = { changeDetail { creating = true } }, enabled = project.sites.isNotEmpty()) { Text(i18n.text("text.8650e4573818")) }
         }
 
         ActiveFilters(listOfNotNull(
             categoryFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { categoryFilter = null } },
             areaFilter?.let { ActiveFilter(it.name) { areaId = null } },
-            statusFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { statusFilter = null } }
-        ), i18n) { categoryFilter = null; areaId = null; statusFilter = null }
-        if (filtersOpen) FiltersDialog(i18n, { filtersOpen = false }, { categoryFilter = null; areaId = null; statusFilter = null }) {
+            statusFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { statusFilter = null } },
+            managementFilter?.let { ActiveFilter(it.toDisplayString(i18n)) { managementFilter = null } }
+        ), i18n) { categoryFilter = null; areaId = null; statusFilter = null; managementFilter = null }
+        if (filtersOpen) FiltersDialog(i18n, { filtersOpen = false }, { categoryFilter = null; areaId = null; statusFilter = null; managementFilter = null }) {
             OptionPicker(
                 label = i18n.text("text.54276aa0307f"),
                 options = DeviceCategory.entries,
@@ -120,6 +123,14 @@ fun InventorySection(
                 optionLabel = { it.toDisplayString(i18n = i18n) },
                 onSelected = { statusFilter = it },
                 noneLabel = i18n.text("status.filterAll")
+            )
+            OptionPicker(
+                label = i18n.text("device.management"),
+                options = DeviceManagement.entries,
+                selected = managementFilter,
+                optionLabel = { it.toDisplayString(i18n = i18n) },
+                onSelected = { managementFilter = it },
+                noneLabel = i18n.text("management.filterAll")
             )
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -153,7 +164,8 @@ fun InventorySection(
                         title = dev.technicalName + (dev.alias?.let { " ($it)" } ?: ""),
                         badge = dev.category.toDisplayString(i18n = i18n),
                         details = listOfNotNull(location, listOf(network, i18n.plural("text.53a2e3b94696", dev.ports.size)).filter { it.isNotBlank() }.joinToString(" · "),
-                            dev.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.let { i18n.text("device.status") + ": " + it.toDisplayString(i18n) }),
+                            dev.operationalStatus.takeIf { it != OperationalStatus.IN_SERVICE }?.let { i18n.text("device.status") + ": " + it.toDisplayString(i18n) },
+                            dev.takeIf { it.thirdParty }?.let { listOfNotNull(it.management.toDisplayString(i18n), it.supplierName).joinToString(": ") }),
                         selected = editing?.id == dev.id || portsOf == dev.id,
                         onClick = { changeDetail { editing = dev } },
                         leading = {

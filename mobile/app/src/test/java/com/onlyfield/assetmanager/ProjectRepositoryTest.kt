@@ -42,7 +42,8 @@ import java.util.UUID
 class ProjectRepositoryTest {
     @Test fun explicitCentreRouteSurvivesRoomStorage() = runBlocking {
         val area = Area(name = "Route floor")
-        val a = Device(technicalName = "A", areaId = area.id)
+        val a = Device(technicalName = "A", areaId = area.id, management = com.onlyfield.assetmanager.core.model.DeviceManagement.SUPPLIER,
+            supplierName = "TIM", supplierContact = "800 000 000", contractReference = "CT-1")
         val b = Device(technicalName = "B", areaId = area.id)
         val cable = com.onlyfield.assetmanager.core.model.Cable(deviceAId = a.id, deviceBId = b.id)
         val points = listOf(com.onlyfield.assetmanager.core.model.MapPoint(.2f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.5f, .5f), com.onlyfield.assetmanager.core.model.MapPoint(.8f, .5f))

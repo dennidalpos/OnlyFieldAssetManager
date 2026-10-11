@@ -1,18 +1,12 @@
 package com.onlyfield.assetmanager.pc.ui
 
-import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import com.onlyfield.assetmanager.core.display.sitesForDisplay
-import com.onlyfield.assetmanager.core.display.displayName
-import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.*
@@ -36,9 +30,12 @@ fun FloorHomeSection(state: DesktopAppState) {
     val i18n = LocalMessages.current
 
     val project = state.project ?: return
-    val site = project.sites.find { it.id == state.selectedSiteId }
+    val selectedSite = project.sites.find { it.id == state.selectedSiteId }
+    // A single site is opened directly: its drawing is the project's first screen.
+    val site = selectedSite ?: project.sites.singleOrNull()
     val area = site?.let { it.areas.find { it.id == state.selectedAreaId } }
-    var addingStructure by remember { mutableStateOf(false) }
+    // New structure being named: true for a site, false for a floor of [site].
+    var addingSite by remember { mutableStateOf<Boolean?>(null) }
     var adding by remember { mutableStateOf<Pair<ObjectRef?, MapPoint?>?>(null) }
     var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
     // Object to select after "Go to"; cleared when the user picks a floor by hand.
@@ -80,19 +77,15 @@ fun FloorHomeSection(state: DesktopAppState) {
             TextButton(onClick = { state.selectedSiteId = null; state.selectedAreaId = null }) { Text(project.name) }
             site?.let { TextButton(onClick = { state.selectedAreaId = null }) { Text("› ${it.name}") } }
             Spacer(Modifier.weight(1f))
-            OutlinedButton(onClick = { topology = true }) { Text(i18n.text("topology.title")) }
             OutlinedButton(onClick = { searching = true }) { Text(i18n.text("search.action")) }
         }
         if (area == null) {
-            Text(if (site == null) i18n.text("text.26aad2e3cb26") else i18n.text("text.363156736748"), style = MaterialTheme.typography.headlineSmall)
-            Button(onClick = { addingStructure = true }) { Text(if (site == null) i18n.text("text.4e90901d9fa2") else i18n.text("text.3575ad226840")) }
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (site == null) items(project.sites.sitesForDisplay(i18n), key = { it.id }) { b ->
-                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { state.selectedSiteId = b.id; state.selectedAreaId = null }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.edc54eb6f93e", b.displayName(), b.areas.size)) } }
-                } else items(site.areas.sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
-                    Card(Modifier.fillMaxWidth()) { TextButton(onClick = { focus = null; state.selectedAreaId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.0b16578ff793", a.name, ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)) } }
-                }
-            }
+            MapHome(project, i18n, site, state.mapUiState,
+                onSite = { state.selectedSiteId = it.id; state.selectedAreaId = null },
+                onFloor = { focus = null; state.selectedAreaId = it.id },
+                onDevice = ::openDevice,
+                onAddSite = { addingSite = true }, onAddFloor = { addingSite = false },
+                modifier = Modifier.weight(1f), onTopology = { topology = true })
         } else {
             imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             MapWorkspace(project, area.id, image, i18n, MapActions(
@@ -129,11 +122,12 @@ fun FloorHomeSection(state: DesktopAppState) {
             })
         }
     }
-    if (addingStructure) {
+    addingSite?.let { requested ->
+        val newSite = requested || site == null
         var name by remember { mutableStateOf("") }
-        FormDialog(if (site == null) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site.name), { addingStructure = false }, {
-            state.update(if (site == null) ProjectEdits.addSite(project, name.trim()) else ProjectEdits.addArea(project, site.id, Area(name = name.trim())), i18n.text("text.ad31ce615e92"))
-            if (state.error == null) addingStructure = false
+        FormDialog(if (newSite) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site!!.name), { addingSite = null }, {
+            state.update(if (newSite) ProjectEdits.addSite(project, name.trim()) else ProjectEdits.addArea(project, site!!.id, Area(name = name.trim())), i18n.text("text.ad31ce615e92"))
+            if (state.error == null) addingSite = null
         }, confirmEnabled = name.isNotBlank()) {
             FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

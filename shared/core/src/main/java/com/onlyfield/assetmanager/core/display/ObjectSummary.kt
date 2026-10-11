@@ -36,6 +36,10 @@ data class ObjectSummary(
                 fact("config.ip", device?.ipAddress),
                 fact("config.mac", device?.macAddress),
                 fact("config.serial", device?.serialNumber),
+                device?.takeIf { it.thirdParty }?.let { fact("device.management", it.management.toDisplayString(i18n)) },
+                fact("device.supplier", device?.supplierName),
+                fact("device.supplierContact", device?.supplierContact),
+                fact("device.contract", device?.contractReference),
             )
             val containers = hierarchy.ancestors(ref).reversed().map { ObjectHierarchy.name(project, it, i18n) }
             val location = listOfNotNull(index.area(hierarchy.areaId(ref))?.name) + containers

@@ -259,7 +259,11 @@ data class DeviceEntity(
     val category: String = "CUSTOM",
     val objectTypeId: String? = null,
     val serialNumber: String? = null,
-    val operationalStatus: String = "IN_SERVICE"
+    val operationalStatus: String = "IN_SERVICE",
+    val management: String = "MANAGED",
+    val supplierName: String? = null,
+    val supplierContact: String? = null,
+    val contractReference: String? = null,
 )
 
 @Entity(

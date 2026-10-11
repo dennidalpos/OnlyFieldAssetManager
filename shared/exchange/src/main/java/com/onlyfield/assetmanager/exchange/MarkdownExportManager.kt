@@ -90,6 +90,15 @@ object MarkdownExportManager {
             sb.append("| **${escaped(dev.technicalName)}** | ${code(dev.ipAddress ?: "-")} | ${dev.category.toDisplayString(i18n)} | ${escaped(rackLoc)} | ${dev.ports.size} | ${dev.operationalStatus.toDisplayString(i18n)} | `$statusStr` |\n")
         }
         sb.append("\n")
+        // Who to call for what the technician does not run.
+        val thirdParty = filteredDevices.filter { it.thirdParty }
+        if (thirdParty.isNotEmpty()) {
+            sb.append("### ${i18n.text("thirdParty.title")}\n\n")
+            sb.append("| ${i18n.text("text.29caae5fe1e7")} | ${i18n.text("device.management")} | ${i18n.text("device.supplier")} | ${i18n.text("device.supplierContact")} | ${i18n.text("device.contract")} |\n")
+            sb.append("| :--- | :--- | :--- | :--- | :--- |\n")
+            for (dev in thirdParty) sb.append("| **${escaped(dev.technicalName)}** | ${dev.management.toDisplayString(i18n)} | ${escaped(dev.supplierName ?: "-")} | ${escaped(dev.supplierContact ?: "-")} | ${escaped(dev.contractReference ?: "-")} |\n")
+            sb.append("\n")
+        }
 
         sb.append("## ${i18n.text("config.title")}\n\n")
         val graph = com.onlyfield.assetmanager.core.model.ConnectionGraph(project)
