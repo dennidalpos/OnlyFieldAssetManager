@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.ui.components
 
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.heading
+import com.onlyfield.assetmanager.configurator.theme.ListRow
 import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.configurator.theme.AppSpacing
 import com.onlyfield.assetmanager.configurator.theme.ContentDialog
@@ -293,7 +296,7 @@ fun LabeledCheckbox(checked: Boolean, onCheckedChange: (Boolean) -> Unit, label:
 
 @Composable
 fun SectionTitle(text: String) {
-    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp))
+    Text(text, style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
 }
 
 /** Read-only field that opens a searchable dialog. */
@@ -339,27 +342,23 @@ fun <T> OptionPicker(
         var query by remember { mutableStateOf("") }
         val ordered = if (sortByName && options.firstOrNull() !is Number) options.sortedForDisplay(i18n, optionLabel) else options
         val filtered = ordered.filter { o -> matchesQuery(query, optionLabel(o), optionDetail?.invoke(o)) }
-        AlertDialog(
-            onDismissRequest = { open = false },
-            title = { Text(label.removeSuffix(" *")) },
+        ContentDialog(
+            onDismissRequest = { open = false }, wide = true, scrollBody = false,
+            title = { Text(label.removeSuffix(" *"), style = MaterialTheme.typography.titleLarge) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (options.size > 7) SearchField(query, { query = it }, i18n.text("text.30109da716dd"))
-                    LazyColumn(modifier = Modifier.heightIn(max = 420.dp)) {
+                    LazyColumn(modifier = Modifier.weight(1f, fill = false)) {
                         if (noneLabel != null && query.isBlank()) {
                             item {
-                                ListItem(headlineContent = { Text(noneLabel) }, modifier = Modifier.clickable { markDirty(); onSelected(null); open = false })
+                                ListRow(noneLabel) { markDirty(); onSelected(null); open = false }
                                 HorizontalDivider()
                             }
                         }
-                        if (filtered.isEmpty()) item { Text(if (options.isEmpty()) i18n.text("text.0391aa0b5565") else i18n.text("text.0af987882e51"), modifier = Modifier.padding(16.dp)) }
+                        if (filtered.isEmpty()) item { Text(if (options.isEmpty()) i18n.text("text.0391aa0b5565") else i18n.text("text.0af987882e51"), modifier = Modifier.padding(vertical = 16.dp)) }
                         items(filtered) { o ->
-                            ListItem(
-                                headlineContent = { Text(optionLabel(o)) },
-                                supportingContent = optionDetail?.invoke(o)?.takeIf { it.isNotBlank() }?.let { { Text(it) } },
-                                trailingContent = if (o == selected) { { Text("✓") } } else null,
-                                modifier = Modifier.clickable { markDirty(); onSelected(o); open = false }
-                            )
+                            ListRow(optionLabel(o), subtitle = optionDetail?.invoke(o), trailing = { if (o == selected) Text("✓") }) { markDirty(); onSelected(o); open = false }
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }

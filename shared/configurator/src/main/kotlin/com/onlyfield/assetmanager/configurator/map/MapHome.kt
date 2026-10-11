@@ -8,7 +8,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -23,7 +26,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.configurator.PortQuickActions
+import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.core.display.displayName
 import com.onlyfield.assetmanager.core.display.sitesForDisplay
@@ -34,9 +42,6 @@ import com.onlyfield.assetmanager.core.forms.SiteOverview
 import com.onlyfield.assetmanager.core.forms.SiteTopology
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
-
-/** What the Map area shows above the floor level: drawings first, the plain list one tap away. */
-enum class MapHomeView(val labelKey: String) { DIAGRAM("maphome.diagram"), LOGICAL("maphome.logical"), LIST("map.list") }
 
 /**
  * Map area above the floor level. Project: the sites and how they reach each other. Site: its floors
@@ -55,50 +60,53 @@ fun MapHome(
     onAddSite: () -> Unit,
     onAddFloor: () -> Unit,
     modifier: Modifier = Modifier,
-    /** Device topology of the whole project, offered at project level. */
-    onTopology: (() -> Unit)? = null,
+    /** Port card from the device drawings; null leaves the ports read-only. */
+    portActions: PortQuickActions? = null,
 ) {
+    val level = if (site == null) MapLevel.PROJECT else MapLevel.SITE
+    val view = if (site == null) state.projectView else state.siteView
     Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        MapViewBar(MapView.forLevel(level), view, level, i18n) { if (site == null) state.projectView = it else state.siteView = it }
+        val floors = remember(site, i18n.locale) { site?.areas.orEmpty().sortedForDisplay(i18n) { it.name } }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            MapHomeView.entries.forEach { view ->
-                FilterChip(state.homeView == view, { state.homeView = view }, { Text(i18n.text(view.labelKey)) }, Modifier.heightIn(min = 48.dp))
-            }
-            if (site == null) {
-                Button(onClick = onAddSite) { Text(i18n.text("text.4e90901d9fa2")) }
-                if (onTopology != null && project.sites.isNotEmpty()) OutlinedButton(onClick = onTopology) { Text(i18n.text("topology.title")) }
-            } else {
+            if (site == null) Button(onClick = onAddSite) { Text(i18n.text("text.4e90901d9fa2")) }
+            else {
+                // The floors stay one tap away whatever the view.
+                if (floors.isNotEmpty()) Text(i18n.text("maphome.floors"), Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelLarge)
+                floors.forEach { a -> AssistChip({ onFloor(a) }, { Text(a.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }, Modifier.heightIn(min = 48.dp)) }
                 Button(onClick = onAddFloor) { Text(i18n.text("text.3575ad226840")) }
                 // A single site is opened directly: keep the way to add the second one.
                 if (project.sites.size == 1) OutlinedButton(onClick = onAddSite) { Text(i18n.text("text.4e90901d9fa2")) }
             }
         }
-        val floors = remember(site, i18n.locale) { site?.areas.orEmpty().sortedForDisplay(i18n) { it.name } }
         when {
             project.sites.isEmpty() -> Text(i18n.text("sites.empty"))
-            state.homeView == MapHomeView.LIST -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (site == null) project.sites.sitesForDisplay(i18n).forEach { s ->
-                    ListCard(i18n.text("text.edc54eb6f93e", s.displayName(), s.areas.size)) { onSite(s) }
-                } else floors.forEach { a ->
-                    ListCard(i18n.text("text.0b16578ff793", a.name, ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size)) { onFloor(a) }
+            view == MapView.LIST -> Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                SectionCard(i18n.text(if (site == null) "mapview.sites" else "maphome.floors"), count = if (site == null) project.sites.size else floors.size) {
+                    if (site == null) ListRows(project.sites.sitesForDisplay(i18n)) { s ->
+                        ListRow(s.displayName(), subtitle = i18n.text("sites.node", s.areas.size, s.devices.count { !it.isPassive() }), leading = { Icon(SymbolIcons.apartment, null) }) { onSite(s) }
+                    } else ListRows(floors) { a ->
+                        ListRow(a.name, subtitle = i18n.plural("map.objectCount", ObjectMap.nodes(project, a.id).size + ObjectMap.routes(project, a.id).size), leading = { Icon(SymbolIcons.map, null) }) { onFloor(a) }
+                    }
                 }
             }
-            state.homeView == MapHomeView.LOGICAL -> LogicalView(project, i18n, site?.id, onDevice, Modifier.weight(1f))
-            site == null -> SiteOverviewView(project, i18n, onSite, Modifier.weight(1f))
-            else -> {
-                if (floors.isNotEmpty()) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(i18n.text("maphome.floors"), Modifier.align(Alignment.CenterVertically), style = MaterialTheme.typography.labelLarge)
-                    floors.forEach { a -> AssistChip({ onFloor(a) }, { Text(a.name, maxLines = 1, overflow = TextOverflow.Ellipsis) }, Modifier.heightIn(min = 48.dp)) }
+            view == MapView.LOGICAL -> LogicalView(project, i18n, site?.id, onDevice, Modifier.weight(1f))
+            view == MapView.DEVICES -> DeviceGallery(project, i18n, site?.id, null, onDevice, Modifier.weight(1f), portActions = portActions)
+            site != null -> TopologyView(project, i18n, site.id, null, onDevice, Modifier.weight(1f))
+            view == MapView.TOPOLOGY -> {
+                // Whole project, narrowed to a site and then a floor on demand.
+                var siteId by remember(project.id) { mutableStateOf<String?>(null) }
+                var areaId by remember(project.id) { mutableStateOf<String?>(null) }
+                val current = project.sites.find { it.id == siteId }
+                TopologyView(project, i18n, current?.id, areaId.takeIf { current != null }, onDevice, Modifier.weight(1f)) {
+                    ValueMenu(i18n.text("topology.site"), current, listOf<Site?>(null) + project.sites.sitesForDisplay(i18n), { it?.displayName() ?: i18n.text("topology.allSites") },
+                        Modifier.widthIn(min = 160.dp, max = 280.dp)) { siteId = it?.id; areaId = null }
+                    if (current != null) ValueMenu(i18n.text("topology.floor"), current.areas.find { it.id == areaId }, listOf<Area?>(null) + current.areas.sortedForDisplay(i18n) { it.name },
+                        { it?.name ?: i18n.text("topology.allFloors") }, Modifier.widthIn(min = 160.dp, max = 280.dp)) { areaId = it?.id }
                 }
-                TopologyView(project, i18n, site.id, null, onDevice, Modifier.weight(1f))
             }
+            else -> SiteOverviewView(project, i18n, onSite, Modifier.weight(1f))
         }
-    }
-}
-
-@Composable
-private fun ListCard(text: String, onClick: () -> Unit) {
-    Card(Modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick)) {
-        Text(text, Modifier.padding(16.dp), maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -117,13 +125,9 @@ fun SiteOverviewView(project: Project, i18n: Messages, onSite: (Site) -> Unit, m
         val labels = overview.nodes.associate { it.id to it.label }
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             SiteCanvas(overview, i18n, width, onSite)
-            Text(i18n.text("sites.links"), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall)
-            if (overview.links.isEmpty()) Text(i18n.text("sites.noLinks"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            overview.links.forEach { link ->
-                Column {
-                    Text("${labels[link.a]} ↔ ${labels[link.b]}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                    Text(describe(link, i18n), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+            SectionCard(i18n.text("sites.links"), count = overview.links.size.takeIf { it > 0 }) {
+                if (overview.links.isEmpty()) Text(i18n.text("sites.noLinks"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ListRows(overview.links) { link -> ListRow("${labels[link.a]} ↔ ${labels[link.b]}", subtitle = describe(link, i18n)) }
             }
         }
     }

@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.core.i18n.Messages
@@ -100,9 +101,10 @@ fun DocumentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     LabeledCheckbox(selection.includeNotesAndAttachments, { selection = selection.copy(includeNotesAndAttachments = it) }, i18n.text("text.1d02ed0f43ac"))
                 }
             }
-            SectionTitle(i18n.text("text.6972df666045"))
-            Text(i18n.text("text.a80f05eed78b"), style = MaterialTheme.typography.bodySmall)
-            OutlinedButton(onClick = { labels.launch("${baseName}_etichette.pdf") }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.5973001e5892")) }
+            SectionCard(i18n.text("text.6972df666045")) {
+                Text(i18n.text("text.a80f05eed78b"), style = MaterialTheme.typography.bodySmall)
+                OutlinedButton(onClick = { labels.launch("${baseName}_etichette.pdf") }, modifier = Modifier.fillMaxWidth()) { Text(i18n.text("text.5973001e5892")) }
+            }
         }
     }
 }

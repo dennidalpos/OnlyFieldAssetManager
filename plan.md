@@ -146,4 +146,11 @@ Decisioni (risposte dell'utente):
 - **Apparati di terzi**: campo Gestione (gestito dal tecnico / fornitore / cliente / sconosciuto) con nome fornitore, contatto e riferimento contratto facoltativi; evidenza in tutte le viste grafiche e filtro negli elenchi. Comporta un incremento dello schema Room e un nuovo campo nel contratto `.ofam` (ammesso: applicazione in sviluppo).
 - **Ordine**: prima i rilievi AUD-65–70, poi le viste.
 
-Stato: AUD-65–70 corretti; GFX-01 (vista a livelli), GFX-02 (schema sedi), GFX-03 (vista logica) e GFX-04 (gestione e fornitore, Room v3) implementati l'11 ottobre. Aperto GFX-05: demo con sedi interconnesse, subnet e apparati di terzi, e selettore di vista anche al livello del piano. Prove native Android in RES-19. Restano validi i limiti dell'intervista del 5 ottobre: nessuna mappa geografica delle sedi, nessuna scoperta automatica, nessun import da altri strumenti.
+Decisioni dell'11 ottobre (seconda sessione, risposte dell'utente):
+
+- **Viste sempre esposte**: barra di icone fissa a progetto, sede e piano (Schema/Planimetria, Topologia, Logica, Apparati, Elenco); nessuna vista in un menu o in un dialogo.
+- **Vista Apparati**: prospetti dei rack e frontali degli apparati con le porte, per l'ambito corrente.
+- **Modali adattivi per tipo**: sul telefono a schermo intero con azioni fisse; su finestre larghe elenchi, ricerca, scheda porta e disegni usano la finestra, i form di testo restano a 640 dp con i campi brevi affiancati.
+- **Riquadri di sezione** in tutta l'applicazione: ogni gruppo di testi ha un contorno e un titolo; righe degli elenchi allineate al titolo.
+
+Stato: AUD-65–70 corretti; GFX-01 (vista a livelli), GFX-02 (schema sedi), GFX-03 (vista logica) e GFX-04 (gestione e fornitore, Room v3) implementati l'11 ottobre. GFX-06 (barra viste a ogni livello, vista Apparati), UX-07 (modali adattivi) e UX-08 (riquadri ed elenchi nell'interfaccia condivisa) implementati nella seconda sessione dell'11 ottobre. GFX-05 (demo con apparati di terzi, indirizzi e subnet di sede) chiuso lo stesso giorno. Aperto UX-09 (riquadri e campi affiancati nelle schermate di piattaforma non ancora riviste). Prove native Android in RES-19. Restano validi i limiti dell'intervista del 5 ottobre: nessuna mappa geografica delle sedi, nessuna scoperta automatica, nessun import da altri strumenti.

@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
@@ -187,13 +190,11 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
             }
             val photos = index.attachmentsOf(device.id)
             item {
-                SectionTitle(i18n.text("ux.attachments"), photos.size.takeIf { it > 0 }) {
-                    TextButton(onClick = { takePhoto(AttachmentTargetType.DEVICE, device.id) }) { Text(i18n.text("map.addPhoto")) }
+                SectionCard(i18n.text("ux.attachments"), count = photos.size.takeIf { it > 0 },
+                    trailing = { TextButton(onClick = { takePhoto(AttachmentTargetType.DEVICE, device.id) }) { Text(i18n.text("map.addPhoto")) } }) {
+                    if (photos.isEmpty()) Text(i18n.text("map.noPhotos"), style = MaterialTheme.typography.bodySmall)
+                    ListRows(photos) { a -> ListRow(a.name, subtitle = "${a.fileType.toDisplayString(i18n = i18n)} · ${a.originalFileName}") }
                 }
-            }
-            if (photos.isEmpty()) item { Text(i18n.text("map.noPhotos"), style = MaterialTheme.typography.bodySmall) }
-            items(photos, key = { it.id }) { a ->
-                ItemCard(title = a.name, details = listOf("${a.fileType.toDisplayString(i18n = i18n)} · ${a.originalFileName}"))
             }
             // Secondary: identifiers and technical notes, collapsed.
             item {
@@ -265,7 +266,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
             OptionPicker(i18n.text("text.505c57b1f96f"), index.devices.filter { it.id != device.id }, duplicate, { it.technicalName }, { duplicate = it },
                 optionDetail = { it.ipAddress })
             duplicate?.let { dup ->
-                SectionTitle(i18n.text("text.b8446f35e08e"))
+                SectionCard(i18n.text("text.b8446f35e08e")) {
                 LabeledCheckbox(choices.useTechnicalNameFromDuplicate, { choices = choices.copy(useTechnicalNameFromDuplicate = it) }, i18n.text("text.ddd991c1f573", dup.technicalName))
                 LabeledCheckbox(choices.useIpFromDuplicate, { choices = choices.copy(useIpFromDuplicate = it) }, i18n.text("text.ab03ca58781a", dup.ipAddress ?: "vuoto"))
                 LabeledCheckbox(choices.useMacFromDuplicate, { choices = choices.copy(useMacFromDuplicate = it) }, i18n.text("text.204c390b7016", dup.macAddress ?: "vuoto"))
@@ -277,6 +278,7 @@ fun DeviceDetailScreen(vm: ProjectViewModel, project: Project, deviceId: String,
                 LabeledCheckbox(choices.mergePowerFeeds, { choices = choices.copy(mergePowerFeeds = it) }, i18n.text("merge.powerFeeds"))
                 LabeledCheckbox(choices.mergeExtraFields, { choices = choices.copy(mergeExtraFields = it) }, i18n.text("merge.extraFields"))
                 Text(i18n.text("merge.associatedHint"), style = MaterialTheme.typography.bodySmall)
+                }
             }
         }
     }

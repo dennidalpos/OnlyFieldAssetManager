@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.ui.LocalMessages
 
@@ -218,9 +221,8 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
             Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 RackElevation(index.project, rack, side, i18n, onDevice = { vm.navigate(Screen.DeviceDetail(it.id)) }, onAddAt = { addingAt = it })
                 val unplaced = inRack.filter { it.positionU == null }
-                if (unplaced.isNotEmpty()) {
-                    SectionTitle(i18n.text("text.d75d6ae3881b"))
-                    unplaced.sortedForDisplay(i18n) { it.technicalName }.forEach { d -> ItemCard(d.technicalName, listOf(i18n.text("text.a03528f849dc")), onClick = { vm.navigate(Screen.DeviceDetail(d.id)) }) }
+                if (unplaced.isNotEmpty()) SectionCard(i18n.text("text.d75d6ae3881b"), count = unplaced.size) {
+                    ListRows(unplaced.sortedForDisplay(i18n) { it.technicalName }) { d -> ListRow(d.technicalName, subtitle = i18n.text("text.a03528f849dc")) { vm.navigate(Screen.DeviceDetail(d.id)) } }
                 }
             }
         }

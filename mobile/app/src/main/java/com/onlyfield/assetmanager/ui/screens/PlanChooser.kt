@@ -1,5 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
@@ -51,14 +53,14 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, file
             catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; failure = e.message ?: i18n.text("text.cff201c9dd3a") }
         }
     }
-    AlertDialog(onDismissRequest = onClose, title = { Text(i18n.text("text.f3e846ee8611", area.name)) }, text = {
+    ContentDialog(onDismissRequest = onClose, wide = true, scrollBody = false, title = { Text(i18n.text("text.f3e846ee8611", area.name), style = MaterialTheme.typography.titleLarge) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedButton(onClick = onPick) { Text(i18n.text("text.5784dc5eaf9c")) }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             failure?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (selected?.fileType == AttachmentType.PDF) {
                 Text(i18n.text("text.0d63c434f784", selected.name))
-                LazyColumn(Modifier.heightIn(max = 340.dp)) {
+                LazyColumn(Modifier.weight(1f, fill = false)) {
                     items((0 until pages).toList()) { index ->
                         Card(Modifier.fillMaxWidth().padding(bottom = 6.dp).clickable { page = index }, colors = CardDefaults.cardColors(containerColor = if (index == page) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant)) {
                             Text(i18n.text("text.c192249f9066", index + 1), Modifier.padding(8.dp))
@@ -66,9 +68,10 @@ internal fun PlanChooser(project: Project, area: Area, importedId: String?, file
                         }
                     }
                 }
-            } else LazyColumn(Modifier.heightIn(max = 340.dp)) {
+            } else LazyColumn(Modifier.weight(1f, fill = false)) {
                 items(project.attachments.filter { it.fileType == AttachmentType.IMAGE || it.fileType == AttachmentType.PDF }.sortedForDisplay(i18n) { it.name }, key = { it.id }) { a ->
-                    TextButton(onClick = { if (a.fileType == AttachmentType.IMAGE) onAssign(a.id, 0, 1) else selectedId = a.id }, modifier = Modifier.fillMaxWidth()) { Text(a.name + if (a.fileType == AttachmentType.PDF) i18n.text("text.0bd78b344dac") else "") }
+                    ListRow(a.name + if (a.fileType == AttachmentType.PDF) i18n.text("text.0bd78b344dac") else "") { if (a.fileType == AttachmentType.IMAGE) onAssign(a.id, 0, 1) else selectedId = a.id }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }

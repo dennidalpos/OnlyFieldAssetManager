@@ -47,7 +47,6 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
-    var topology by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
     var saveError by remember { mutableStateOf<String?>(null) }
@@ -70,12 +69,16 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = hit.focus }
     }
     fun openDevice(d: Device) {
-        topology = false
         val target = ObjectMap.areaId(project, d)
         if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
         else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
     }
-    fun back() { when { area != null && vm.mapUiState.floor(project, area.id).let { it.expanded && !it.wideDetails } -> vm.mapUiState.floor(project, area.id).expanded = false; area != null -> vm.selectedAreaId = null; selectedSite != null && manySites -> vm.selectedSiteId = null; else -> vm.back() } }
+    // Port card of the device drawings above the floor level.
+    val portActions = com.onlyfield.assetmanager.configurator.PortQuickActions(update = vm::editMap, photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current, openDevice = ::openDevice,
+        details = { port -> editorPage = ConfiguratorPage.PORTS; editor = MapObjectDraft.forDevice(project, project.sites.flatMap { it.devices }.find { it.id == port.deviceId }).copy(focusPortId = port.id) })
+    fun back() { when { area != null && vm.mapUiState.floor(project, area.id).let { it.expanded && !it.wideDetails } -> vm.mapUiState.floor(project, area.id).expanded = false
+        // Another view of the floor goes back to its plan first.
+        area != null && vm.mapUiState.floor(project, area.id).view != MapView.DIAGRAM -> vm.mapUiState.floor(project, area.id).view = MapView.DIAGRAM; area != null -> vm.selectedAreaId = null; selectedSite != null && manySites -> vm.selectedSiteId = null; else -> vm.back() } }
     BackHandler(enabled = area != null || (selectedSite != null && manySites)) { back() }
     LaunchedEffect(attachment?.id, area?.floorplanPageIndex) {
         image = null; imageError = null
@@ -103,7 +106,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     onDevice = ::openDevice,
                     onAddSite = { if (vm.busy == null) { saveError = null; addingSite = true } },
                     onAddFloor = { if (vm.busy == null) { saveError = null; addingSite = false } },
-                    modifier = Modifier.weight(1f), onTopology = { topology = true })
+                    modifier = Modifier.weight(1f), portActions = portActions)
             } else {
                 imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                 MapWorkspace(project, area.id, image, i18n, MapActions(
@@ -115,8 +118,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
                     photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
                 ), Modifier.weight(1f), tools = listOf(
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
-                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("topology.title")) { topology = true },
-                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { if (vm.busy == null) { saveError = null; selectingPlan = true } },
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.choosePlan")) { if (vm.busy == null) { saveError = null; selectingPlan = true } },
                 ), state = vm.mapUiState.floor(project, area.id), focus = focus, onFocusHandled = { focus = null },
                 onSearch = { searching = true }, onLeaveFloor = { vm.selectedAreaId = null }, media = { ref ->
                     val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
@@ -134,7 +136,6 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
         }
     }
     if (searching) GlobalSearchDialog(project, i18n, vm.recentSearch, ::openHit) { searching = false }
-    if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
     addingSite?.let { requested ->
         val newSite = requested || site == null
         var name by remember { mutableStateOf("") }

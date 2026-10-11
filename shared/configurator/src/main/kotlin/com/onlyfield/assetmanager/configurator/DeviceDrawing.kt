@@ -15,6 +15,8 @@ import com.onlyfield.assetmanager.configurator.map.MapStyle
 import com.onlyfield.assetmanager.configurator.map.ValueMenu
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import androidx.compose.ui.text.style.TextOverflow
+import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.forms.*
 import com.onlyfield.assetmanager.core.i18n.Messages
@@ -25,7 +27,11 @@ import com.onlyfield.assetmanager.core.model.*
 @Composable
 fun DeviceDrawing(project: Project, device: Device, i18n: Messages,
                   onPort: ((PortCell) -> Unit)? = null, onDeviceChange: ((Device) -> Unit)? = null,
-                  selectedPortIds: Set<String> = emptySet(), onLongPort: ((PortCell) -> Unit)? = null, showName: Boolean = true, framed: Boolean = true) {
+                  selectedPortIds: Set<String> = emptySet(), onLongPort: ((PortCell) -> Unit)? = null, showName: Boolean = true, framed: Boolean = true,
+                  /** Opens the device from its heading. */
+                  onOpen: (() -> Unit)? = null,
+                  /** Shared by galleries, so each drawing does not rebuild them. */
+                  graph: ConnectionGraph? = null, index: ProjectIndex? = null) {
     var side by remember(device.id) { mutableStateOf(PortSide.FRONT) }
     var arranging by remember(device.id) { mutableStateOf(false) }
     var editingPoe by remember(device.id) { mutableStateOf(false) }
@@ -33,7 +39,8 @@ fun DeviceDrawing(project: Project, device: Device, i18n: Messages,
     var standard by remember(device.id) { mutableStateOf(PoeStandard.IEEE_802_3AT) }
     val glyph = ObjectGlyph.of(project, device)
     val type = ObjectCatalog.type(project, device.objectTypeId)
-    val cells = PortLogic.panel(project, device).filter { PortArrangement.side(it.port) == side || it.port.hardware.side == PortSide.BOTH }
+    val panel = remember(project, device, graph, index) { PortLogic.panel(project, device, graph ?: ConnectionGraph(project), index ?: ProjectIndex(project)) }
+    val cells = panel.filter { PortArrangement.side(it.port) == side || it.port.hardware.side == PortSide.BOTH }
     val ids = cells.map { it.port.id }.toSet()
     val selection = selected.intersect(ids)
     fun swap(a: String, b: String) {
@@ -45,13 +52,14 @@ fun DeviceDrawing(project: Project, device: Device, i18n: Messages,
         onDeviceChange?.invoke(PortArrangement.set(device, layout.copy(order = layout.order.map { if (it == first) second else if (it == second) first else it })))
         selected = emptySet()
     }
-    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = if (framed) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surface,
+    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, color = if (framed) MaterialTheme.colorScheme.surfaceContainer else androidx.compose.ui.graphics.Color.Transparent,
         border = if (framed) BorderStroke(1.dp, MapStyle.glyph(glyph)) else null) {
         Column(Modifier.padding(if (framed) 12.dp else 0.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth().then(if (onOpen != null) Modifier.clickable(role = Role.Button, onClick = onOpen) else Modifier),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 GlyphBadge(glyph, if (glyph.family in setOf(ObjectFamily.ENDPOINT, ObjectFamily.SECURITY)) 56.dp else 36.dp)
                 Column(Modifier.weight(1f)) {
-                    if (showName) Text(device.technicalName, style = MaterialTheme.typography.titleMedium)
+                    if (showName) Text(device.technicalName, style = MaterialTheme.typography.titleMedium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(type?.let { ObjectCatalog.displayName(it, i18n) } ?: glyph.code, style = MaterialTheme.typography.bodySmall)
                 }
             }

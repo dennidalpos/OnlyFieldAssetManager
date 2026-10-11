@@ -22,7 +22,9 @@ Le regressioni dell'audit sono permanenti: `ImportedProtectionTest` verifica la 
 .\gradlew.bat :shared:exchange:demoPackage
 ```
 
-Contenuto aggiornato il 9 ottobre 2026 («Demo Comune», **366 apparati, 8 rack, 1007 cavi, 14 modelli, 7 allegati**):
+Contenuto aggiornato l'11 ottobre 2026 («Demo Comune», **366 apparati, 8 rack, 1007 cavi, 14 modelli, 7 allegati**; data di revisione fissa 11 ottobre):
+
+- **Viste grafiche (GFX-05)**: ONT-COM-01 e ONT-TEA-01 gestiti dal fornitore «Operatore FTTH», NVR-COM-LAB e CAM-COM-LAB da «Vigilanza Demo Srl», SRV-COM-02 dal cliente, con contatto e contratto sintetici. Indirizzi IP su firewall, server, NAS, switch di laboratorio e NVR; subnet di sede **Teatro** `10.20.10.0/24` con gateway RTR-TEA-01 e i due switch del teatro. Lo schema sedi mostra i due ponti radio, la VPN Teatro–Municipio e il nodo esterno dell'operatore.
 
 - **Comune – Municipio** (CED, Piano terra, Primo piano, Copertura, Laboratorio collaudi). Il rack CED è il centro stella. Contiene: patch panel fibra PPF-COM-CED (24 LC), SW-COM-CORE (24 RJ45 + 12 SFP+), FW-COM-01, RTR-COM-01, ONT-COM-01, due server, NAS, UPS e PDU sul retro. La catena WAN è ONT → router → firewall → core.
 - **Teatro comunale** (Piano terra): ONT e router propri con linea FTTH e VPN verso il firewall del Municipio (collegamenti logici). Il cavo della presa PR-TEA-PT-01 passa per la scatola di giunzione GB-TEA-PT-01.

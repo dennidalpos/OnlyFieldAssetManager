@@ -97,8 +97,8 @@ class FloorMapUiTest {
             rule.setContent { MaterialTheme { Box(Modifier.size(900.dp, 700.dp)) { FloorHomeSection(state) } } }
             // The drawing is the default view: this flow walks the list.
             rule.onNodeWithText("Elenco").performClick()
-            rule.onNodeWithText("BU-A · 2 piani / zone").performClick()
-            rule.onNodeWithText("Terra · 1 oggetti").performClick()
+            rule.onNodeWithText("BU-A").performClick()
+            rule.onNodeWithText("Terra").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.onNodeWithText("Aggiungi oggetto").performClick()
             rule.onNodeWithText("Cerca tipologia…").performTextInput("modem")
@@ -107,7 +107,7 @@ class FloorMapUiTest {
             rule.runOnIdle { assertEquals(1, state.project!!.sites.first().devices.size) }
             rule.onNode(hasText("Terra") and hasClickAction()).performClick()
             rule.onNodeWithText("BU-A").performClick()
-            rule.onNodeWithText("Primo · 0 oggetti").performClick()
+            rule.onNodeWithText("Primo").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.onNode(hasText("Primo") and hasClickAction()).performClick()
             rule.onNodeWithText("BU-A").performClick()
@@ -115,11 +115,11 @@ class FloorMapUiTest {
             rule.onNodeWithText("Aggiungi sede").performClick()
             rule.onNodeWithText("Nome *").performTextInput("BU-C")
             rule.onNodeWithText("Salva").performClick()
-            rule.onNodeWithText("BU-C · 0 piani / zone").performClick()
+            rule.onNodeWithText("BU-C").performClick()
             rule.onNodeWithText("Aggiungi piano").performClick()
             rule.onNodeWithText("Nome *").performTextInput("Zona nuova")
             rule.onNodeWithText("Salva").performClick()
-            rule.onNodeWithText("Zona nuova · 0 oggetti").performClick()
+            rule.onNodeWithText("Zona nuova").performClick()
             rule.onNodeWithTag("floor-map").assertIsDisplayed()
             rule.runOnIdle { assertEquals(3, state.project!!.sites.size); assertEquals(empty, state.project!!.sites[1]) }
         } finally { state.shutdown(); dir.deleteRecursively() }

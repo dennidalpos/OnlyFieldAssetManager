@@ -27,9 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.displayName
 import com.onlyfield.assetmanager.core.display.sitesForDisplay
@@ -44,36 +42,6 @@ private val NodeHeight = 48.dp
 private val ColumnGap = 12.dp
 private val RowGap = 44.dp
 
-/** Full-screen [TopologyView] with site and floor filters. */
-@OptIn(ExperimentalLayoutApi::class)
-@Composable
-fun TopologyDialog(project: Project, i18n: Messages, siteId: String?, areaId: String?, onOpen: (Device) -> Unit, onClose: () -> Unit) {
-    var site by remember { mutableStateOf(siteId) }
-    var area by remember { mutableStateOf(areaId) }
-    Dialog(onDismissRequest = onClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
-        Surface(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(i18n.text("topology.title"), Modifier.weight(1f).semantics { heading() }, style = MaterialTheme.typography.titleLarge)
-                    TextButton(onClick = onClose) { Text(i18n.text("ux.close")) }
-                }
-                val sites = remember(project) { listOf<Site?>(null) + project.sites.sitesForDisplay(i18n) }
-                val current = project.sites.find { it.id == site }
-                TopologyView(project, i18n, site, area, onOpen, Modifier.weight(1f)) {
-                    ValueMenu(i18n.text("topology.site"), current, sites, { it?.displayName() ?: i18n.text("topology.allSites") }, Modifier.widthIn(min = 160.dp, max = 280.dp)) {
-                        site = it?.id; area = null
-                    }
-                    if (current != null) {
-                        val areas = listOf<Area?>(null) + current.areas.sortedForDisplay(i18n) { it.name }
-                        ValueMenu(i18n.text("topology.floor"), current.areas.find { it.id == area }, areas, { it?.name ?: i18n.text("topology.allFloors") },
-                            Modifier.widthIn(min = 160.dp, max = 280.dp)) { area = it?.id }
-                    }
-                }
-            }
-        }
-    }
-}
-
 /**
  * Physical topology of the active devices (passives collapsed into the links).
  * Rows follow the available width, so only vertical scrolling is ever needed; a tap opens the device.
@@ -83,25 +51,25 @@ fun TopologyDialog(project: Project, i18n: Messages, siteId: String?, areaId: St
 fun TopologyView(project: Project, i18n: Messages, siteId: String?, areaId: String?, onOpen: (Device) -> Unit, modifier: Modifier = Modifier,
                  filters: @Composable FlowRowScope.() -> Unit = {}) {
     var endpoints by rememberSaveable { mutableStateOf(false) }
-    Column(modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        // Filters wrap instead of scrolling sideways.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            filters()
-            Row(Modifier.toggleable(endpoints, role = Role.Switch) { endpoints = it }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Switch(endpoints, null); Text(i18n.text("topology.endpoints"))
-            }
-        }
-        BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
-            val width = maxWidth
-            val perRow = ((width + ColumnGap) / (NodeWidth + ColumnGap)).toInt().coerceAtLeast(1)
-            val topology = remember(project, siteId, areaId, perRow, endpoints) { PhysicalTopology.build(project, siteId, areaId, perRow, foldEndpoints = !endpoints) }
-            Column {
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val width = maxWidth
+        val perRow = ((width + ColumnGap) / (NodeWidth + ColumnGap)).toInt().coerceAtLeast(1)
+        val topology = remember(project, siteId, areaId, perRow, endpoints) { PhysicalTopology.build(project, siteId, areaId, perRow, foldEndpoints = !endpoints) }
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Filters and counts in one box; they wrap instead of scrolling sideways.
+            SectionCard(null) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    filters()
+                    Row(Modifier.toggleable(endpoints, role = Role.Switch) { endpoints = it }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Switch(endpoints, null); Text(i18n.text("topology.endpoints"))
+                    }
+                }
                 Text(i18n.text("topology.summary", topology.nodes.count { !it.outside } + topology.folded.values.sumOf { it.size }, topology.links.size, topology.stubs.values.sum()),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                if (topology.nodes.isEmpty()) Text(i18n.text("topology.empty"), Modifier.padding(top = 16.dp))
-                else TopologyCanvas(project, topology, i18n, width, onOpen)
             }
+            if (topology.nodes.isEmpty()) Text(i18n.text("topology.empty"), Modifier.padding(top = 8.dp))
+            else TopologyCanvas(project, topology, i18n, width, onOpen)
         }
     }
 }

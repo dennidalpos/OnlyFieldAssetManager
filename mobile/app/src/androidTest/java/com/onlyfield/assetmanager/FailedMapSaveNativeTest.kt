@@ -119,7 +119,7 @@ class FailedMapSaveNativeTest {
                 else -> {
                     if (rule.onAllNodesWithContentDescription(vm.i18n.text("ux.more")).fetchSemanticsNodes().isNotEmpty())
                         rule.onNodeWithContentDescription(vm.i18n.text("ux.more")).performClick()
-                    rule.onNodeWithText(vm.i18n.text("text.68f86d09412c")).performClick()
+                    rule.onNodeWithText(vm.i18n.text("map.choosePlan")).performClick()
                     action = when (picker) {
                         "image" -> attachment.name
                         "remove" -> vm.i18n.text("text.f139b3096d6f")

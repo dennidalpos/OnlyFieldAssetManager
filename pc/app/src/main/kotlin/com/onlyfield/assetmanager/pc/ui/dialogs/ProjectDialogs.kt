@@ -1,5 +1,8 @@
 package com.onlyfield.assetmanager.pc.ui.dialogs
 
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
+import com.onlyfield.assetmanager.configurator.theme.LocalDialogBodyHeight
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
@@ -61,12 +64,11 @@ private fun NewProjectDialog(state: DesktopAppState) {
         state.newSiteWizard = w.update(t)
     }
 
-    AlertDialog(
+    ContentDialog(
         onDismissRequest = { state.dismissDialog() },
-        modifier = Modifier.width(560.dp),
-        title = { Text(i18n.text("text.e5fb2fba05af", w.stepNumber, w.stepCount)) },
+        title = { Text(i18n.text("text.e5fb2fba05af", w.stepNumber, w.stepCount), style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(Modifier.heightIn(max = 440.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.inset)) {
                 LinearProgressIndicator(progress = { w.stepNumber / w.stepCount.toFloat() }, modifier = Modifier.fillMaxWidth())
                 Text(w.step.localizedTitle(i18n), style = MaterialTheme.typography.titleMedium)
                 Text(w.step.localizedHint(i18n), style = MaterialTheme.typography.bodySmall)
@@ -199,11 +201,11 @@ private fun ManagePasswordDialog(state: DesktopAppState) {
 private fun CompareDialog(state: DesktopAppState, d: AppDialog.Compare) {
     val i18n = LocalMessages.current
 
-    AlertDialog(
+    ContentDialog(
         onDismissRequest = { state.dismissDialog() },
-        title = { Text(i18n.text("text.d9894806b1de")) },
+        title = { Text(i18n.text("text.d9894806b1de"), style = MaterialTheme.typography.titleLarge) },
         text = {
-            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(i18n.text("text.620d36696411", d.pkg.project.name), fontWeight = FontWeight.SemiBold)
                 Text(i18n.text("text.9d284912dcdd", if (d.comparison.currentProjectId == null) d.comparison.summary else d.comparison.status.toDisplayString(i18n = i18n)))
                 d.comparison.warningMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
@@ -231,15 +233,15 @@ private fun MergeDialog(state: DesktopAppState, d: AppDialog.Merge) {
     val i18n = LocalMessages.current
 
     val conflict = d.current ?: return
-    AlertDialog(
+    ContentDialog(
         onDismissRequest = {},
-        modifier = Modifier.width(600.dp),
-        title = { Text(i18n.text("text.e81e208100f0", d.choices.size + 1, d.result.conflicts.size)) },
+        title = { Text(i18n.text("text.e81e208100f0", d.choices.size + 1, d.result.conflicts.size), style = MaterialTheme.typography.titleLarge) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text("${conflict.kindLabel}: ${conflict.name}", fontWeight = FontWeight.SemiBold)
                 Text(conflict.localizedDescription(i18n))
-                LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                // The differences take what the window leaves.
+                LazyColumn(Modifier.heightIn(max = LocalDialogBodyHeight.current * .7f)) {
                     items(conflict.differences(i18n = i18n)) { Text("• $it", style = MaterialTheme.typography.bodySmall) }
                 }
                 if (d.result.autoApplied > 0) Text(i18n.text("text.cdaed04f8505", d.result.autoApplied), style = MaterialTheme.typography.bodySmall)
@@ -349,12 +351,11 @@ private fun ValidationDialog(state: DesktopAppState) {
     val project = state.project ?: return
     val index = remember(project) { ProjectIndex(project) }
     val grouped = state.issues.groupBy { it.severity }
-    AlertDialog(
-        onDismissRequest = { state.dismissDialog() },
-        modifier = Modifier.width(720.dp),
-        title = { Text(i18n.text("text.a590fcd25b56")) },
+    ContentDialog(
+        onDismissRequest = { state.dismissDialog() }, wide = true, scrollBody = false,
+        title = { Text(i18n.text("text.a590fcd25b56"), style = MaterialTheme.typography.titleLarge) },
         text = {
-            LazyColumn(modifier = Modifier.heightIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 item {
                     Text(
                         i18n.text("text.99f37796ec4a"),

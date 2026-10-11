@@ -11,9 +11,17 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.onlyfield.assetmanager.configurator.map.MapHome
-import com.onlyfield.assetmanager.configurator.map.MapHomeView
+import com.onlyfield.assetmanager.configurator.map.MapActions
+import com.onlyfield.assetmanager.configurator.map.MapView
+import com.onlyfield.assetmanager.configurator.map.MapWorkspace
 import com.onlyfield.assetmanager.configurator.map.MapUiState
-import com.onlyfield.assetmanager.configurator.map.TopologyDialog
+import com.onlyfield.assetmanager.configurator.map.TopologyView
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.forms.HardwareConfigurator
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.core.model.*
@@ -31,19 +39,20 @@ class TopologyUiTest {
 
     @Test fun showsLinkedDevicesAndOpensOnTap() {
         var opened: Device? = null
-        rule.setContent { MaterialTheme { TopologyDialog(project, Messages(), null, null, { opened = it }) {} } }
+        rule.setContent { MaterialTheme { TopologyView(project, Messages(), null, null, { opened = it }) } }
         rule.onNodeWithText("2 apparati · 1 collegamenti · 0 percorsi aperti (⋯) · +N terminali raccolti").assertExists()
         val output = File("build/reports/visual-configurator/topology-current.png")
         output.parentFile.mkdirs()
-        Image.makeFromBitmap(rule.onAllNodes(isRoot()).filterToOne(hasAnyDescendant(isDialog())).captureToImage().asSkiaBitmap()).use { image -> image.encodeToData()!!.use { output.writeBytes(it.bytes) } }
+        Image.makeFromBitmap(rule.onRoot().captureToImage().asSkiaBitmap()).use { image -> image.encodeToData()!!.use { output.writeBytes(it.bytes) } }
         rule.onNodeWithContentDescription("SW-01, Sede, 1 collegamento").performClick()
         rule.runOnIdle { assertEquals("s", opened?.id) }
     }
 
-    private fun capture(name: String) {
+    private fun capture(name: String, tag: String? = null) {
         val output = File("build/reports/visual-configurator/$name.png")
         output.parentFile.mkdirs()
-        Image.makeFromBitmap(rule.onRoot().captureToImage().asSkiaBitmap()).use { image -> image.encodeToData()!!.use { output.writeBytes(it.bytes) } }
+        val node = if (tag == null) rule.onRoot() else rule.onNodeWithTag(tag)
+        Image.makeFromBitmap(node.captureToImage().asSkiaBitmap()).use { image -> image.encodeToData()!!.use { output.writeBytes(it.bytes) } }
     }
 
     /** The Map area opens on drawings: sites and their links, then the topology of the chosen site. */
@@ -66,7 +75,7 @@ class TopologyUiTest {
         rule.onNode(hasContentDescription("RTR-01", substring = true)).performClick()
         rule.runOnIdle { assertEquals("r", opened?.id) }
         rule.onNodeWithText("Elenco").performClick()
-        rule.onNodeWithText("Terra · 0 oggetti").assertExists()
+        rule.onNodeWithText("0 oggetti").assertExists()
     }
 
     /** Logical view: devices grouped by subnet, gateway first; third-party devices are marked in the topology. */
@@ -74,7 +83,7 @@ class TopologyUiTest {
         val net = project.copy(subnets = listOf(Subnet(cidrBlock = "192.168.1.0/24", gatewayIp = "192.168.1.1", name = "Uffici")),
             sites = project.sites.map { s -> s.copy(devices = s.devices.map { if (it.id == "r") it.copy(ipAddress = "192.168.1.1", management = DeviceManagement.SUPPLIER, supplierName = "TIM") else it }) })
         var opened: Device? = null
-        val state = MapUiState().apply { homeView = MapHomeView.LOGICAL }
+        val state = MapUiState().apply { siteView = MapView.LOGICAL }
         rule.setContent { MaterialTheme { MapHome(net, Messages(), net.sites.single(), state, {}, {}, { opened = it }, {}, {}) } }
         rule.onNodeWithText("192.168.1.0/24").assertExists()
         rule.onNodeWithText("Uffici · Gateway 192.168.1.1").assertExists()
@@ -82,8 +91,49 @@ class TopologyUiTest {
         capture("map-home-logical")
         rule.onNode(hasContentDescription("RTR-01, 192.168.1.1, gateway")).performClick()
         rule.runOnIdle { assertEquals("r", opened?.id) }
-        rule.runOnIdle { state.homeView = MapHomeView.DIAGRAM }
+        rule.runOnIdle { state.siteView = MapView.TOPOLOGY }
         rule.onNode(hasContentDescription("Fornitore TIM", substring = true)).assertExists()
         capture("map-home-third-party")
+    }
+
+    private val racked = Project(name = "Rete", createdEpochMs = 1, updatedEpochMs = 1, racks = listOf(Rack(id = "k", name = "RACK-A", areaId = "t", heightU = 12)),
+        sites = listOf(Site(id = "a", name = "Municipio", areas = listOf(Area(id = "t", name = "Terra")), devices = listOf(
+            Device(id = "s", technicalName = "SW-01", objectTypeId = "switch", areaId = "t", rackId = "k", positionU = 10, ports = (1..24).map { Port(id = "s-$it", deviceId = "s", name = "$it") }),
+            Device(id = "r", technicalName = "RTR-01", objectTypeId = "router", areaId = "t", rackId = "k", positionU = 8, ports = (1..4).map { Port(id = "r-$it", deviceId = "r", name = "$it") }),
+            Device(id = "f", technicalName = "FW-01", objectTypeId = "firewall", areaId = "t", ports = (1..4).map { Port(id = "f-$it", deviceId = "f", name = "$it") }),
+            Device(id = "p", technicalName = "PC-01", objectTypeId = "workstation", areaId = "t", ports = listOf(Port(id = "p-1", deviceId = "p", name = "1")))))))
+        .let { HardwareConfigurator.connect(it, "r-1", "s-1", CableMedium.ETHERNET_COPPER) }
+
+    /** Device drawings: the rack with its elevation and fronts, loose devices apart, end devices on demand. */
+    @Test fun deviceGalleryDrawsRacksAndFronts() {
+        var opened: Device? = null
+        val state = MapUiState().apply { siteView = MapView.DEVICES }
+        rule.setContent { MaterialTheme { Surface { MapHome(racked, Messages(), racked.sites.single(), state, {}, {}, { opened = it }, {}, {}) } } }
+        rule.onNodeWithText("RACK-A (2)").assertExists()
+        rule.onNodeWithText("Fuori da rack e contenitori (1)").assertExists()
+        rule.onNodeWithText("PC-01").assertDoesNotExist()
+        capture("map-view-devices-1024")
+        rule.onNodeWithText("Mostra i terminali").performClick()
+        rule.onNodeWithText("PC-01").assertExists()
+        rule.onNodeWithText("FW-01").performClick()
+        rule.runOnIdle { assertEquals("f", opened?.id) }
+    }
+
+    /** Phone width: every view is one tap away on the floor too, and leaves the plan in place. */
+    @Test fun floorViewsAreOneTapAwayOnPhones() {
+        val state = MapUiState()
+        rule.setContent { MaterialTheme { Surface { Box(Modifier.requiredSize(360.dp, 720.dp).testTag("phone")) {
+            MapWorkspace(racked, "t", null, Messages(), MapActions(update = { _, _ -> }, edit = { _, _ -> }, add = { _, _ -> }), state = state.floor(racked, "t"))
+        } } } }
+        rule.onNodeWithText("Planimetria").assertExists()
+        capture("map-view-floor-360", "phone")
+        rule.onNodeWithContentDescription("Apparati").performClick()
+        rule.onNodeWithText("RACK-A (2)").assertExists()
+        capture("map-view-floor-devices-360", "phone")
+        rule.onNodeWithContentDescription("Topologia").performClick()
+        rule.onNode(hasContentDescription("SW-01", substring = true)).performClick()
+        rule.runOnIdle { assertEquals(MapView.DIAGRAM, state.floor(racked, "t").view) }
+        rule.onNodeWithContentDescription("Elenco").performClick()
+        capture("map-view-floor-list-360", "phone")
     }
 }

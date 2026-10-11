@@ -1,5 +1,6 @@
 package com.onlyfield.assetmanager.configurator
 
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
@@ -174,9 +175,10 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
             if (!modelEditor) BulkPortBar(preview, cells, selection, i18n, { selectedPorts = it }) { stage(it) }
         }
         ObjectKind.RACK -> index.rack(draft.id)?.takeIf { it.heightU in 1..60 }?.let { rack ->
-            Text(i18n.text("ux.rackContents"), style = MaterialTheme.typography.titleMedium)
-            RackContents(preview, rack, index.devices.filter { it.rackId == rack.id }, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { u ->
-                addingAt = u
+            SectionCard(i18n.text("ux.rackContents")) {
+                RackContents(preview, rack, index.devices.filter { it.rackId == rack.id }, side, i18n, onSide = { side = it }, onOpen = ::openDevice) { u ->
+                    addingAt = u
+                }
             }
         }
         ObjectKind.CABLE -> Unit
@@ -189,7 +191,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     } }
 
     // Essentials: what the object is. Where it is lives in Position.
-    SectionTitle(i18n.text("config.section.essentials"))
+    SectionCard(i18n.text("config.section.essentials")) {
     Field(i18n.text("config.name"), rootName, error = errors["technicalName"] ?: errors["name"]) { value ->
         change(when (kind) {
             ObjectKind.DEVICE -> draft.copy(device = draft.device.copy(technicalName = value))
@@ -215,6 +217,7 @@ private fun ConfiguratorBody(project: Project, draft: MapObjectDraft, i18n: Mess
     if (kind == ObjectKind.DEVICE && !modelEditor) Pick(i18n.text("device.status"), draft.device.operationalStatus, OperationalStatus.entries, i18n, { it.toDisplayString(i18n) }, allowClear = false) { it?.let { st -> change(draft.copy(device = draft.device.copy(operationalStatus = st))) } }
     if (kind == ObjectKind.RACK) Choice(i18n.text("config.units"), draft.rack.heightU, (HardwareConfigurator.rackHeights + preview.racks.map { it.heightU }).map { it.toString() }, error = errors["heightU"]) { change(draft.copy(rack = draft.rack.copy(heightU = it))) }
     if (kind == ObjectKind.CABLE) Pick(i18n.text("config.medium"), draft.cable.medium, CableMedium.entries, i18n, { it.toDisplayString(i18n) }) { it?.let { m -> change(draft.copy(cable = draft.cable.copy(medium = m))) } }
+    }
 
     @Composable
     fun containerPick() {
@@ -656,7 +659,7 @@ private fun PortLink(project: Project, ref: ProjectIndex.PortRef, rootId: String
             else p.port.id == currentDestination || !graph.occupied(p.port.id, existing?.id)) &&
             (!sameFloor || ObjectMap.areaId(project, p.device) == floor)
     }.sortedWith(compareBy({ if (it.port.hardware.connector == port.hardware.connector) 0 else 1 }, { it.device.technicalName.lowercase() }))
-    SectionTitle(i18n.text("config.destinationTitle"))
+    SectionCard(i18n.text("config.destinationTitle")) {
     if (PassiveCabling.supported(ref.device) && port.hardware.side == PortSide.FRONT)
         ValueMenu(i18n.text("visual.cablingMode"), fixed, listOf(true, false), { i18n.text(if (it) "visual.fixedCable" else "visual.frontCable") }) { fixed = it; destination = null }
     if (physicalPort == null) Text(i18n.text("visual.missingRear"), color = MaterialTheme.colorScheme.error)
@@ -673,13 +676,12 @@ private fun PortLink(project: Project, ref: ProjectIndex.PortRef, rootId: String
     Button(onClick = { physicalPort?.let { stage(HardwareConfigurator.connect(project, it.id, actualTo, medium, existing?.id)) } },
         enabled = physicalPort != null && !graph.occupied(physicalPort.id, existing?.id) && (if (fixed) actualTo != null else true) && (actualTo == null || !graph.occupied(actualTo, existing?.id))) { Text(i18n.text("config.connect")) }
     destination?.let { id -> index.port(id)?.device?.let { d -> TextButton(onClick = { openDevice(d) }, enabled = d.id != rootId) { Text(i18n.text("config.openDestination")) } } }
+    }
     PathSchematics.of(project, port.id, graph, index)?.takeIf { it.segments.isNotEmpty() }?.let { path ->
-        SectionTitle(i18n.text("config.traceTitle"))
-        PathSchematicView(path, i18n, onOpen = { d -> if (d.id != rootId) openDevice(d) })
+        SectionCard(i18n.text("config.traceTitle")) { PathSchematicView(path, i18n, onOpen = { d -> if (d.id != rootId) openDevice(d) }) }
     }
     val mapping = project.panelMappings.singleOrNull { it.portAId == port.id || it.portBId == port.id }
-    if (ref.device.isPassive() && project.panelMappings.count { it.portAId == port.id || it.portBId == port.id } <= 1) {
-        SectionTitle(i18n.text("config.passageTitle"))
+    if (ref.device.isPassive() && project.panelMappings.count { it.portAId == port.id || it.portBId == port.id } <= 1) SectionCard(i18n.text("config.passageTitle")) {
         val other = mapping?.let { if (it.portAId == port.id) it.portBId else it.portAId }
         val freePassages = index.ports.filter { p -> p.port.id != port.id && project.panelMappings.none { it.id != mapping?.id && (it.portAId == p.port.id || it.portBId == p.port.id) } }
         Pick(i18n.text("config.passage"), index.port(other), freePassages, i18n, { "${it.device.technicalName} › ${it.port.name}" }, sortByName = false) { p ->

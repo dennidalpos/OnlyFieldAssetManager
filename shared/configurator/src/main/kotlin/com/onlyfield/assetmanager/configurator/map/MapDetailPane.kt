@@ -3,6 +3,10 @@ package com.onlyfield.assetmanager.configurator.map
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -46,7 +50,7 @@ fun MapDetailPane(project: Project, scene: MapScene, selection: MapSelection?, i
     var assigning by remember(scene.container) { mutableStateOf(false) }
     Surface(modifier.testTag("map-detail"), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), shape = MaterialTheme.shapes.medium) {
         // A new selection starts at the top of the pane.
-        Column(Modifier.then(if (selection is MapSelection.Node) Modifier else Modifier.verticalScroll(remember(selection, scene.container) { ScrollState(0) })).padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.then(if (selection is MapSelection.Node) Modifier else Modifier.verticalScroll(remember(selection, scene.container) { ScrollState(0) })).padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             when (selection) {
                 is MapSelection.Node -> scene.node(selection.ref)?.let { node ->
                     NodeDetails(project, index, hierarchy, scene, node, i18n, actions, onSelect, onOpen, media, current = false)
@@ -83,33 +87,30 @@ private fun containerNode(project: Project, areaId: String, ref: ObjectRef): Sce
 private fun SceneObjects(scene: MapScene, i18n: Messages, onSelect: (MapSelection?) -> Unit, onAssign: (() -> Unit)?) {
     var query by remember(scene.areaId, scene.container) { mutableStateOf("") }
     val title = i18n.text(if (scene.container != null) "map.contents" else "map.objectsTitle")
-    SectionTitle(title, scene.nodes.size) {
-        onAssign?.let { TextButton(onClick = it) { Text(i18n.text("map.assignExisting")) } }
-    }
-    if (scene.nodes.isEmpty()) { Text(i18n.text("map.noObjects"), style = MaterialTheme.typography.bodySmall); return }
-    if (scene.nodes.size > 10) OutlinedTextField(query, { query = it }, label = { Text(i18n.text("map.filter")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
-    val shown = scene.nodes.filter { query.isBlank() || it.name.contains(query.trim(), true) }
-    val groups = shown.groupBy { it.glyph.family }.toSortedMap(compareBy { it.ordinal })
-    groups.forEach { (family, nodes) ->
-        if (groups.size > 1) Text(familyLabel(family, i18n), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-        nodes.sortedBy { it.name.lowercase() }.forEach { node ->
-            TextButton(onClick = { onSelect(MapSelection.Node(node.ref)) }, modifier = Modifier.fillMaxWidth()) {
-                GlyphBadge(node.glyph, 28.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(node.name, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (node.isContainer && node.childCount > 0) Text(i18n.plural("map.objectCount", node.childCount), style = MaterialTheme.typography.labelSmall)
+    SectionCard(title, count = scene.nodes.size, trailing = { onAssign?.let { TextButton(onClick = it) { Text(i18n.text("map.assignExisting")) } } }) {
+        if (scene.nodes.isEmpty()) { Text(i18n.text("map.noObjects"), style = MaterialTheme.typography.bodySmall); return@SectionCard }
+        if (scene.nodes.size > 10) OutlinedTextField(query, { query = it }, label = { Text(i18n.text("map.filter")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        val shown = scene.nodes.filter { query.isBlank() || it.name.contains(query.trim(), true) }
+        val groups = shown.groupBy { it.glyph.family }.toSortedMap(compareBy { it.ordinal })
+        groups.forEach { (family, nodes) ->
+            if (groups.size > 1) Text(familyLabel(family, i18n), Modifier.padding(top = 4.dp), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+            ListRows(nodes.sortedBy { it.name.lowercase() }) { node ->
+                ListRow(node.name, leading = { GlyphBadge(node.glyph, 28.dp) }, trailing = {
+                    if (node.isContainer && node.childCount > 0) Text(i18n.plural("map.objectCount", node.childCount), style = MaterialTheme.typography.labelSmall)
+                }) { onSelect(MapSelection.Node(node.ref)) }
             }
         }
+        if (shown.isEmpty()) Text(i18n.text("ux.noResults"), style = MaterialTheme.typography.bodySmall)
     }
-    if (shown.isEmpty()) Text(i18n.text("ux.noResults"), style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable
 private fun FloorHint(i18n: Messages) {
     var open by remember { mutableStateOf(false) }
+    SectionCard(null) {
     Text(i18n.text("map.hint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     TextButton(onClick = { open = !open }) { Text(i18n.text("map.legend") + if (open) " ▴" else " ▾") }
-    if (!open) return
+    if (!open) return@SectionCard
     LinkMedium.entries.forEach { m ->
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             val color = MapStyle.medium(setOf(m), MaterialTheme.colorScheme.primary)
@@ -120,6 +121,7 @@ private fun FloorHint(i18n: Messages) {
         }
     }
     Text(i18n.text("map.legendNodes"), style = MaterialTheme.typography.bodySmall)
+    }
 }
 
 @Composable
@@ -161,18 +163,19 @@ private fun ColumnScope.NodeDetails(project: Project, index: ProjectIndex, hiera
         device?.physicalLabel?.takeIf { it.isNotBlank() }?.let { ObjectSummary.Fact(i18n.text("map.fact.label"), it) },
         device?.operationalStatus?.takeIf { it != OperationalStatus.IN_SERVICE }?.let { ObjectSummary.Fact(i18n.text("device.status"), it.toDisplayString(i18n)) },
     )
-    Column(Modifier.then(if (current) Modifier else Modifier.weight(1f).verticalScroll(remember(node.ref) { ScrollState(0) })), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    FactRows(primary)
+    Column(Modifier.then(if (current) Modifier else Modifier.weight(1f).verticalScroll(remember(node.ref) { ScrollState(0) })), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    if (primary.isNotEmpty()) SectionCard(null) { FactRows(primary) }
     var quickPort by remember(node.ref) { mutableStateOf<String?>(null) }
     device?.let { d ->
-        SectionTitle(i18n.text("ux.ports")) { Text("${node.portsUsed}/${node.portsTotal}", style = MaterialTheme.typography.labelMedium) }
-        val cells = remember(project, d.id) { PortLogic.panel(project, d, index = index) }
-        DeviceDrawing(project, d, i18n, showName = false, onPort = { quickPort = it.port.id })
-        // Field documentation loop: open the next cabled port still without a photo.
-        val missing = cells.filter { it.photoMissing }
-        if (missing.isNotEmpty() && actions.photo != null) Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(i18n.plural("photo.missing", missing.size), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            TextButton(onClick = { quickPort = missing.first().port.id }) { Text(i18n.text("photo.nextMissing")) }
+        SectionCard(i18n.text("ux.ports"), trailing = { Text("${node.portsUsed}/${node.portsTotal}", style = MaterialTheme.typography.labelMedium) }) {
+            val cells = remember(project, d.id) { PortLogic.panel(project, d, index = index) }
+            DeviceDrawing(project, d, i18n, showName = false, framed = false, onPort = { quickPort = it.port.id })
+            // Field documentation loop: open the next cabled port still without a photo.
+            val missing = cells.filter { it.photoMissing }
+            if (missing.isNotEmpty() && actions.photo != null) Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(i18n.plural("photo.missing", missing.size), Modifier.weight(1f), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                TextButton(onClick = { quickPort = missing.first().port.id }) { Text(i18n.text("photo.nextMissing")) }
+            }
         }
     }
     quickPort?.let { id ->
@@ -183,28 +186,21 @@ private fun ColumnScope.NodeDetails(project: Project, index: ProjectIndex, hiera
     }
 
     val links = scene.links.filter { it.a == node.ref || it.b == node.ref }
-    if (links.isNotEmpty() && !current) {
-        SectionTitle(i18n.text("map.cables"), links.size)
-        links.forEach { link ->
+    if (links.isNotEmpty() && !current) SectionCard(i18n.text("map.cables"), count = links.size) {
+        ListRows(links) { link ->
             val other = (if (link.a == node.ref) link.b else link.a)?.let { scene.node(it)?.name } ?: stubLabel(scene, link, i18n) ?: i18n.text("map.outside")
-            TextButton(onClick = { onSelect(MapSelection.Link(link.cableIds)) }, modifier = Modifier.fillMaxWidth()) {
-                Column(Modifier.weight(1f)) {
-                    Text(other, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(link.media.joinToString(" · ") { i18n.text("map.medium.${it.name}") }, style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Text(i18n.plural("map.cableCount", link.cableIds.size), style = MaterialTheme.typography.labelMedium)
-            }
+            ListRow(other, subtitle = link.media.joinToString(" · ") { i18n.text("map.medium.${it.name}") },
+                trailing = { Text(i18n.plural("map.cableCount", link.cableIds.size), style = MaterialTheme.typography.labelMedium) }) { onSelect(MapSelection.Link(link.cableIds)) }
         }
     }
     // Photos are a primary section: always shown, even before the first shot.
     if (!current) {
         val attachments = project.attachments.count { it.targetId == node.ref.id && it.targetType == target }
-        SectionTitle(i18n.text("ux.attachments"), attachments.takeIf { it > 0 }) {
-            photoAction?.let { a -> TextButton(onClick = a.onClick) { Text(i18n.text("map.addPhoto")) } }
+        SectionCard(i18n.text("ux.attachments"), count = attachments.takeIf { it > 0 },
+            trailing = { photoAction?.let { a -> TextButton(onClick = a.onClick) { Text(i18n.text("map.addPhoto")) } } }) {
+            if (attachments > 0) media(node.ref)
+            else Text(i18n.text("map.noPhotos"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        if (attachments > 0) media(node.ref)
-        else Text(i18n.text("map.noPhotos"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 
     // Secondary: technical details, collapsed.
@@ -214,11 +210,11 @@ private fun ColumnScope.NodeDetails(project: Project, index: ProjectIndex, hiera
     ) + (if (device != null && !current) summary.identity.filterNot { it.value == device.physicalLabel } else emptyList())
     if (secondary.isNotEmpty() || (device != null && !current)) {
         var open by remember(node.ref) { mutableStateOf(false) }
-        TextButton(onClick = { open = !open }) { Text(i18n.text("map.moreDetails") + if (open) " ▴" else " ▾") }
-        if (open) {
-            FactRows(secondary)
-            if (device != null && !current) LogicalLinksSection(project, hierarchy, device, i18n, actions)
+        SectionCard(null) {
+            TextButton(onClick = { open = !open }) { Text(i18n.text("map.moreDetails") + if (open) " ▴" else " ▾") }
+            if (open) FactRows(secondary)
         }
+        if (open && device != null && !current) LogicalLinksSection(project, hierarchy, device, i18n, actions)
     }
     }
 }
@@ -229,23 +225,15 @@ private fun LogicalLinksSection(project: Project, hierarchy: HierarchyIndex, dev
     val links = remember(project, device.id) { LogicalLinks.of(project, device.id) }
     var editing by remember(device.id) { mutableStateOf<WanVpnConnection?>(null) }
     var open by remember(device.id) { mutableStateOf(false) }
-    SectionTitle(i18n.text("map.logicalLinks"), links.size.takeIf { it > 0 }) {
-        TextButton(onClick = { editing = null; open = true }) { Text(i18n.text("map.newLogicalLink")) }
-    }
-    links.forEach { link ->
-        val farRef = LogicalLinks.far(link, device.id).first?.let { ObjectRef(PlacementTargetType.DEVICE, it) }
-        val farArea = farRef?.let(hierarchy::areaId)
-        val towards = LogicalLinks.farLabel(project, link, device.id) ?: i18n.text("text.65389ba5d2fd")
-        TextButton(onClick = { editing = link; open = true }, modifier = Modifier.fillMaxWidth()) {
-            Column(Modifier.weight(1f)) {
-                Text("${link.type.toDisplayString(i18n)} · ${link.name}", maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(listOfNotNull(link.providerOrCarrier, link.bandwidth, i18n.text("map.towards", towards)).joinToString(" · "),
-                    style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        }
-        val goTo = actions.goTo
-        if (goTo != null && farRef != null && farArea != null) TextButton(onClick = { goTo(farArea, farRef) }) {
-            Text(i18n.text("map.goTo", ObjectHierarchy.name(project, farRef, i18n)))
+    SectionCard(i18n.text("map.logicalLinks"), count = links.size.takeIf { it > 0 },
+        trailing = { TextButton(onClick = { editing = null; open = true }) { Text(i18n.text("map.newLogicalLink")) } }) {
+        ListRows(links) { link ->
+            val farRef = LogicalLinks.far(link, device.id).first?.let { ObjectRef(PlacementTargetType.DEVICE, it) }
+            val farArea = farRef?.let(hierarchy::areaId)
+            val towards = LogicalLinks.farLabel(project, link, device.id) ?: i18n.text("text.65389ba5d2fd")
+            val goTo = actions.goTo
+            ListRow("${link.type.toDisplayString(i18n)} · ${link.name}", subtitle = listOfNotNull(link.providerOrCarrier, link.bandwidth, i18n.text("map.towards", towards)).joinToString(" · "),
+                trailing = { if (goTo != null && farRef != null && farArea != null) TextButton(onClick = { goTo(farArea, farRef) }) { Text(i18n.text("map.goTo", ObjectHierarchy.name(project, farRef, i18n))) } }) { editing = link; open = true }
         }
     }
     if (open) LogicalLinkDialog(project, device.id, editing, i18n, onClose = { open = false }) { saved ->
@@ -269,11 +257,11 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
     PaneHeader(null, "${scene.node(link.a)?.name ?: i18n.text("map.outside")} ⟷ $far",
         (listOf(i18n.plural("map.cableCount", link.cableIds.size)) + link.media.map { i18n.text("map.medium.${it.name}") }).joinToString(" · "),
         i18n, onClose = { onSelect(null) })
-    SectionTitle(i18n.text("map.cablesTitle"), link.cableIds.size)
     var passageFrom by remember(link) { mutableStateOf<String?>(null) }
     passageFrom?.let { end ->
         PortQuickDialog(project, end, i18n, PortQuickActions(update = actions.update, photo = actions.photo), onClose = { passageFrom = null }, insertPassage = true)
     }
+    SectionCard(i18n.text("map.cablesTitle"), count = link.cableIds.size) {
     link.cableIds.mapNotNull { id -> project.cables.find { it.id == id } }.forEach { cable ->
         val selected = cable.id == cableId
         Surface(color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape = MaterialTheme.shapes.medium,
@@ -313,6 +301,7 @@ private fun LinkDetails(project: Project, index: ProjectIndex, scene: MapScene, 
         }
     }
     if (scene.editable) Text(i18n.text("map.routeHint"), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
 }
 
 /** Existing objects of this floor that can move into [container]: searchable, with type and current place. */
@@ -326,26 +315,21 @@ private fun AssignObjectDialog(project: Project, index: ProjectIndex, hierarchy:
             .map { it to ObjectHierarchy.name(project, it, i18n) }.sortedBy { it.second.lowercase() }
     }
     val shown = candidates.filter { query.isBlank() || it.second.contains(query.trim(), true) }
-    AlertDialog(onDismissRequest = onClose, title = { Text(i18n.text("map.assignTitle", ObjectHierarchy.name(project, container, i18n))) }, text = {
+    ContentDialog(onDismissRequest = onClose, wide = true, scrollBody = false,
+        title = { Text(i18n.text("map.assignTitle", ObjectHierarchy.name(project, container, i18n)), style = MaterialTheme.typography.titleLarge) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (candidates.size > 7) OutlinedTextField(query, { query = it }, label = { Text(i18n.text("map.filter")) }, singleLine = true, modifier = Modifier.fillMaxWidth())
             if (candidates.isEmpty()) Text(i18n.text("text.032265877af8"), style = MaterialTheme.typography.bodySmall)
             else if (shown.isEmpty()) Text(i18n.text("ux.noResults"), style = MaterialTheme.typography.bodySmall)
-            LazyColumn(Modifier.heightIn(max = 380.dp)) {
+            LazyColumn(Modifier.weight(1f, fill = false)) {
                 items(shown, key = { it.first.id }) { (ref, name) ->
                     val device = index.device(ref.id).takeIf { ref.type == PlacementTargetType.DEVICE }
                     val glyph = if (ref.type == PlacementTargetType.RACK) ObjectGlyph.RACK else ObjectGlyph.of(project, device)
                     val type = if (ref.type == PlacementTargetType.RACK) i18n.text("text.4cd265c2b8c6")
                         else ObjectCatalog.type(project, device?.objectTypeId)?.let { ObjectCatalog.displayName(it, i18n) }
                     val place = hierarchy.parents[ref]?.let { i18n.text("map.inContainer", ObjectHierarchy.name(project, it, i18n)) } ?: i18n.text("map.onFloor")
-                    TextButton(onClick = { onPick(ref) }, modifier = Modifier.fillMaxWidth()) {
-                        GlyphBadge(glyph, 28.dp)
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(listOfNotNull(type, place).joinToString(" · "), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
+                    ListRow(name, subtitle = listOfNotNull(type, place).joinToString(" · "), leading = { GlyphBadge(glyph, 28.dp) }) { onPick(ref) }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }

@@ -19,6 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.configurator.GlyphBadge
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
 import com.onlyfield.assetmanager.core.forms.LogicalGroup
@@ -47,15 +50,11 @@ fun LogicalView(project: Project, i18n: Messages, siteId: String?, onOpen: (Devi
         if (logical.unassigned.isNotEmpty()) GroupBox(i18n.text("logical.unassigned"), i18n.text("logical.unassignedHint")) {
             logical.unassigned.forEach { DeviceChip(project, it, i18n, member = null, onOpen = onOpen) }
         }
-        if (logical.connections.isNotEmpty()) {
-            Text(i18n.text("text.04bc126d165e"), Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall)
-            logical.connections.forEach { c ->
+        if (logical.connections.isNotEmpty()) SectionCard(i18n.text("text.04bc126d165e"), count = logical.connections.size) {
+            ListRows(logical.connections) { c ->
                 val local = c.localEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.localEndpointSiteDescription ?: "?"
                 val remote = c.remoteEndpointDeviceId?.let { index.deviceName(it, i18n = i18n) } ?: c.remoteEndpointSiteDescription ?: c.providerOrCarrier ?: "?"
-                Column {
-                    Text("${c.type.toDisplayString(i18n = i18n)} · ${c.name}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold)
-                    Text(listOfNotNull("$local → $remote", c.providerOrCarrier, c.bandwidth).joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
+                ListRow("${c.type.toDisplayString(i18n = i18n)} · ${c.name}", subtitle = listOfNotNull("$local → $remote", c.providerOrCarrier, c.bandwidth).joinToString(" · "))
             }
         }
     }
@@ -66,18 +65,11 @@ private fun title(group: LogicalGroup, i18n: Messages): String = listOfNotNull(
     group.vlanNumber?.let { n -> group.vlanName?.let { i18n.text("text.15fd0dfb7614", n, it) } ?: i18n.text("text.da4da5c165af", n) },
 ).joinToString(" · ")
 
+/** Subnet or VLAN box: the members wrap inside it. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun GroupBox(title: String, detail: String, content: @Composable FlowRowScope.() -> Unit) {
-    Surface(Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant), color = MaterialTheme.colorScheme.surfaceContainerLow) {
-        Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Column {
-                Text(title, Modifier.semantics { heading() }, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                if (detail.isNotBlank()) Text(detail, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
-        }
-    }
+    SectionCard(title, detail = detail) { FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content) }
 }
 
 @Composable

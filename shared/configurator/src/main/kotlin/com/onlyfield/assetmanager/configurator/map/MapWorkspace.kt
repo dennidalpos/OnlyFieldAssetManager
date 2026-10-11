@@ -4,6 +4,7 @@ import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.configurator.OverflowActions
 import com.onlyfield.assetmanager.configurator.PaneAction
+import com.onlyfield.assetmanager.configurator.PortQuickActions
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -51,6 +52,7 @@ fun editDraft(project: Project, ref: ObjectRef, areaId: String, i18n: Messages):
  * Floor map with drill-down into containers and an adaptive, non-modal detail pane:
  * side panel from 840 dp; expandable selection card below.
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MapWorkspace(
     project: Project,
@@ -77,6 +79,7 @@ fun MapWorkspace(
         if (arrival != null) {
             path = hierarchy.ancestors(arrival).reversed()
             state.selection = MapSelection.Node(arrival)
+            state.view = MapView.DIAGRAM
             onFocusHandled()
         }
     }
@@ -101,6 +104,18 @@ fun MapWorkspace(
     val floorName = remember(project, areaId) { ProjectIndex(project).area(areaId)?.name } ?: i18n.text("map.floor")
     fun go(levels: List<ObjectRef>) { path = levels; selection = null; state.expanded = false; listOpen = false }
     fun open(ref: ObjectRef) = go(validPath + ref)
+    val siteId = remember(project, areaId) { floorSite(project, areaId) }
+    // From another view: back to the plan on the device, or to its own floor.
+    fun show(device: Device) {
+        val ref = ObjectRef(PlacementTargetType.DEVICE, device.id)
+        val target = hierarchy.areaId(ref)
+        val goTo = actions.goTo
+        when {
+            target == areaId -> { path = hierarchy.ancestors(ref).reversed(); selection = MapSelection.Node(ref); state.expanded = false; listOpen = false; state.view = MapView.DIAGRAM }
+            target != null && goTo != null -> goTo(target, ref)
+            else -> actions.edit(MapObjectDraft.forDevice(project, device), ConfiguratorPage.ESSENTIALS)
+        }
+    }
     val canvas: @Composable (Modifier) -> Unit = { m ->
         MapCanvas(scene, if (container == null) image else null, selection, i18n,
             onSelect = { selection = it; state.expanded = false }, onOpen = { open(it.ref) },
@@ -138,23 +153,35 @@ fun MapWorkspace(
         }
         val addLabel = i18n.text(if (container == null) "map.addObject" else "map.addHere")
         BoxWithConstraints(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface, MaterialTheme.shapes.medium)) {
-            val narrow = maxWidth < 840.dp
             if (maxWidth >= 600.dp) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 trail()
                 onSearch?.let { search -> SymbolButton(SymbolIcons.search, i18n.text("search.action"), search) }
                 Button(onClick = { actions.add(container, null) }) { Text(addLabel) }
-                if (narrow) FilterChip(selected = listOpen, onClick = { listOpen = !listOpen; state.expanded = listOpen }, label = { Text(i18n.text("map.list")) })
                 OverflowActions(i18n, tools)
             } else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 trail()
                 onSearch?.let { search -> SymbolButton(SymbolIcons.search, i18n.text("search.action"), search) }
                 SymbolButton(SymbolIcons.add, addLabel) { actions.add(container, null) }
-                OverflowActions(i18n, listOf(PaneAction(i18n.text("map.list")) {
-                    listOpen = !listOpen; state.expanded = listOpen
-                }) + tools)
+                OverflowActions(i18n, tools)
             }
         }
-        BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // Wide windows always show the list beside the plan; below, "List" is the expanded pane.
+            val narrow = maxWidth < 840.dp
+            val listing = narrow && state.view == MapView.DIAGRAM && listOpen && state.expanded
+            MapViewBar(MapView.forLevel(MapLevel.FLOOR).filter { narrow || it != MapView.LIST }, if (listing) MapView.LIST else state.view, MapLevel.FLOOR, i18n) { picked ->
+                state.view = if (picked == MapView.LIST) MapView.DIAGRAM else picked
+                listOpen = picked == MapView.LIST; state.expanded = listOpen
+            }
+        }
+        if (state.view != MapView.DIAGRAM) when (state.view) {
+            MapView.TOPOLOGY -> TopologyView(project, i18n, siteId, areaId, ::show, Modifier.fillMaxWidth().weight(1f))
+            MapView.LOGICAL -> LogicalView(project, i18n, siteId, ::show, Modifier.fillMaxWidth().weight(1f))
+            else -> DeviceGallery(project, i18n, siteId, areaId, ::show, Modifier.fillMaxWidth().weight(1f), container = container,
+                portActions = PortQuickActions(update = actions.update, photo = actions.photo, openDevice = ::show, details = { port ->
+                    actions.edit(editDraft(project, ObjectRef(PlacementTargetType.DEVICE, port.deviceId), areaId, i18n).copy(focusPortId = port.id), ConfiguratorPage.PORTS)
+                }))
+        } else BoxWithConstraints(Modifier.fillMaxWidth().weight(1f)) {
             SideEffect { state.wideDetails = maxWidth >= 840.dp }
             val showPane = selection != null || container != null || listOpen || maxWidth >= 840.dp
             if (maxWidth >= 840.dp && (selection != null || container != null || listOpen)) SideEffect { state.expanded = true }

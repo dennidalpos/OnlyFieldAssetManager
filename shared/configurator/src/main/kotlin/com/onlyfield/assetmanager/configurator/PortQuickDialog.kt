@@ -1,6 +1,10 @@
 package com.onlyfield.assetmanager.configurator
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.LocalDialogBodyHeight
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.clickable
@@ -80,7 +84,7 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
     fun done(updated: Project, message: String) { actions.update(updated, message); step = QuickStep.MAIN }
 
     val title = index.portLabel(port.id)
-    com.onlyfield.assetmanager.configurator.theme.ContentDialog(onDismissRequest = ::close, width = 760.dp, title = {
+    ContentDialog(onDismissRequest = ::close, wide = true, title = {
         Column {
             Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             Text(listOfNotNull(port.hardware.side?.takeIf { device.isPassive() }?.toDisplayString(i18n), stateLabel(summary.state, i18n), port.hardware.connector)
@@ -210,13 +214,13 @@ fun PortQuickDialog(project: Project, portId: String, i18n: Messages, actions: P
 private fun MainStep(project: Project, summary: PortSummary, path: PathSchematic?, index: ProjectIndex, i18n: Messages, actions: PortQuickActions, fresh: Boolean) {
     val cable = summary.cable
     if (cable != null) {
-        Text(cable.codeOrLabel ?: CableLabels.suggest(project, cable, index), style = MaterialTheme.typography.titleSmall)
-        Text(listOfNotNull(cable.medium.toDisplayString(i18n), cable.color, cable.lengthValue?.let { "$it ${cable.lengthUnit ?: "m"}" }).joinToString(" · "),
-            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        // Whole path, both sides of a pass-through included, from the active end when there is one.
-        path?.takeIf { it.segments.isNotEmpty() }?.let {
-            SectionTitle(i18n.text("config.traceTitle"))
-            PathSchematicView(it, i18n, onOpen = actions.openDevice)
+        SectionCard(cable.codeOrLabel ?: CableLabels.suggest(project, cable, index),
+            detail = listOfNotNull(cable.medium.toDisplayString(i18n), cable.color, cable.lengthValue?.let { "$it ${cable.lengthUnit ?: "m"}" }).joinToString(" · ")) {
+            // Whole path, both sides of a pass-through included, from the active end when there is one.
+            path?.takeIf { it.segments.isNotEmpty() }?.let {
+                Text(i18n.text("config.traceTitle"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                PathSchematicView(it, i18n, onOpen = actions.openDevice)
+            }
         }
     }
     if (fresh && actions.photo != null) Text(i18n.text("quick.photoPrompt"), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
@@ -269,14 +273,13 @@ private fun DeviceStep(project: Project, device: Device, areaId: String?, sameFl
     }
     val shown = candidates.filter { (d, _) -> query.isBlank() || d.technicalName.contains(query, true) || d.physicalLabel?.contains(query, true) == true }
     if (shown.isEmpty()) Text(i18n.text("quick.noDevices"), style = MaterialTheme.typography.bodySmall)
-    LazyColumn(Modifier.heightIn(max = 300.dp)) {
+    // The list takes what the dialog leaves, not a fixed height.
+    LazyColumn(Modifier.heightIn(max = LocalDialogBodyHeight.current * .7f)) {
         items(shown, key = { it.first.id }) { (d, area) ->
             val free = d.ports.count { !graph.occupied(it.id) }
-            Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { onPick(d) }.padding(vertical = 8.dp)) {
-                Text(d.technicalName, style = MaterialTheme.typography.bodyLarge)
-                Text(listOfNotNull(i18n.plural("quick.freePorts", free), area?.takeIf { it != areaId }?.let { index.areaName(it) }).joinToString(" · "),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+            ListRow(d.technicalName, subtitle = listOfNotNull(i18n.plural("quick.freePorts", free), area?.takeIf { it != areaId }?.let { index.areaName(it) }).joinToString(" · "),
+                leading = { GlyphBadge(ObjectGlyph.of(project, d), 28.dp) }) { onPick(d) }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }
@@ -292,11 +295,10 @@ private fun PassageStep(project: Project, cable: Cable, device: Device, areaId: 
     }
     if (areaId != null) OutlinedButton(onClick = { onInsert(withNewJunction(project, cable, device, areaId, i18n)) }) { Text(i18n.text("quick.newJunction")) }
     if (entries.isEmpty()) Text(i18n.text("quick.noPassages"), style = MaterialTheme.typography.bodySmall)
-    LazyColumn(Modifier.heightIn(max = 280.dp)) {
+    LazyColumn(Modifier.heightIn(max = LocalDialogBodyHeight.current * .7f)) {
         items(entries, key = { it.port.id }) { ref ->
-            Text(listOfNotNull(index.portLabel(ref.port.id), ref.port.hardware.side?.toDisplayString(i18n)).joinToString(" · "), Modifier.fillMaxWidth().clickable(role = Role.Button) {
-                onInsert(HardwareConfigurator.insertPassage(project, cable.id, ref.port.id))
-            }.padding(vertical = 10.dp), style = MaterialTheme.typography.bodyLarge)
+            ListRow(index.portLabel(ref.port.id), subtitle = ref.port.hardware.side?.toDisplayString(i18n)) { onInsert(HardwareConfigurator.insertPassage(project, cable.id, ref.port.id)) }
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         }
     }
 }

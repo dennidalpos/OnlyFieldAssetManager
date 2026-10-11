@@ -36,10 +36,13 @@ L'area del piano è un foglio pieno con bordo, su sfondo distinto, e griglia 24 
 Nessun comando scorre in orizzontale:
 
 - **Intestazione**: Indietro e un unico percorso sede/piano/contenitore. I livelli superiori sono in un menu a tendina.
-- **Telefono**: Aggiungi oggetto (Aggiungi qui dentro un contenitore) a tutta larghezza con Elenco. Ricerca diretta; Scansiona codice, Topologia e Planimetria sono nel menu degli strumenti.
-- **Finestre da 600 dp**: tutti i comandi in una riga.
+- **Barra delle viste** (`MapViewBar`), sempre visibile sotto l'intestazione: Planimetria, Topologia, Logica, Apparati e, sotto 840 dp, Elenco (il pannello espanso). Sotto 600 dp sono icone e solo la vista attiva ha il testo. Dettagli in «Viste rapide».
+- **Telefono**: Aggiungi oggetto (Aggiungi qui dentro un contenitore) e ricerca diretta; Scansiona codice e Scegli planimetria sono nel menu degli strumenti.
+- **Finestre da 600 dp**: i comandi dell'intestazione in una riga.
 
 Le miniature degli allegati vanno a capo.
+
+Ogni sezione del pannello è un riquadro con titolo (`theme.SectionCard`); le righe degli elenchi sono allineate al titolo (`theme.ListRow`) e i dati etichetta/valore hanno i valori incolonnati (`FactRows`).
 
 Per un oggetto l'ordine è sempre lo stesso:
 
@@ -67,12 +70,26 @@ Il risultato scelto apre la mappa sul suo piano, anche di un'altra sede, con i c
 
 ## Vista grafica principale — 11 ottobre 2026
 
-Sopra il livello del piano la scheda Mappa apre un disegno, non un elenco (`configurator.map.MapHome`, condiviso da Android e Windows). **Schema** è la vista iniziale; **Logica** raggruppa gli apparati per rete; **Elenco** mostra sedi e piani come prima. La scelta vale per la sessione (`MapUiState.homeView`).
+Sopra il livello del piano la scheda Mappa apre un disegno, non un elenco (`configurator.map.MapHome`, condiviso da Android e Windows). Le viste si scelgono dalla barra in alto (vedi «Viste rapide»); la scelta vale per la sessione, distinta per progetto e sede (`MapUiState.projectView`, `siteView`).
 
 - **Progetto**: le sedi sono nodi (codice o nome, piani e apparati attivi) e i collegamenti sono linee: continua per i cavi che attraversano due sedi, tratteggio lungo per i ponti radio, tratteggio corto per le sole WAN/VPN. Un capo WAN/VPN senza apparato censito diventa un nodo **Esterno** con il nome della descrizione o del fornitore, condiviso fra le sedi che lo usano (`core.forms.SiteTopology`). Sotto il disegno, **Collegamenti tra sedi** elenca ogni coppia con cavi e connessioni. Il tocco su una sede la apre.
-- **Sede**: i piani sono pulsanti che aprono la planimetria; sotto, la topologia fisica della sede in linea (`TopologyView`). Il tocco su un apparato lo seleziona sulla mappa del suo piano.
+- **Sede**: i piani sono pulsanti che aprono la planimetria, presenti in ogni vista; la vista iniziale è la topologia fisica della sede (`TopologyView`). Il tocco su un apparato lo seleziona sulla mappa del suo piano.
 - Un progetto con una sola sede apre direttamente la sede; **Aggiungi sede** resta accanto ad **Aggiungi piano**.
-- **Topologia**, al livello progetto, apre la topologia degli apparati di tutte le sedi.
+- **Topologia**, al livello progetto, mostra gli apparati di tutte le sedi con i filtri Sede e Piano.
+
+### Viste rapide — 11 ottobre 2026
+
+`MapViewBar` espone le viste a ogni livello con un tocco (`MapView.forLevel`):
+
+| Livello | Viste |
+|---|---|
+| Progetto | Schema (sedi) · Topologia · Logica · Apparati · Elenco |
+| Sede | Topologia · Logica · Apparati · Elenco |
+| Piano | Planimetria · Topologia · Logica · Apparati · Elenco (sotto 840 dp) |
+
+Al piano le viste diverse dalla planimetria sostituiscono mappa e pannello; il tocco su un apparato torna alla planimetria con l'apparato selezionato (o apre il suo piano). Ogni piano ricorda la propria vista (`FloorUiState.view`); l'arrivo da ricerca o Vai a riporta alla planimetria; su Android Indietro fa lo stesso prima di lasciare il piano.
+
+**Apparati** (`DeviceGallery`, dati da `core.forms.DeviceGalleries`) disegna gli apparati dell'ambito corrente (progetto, sede, piano o contenitore aperto): un riquadro per rack con il prospetto e i frontali dei suoi apparati dall'unità più alta, uno per ogni altro contenitore, uno per gli apparati fuori da rack e contenitori. I terminali compaiono con **Mostra i terminali**; oltre dieci apparati c'è il filtro per nome o etichetta. Il tocco su una porta apre la scheda rapida, quello sull'intestazione o su un blocco del prospetto apre l'apparato.
 
 Le WAN/VPN prive di apparato a entrambi i capi non sono collocabili e restano nell'elenco di Rete.
 
@@ -87,14 +104,14 @@ Gli apparati non gestiti dal tecnico hanno un contorno tratteggiato in planimetr
 
 ## Topologia fisica
 
-**Topologia** (al livello progetto della vista grafica e tra gli strumenti della mappa di piano) apre a schermo intero `configurator.map.TopologyDialog`, filtrato su sede e piano correnti; la stessa vista è in linea nella pagina della sede.
+**Topologia** è una vista in linea (`configurator.map.TopologyView`) a ogni livello della Mappa: tutto il progetto con filtri, la sede, oppure il piano.
 
 - `core.forms.PhysicalTopology` usa solo gli apparati attivi: un collegamento unisce due apparati raggiunti da un percorso completo (`PathSchematics`), con i passanti nascosti; il numero di percorsi rende la linea più spessa, il ponte radio è tratteggiato. I percorsi che non arrivano a un altro apparato attivo sono contati sull'apparato come percorsi aperti (`⋯N`).
 - Ogni rete collegata è una fascia di righe, a livelli in ampiezza dall'apparato più a monte (ONT o modem, router o firewall, poi lo switch con più collegamenti); gli apparati senza collegamenti chiudono il disegno. Le righe si adattano alla larghezza della finestra, quindi si scorre solo in verticale.
 - I terminali con un solo collegamento verso un apparato di infrastruttura sono raccolti su di esso (`+N`); **Mostra i terminali** li disegna tutti.
 - Filtri Sede e Piano: gli apparati fuori filtro all'altro capo di un collegamento restano visibili e attenuati. Apparati spenti o dismessi sono attenuati.
 - Ogni nodo usa colore per tipo, icona e nome, coerenti con la mappa; stato e appartenenza al filtro restano distinti.
-- Il tocco su un apparato chiude la topologia e lo seleziona sulla mappa del suo piano; senza piano apre l'editor.
+- Il tocco su un apparato lo seleziona sulla mappa del suo piano; senza piano apre l'editor.
 
 ## Planimetrie
 

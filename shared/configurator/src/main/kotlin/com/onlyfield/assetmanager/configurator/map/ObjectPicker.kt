@@ -3,6 +3,10 @@ package com.onlyfield.assetmanager.configurator.map
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.LocalDialogBodyHeight
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -110,20 +114,20 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
         custom -> i18n.text("text.7a83d7ae0c15")
         else -> i18n.text("map.addObject")
     }
-    AlertDialog(onDismissRequest = onClose, title = {
+    ContentDialog(onDismissRequest = onClose, wide = true, scrollBody = draft != null || custom, title = {
         Column {
-            Text(title, modifier = Modifier.semantics { heading() })
+            Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.semantics { heading() })
             subtitle?.let { Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
             error?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error) }
         }
     }, text = {
-        Column(Modifier.heightIn(max = 420.dp).then(if (draft != null || custom) Modifier.verticalScroll(rememberScrollState()) else Modifier), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(AppSpacing.inset)) {
             when {
                 draft != null -> {
                     val preview = draft.preview(project, i18n)
                     when (draft.type.kind) {
                         ObjectKind.DEVICE -> preview.sites.flatMap { it.devices }.find { it.id == draft.id }?.let { com.onlyfield.assetmanager.configurator.DeviceDrawing(preview, it, i18n, showName = false) }
-                        ObjectKind.RACK -> preview.racks.find { it.id == draft.id }?.let { rack -> com.onlyfield.assetmanager.configurator.RackElevation(preview, rack, RackSide.FRONT, i18n, Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState())) }
+                        ObjectKind.RACK -> preview.racks.find { it.id == draft.id }?.let { rack -> com.onlyfield.assetmanager.configurator.RackElevation(preview, rack, RackSide.FRONT, i18n, Modifier.heightIn(max = LocalDialogBodyHeight.current * .5f).verticalScroll(rememberScrollState())) }
                         ObjectKind.CABLE -> Unit
                     }
                     OutlinedTextField(name, { name = it }, label = { Text(i18n.text("config.name")) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -150,35 +154,29 @@ fun ObjectPickerDialog(project: Project, i18n: Messages, subtitle: String?, onCl
                     val types = allTypes.filter { ObjectCatalog.displayName(it, i18n).contains(query.trim(), true) }
                     val grouped = types.groupBy { if (it.kind == ObjectKind.CABLE) null else ObjectGlyph.of(it).family }
                         .toSortedMap(compareBy(nullsLast()) { it?.ordinal })
-                    LazyColumn(Modifier.heightIn(max = 260.dp)) {
+                    LazyColumn(Modifier.weight(1f, fill = false)) {
                         grouped.forEach { (family, list) ->
                             item(key = "h-${family?.name}") {
                                 Text(family?.let { familyLabel(it, i18n) } ?: i18n.text("map.family.CABLE"), style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(top = 8.dp).semantics { heading() })
                             }
                             items(list.sortedBy { ObjectCatalog.displayName(it, i18n).lowercase() }, key = { it.id }) { type ->
-                                TextButton(onClick = { pick(type) }, modifier = Modifier.fillMaxWidth()) {
-                                    GlyphBadge(ObjectGlyph.of(type), 28.dp)
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(ObjectCatalog.displayName(type, i18n), modifier = Modifier.weight(1f))
-                                }
+                                ListRow(ObjectCatalog.displayName(type, i18n), leading = { GlyphBadge(ObjectGlyph.of(type), 28.dp) }) { pick(type) }
                             }
                         }
                         if (types.isEmpty()) item(key = "empty") { Text(i18n.text("ux.noResults"), style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(vertical = 8.dp)) }
                     }
                     // Pinned below the list so it stays visible whatever the scroll position.
                     HorizontalDivider()
-                    TextButton(onClick = { custom = true }, modifier = Modifier.fillMaxWidth()) {
-                        Text("+ " + i18n.text("text.7a83d7ae0c15"), modifier = Modifier.weight(1f))
-                    }
+                    ListRow("+ " + i18n.text("text.7a83d7ae0c15")) { custom = true }
                 }
             }
         }
     }, confirmButton = {
         when {
-            draft != null -> Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Button(enabled = errors.isEmpty(), onClick = { onAdd(draft) }) { Text(i18n.text("ux.add")) }
+            draft != null -> {
                 if (onEdit != null) OutlinedButton(enabled = errors.isEmpty(), onClick = { onEdit(draft) }) { Text(i18n.text("quick.addAndEdit")) }
+                Button(enabled = errors.isEmpty(), onClick = { onAdd(draft) }) { Text(i18n.text("ux.add")) }
             }
             // A custom type is created together with the object: the draft carries it into the project.
             custom -> Button(enabled = customType != null, onClick = { custom = false; chosen = customType }) { Text(i18n.text("catalog.continue")) }

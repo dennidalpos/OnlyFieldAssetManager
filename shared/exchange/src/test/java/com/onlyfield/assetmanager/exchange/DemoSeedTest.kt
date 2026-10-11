@@ -122,13 +122,29 @@ class DemoSeedTest {
         assertEquals(PoeStandard.IEEE_802_3BT, sw.ports.single { it.name == "P3" }.hardware.poeStandard)
         assertNull(sw.ports.single { it.name == "P4" }.hardware.poeStandard)
         assertEquals(setOf(10, 20, 30, 90), project.vlans.map { it.vlanId }.toSet())
-        assertEquals(4, project.subnets.size)
+        assertEquals(5, project.subnets.size)
         assertEquals(setOf(PortVlanMode.ACCESS, PortVlanMode.TRUNK), project.portVlanMemberships.map { it.mode }.toSet())
         assertEquals(2, project.lagGroups.size)
         val server = named("SRV-COM-01")
         assertTrue(server.hardware.redundantPower)
         assertEquals(setOf(PowerFeedType.PRIMARY_A, PowerFeedType.SECONDARY_B), project.powerFeeds.filter { it.deviceId == server.id }.map { it.feedType }.toSet())
         assertEquals(named("NVR-COM-LAB").id, project.videoSurveillanceMappings.single().managerDeviceId)
+    }
+
+    /** GFX-05: the graphic views have something to draw: third parties, a link between sites, gateways. */
+    @Test fun thirdPartiesSiteLinksAndGatewaysFeedTheGraphicViews() {
+        assertEquals(setOf("ONT-COM-01", "ONT-TEA-01", "NVR-COM-LAB", "CAM-COM-LAB"), devices.filter { it.management == DeviceManagement.SUPPLIER }.map { it.technicalName }.toSet())
+        assertTrue(devices.filter { it.thirdParty }.all { !it.supplierName.isNullOrBlank() })
+        assertEquals(DeviceManagement.CUSTOMER, named("SRV-COM-02").management)
+        val (municipio, theatreSite) = project.sites
+        val overview = com.onlyfield.assetmanager.core.forms.SiteTopology.build(project, 4, com.onlyfield.assetmanager.core.i18n.Messages())
+        assertTrue(overview.links.any { setOf(it.a, it.b) == setOf(municipio.id, theatreSite.id) && it.connections.any { c -> c.type == WanVpnType.VPN } })
+        assertTrue(overview.links.any { it.radio })
+        assertTrue(overview.nodes.any { it.site == null })
+        val theatre = com.onlyfield.assetmanager.core.forms.LogicalTopologies.build(project, theatreSite.id).groups.single { it.subnet?.cidrBlock == "10.20.10.0/24" }
+        assertEquals("RTR-TEA-01", theatre.members.first().device.technicalName)
+        assertTrue(theatre.members.first().gateway)
+        assertEquals(3, theatre.members.size)
     }
 
     @Test fun generatedFixtureIncludesDecodableMediaForEveryTargetAndClassification() {

@@ -62,7 +62,7 @@ object DemoMedia {
                 }
                 g.color = Color(0x4D606E)
                 g.font = Font(Font.SANS_SERIF, Font.PLAIN, 20)
-                g.drawString("Revisione 9 ottobre 2026 · Dati sintetici; avvisi del laboratorio intenzionali.", 32, 765)
+                g.drawString("Revisione 11 ottobre 2026 · Dati sintetici; avvisi del laboratorio intenzionali.", 32, 765)
             } else {
                 g.color = Color(0x174E78)
                 g.fillRoundRect(80, 170, 1040, 360, 24, 24)

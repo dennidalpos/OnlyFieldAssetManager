@@ -9,7 +9,8 @@
 - Hardware layouts/PoE overrides belong in hardware JSON, not Room columns.
 - Shared UI: `shared/configurator`; hardware: `core.forms`, `core.model.ConnectionGraph`.
 - `MapWorkspace` uses host `MapUiState`: camera/selection/containers survive view/size changes; outside Room/.ofam.
-- Reuse `OnlyFieldTheme`, `AppSpacing` and `ContentDialog`; text forms max 640 dp, technical canvases exempt. Dialogs use window/IME bounds.
+- Reuse `OnlyFieldTheme`, `AppSpacing`, `SectionCard`/`ListRow`/`FormRow` and `ContentDialog` (fields, lists, drawings; `AlertDialog` only for confirmations); text forms max 640 dp, `wide` lists and technical canvases exempt. Dialogs use window/IME bounds, full screen when compact.
+- Map views go through `MapViewBar`/`MapView.forLevel`; no view hidden in a menu or dialog.
 - Forms `copy()` retain hidden fields; close on successful save. Scope refusals never retarget networks.
 - `core.i18n.Messages`: UTF-8 it/en/es, Italian default; capture at generation start, preserve user text.
 - `.\gradlew.bat :pc:app:packagePortable` → EXE/ZIP in `dist/OnlyFieldAssetManager`; data beside EXE. Regeneration refuses runtime data/. `prepare-release.ps1` needs an empty output dir.

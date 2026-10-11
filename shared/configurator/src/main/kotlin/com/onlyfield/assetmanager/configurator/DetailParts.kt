@@ -68,14 +68,14 @@ fun SectionTitle(title: String, count: Int? = null, modifier: Modifier = Modifie
     }
 }
 
-/** Label/value rows; each row is read as one "label: value" item. */
+/** Label/value rows with the values in one column; each row is read as one "label: value" item. */
 @Composable
 fun FactRows(facts: List<ObjectSummary.Fact>) {
-    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         facts.forEach { fact ->
-            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(fact.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(.4f))
-                Text(fact.value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(.6f), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(fact.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(120.dp).alignByBaseline())
+                Text(fact.value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).alignByBaseline(), maxLines = 2, overflow = TextOverflow.Ellipsis)
             }
         }
     }

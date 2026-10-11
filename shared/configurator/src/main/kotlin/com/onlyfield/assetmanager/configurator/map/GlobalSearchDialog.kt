@@ -12,6 +12,8 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.configurator.theme.ContentDialog
+import com.onlyfield.assetmanager.configurator.theme.ListRow
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.core.display.GlobalSearch
 import com.onlyfield.assetmanager.core.display.SearchHit
@@ -27,7 +29,7 @@ fun GlobalSearchDialog(project: Project, i18n: Messages, recentIds: List<String>
     val recent = remember(search, recentIds) { search.recent(recentIds) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
-    AlertDialog(onDismissRequest = onClose, title = { Text(i18n.text("search.title")) }, text = {
+    ContentDialog(onDismissRequest = onClose, wide = true, scrollBody = false, title = { Text(i18n.text("search.title"), style = MaterialTheme.typography.titleLarge) }, text = {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             OutlinedTextField(query, { query = it }, label = { Text(i18n.text("search.placeholder")) }, singleLine = true,
                 modifier = Modifier.fillMaxWidth().focusRequester(focus))
@@ -37,13 +39,11 @@ fun GlobalSearchDialog(project: Project, i18n: Messages, recentIds: List<String>
                 query.isBlank() -> Text(i18n.text("search.recent"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                 hits.isEmpty() -> Text(i18n.text("ux.noResults"), style = MaterialTheme.typography.bodySmall)
             }
-            LazyColumn(Modifier.heightIn(max = 380.dp)) {
+            LazyColumn(Modifier.weight(1f, fill = false)) {
                 items(shown, key = { it.kind.name + it.id }) { hit ->
-                    Column(Modifier.fillMaxWidth().clickable(role = Role.Button) { onPick(hit) }.padding(vertical = 8.dp)) {
-                        Text(hit.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(listOf(i18n.text("search.kind.${hit.kind.name}"), hit.place).joinToString(" · ") + (hit.matched.takeIf { it.isNotEmpty() && !it.endsWith(hit.title) }?.let { " · $it" } ?: ""),
-                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
+                    ListRow(hit.title, subtitle = listOf(i18n.text("search.kind.${hit.kind.name}"), hit.place).joinToString(" · ") +
+                        (hit.matched.takeIf { it.isNotEmpty() && !it.endsWith(hit.title) }?.let { " · $it" } ?: "")) { onPick(hit) }
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }

@@ -75,7 +75,7 @@ class FailedMapPickerSaveTest(private val picker: String) {
                 action = state.i18n.text("ux.add")
             } else {
                 compose.onNodeWithContentDescription(state.i18n.text("ux.more")).performClick()
-                compose.onNodeWithText(state.i18n.text("text.68f86d09412c")).performClick()
+                compose.onNodeWithText(state.i18n.text("map.choosePlan")).performClick()
                 action = when (picker) {
                     "plan-remove" -> state.i18n.text("text.f139b3096d6f")
                     "plan-image" -> attachment!!.name

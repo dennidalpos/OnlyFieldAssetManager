@@ -45,7 +45,6 @@ fun FloorHomeSection(state: DesktopAppState) {
     var newPlanId by remember { mutableStateOf<String?>(null) }
     var scanning by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
-    var topology by remember { mutableStateOf(false) }
     var image by remember { mutableStateOf<ImageBitmap?>(null) }
     var imageError by remember { mutableStateOf<String?>(null) }
     val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
@@ -64,11 +63,13 @@ fun FloorHomeSection(state: DesktopAppState) {
         else { state.selectedSiteId = ObjectMap.floorSite(project, target); state.selectedAreaId = target; focus = hit.focus }
     }
     fun openDevice(d: Device) {
-        topology = false
         val target = ObjectMap.areaId(project, d)
         if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
         else { state.selectedSiteId = ObjectMap.floorSite(project, target); state.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
     }
+    // Port card of the device drawings above the floor level.
+    val portActions = com.onlyfield.assetmanager.configurator.PortQuickActions(update = state::update, photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current, openDevice = ::openDevice,
+        details = { port -> editorPage = ConfiguratorPage.PORTS; editor = MapObjectDraft.forDevice(project, project.sites.flatMap { it.devices }.find { it.id == port.deviceId }).copy(focusPortId = port.id) })
     Column(Modifier.fillMaxSize().onPreviewKeyEvent { e ->
         // Ctrl+F opens the project search from the map.
         if (e.type == KeyEventType.KeyDown && e.isCtrlPressed && e.key == Key.F) { searching = true; true } else false
@@ -85,7 +86,7 @@ fun FloorHomeSection(state: DesktopAppState) {
                 onFloor = { focus = null; state.selectedAreaId = it.id },
                 onDevice = ::openDevice,
                 onAddSite = { addingSite = true }, onAddFloor = { addingSite = false },
-                modifier = Modifier.weight(1f), onTopology = { topology = true })
+                modifier = Modifier.weight(1f), portActions = portActions)
         } else {
             imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             MapWorkspace(project, area.id, image, i18n, MapActions(
@@ -104,9 +105,8 @@ fun FloorHomeSection(state: DesktopAppState) {
                 },
                 photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
             ), Modifier.weight(1f), tools = listOf(
-                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("topology.title")) { topology = true },
                     com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
-                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("text.68f86d09412c")) { selectingPlan = true },
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.choosePlan")) { selectingPlan = true },
                 ), state = state.mapUiState.floor(project, area.id), focus = focus, onFocusHandled = { focus = null },
                 onSearch = { searching = true }, onLeaveFloor = { state.selectedAreaId = null }, media = { ref ->
                 val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
@@ -141,7 +141,6 @@ fun FloorHomeSection(state: DesktopAppState) {
         onEdit = { draft -> adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft }, error = state.error) }
     editor?.let { draft -> key(draft.id) { FloorObjectEditor(state, project, draft, editorPage) { editor = null } } }
     if (searching) GlobalSearchDialog(project, i18n, state.recentSearch, ::openHit) { searching = false }
-    if (topology) TopologyDialog(project, i18n, site?.id, area?.id, ::openDevice) { topology = false }
     if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, state::attachmentBytes, {
         DesktopStorageHelper.pickOpenFile(i18n.text("text.04458b820c0e"), i18n.text("text.0c7a70a251fc"), "pdf", "png", "jpg", "jpeg", "webp", "bmp", i18n = i18n)?.let { file ->
             state.importFloorplan(file, area.id)?.let { a ->

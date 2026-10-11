@@ -29,8 +29,8 @@ object DemoSeed {
     /** Cabled outlets per floor: 36 × 2 ports = 72 of the 96 panel ports. */
     const val OUTLETS = 36
 
-    /** Fixed revision date: 2026-10-09T00:00:00Z, shared by observations and export metadata. */
-    const val REVISION_EPOCH_MS = 1_791_504_000_000L
+    /** Fixed revision date: 2026-10-11T00:00:00Z, shared by observations and export metadata. */
+    const val REVISION_EPOCH_MS = 1_791_676_800_000L
 
     fun build(now: Long = REVISION_EPOCH_MS): Project {
         val com = Site(name = "Comune – Municipio", code = "COM", group = "Sedi comunali", address = "Piazza del Municipio 1", areas = listOf(
@@ -40,7 +40,7 @@ object DemoSeed {
         val med = Site(name = "Scuola media", code = "MED", group = "Scuole", address = "Via delle Scuole 10", areas = listOf(
             Area(name = "Piano terra", floor = "0"), Area(name = "Primo piano", floor = "1"), Area(name = "Copertura", floor = "2")))
         val mat = Site(name = "Scuola materna", code = "MAT", group = "Scuole", address = "Via dei Giardini 3", areas = listOf(Area(name = "Piano terra", floor = "0"), Area(name = "Copertura", floor = "1")))
-        var p = Project(id = "d0000000-0000-0000-0000-000000000001", name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna. Revisione 9 ottobre 2026: mappe dense e interne, dettagli espandibili, configuratore e moduli; percorsi di prova nell'allegato Guida-demo.",
+        var p = Project(id = "d0000000-0000-0000-0000-000000000001", name = "Demo Comune", description = "Rete comunale dimostrativa: municipio, teatro, scuola media e materna. Revisione 11 ottobre 2026: sedi interconnesse, reti con indirizzi e gateway, apparati di fornitori e del cliente, mappe dense e interne, configuratore e moduli; percorsi di prova nell'allegato Guida-demo.",
             createdEpochMs = now, updatedEpochMs = now, sites = listOf(com, tea, med, mat))
 
         fun add(draft: MapObjectDraft): String { p = draft.apply(p, i18n); return draft.id }
@@ -222,7 +222,9 @@ object DemoSeed {
 
         val vlans = listOf(10 to "Uffici", 20 to "Voce", 30 to "Videosorveglianza", 90 to "Laboratorio").map { (number, name) -> Vlan(vlanId = number, name = name) }
         val ups = p.sites.flatMap { it.devices }.single { it.technicalName == "UPS-COM-01" }.id
-        p = p.copy(vlans = vlans, subnets = vlans.map { v -> Subnet(cidrBlock = "10.10.${v.vlanId}.0/24", gatewayIp = "10.10.${v.vlanId}.1", vlanId = v.id, name = v.name) },
+        // The theatre has its own routed network behind the VPN: a site-scoped subnet with its gateway.
+        val teaSubnet = Subnet(cidrBlock = "10.20.10.0/24", gatewayIp = "10.20.10.1", name = "Teatro", scopeType = VlanScopeType.SITE, scopeTargetId = tea.id)
+        p = p.copy(vlans = vlans, subnets = vlans.map { v -> Subnet(cidrBlock = "10.10.${v.vlanId}.0/24", gatewayIp = "10.10.${v.vlanId}.1", vlanId = v.id, name = v.name) } + teaSubnet,
             portVlanMemberships = listOf(
                 PortVlanMembership(portId = port(swLab, "P1"), mode = PortVlanMode.ACCESS, untaggedVlanId = 90),
                 PortVlanMembership(portId = port(swLab, "P2"), mode = PortVlanMode.ACCESS, untaggedVlanId = 30),
@@ -261,11 +263,22 @@ object DemoSeed {
         attachment("Cavo-LAB-da-verificare", AttachmentTargetType.CABLE, apCable, AttachmentClassification.REVIEW_REQUIRED)
         attachment("Porta-LAB-P1", AttachmentTargetType.PORT, port(swLab, "P1"))
 
+        // Third parties and addresses: what the sites, logical and device views draw.
+        val carrier = Triple("Operatore FTTH", "assistenza@operatore-ftth.example · 800 000 000", "FTTH-2026-0042")
+        val security = Triple("Vigilanza Demo Srl", "centrale@vigilanza-demo.example", "VID-2025-17")
+        val suppliers = mapOf("ONT-COM-01" to carrier, "ONT-TEA-01" to carrier, "NVR-COM-LAB" to security, "CAM-COM-LAB" to security)
+        val customer = mapOf("SRV-COM-02" to Triple("Ufficio CED del Comune", "ced@comune-demo.example", null))
+        val addresses = mapOf("FW-COM-01" to "10.10.10.254", "SRV-COM-01" to "10.10.10.11", "SRV-COM-02" to "10.10.10.12", "NAS-COM-01" to "10.10.10.20",
+            "SW-COM-LAB" to "10.10.90.2", "NVR-COM-LAB" to "10.10.30.10", "RTR-TEA-01" to "10.20.10.1", "SW-TEA-PT-A" to "10.20.10.2", "SW-TEA-PT-B" to "10.20.10.3")
         val states = mapOf("PC-TEA-PT-06" to OperationalStatus.OFF, "TEL-MAT-PT-04" to OperationalStatus.DECOMMISSIONED, "CAM-MED-PT-02" to OperationalStatus.TO_VERIFY)
         val graph = ConnectionGraph(p)
         val openPort = port(swLab, "P3")
         p = p.copy(sites = p.sites.map { s -> s.copy(areas = s.areas.map { a -> a.copy(floorplanAttachmentId = when (a.id) { comPt.id -> floorPlan.id; lab.id -> labPlan.id; else -> a.floorplanAttachmentId }) },
-            devices = s.devices.map { d -> d.copy(operationalStatus = states[d.technicalName] ?: d.operationalStatus,
+            devices = s.devices.map { d ->
+                val owner = suppliers[d.technicalName] ?: customer[d.technicalName]
+                d.copy(operationalStatus = states[d.technicalName] ?: d.operationalStatus, ipAddress = addresses[d.technicalName] ?: d.ipAddress,
+                management = when (d.technicalName) { in suppliers -> DeviceManagement.SUPPLIER; in customer -> DeviceManagement.CUSTOMER; else -> d.management },
+                supplierName = owner?.first, supplierContact = owner?.second, contractReference = owner?.third,
                 observation = Observation("DemoSeed sintetico", now, when (d.id) { sensor -> ObservationStatus.NOT_DETECTED; camLab -> ObservationStatus.CONFLICT; swLab -> ObservationStatus.TO_VERIFY; else -> ObservationStatus.VERIFIED }),
                 hardware = if (d.id == servers.first()) d.hardware.copy(redundantPower = true) else d.hardware,
                 ports = d.ports.map { pt -> pt.copy(endpointStatus = when { pt.id == openPort -> EndpointStatus.DETACHED_TO_VERIFY; graph.occupied(pt.id) -> EndpointStatus.CONNECTED; else -> EndpointStatus.DISCONNECTED },
