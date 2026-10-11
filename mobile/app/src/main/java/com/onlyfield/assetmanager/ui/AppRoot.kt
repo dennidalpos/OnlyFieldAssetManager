@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import com.onlyfield.assetmanager.ui.components.LocalOverlayCount
 import com.onlyfield.assetmanager.ui.components.MainNavigationRail
@@ -31,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.ui.components.ConfirmHost
+import com.onlyfield.assetmanager.ui.components.FormDialog
 import com.onlyfield.assetmanager.ui.screens.*
 import com.onlyfield.assetmanager.configurator.theme.OnlyFieldTheme
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -136,25 +138,16 @@ private fun ImportDialogs(vm: ProjectViewModel, state: ImportState?) {
         null -> Unit
         is ImportState.NeedsPassword -> {
             var password by remember(state) { mutableStateOf("") }
-            AlertDialog(
-                onDismissRequest = vm::cancelImport,
-                title = { Text(i18n.text("text.9c4199f65693")) },
-                text = {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(i18n.text("text.5d37a89596b4"))
-                        OutlinedTextField(
-                            value = password, onValueChange = { password = it }, label = { Text(i18n.text("text.e7cf3ef4f17c")) },
-                            visualTransformation = PasswordVisualTransformation(), singleLine = true,
-                            isError = state.wrongPassword,
-                            supportingText = if (state.wrongPassword) { { Text(i18n.text("text.972b256c2416")) } } else null
-                        )
-                    }
-                },
-                confirmButton = {
-                    TextButton(enabled = password.isNotEmpty(), onClick = { vm.startImport(context.contentResolver, state.uri, password) }) { Text(i18n.text("text.12abcf9ee7d6")) }
-                },
-                dismissButton = { TextButton(onClick = vm::cancelImport) { Text(i18n.text("text.18c9d912a210")) } }
-            )
+            FormDialog(i18n.text("text.9c4199f65693"), vm::cancelImport, { vm.startImport(context.contentResolver, state.uri, password) },
+                confirmEnabled = password.isNotEmpty(), confirmLabel = i18n.text("text.12abcf9ee7d6"), dismissLabel = i18n.text("text.18c9d912a210")) {
+                Text(i18n.text("text.5d37a89596b4"))
+                OutlinedTextField(
+                    value = password, onValueChange = { password = it }, label = { Text(i18n.text("text.e7cf3ef4f17c")) },
+                    visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    isError = state.wrongPassword,
+                    supportingText = if (state.wrongPassword) { { Text(i18n.text("text.972b256c2416")) } } else null
+                )
+            }
         }
         is ImportState.Review -> {
             val pkg = state.evaluation.importResult.pkg ?: return

@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
 import com.onlyfield.assetmanager.ui.LocalMessages
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -106,8 +107,10 @@ fun CablingScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             save.save(i18n.text("text.c64f4269ee7c"), { newMap = false; mapDialog = null }) { if (m == null) ProjectEdits.addPanelMapping(it, saved) else ProjectEdits.updatePanelMapping(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            PortPicker(i18n.text("text.87af12314823"), index, form.portAId, { form = form.copy(portAId = it) }, noneLabel = null, error = errors["portAId"].takeIf { form.portAId != null })
-            PortPicker(i18n.text("text.dcc43f317d0c"), index, form.portBId, { form = form.copy(portBId = it) }, noneLabel = i18n.text("text.f56b9cfaeb27"), error = errors["portBId"])
+            FormRow {
+                PortPicker(i18n.text("text.87af12314823"), index, form.portAId, { form = form.copy(portAId = it) }, formCell(), noneLabel = null, error = errors["portAId"].takeIf { form.portAId != null })
+                PortPicker(i18n.text("text.dcc43f317d0c"), index, form.portBId, { form = form.copy(portBId = it) }, formCell(), noneLabel = i18n.text("text.f56b9cfaeb27"), error = errors["portBId"])
+            }
             LabeledCheckbox(form.isUnknownPassage, { form = form.copy(isUnknownPassage = it) }, i18n.text("text.8c5c99642be7"))
         }
     }

@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.configurator.theme.BrandMark
@@ -190,8 +191,10 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
             confirmEnabled = name.isNotBlank(),
             width = 440.dp
         ) {
-            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
-            FormField(group, { group = it }, i18n.text("site.group"))
+            FormRow {
+                FormField(name, { name = it }, i18n.text("text.2e245546ff59"), formCell())
+                FormField(group, { group = it }, i18n.text("site.group"), formCell(120.dp))
+            }
             FormField(address, { address = it }, i18n.text("site.address"))
         }
     }
@@ -214,8 +217,10 @@ private fun StructureCard(project: Project, state: DesktopAppState, modifier: Mo
             confirmEnabled = name.isNotBlank(),
             width = 460.dp
         ) {
-            FormField(name, { name = it }, i18n.text("text.2e245546ff59"), hint = i18n.text("text.0b93bb0c53bc"))
-            FormField(floor, { floor = it }, i18n.text("text.fa2bd181d8ba"))
+            FormRow {
+                FormField(name, { name = it }, i18n.text("text.2e245546ff59"), formCell(), hint = i18n.text("text.0b93bb0c53bc"))
+                FormField(floor, { floor = it }, i18n.text("text.fa2bd181d8ba"), formCell(120.dp))
+            }
             FormField(description, { description = it }, i18n.text("text.6fb818621896"))
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -15,6 +16,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /** Outlined group: whatever is inside visibly belongs to [title]. */
@@ -64,12 +66,16 @@ fun <T> ListRows(items: List<T>, row: @Composable (T) -> Unit) {
     }
 }
 
-/** Short fields side by side where two fit, stacked on phones; give each field [formCell]. */
+/** Short fields side by side where they fit, stacked on phones; give each field [formCell]. */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-fun FormRow(modifier: Modifier = Modifier, content: @Composable FlowRowScope.() -> Unit) =
+fun FormRow(modifier: Modifier = Modifier, content: @Composable FormRowScope.() -> Unit) =
     FlowRow(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(AppSpacing.inset),
-        verticalArrangement = Arrangement.spacedBy(AppSpacing.inset), content = content)
+        verticalArrangement = Arrangement.spacedBy(AppSpacing.inset)) { remember(this) { FormRowScope(this) }.content() }
 
+/** Keeps the experimental FlowRow scope out of the screens. */
 @OptIn(ExperimentalLayoutApi::class)
-fun FlowRowScope.formCell(): Modifier = Modifier.widthIn(min = 200.dp).weight(1f)
+class FormRowScope internal constructor(private val flow: FlowRowScope) {
+    /** Equal share of the line; wraps below [min], which suits short numeric fields when lowered. */
+    fun formCell(min: Dp = 200.dp): Modifier = with(flow) { Modifier.widthIn(min = min).weight(1f) }
+}

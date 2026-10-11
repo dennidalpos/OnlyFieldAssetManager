@@ -3,6 +3,7 @@ package com.onlyfield.assetmanager.pc.ui
 import com.onlyfield.assetmanager.configurator.SecondaryModule
 import com.onlyfield.assetmanager.configurator.visibleTabs
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.pc.LocalMessages
 
@@ -108,20 +109,20 @@ private fun FeedsTab(project: Project, index: ProjectIndex, onProjectUpdated: (P
         ) {
             saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.a814bcd8ca15"), index, form.deviceId, { form = form.copy(deviceId = it) }, error = errors["deviceId"])
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), Modifier.weight(1.3f), errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
-                EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) }, Modifier.weight(1f))
+            FormRow {
+                FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), formCell(), errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
+                EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) }, formCell())
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                DevicePicker(i18n.text("text.11ae92f057eb"), index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, Modifier.weight(1f),
+            FormRow {
+                DevicePicker(i18n.text("text.11ae92f057eb"), index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, formCell(),
                     noneLabel = i18n.text("text.65389ba5d2fd"), error = errors["sourceDeviceId"])
-                FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, i18n.text("text.cd33696ca977"), Modifier.weight(1f), hint = i18n.text("text.e8d9aee3669c"))
+                FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, i18n.text("text.cd33696ca977"), formCell(), hint = i18n.text("text.e8d9aee3669c"))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(form.voltage, { form = form.copy(voltage = it) }, i18n.text("text.5093ead90fce"), Modifier.weight(1f), errors["voltage"])
-                FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, i18n.text("text.eb98296d7970"), Modifier.weight(1f), errors["loadWatts"])
-                FormField(form.loadVa, { form = form.copy(loadVa = it) }, i18n.text("text.e821b548ca4b"), Modifier.weight(1f), errors["loadVa"])
-                FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, i18n.text("text.08997b56437a"), Modifier.weight(1f), errors["runtimeMinutes"])
+            FormRow {
+                FormField(form.voltage, { form = form.copy(voltage = it) }, i18n.text("text.5093ead90fce"), formCell(120.dp), errors["voltage"])
+                FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, i18n.text("text.eb98296d7970"), formCell(120.dp), errors["loadWatts"])
+                FormField(form.loadVa, { form = form.copy(loadVa = it) }, i18n.text("text.e821b548ca4b"), formCell(120.dp), errors["loadVa"])
+                FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, i18n.text("text.08997b56437a"), formCell(120.dp), errors["runtimeMinutes"])
             }
             FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
         }
@@ -174,9 +175,9 @@ private fun PoeTab(project: Project, index: ProjectIndex, onProjectUpdated: (Pro
             saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             PortPicker(i18n.text("text.57c2ec879203"), index, form.portId, { form = form.copy(portId = it) }, noneLabel = null, error = errors["portId"])
             if (existingOnPort != null) Text(i18n.text("text.2d099536dd33"), color = MaterialTheme.colorScheme.tertiary)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) }, Modifier.weight(1f))
-                EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) }, Modifier.weight(1f))
+            FormRow {
+                EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) }, formCell())
+                EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) }, formCell())
             }
             FormField(form.watts, { form = form.copy(watts = it) }, i18n.text("text.548f9030240c"), error = errors["watts"])
             FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"))
@@ -228,9 +229,9 @@ private fun BadgesTab(project: Project, index: ProjectIndex, onProjectUpdated: (
         ) {
             saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             TargetPicker(index, form.target, { form = form.copy(target = it) }, errors["target"])
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), Modifier.weight(1.3f), errors["label"])
-                EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) }, Modifier.weight(1f))
+            FormRow {
+                FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), formCell(), errors["label"])
+                EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) }, formCell())
             }
             FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"))
         }

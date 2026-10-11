@@ -120,23 +120,14 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
     unlocking?.let { p ->
         var password by remember(p) { mutableStateOf("") }
         var wrong by remember(p) { mutableStateOf(false) }
-        AlertDialog(
-            onDismissRequest = { unlocking = null },
-            title = { Text(i18n.text("text.dc30ca04bf34", p.name)) },
-            text = {
-                OutlinedTextField(
-                    value = password, onValueChange = { password = it; wrong = false }, label = { Text(i18n.text("text.e7cf3ef4f17c")) },
-                    visualTransformation = PasswordVisualTransformation(), singleLine = true, isError = wrong,
-                    supportingText = if (wrong) { { Text(i18n.text("text.c409f4b96322")) } } else null
-                )
-            },
-            confirmButton = {
-                TextButton(enabled = password.isNotEmpty(), onClick = {
-                    vm.openProtectedProject(p.id, password) { wrong = true }
-                }) { Text(i18n.text("text.12abcf9ee7d6")) }
-            },
-            dismissButton = { TextButton(onClick = { unlocking = null }) { Text(i18n.text("text.18c9d912a210")) } }
-        )
+        FormDialog(i18n.text("text.dc30ca04bf34", p.name), { unlocking = null }, { vm.openProtectedProject(p.id, password) { wrong = true } },
+            confirmEnabled = password.isNotEmpty(), confirmLabel = i18n.text("text.12abcf9ee7d6"), dismissLabel = i18n.text("text.18c9d912a210")) {
+            OutlinedTextField(
+                value = password, onValueChange = { password = it; wrong = false }, label = { Text(i18n.text("text.e7cf3ef4f17c")) },
+                visualTransformation = PasswordVisualTransformation(), singleLine = true, isError = wrong,
+                supportingText = if (wrong) { { Text(i18n.text("text.c409f4b96322")) } } else null, modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }
 

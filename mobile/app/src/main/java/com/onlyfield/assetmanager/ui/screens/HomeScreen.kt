@@ -2,14 +2,16 @@ package com.onlyfield.assetmanager.ui.screens
 
 import com.onlyfield.assetmanager.configurator.SecondaryModule
 import com.onlyfield.assetmanager.configurator.shown
-import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -60,68 +62,66 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
         busy = vm.busy,
         actions = { LanguagePicker(vm) }
     ) { padding ->
-        // Everything the bottom bar does not reach, grouped, with project actions last.
-        LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(vertical = 8.dp)) {
-            project.description?.ifBlank { null }?.let { item { Text(it, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(horizontal = 16.dp)) } }
+        // Everything the bottom bar does not reach, one card per group, with project actions last.
+        LazyColumn(Modifier.padding(padding), contentPadding = PaddingValues(AppSpacing.content), verticalArrangement = Arrangement.spacedBy(AppSpacing.inset)) {
+            project.description?.ifBlank { null }?.let { item { Text(it, style = MaterialTheme.typography.bodyMedium) } }
             if (issues.isNotEmpty()) item {
-                ListItem(headlineContent = { Text(i18n.text("text.48139e9146f0", errors, warnings)) },
-                    leadingContent = { Icon(SymbolIcons.description, null, tint = if (errors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) },
-                    modifier = Modifier.fillMaxWidth().clickable { vm.navigate(Screen.Issues) })
+                SectionCard(null) {
+                    ListRow(i18n.text("text.48139e9146f0", errors, warnings),
+                        leading = { Icon(SymbolIcons.description, null, tint = if (errors > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.tertiary) }) { vm.navigate(Screen.Issues) }
+                }
             }
             ProjectDestination.entries.filter { it.area == com.onlyfield.assetmanager.configurator.ProjectArea.PROJECT }.filter { it.shown(project, vm.showSecondary) }.groupBy { it.groupKey }.forEach { (group, destinations) ->
-                item { GroupHeader(i18n.text(group)) }
-                items(destinations) { destination ->
-                    val screen = when (destination) {
-                        ProjectDestination.NETWORK -> Screen.Network
-                        ProjectDestination.POWER -> Screen.Power
-                        ProjectDestination.MODELS -> Screen.Models
-                        ProjectDestination.ATTACHMENTS -> Screen.Attachments
-                        ProjectDestination.CREDENTIALS -> Screen.Credentials
-                        ProjectDestination.DOCUMENTS -> Screen.Documents
-                        ProjectDestination.PROJECT -> Screen.Structure
-                        ProjectDestination.TRASH -> Screen.Trash
-                        else -> Screen.Home
+                item(key = group) {
+                    SectionCard(i18n.text(group)) {
+                        ListRows(destinations) { destination ->
+                            val screen = when (destination) {
+                                ProjectDestination.NETWORK -> Screen.Network
+                                ProjectDestination.POWER -> Screen.Power
+                                ProjectDestination.MODELS -> Screen.Models
+                                ProjectDestination.ATTACHMENTS -> Screen.Attachments
+                                ProjectDestination.CREDENTIALS -> Screen.Credentials
+                                ProjectDestination.DOCUMENTS -> Screen.Documents
+                                ProjectDestination.PROJECT -> Screen.Structure
+                                ProjectDestination.TRASH -> Screen.Trash
+                                else -> Screen.Home
+                            }
+                            ListRow(destination.title(i18n), leading = { Icon(destination.icon, null) }) { vm.navigate(screen) }
+                        }
                     }
-                    ListItem(headlineContent = { Text(destination.title(i18n)) }, leadingContent = { Icon(destination.icon, null) },
-                        modifier = Modifier.fillMaxWidth().clickable { vm.navigate(screen) })
                 }
             }
             // Unused optional modules stay behind one entry.
             val hidden = SecondaryModule.hidden(project)
             if (hidden.isNotEmpty()) item {
-                ListItem(headlineContent = { Text(i18n.text(if (vm.showSecondary) "nav.lessModules" else "nav.moreModules")) },
-                    supportingContent = { Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }) },
-                    leadingContent = { Icon(SymbolIcons.category, null) },
-                    modifier = Modifier.fillMaxWidth().clickable { vm.showSecondary = !vm.showSecondary })
+                SectionCard(null) {
+                    ListRow(i18n.text(if (vm.showSecondary) "nav.lessModules" else "nav.moreModules"), subtitle = hidden.joinToString(", ") { i18n.text(it.labelKey) },
+                        leading = { Icon(SymbolIcons.category, null) }) { vm.showSecondary = !vm.showSecondary }
+                }
             }
-            item { GroupHeader(i18n.text("ux.nav.actions")) }
-            item { ActionItem(i18n.text("text.2c4c51a93ca7"), ::startExport) }
-            item { ActionItem(i18n.text("text.a6afc0c52be6")) { importLauncher.launch(arrayOf("*/*")) } }
-            item { ActionItem(if (project.isPasswordProtected) i18n.text("text.e7ce0854e521") else i18n.text("text.07298c58b48f")) { managingPassword = true } }
-            item { ActionItem(i18n.text("text.c00df9e3726e")) { vm.closeProject() } }
+            item {
+                SectionCard(i18n.text("ux.nav.actions")) {
+                    ListRows(listOf<Pair<String, () -> Unit>>(
+                        i18n.text("text.2c4c51a93ca7") to ::startExport,
+                        i18n.text("text.a6afc0c52be6") to { importLauncher.launch(arrayOf("*/*")) },
+                        (if (project.isPasswordProtected) i18n.text("text.e7ce0854e521") else i18n.text("text.07298c58b48f")) to { managingPassword = true },
+                        i18n.text("text.c00df9e3726e") to { vm.closeProject() },
+                    )) { (label, action) -> ListRow(label, onClick = action) }
+                }
+            }
         }
     }
 
     if (askExportPassword) {
         var pwd by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { askExportPassword = false },
-            title = { Text(i18n.text("text.e4b38d139b28")) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(i18n.text("text.4cca746f444e"))
-                    OutlinedTextField(pwd, { pwd = it }, label = { Text(i18n.text("text.f6a32b19c4b1")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true)
-                }
-            },
-            confirmButton = {
-                TextButton(enabled = pwd.isNotEmpty(), onClick = {
-                    askExportPassword = false
-                    exportPassword = pwd
-                    exportLauncher.launch("${safeFileName(project.name)}.ofam")
-                }) { Text(i18n.text("text.be66f958b50a")) }
-            },
-            dismissButton = { TextButton(onClick = { askExportPassword = false }) { Text(i18n.text("text.18c9d912a210")) } }
-        )
+        FormDialog(i18n.text("text.e4b38d139b28"), { askExportPassword = false }, {
+            askExportPassword = false
+            exportPassword = pwd
+            exportLauncher.launch("${safeFileName(project.name)}.ofam")
+        }, confirmEnabled = pwd.isNotEmpty(), confirmLabel = i18n.text("text.be66f958b50a"), dismissLabel = i18n.text("text.18c9d912a210")) {
+            Text(i18n.text("text.4cca746f444e"))
+            OutlinedTextField(pwd, { pwd = it }, label = { Text(i18n.text("text.f6a32b19c4b1")) }, visualTransformation = PasswordVisualTransformation(), singleLine = true, modifier = Modifier.fillMaxWidth())
+        }
     }
 
     if (managingPassword) PasswordDialog(vm, project) { managingPassword = false }
@@ -188,11 +188,3 @@ fun IssuesScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostS
         }
     }
 }
-
-@Composable
-private fun GroupHeader(text: String) =
-    Text(text, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(start = 16.dp, top = 20.dp, bottom = 4.dp))
-
-@Composable
-private fun ActionItem(label: String, onClick: () -> Unit) =
-    ListItem(headlineContent = { Text(label) }, modifier = Modifier.fillMaxWidth().clickable(onClick = onClick))

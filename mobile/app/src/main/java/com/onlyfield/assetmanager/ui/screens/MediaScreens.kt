@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.ui.screens
 
 import com.onlyfield.assetmanager.configurator.theme.TextButton
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.ui.LocalMessages
 
 import android.net.Uri
@@ -84,8 +85,10 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
             importSave.submit({ picked = null }) { result -> vm.addAttachment(context, uri, name, classification, result) }
         }, confirmLabel = i18n.text("text.84cbef7b19b8")) {
             importSave.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            FormField(name, { name = it }, i18n.text("text.5086900635fe"), hint = i18n.text("text.634787507dfd"))
-            EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, classification, { it.toDisplayString(i18n = i18n) }, { classification = it })
+            FormRow {
+                FormField(name, { name = it }, i18n.text("text.5086900635fe"), formCell(), hint = i18n.text("text.634787507dfd"))
+                EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, classification, { it.toDisplayString(i18n = i18n) }, { classification = it }, formCell())
+            }
         }
     }
 
@@ -177,9 +180,11 @@ fun CredentialsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
             FormField(username, { username = it }, i18n.text("text.3255e3d5e3b4"))
             val markDirty = LocalMarkDirty.current
             OutlinedTextField(secret, { markDirty(); secret = it }, label = { Text(i18n.text("text.7f9bedb6b654")) }, singleLine = type != CredentialType.SSH_KEY, modifier = Modifier.fillMaxWidth())
-            EnumPicker(i18n.text("text.3868d2843d59"), CredentialType.entries, type, { it.toDisplayString(i18n = i18n) }, { type = it })
+            FormRow {
+                EnumPicker(i18n.text("text.3868d2843d59"), CredentialType.entries, type, { it.toDisplayString(i18n = i18n) }, { type = it }, formCell())
+                FormField(group, { group = it }, i18n.text("text.b9bb40edbe6e"), formCell(), hint = i18n.text("text.35a0170556ea"))
+            }
             DevicePicker(i18n.text("text.cf301d95d32c"), index, deviceId, { deviceId = it }, noneLabel = i18n.text("text.375889cbf5ec"))
-            FormField(group, { group = it }, i18n.text("text.b9bb40edbe6e"), hint = i18n.text("text.35a0170556ea"))
             FormField(notes, { notes = it }, i18n.text("text.d8da2c49df39"))
         }
     }
@@ -245,9 +250,11 @@ private fun MapDownloadEditor(vm: ProjectViewModel, onClose: () -> Unit) {
                 i18n.text("text.4d7cad637ae4"),
             style = MaterialTheme.typography.bodySmall
         )
-        FormField(lat, { lat = it }, i18n.text("text.259bd9884099"), error = errors["lat"], hint = i18n.text("text.c68adbb89b8d"), kind = FieldKind.DECIMAL)
-        FormField(lon, { lon = it }, i18n.text("text.8f00dfa444aa"), error = errors["lon"], hint = i18n.text("text.5e6ab81bedad"), kind = FieldKind.DECIMAL)
-        FormField(zoom, { zoom = it }, i18n.text("text.002fdf567c4f"), error = errors["zoom"], kind = FieldKind.NUMBER, hint = i18n.text("text.e2cbfeb6f905"))
+        FormRow {
+            FormField(lat, { lat = it }, i18n.text("text.259bd9884099"), formCell(160.dp), errors["lat"], hint = i18n.text("text.c68adbb89b8d"), kind = FieldKind.DECIMAL)
+            FormField(lon, { lon = it }, i18n.text("text.8f00dfa444aa"), formCell(160.dp), errors["lon"], hint = i18n.text("text.5e6ab81bedad"), kind = FieldKind.DECIMAL)
+            FormField(zoom, { zoom = it }, i18n.text("text.002fdf567c4f"), formCell(120.dp), errors["zoom"], kind = FieldKind.NUMBER, hint = i18n.text("text.e2cbfeb6f905"))
+        }
         FormField(name, { name = it }, i18n.text("text.5086900635fe"), hint = i18n.text("text.609e94eb3a8b"))
         Text(source.attributionText, style = MaterialTheme.typography.bodySmall)
     }

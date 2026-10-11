@@ -231,10 +231,9 @@ fun FormDialog(
     onConfirm: () -> Unit,
     confirmEnabled: Boolean = true,
     confirmLabel: String = LocalMessages.current.text("text.c5997e85ae51"),
+    dismissLabel: String = LocalMessages.current.text("ux.cancelChanges"),
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val i18n = LocalMessages.current
-
     ContentDialog(
         onDismissRequest = onDismiss,
         title = { Text(title, style = MaterialTheme.typography.titleLarge) },
@@ -242,7 +241,7 @@ fun FormDialog(
             Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(AppSpacing.content), content = content)
         },
         confirmButton = { Button(onClick = onConfirm, enabled = confirmEnabled) { Text(confirmLabel) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(i18n.text("ux.cancelChanges")) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(dismissLabel) } },
     )
 }
 

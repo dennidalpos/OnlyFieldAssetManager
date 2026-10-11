@@ -2,6 +2,7 @@ package com.onlyfield.assetmanager.ui.screens
 
 import com.onlyfield.assetmanager.configurator.SecondaryModule
 import com.onlyfield.assetmanager.configurator.visibleTabs
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.ui.LocalMessages
 
@@ -120,8 +121,10 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             save.save(i18n.text("text.9c856115c4fc", saved.vlanId), { vlan = null }) { if (v == null) ProjectEdits.addVlan(it, saved) else ProjectEdits.updateVlan(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            FormField(form.vlanId, { form = form.copy(vlanId = it) }, i18n.text("text.21d0e8b7d284"), error = errors["vlanId"], hint = "1–4094", kind = FieldKind.NUMBER)
-            FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), error = errors["name"])
+            FormRow {
+                FormField(form.vlanId, { form = form.copy(vlanId = it) }, i18n.text("text.21d0e8b7d284"), formCell(120.dp), errors["vlanId"], hint = "1–4094", kind = FieldKind.NUMBER)
+                FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), formCell(), errors["name"])
+            }
             EnumPicker(i18n.text("text.03cbc24f25f2"), VlanScopeType.entries, form.scopeType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(scopeType = it, scopeTargetId = null) })
             when (form.scopeType) {
                 VlanScopeType.SITE -> OptionPicker(i18n.text("text.e4de7d26b141"), project.sites, project.sites.find { it.id == form.scopeTargetId }, { it.name }, { form = form.copy(scopeTargetId = it?.id) })
@@ -142,8 +145,10 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             save.save(i18n.text("text.be84c37df37d"), { subnet = null }) { if (s == null) ProjectEdits.addSubnet(it, saved) else ProjectEdits.updateSubnet(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, i18n.text("text.a1f614a904b2"), error = errors["cidrBlock"], hint = i18n.text("text.ee4725fa1904"), kind = FieldKind.IP)
-            FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, i18n.text("text.41ed52921661"), error = errors["gatewayIp"], kind = FieldKind.IP)
+            FormRow {
+                FormField(form.cidrBlock, { form = form.copy(cidrBlock = it) }, i18n.text("text.a1f614a904b2"), formCell(), errors["cidrBlock"], hint = i18n.text("text.ee4725fa1904"), kind = FieldKind.IP)
+                FormField(form.gatewayIp, { form = form.copy(gatewayIp = it) }, i18n.text("text.41ed52921661"), formCell(), errors["gatewayIp"], kind = FieldKind.IP)
+            }
             OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.id == form.vlanRefId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
                 { form = form.copy(vlanRefId = it?.id) }, sortByName = false, noneLabel = i18n.text("text.b60b955a9981"))
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.5086900635fe"))
@@ -163,11 +168,15 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.e7f2c0e68768"), index, form.deviceId, { form = form.copy(deviceId = it) })
             FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.2e245546ff59"), error = errors["name"], hint = i18n.text("text.4575ffa32f9c"))
-            FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, i18n.text("text.ebb396f2d486"), error = errors["ipAddress"], kind = FieldKind.IP)
-            FormField(form.subnetCidr, { form = form.copy(subnetCidr = it) }, i18n.text("text.7cfdb8aaa25f"), error = errors["subnetCidr"], kind = FieldKind.IP)
-            OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
-                { form = form.copy(vlanId = it?.vlanId) }, sortByName = false, noneLabel = i18n.text("text.b60b955a9981"))
-            FormField(form.macAddress, { form = form.copy(macAddress = it) }, "MAC", error = errors["macAddress"])
+            FormRow {
+                FormField(form.ipAddress, { form = form.copy(ipAddress = it) }, i18n.text("text.ebb396f2d486"), formCell(), errors["ipAddress"], kind = FieldKind.IP)
+                FormField(form.subnetCidr, { form = form.copy(subnetCidr = it) }, i18n.text("text.7cfdb8aaa25f"), formCell(), errors["subnetCidr"], kind = FieldKind.IP)
+            }
+            FormRow {
+                OptionPicker("VLAN", project.vlans.sortedBy { it.vlanId }, project.vlans.find { it.vlanId == form.vlanId }, { i18n.text("text.15fd0dfb7614", it.vlanId, it.name) },
+                    { form = form.copy(vlanId = it?.vlanId) }, formCell(), sortByName = false, noneLabel = i18n.text("text.b60b955a9981"))
+                FormField(form.macAddress, { form = form.copy(macAddress = it) }, "MAC", formCell(), errors["macAddress"])
+            }
             LabeledCheckbox(form.isL3, { form = form.copy(isL3 = it) }, i18n.text("text.3d62d85ca195"))
         }
     }
@@ -182,14 +191,22 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
             save.save(i18n.text("text.ec170e822ebb"), { wan = null }) { if (c == null) ProjectEdits.addWanVpnConnection(it, saved) else ProjectEdits.updateWanVpnConnection(it, saved) }
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.656e4a65e6cc"), error = errors["name"])
-            EnumPicker(i18n.text("text.3868d2843d59"), WanVpnType.entries, form.type, { it.toDisplayString(i18n = i18n) }, { form = form.copy(type = it) })
-            FormField(form.provider, { form = form.copy(provider = it) }, i18n.text("text.ad528b8d1f72"))
-            FormField(form.bandwidth, { form = form.copy(bandwidth = it) }, i18n.text("text.a4ed9939fab6"), hint = i18n.text("text.b2cbeb3179e9"))
-            DevicePicker(i18n.text("text.588719de20b9"), index, form.localDeviceId, { form = form.copy(localDeviceId = it) }, noneLabel = i18n.text("text.65389ba5d2fd"))
-            FormField(form.localSite, { form = form.copy(localSite = it) }, i18n.text("text.5b797e8b1a2c"))
-            DevicePicker(i18n.text("text.c0771cebf192"), index, form.remoteDeviceId, { form = form.copy(remoteDeviceId = it) }, noneLabel = i18n.text("text.65389ba5d2fd"))
-            FormField(form.remoteSite, { form = form.copy(remoteSite = it) }, i18n.text("text.dd76664512a4"))
+            FormRow {
+                FormField(form.name, { form = form.copy(name = it) }, i18n.text("text.656e4a65e6cc"), formCell(), errors["name"])
+                EnumPicker(i18n.text("text.3868d2843d59"), WanVpnType.entries, form.type, { it.toDisplayString(i18n = i18n) }, { form = form.copy(type = it) }, formCell())
+            }
+            FormRow {
+                FormField(form.provider, { form = form.copy(provider = it) }, i18n.text("text.ad528b8d1f72"), formCell())
+                FormField(form.bandwidth, { form = form.copy(bandwidth = it) }, i18n.text("text.a4ed9939fab6"), formCell(), hint = i18n.text("text.b2cbeb3179e9"))
+            }
+            FormRow {
+                DevicePicker(i18n.text("text.588719de20b9"), index, form.localDeviceId, { form = form.copy(localDeviceId = it) }, formCell(), noneLabel = i18n.text("text.65389ba5d2fd"))
+                FormField(form.localSite, { form = form.copy(localSite = it) }, i18n.text("text.5b797e8b1a2c"), formCell())
+            }
+            FormRow {
+                DevicePicker(i18n.text("text.c0771cebf192"), index, form.remoteDeviceId, { form = form.copy(remoteDeviceId = it) }, formCell(), noneLabel = i18n.text("text.65389ba5d2fd"))
+                FormField(form.remoteSite, { form = form.copy(remoteSite = it) }, i18n.text("text.dd76664512a4"), formCell())
+            }
         }
     }
 
@@ -222,8 +239,10 @@ fun NetworkScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHost
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             TargetPicker(index, form.target, { form = form.copy(target = it) })
-            FormField(form.key, { form = form.copy(key = it) }, i18n.text("text.4702cf978b67"), error = errors["key"], hint = i18n.text("text.08d801a474bf"))
-            EnumPicker(i18n.text("text.3868d2843d59"), CustomFieldType.entries, form.fieldType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(fieldType = it) })
+            FormRow {
+                FormField(form.key, { form = form.copy(key = it) }, i18n.text("text.4702cf978b67"), formCell(), errors["key"], hint = i18n.text("text.08d801a474bf"))
+                EnumPicker(i18n.text("text.3868d2843d59"), CustomFieldType.entries, form.fieldType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(fieldType = it) }, formCell())
+            }
             FormField(form.value, { form = form.copy(value = it) }, i18n.text("text.3b50ed0e6ec2"), error = errors["value"])
             EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, form.classification, { it.toDisplayString(i18n = i18n) }, { form = form.copy(classification = it) })
         }
@@ -291,14 +310,20 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             DevicePicker(i18n.text("text.a814bcd8ca15"), index, form.deviceId, { form = form.copy(deviceId = it) })
-            FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), error = errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
-            EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) })
-            DevicePicker(i18n.text("text.11ae92f057eb"), index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, noneLabel = i18n.text("text.65389ba5d2fd"), error = errors["sourceDeviceId"])
-            FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, i18n.text("text.cd33696ca977"))
-            FormField(form.voltage, { form = form.copy(voltage = it) }, i18n.text("text.5093ead90fce"), error = errors["voltage"], kind = FieldKind.NUMBER)
-            FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, i18n.text("text.eb98296d7970"), error = errors["loadWatts"], kind = FieldKind.DECIMAL)
-            FormField(form.loadVa, { form = form.copy(loadVa = it) }, i18n.text("text.e821b548ca4b"), error = errors["loadVa"], kind = FieldKind.DECIMAL)
-            FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, i18n.text("text.08997b56437a"), error = errors["runtimeMinutes"], kind = FieldKind.NUMBER)
+            FormRow {
+                FormField(form.feedName, { form = form.copy(feedName = it) }, i18n.text("text.694885c1179e"), formCell(), errors["feedName"], hint = i18n.text("text.eb9a6bbaecd2"))
+                EnumPicker(i18n.text("text.3868d2843d59"), PowerFeedType.entries, form.feedType, { it.toDisplayString(i18n = i18n) }, { form = form.copy(feedType = it) }, formCell())
+            }
+            FormRow {
+                DevicePicker(i18n.text("text.11ae92f057eb"), index, form.sourceDeviceId, { form = form.copy(sourceDeviceId = it) }, formCell(), noneLabel = i18n.text("text.65389ba5d2fd"), error = errors["sourceDeviceId"])
+                FormField(form.sourceOutlet, { form = form.copy(sourceOutlet = it) }, i18n.text("text.cd33696ca977"), formCell())
+            }
+            FormRow {
+                FormField(form.voltage, { form = form.copy(voltage = it) }, i18n.text("text.5093ead90fce"), formCell(120.dp), errors["voltage"], kind = FieldKind.NUMBER)
+                FormField(form.loadWatts, { form = form.copy(loadWatts = it) }, i18n.text("text.eb98296d7970"), formCell(120.dp), errors["loadWatts"], kind = FieldKind.DECIMAL)
+                FormField(form.loadVa, { form = form.copy(loadVa = it) }, i18n.text("text.e821b548ca4b"), formCell(120.dp), errors["loadVa"], kind = FieldKind.DECIMAL)
+                FormField(form.runtimeMinutes, { form = form.copy(runtimeMinutes = it) }, i18n.text("text.08997b56437a"), formCell(120.dp), errors["runtimeMinutes"], kind = FieldKind.NUMBER)
+            }
             FormField(form.notes, { form = form.copy(notes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
         }
     }
@@ -314,8 +339,10 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             PortPicker(i18n.text("text.57c2ec879203"), index, form.portId, { form = form.copy(portId = it) }, noneLabel = null)
-            EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) })
-            EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) })
+            FormRow {
+                EnumPicker(i18n.text("text.7a972bbc1480"), PoeRole.entries, form.role, { it.toDisplayString(i18n = i18n) }, { form = form.copy(role = it) }, formCell())
+                EnumPicker(i18n.text("text.ef6691545d2c"), PoeStandard.entries, form.standard, { it.toDisplayString(i18n = i18n) }, { form = form.copy(standard = it) }, formCell())
+            }
             FormField(form.watts, { form = form.copy(watts = it) }, i18n.text("text.548f9030240c"), error = errors["watts"], kind = FieldKind.DECIMAL)
         }
     }
@@ -331,8 +358,10 @@ fun PowerScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostSt
         }, confirmEnabled = errors.isEmpty()) {
             save.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             TargetPicker(index, form.target, { form = form.copy(target = it) })
-            FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), error = errors["label"])
-            EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) })
+            FormRow {
+                FormField(form.label, { form = form.copy(label = it) }, i18n.text("text.77a1b70aa654"), formCell(), errors["label"])
+                EnumPicker(i18n.text("text.54276aa0307f"), BadgeCategory.entries, form.category, { it.toDisplayString(i18n = i18n) }, { form = form.copy(category = it) }, formCell())
+            }
         }
     }
 }

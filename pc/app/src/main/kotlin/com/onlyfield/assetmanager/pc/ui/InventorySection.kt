@@ -5,6 +5,7 @@ import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
@@ -320,20 +321,22 @@ private fun MergeDialog(index: ProjectIndex, survivor: Device, onDismiss: () -> 
             onSelected = { duplicate = it }
         )
         duplicate?.let { dup ->
-            Text(i18n.text("text.ba17b5a14990"), fontWeight = FontWeight.SemiBold)
-            LabeledCheckbox(choices.useAliasFromDuplicate, { choices = choices.copy(useAliasFromDuplicate = it) }, i18n.text("text.2feff34b895f", dup.alias ?: "vuoto"))
-            LabeledCheckbox(choices.useTechnicalNameFromDuplicate, { choices = choices.copy(useTechnicalNameFromDuplicate = it) }, i18n.text("text.f056df92d232", dup.technicalName))
-            LabeledCheckbox(choices.usePhysicalLabelFromDuplicate, { choices = choices.copy(usePhysicalLabelFromDuplicate = it) }, i18n.text("text.6c6b0e8c59a2", dup.physicalLabel ?: "vuota"))
-            LabeledCheckbox(choices.useIpFromDuplicate, { choices = choices.copy(useIpFromDuplicate = it) }, i18n.text("text.e22da0229a30", dup.ipAddress ?: "vuoto"))
-            LabeledCheckbox(choices.useMacFromDuplicate, { choices = choices.copy(useMacFromDuplicate = it) }, i18n.text("text.c893c36f0a38", dup.macAddress ?: "vuoto"))
-            LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, i18n.text("text.6d44f00413d7"))
-            Text("Trasferisci:", fontWeight = FontWeight.SemiBold)
-            LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, i18n.text("text.625d94dac5fc", dup.ports.size))
-            LabeledCheckbox(choices.mergeCredentials, { choices = choices.copy(mergeCredentials = it) }, i18n.text("merge.credentials"))
-            LabeledCheckbox(choices.mergeConfigurations, { choices = choices.copy(mergeConfigurations = it) }, i18n.text("merge.configurations"))
-            LabeledCheckbox(choices.mergePowerFeeds, { choices = choices.copy(mergePowerFeeds = it) }, i18n.text("merge.powerFeeds"))
-            LabeledCheckbox(choices.mergeExtraFields, { choices = choices.copy(mergeExtraFields = it) }, i18n.text("merge.extraFields"))
-            Text(i18n.text("merge.associatedHint"), style = MaterialTheme.typography.bodySmall)
+            SectionCard(i18n.text("text.b8446f35e08e")) {
+                LabeledCheckbox(choices.useAliasFromDuplicate, { choices = choices.copy(useAliasFromDuplicate = it) }, i18n.text("text.2feff34b895f", dup.alias ?: "vuoto"))
+                LabeledCheckbox(choices.useTechnicalNameFromDuplicate, { choices = choices.copy(useTechnicalNameFromDuplicate = it) }, i18n.text("text.f056df92d232", dup.technicalName))
+                LabeledCheckbox(choices.usePhysicalLabelFromDuplicate, { choices = choices.copy(usePhysicalLabelFromDuplicate = it) }, i18n.text("text.6c6b0e8c59a2", dup.physicalLabel ?: "vuota"))
+                LabeledCheckbox(choices.useIpFromDuplicate, { choices = choices.copy(useIpFromDuplicate = it) }, i18n.text("text.e22da0229a30", dup.ipAddress ?: "vuoto"))
+                LabeledCheckbox(choices.useMacFromDuplicate, { choices = choices.copy(useMacFromDuplicate = it) }, i18n.text("text.c893c36f0a38", dup.macAddress ?: "vuoto"))
+                LabeledCheckbox(choices.useLocationFromDuplicate, { choices = choices.copy(useLocationFromDuplicate = it) }, i18n.text("text.6d44f00413d7"))
+            }
+            SectionCard(i18n.text("merge.transfer")) {
+                LabeledCheckbox(choices.mergePorts, { choices = choices.copy(mergePorts = it) }, i18n.text("text.625d94dac5fc", dup.ports.size))
+                LabeledCheckbox(choices.mergeCredentials, { choices = choices.copy(mergeCredentials = it) }, i18n.text("merge.credentials"))
+                LabeledCheckbox(choices.mergeConfigurations, { choices = choices.copy(mergeConfigurations = it) }, i18n.text("merge.configurations"))
+                LabeledCheckbox(choices.mergePowerFeeds, { choices = choices.copy(mergePowerFeeds = it) }, i18n.text("merge.powerFeeds"))
+                LabeledCheckbox(choices.mergeExtraFields, { choices = choices.copy(mergeExtraFields = it) }, i18n.text("merge.extraFields"))
+                Text(i18n.text("merge.associatedHint"), style = MaterialTheme.typography.bodySmall)
+            }
         }
     }
 }
@@ -364,16 +367,17 @@ private fun BatchEditDialog(
             style = MaterialTheme.typography.bodySmall,
             maxLines = 3
         )
-        Text(i18n.text("text.4b100c535572"), fontWeight = FontWeight.SemiBold)
-        LabeledCheckbox(changes.updateCategory, { changes = changes.copy(updateCategory = it) }, i18n.text("text.54276aa0307f"))
-        if (changes.updateCategory) EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, changes.category ?: DeviceCategory.CUSTOM, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(category = it) })
-        LabeledCheckbox(changes.updateAreaId, { changes = changes.copy(updateAreaId = it) }, i18n.text("text.024dc204d7ba"))
-        if (changes.updateAreaId) OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, index.area(changes.areaId), { it.name }, { changes = changes.copy(areaId = it?.id) }, noneLabel = i18n.text("text.0eb949b8ab9b"))
-        LabeledCheckbox(changes.updateRackId, { changes = changes.copy(updateRackId = it) }, i18n.text("text.4cd265c2b8c6"))
-        if (changes.updateRackId) OptionPicker(i18n.text("text.4cd265c2b8c6"), project.racks, index.rack(changes.rackId), { it.name }, { changes = changes.copy(rackId = it?.id) }, noneLabel = i18n.text("text.da968f7d518f"))
-        LabeledCheckbox(changes.updateMountingType, { changes = changes.copy(updateMountingType = it) }, i18n.text("text.6a0a9db35cde"))
-        if (changes.updateMountingType) EnumPicker(i18n.text("text.d3a2e8299422"), MountingType.entries, changes.mountingType ?: MountingType.RACK_MOUNT, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(mountingType = it) })
-        LabeledCheckbox(changes.updateObservationNotes, { changes = changes.copy(updateObservationNotes = it) }, i18n.text("text.b8320c85f325"))
-        if (changes.updateObservationNotes) FormField(changes.observationNotes.orEmpty(), { changes = changes.copy(observationNotes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
+        SectionCard(i18n.text("text.4b100c535572")) {
+            LabeledCheckbox(changes.updateCategory, { changes = changes.copy(updateCategory = it) }, i18n.text("text.54276aa0307f"))
+            if (changes.updateCategory) EnumPicker(i18n.text("text.54276aa0307f"), DeviceCategory.entries, changes.category ?: DeviceCategory.CUSTOM, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(category = it) })
+            LabeledCheckbox(changes.updateAreaId, { changes = changes.copy(updateAreaId = it) }, i18n.text("text.024dc204d7ba"))
+            if (changes.updateAreaId) OptionPicker(i18n.text("text.024dc204d7ba"), index.areas, index.area(changes.areaId), { it.name }, { changes = changes.copy(areaId = it?.id) }, noneLabel = i18n.text("text.0eb949b8ab9b"))
+            LabeledCheckbox(changes.updateRackId, { changes = changes.copy(updateRackId = it) }, i18n.text("text.4cd265c2b8c6"))
+            if (changes.updateRackId) OptionPicker(i18n.text("text.4cd265c2b8c6"), project.racks, index.rack(changes.rackId), { it.name }, { changes = changes.copy(rackId = it?.id) }, noneLabel = i18n.text("text.da968f7d518f"))
+            LabeledCheckbox(changes.updateMountingType, { changes = changes.copy(updateMountingType = it) }, i18n.text("text.6a0a9db35cde"))
+            if (changes.updateMountingType) EnumPicker(i18n.text("text.d3a2e8299422"), MountingType.entries, changes.mountingType ?: MountingType.RACK_MOUNT, { it.toDisplayString(i18n = i18n) }, { changes = changes.copy(mountingType = it) })
+            LabeledCheckbox(changes.updateObservationNotes, { changes = changes.copy(updateObservationNotes = it) }, i18n.text("text.b8320c85f325"))
+            if (changes.updateObservationNotes) FormField(changes.observationNotes.orEmpty(), { changes = changes.copy(observationNotes = it) }, i18n.text("text.d8da2c49df39"), singleLine = false)
+        }
     }
 }

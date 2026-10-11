@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -68,9 +69,11 @@ fun CredentialsSection(project: Project, update: (Project, String) -> Unit, save
             FormField(username, { username = it }, i18n.text("text.3255e3d5e3b4"))
             val dirty = LocalMarkDirty.current
             OutlinedTextField(secret, { dirty(); secret = it }, label = { Text(i18n.text("text.7f9bedb6b654")) }, visualTransformation = PasswordVisualTransformation(), modifier = Modifier.fillMaxWidth())
-            EnumPicker(i18n.text("text.3868d2843d59"), CredentialType.entries, type, { it.toDisplayString(i18n = i18n) }, { type = it })
+            FormRow {
+                EnumPicker(i18n.text("text.3868d2843d59"), CredentialType.entries, type, { it.toDisplayString(i18n = i18n) }, { type = it }, formCell())
+                FormField(group, { group = it }, i18n.text("text.b9bb40edbe6e"), formCell())
+            }
             DevicePicker(i18n.text("text.cf301d95d32c"), index, deviceId, { deviceId = it }, noneLabel = i18n.text("text.ab02eb85c3ac"))
-            FormField(group, { group = it }, i18n.text("text.b9bb40edbe6e"))
             FormField(notes, { notes = it }, i18n.text("text.d8da2c49df39"))
         }
     }

@@ -57,6 +57,10 @@ Progetto contiene:
 - gli altri gruppi, con icone;
 - Azioni progetto: Esporta, Importa, password e Chiudi progetto.
 
+Ogni gruppo è un riquadro con titolo (`theme.SectionCard`) e righe `ListRow`; la panoramica Progetto di Windows usa gli stessi riquadri, larghi al massimo 640 dp.
+
+**Editor delle schermate di piattaforma** (UX-09). I campi brevi stanno affiancati in `theme.FormRow`: ogni campo riceve `formCell()` (minimo 200 dp, 120–160 dp per numeri e coordinate) e va a capo quando non entra, quindi sui telefoni restano impilati. Fusione e modifica multipla raggruppano le caselle in riquadri. I dialoghi con un campo (password di esportazione, sblocco e import protetto) usano `ContentDialog` tramite `FormDialog`; `AlertDialog` resta per conferme, esito dell'import, conflitti di fusione e attesa.
+
 La navigazione scompare mentre è aperto un editor a pagina intera o lo scanner, lasciando più spazio alla bozza. Le sottoschede sono fisse fino a tre; oltre diventano un menu Vista.
 
 **Windows.** La barra laterale misura 208 dp e mostra le icone delle destinazioni. È estesa da 1200 dp di finestra; sotto tale soglia usa una rail da 104 dp con quattro accessi, indipendentemente dall’apertura dell’editor. Operazioni progetto elenca Esporta, Importa, password, poi Nuovo sito e Chiudi progetto.

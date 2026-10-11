@@ -4,6 +4,10 @@ import com.onlyfield.assetmanager.configurator.SecondaryModule
 import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.configurator.shown
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
@@ -154,36 +158,48 @@ private fun ProjectRail(state: DesktopAppState) {
 }
 
 @Composable
-private fun ProjectModules(state: DesktopAppState) {
+private fun ProjectModules(state: DesktopAppState, boxed: Boolean = false) {
     val project = state.project ?: return
     val i18n = state.i18n
-    ProjectDestination.entries.filter { it.area == ProjectArea.PROJECT && it.shown(project, state.showSecondary) }
-        .groupBy { it.groupKey }.forEach { (group, destinations) ->
-            Text(i18n.text(group), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp))
-            destinations.forEach { destination ->
-                ListItem(headlineContent = { Text(destination.title(i18n)) }, leadingContent = { Icon(destination.icon, null) },
-                    modifier = Modifier.fillMaxWidth().clickable { state.navigate(destination) })
+    val hidden = SecondaryModule.hidden(project)
+    // Hiding removes optional tabs: an open draft goes through the discard guard first.
+    val toggleSecondary = { state.requestChange { state.showSecondary = !state.showSecondary } }
+    val groups = ProjectDestination.entries.filter { it.area == ProjectArea.PROJECT && it.shown(project, state.showSecondary) }.groupBy { it.groupKey }
+    if (boxed) {
+        groups.forEach { (group, destinations) ->
+            SectionCard(i18n.text(group)) {
+                ListRows(destinations) { d -> ListRow(d.title(i18n), leading = { Icon(d.icon, null) }) { state.navigate(d) } }
             }
         }
-    val hidden = SecondaryModule.hidden(project)
+        if (hidden.isNotEmpty()) SectionCard(null) {
+            ListRow(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules"), subtitle = hidden.joinToString(", ") { i18n.text(it.labelKey) },
+                leading = { Icon(SymbolIcons.category, null) }, onClick = toggleSecondary)
+        }
+        return
+    }
+    groups.forEach { (group, destinations) ->
+        Text(i18n.text(group), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 4.dp))
+        destinations.forEach { destination ->
+            ListItem(headlineContent = { Text(destination.title(i18n)) }, leadingContent = { Icon(destination.icon, null) },
+                modifier = Modifier.fillMaxWidth().clickable { state.navigate(destination) })
+        }
+    }
     if (hidden.isNotEmpty()) ListItem(
         headlineContent = { Text(i18n.text(if (state.showSecondary) "nav.lessModules" else "nav.moreModules")) },
         supportingContent = { Text(hidden.joinToString(", ") { i18n.text(it.labelKey) }) },
         leadingContent = { Icon(SymbolIcons.category, null) },
-        // Hiding removes optional tabs: an open draft goes through the discard guard first.
-        modifier = Modifier.fillMaxWidth().clickable { state.requestChange { state.showSecondary = !state.showSecondary } })
+        modifier = Modifier.fillMaxWidth().clickable(onClick = toggleSecondary))
 }
 
 @Composable
 private fun ProjectOverview(state: DesktopAppState) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Column(Modifier.fillMaxHeight().widthIn(max = AppSpacing.formWidth).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(AppSpacing.inset)) {
         Text(state.i18n.text("ux.nav.projectHome"), style = MaterialTheme.typography.titleLarge)
-        if (state.issues.isNotEmpty()) ListItem(
-            headlineContent = { Text(state.i18n.text("text.48139e9146f0", state.errorCount, state.warningCount)) },
-            leadingContent = { Icon(SymbolIcons.description, null) },
-            modifier = Modifier.fillMaxWidth().clickable { state.dialog = AppDialog.Validation })
-        ProjectModules(state)
+        if (state.issues.isNotEmpty()) SectionCard(null) {
+            ListRow(state.i18n.text("text.48139e9146f0", state.errorCount, state.warningCount), leading = { Icon(SymbolIcons.description, null) }) { state.dialog = AppDialog.Validation }
+        }
+        ProjectModules(state, boxed = true)
     }
 }
 

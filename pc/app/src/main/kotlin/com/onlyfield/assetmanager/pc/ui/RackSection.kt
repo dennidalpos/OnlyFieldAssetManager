@@ -5,11 +5,12 @@ import com.onlyfield.assetmanager.core.forms.QuickAdd
 import com.onlyfield.assetmanager.configurator.map.ObjectPickerDialog
 import com.onlyfield.assetmanager.configurator.RackUnitPicker
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.ListRow
+import com.onlyfield.assetmanager.configurator.theme.ListRows
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
 
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.onlyfield.assetmanager.configurator.RackElevation
@@ -23,8 +24,6 @@ import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import com.onlyfield.assetmanager.configurator.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.display.ProjectIndex
 import com.onlyfield.assetmanager.core.display.toDisplayString
@@ -76,21 +75,9 @@ fun RackSection(
         Row(modifier = Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             LazyColumn(modifier = Modifier.width(300.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 items(racks.sortedForDisplay(i18n) { it.name }, key = { it.id }) { rack ->
-                    val isSelected = rack.id == selected?.id
                     val used = RackLayout.usedUnits(rack, index.devices)
-                    Card(
-                        modifier = Modifier.fillMaxWidth()
-                            .border(if (isSelected) 2.dp else 0.dp, if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent, MaterialTheme.shapes.medium)
-                            .clickable { if (selectedRackId != rack.id) changeDetail { selectedRackId = rack.id } },
-                        colors = CardDefaults.cardColors(
-                            containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLow
-                        )
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text(rack.name, fontWeight = FontWeight.SemiBold)
-                            Text(i18n.text("text.4abc2837dcad", index.areaName(rack.areaId, i18n.text("text.0eb949b8ab9b")), used, rack.heightU), style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
+                    ItemCard(rack.name, listOf(i18n.text("text.4abc2837dcad", index.areaName(rack.areaId, i18n.text("text.0eb949b8ab9b")), used, rack.heightU)),
+                        selected = rack.id == selected?.id, onClick = { if (selectedRackId != rack.id) changeDetail { selectedRackId = rack.id } })
                 }
             }
 
@@ -126,23 +113,13 @@ fun RackSection(
                             Column(Modifier.weight(1.3f).fillMaxHeight().verticalScroll(rememberScrollState())) {
                                 RackElevation(project, rack, side, i18n, onAddAt = { u -> changeDetail { addingAt = u } })
                             }
-                            Column(modifier = Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(i18n.text("text.0a7e55b149a2", inRack.size), fontWeight = FontWeight.SemiBold)
-                                if (unplaced.isNotEmpty()) {
-                                    Text(
-                                        i18n.text("text.b9b94499eef0", unplaced.size),
-                                        color = MaterialTheme.colorScheme.tertiary,
-                                        style = MaterialTheme.typography.bodySmall
-                                    )
-                                }
-                                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    items(inRack.sortedByDescending { it.positionU ?: 0 }, key = { it.id }) { dev ->
-                                        ItemCard(
-                                            title = dev.technicalName,
-                                            details = listOf(
-                                                (dev.positionU?.let { "U$it" } ?: i18n.text("text.eb0f3a47d9d5")) + i18n.text("text.b84d9d34ca27", dev.heightU, dev.rackSide.toDisplayString(i18n = i18n))
-                                            )
-                                        ) {
+                            SectionCard(i18n.text("text.0a7e55b149a2", inRack.size), Modifier.weight(1f).fillMaxHeight(),
+                                detail = if (unplaced.isNotEmpty()) i18n.text("text.b9b94499eef0", unplaced.size) else null) {
+                                Column(Modifier.verticalScroll(rememberScrollState())) {
+                                    ListRows(inRack.sortedByDescending { it.positionU ?: 0 }) { dev ->
+                                        ListRow(dev.technicalName,
+                                            subtitle = (dev.positionU?.let { "U$it" } ?: i18n.text("text.eb0f3a47d9d5")) + i18n.text("text.b84d9d34ca27", dev.heightU, dev.rackSide.toDisplayString(i18n = i18n)),
+                                            trailing = {
                                             TextButton(onClick = {
                                                 confirm(
                                                     ConfirmRequest(
@@ -156,7 +133,7 @@ fun RackSection(
                                                     }
                                                 )
                                             }) { Text(i18n.text("text.a6f1f723fa07")) }
-                                        }
+                                        })
                                     }
                                 }
                             }

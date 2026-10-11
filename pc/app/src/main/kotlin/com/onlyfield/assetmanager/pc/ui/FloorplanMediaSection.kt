@@ -1,6 +1,8 @@
 package com.onlyfield.assetmanager.pc.ui
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.pc.LocalMessages
@@ -126,8 +128,10 @@ private fun AttachmentsTab(
                     "jpg", "jpeg", "png", "gif", "bmp", "webp", "pdf", "doc", "docx", "xls", "xlsx", "txt", "md",
                     i18n = i18n)?.let { file = it; if (name.isBlank()) name = it.nameWithoutExtension }
             }) { Text(file?.let { i18n.text("text.12610d51818d", it.name) } ?: i18n.text("text.26d8bab1dd5d")) }
-            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
-            EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, classification, { it.toDisplayString(i18n = i18n) }, { classification = it })
+            FormRow {
+                FormField(name, { name = it }, i18n.text("text.2e245546ff59"), formCell())
+                EnumPicker(i18n.text("text.57fbd1029ff6"), AttachmentClassification.entries, classification, { it.toDisplayString(i18n = i18n) }, { classification = it }, formCell())
+            }
         }
     }
 
@@ -178,12 +182,12 @@ private fun CartographyTab(onAddMapSnapshot: (DesktopMapSnapshot, String) -> Boo
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         SectionHeader(i18n.text("text.2ebfe0133d0c"), subtitle = i18n.text("text.3937e81f67c1"))
         Text(source.attribution, style = MaterialTheme.typography.bodySmall)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            FormField(lat, { lat = it }, i18n.text("text.9b0a8bdbd3df"), Modifier.width(160.dp), latError, hint = i18n.text("text.c68adbb89b8d"))
-            FormField(lon, { lon = it }, i18n.text("text.094c15c97b20"), Modifier.width(160.dp), lonError, hint = i18n.text("text.5e6ab81bedad"))
-            FormField(zoom, { zoom = it }, i18n.text("text.002fdf567c4f"), Modifier.width(130.dp), zoomError)
+        FormRow(Modifier.widthIn(max = AppSpacing.formWidth)) {
+            FormField(lat, { lat = it }, i18n.text("text.9b0a8bdbd3df"), formCell(160.dp), latError, hint = i18n.text("text.c68adbb89b8d"))
+            FormField(lon, { lon = it }, i18n.text("text.094c15c97b20"), formCell(160.dp), lonError, hint = i18n.text("text.5e6ab81bedad"))
+            FormField(zoom, { zoom = it }, i18n.text("text.002fdf567c4f"), formCell(120.dp), zoomError)
         }
-        FormField(name, { name = it }, i18n.text("text.9cc76babaef2"), hint = i18n.text("text.609e94eb3a8b"))
+        FormField(name, { name = it }, i18n.text("text.9cc76babaef2"), Modifier.widthIn(max = AppSpacing.formWidth), hint = i18n.text("text.609e94eb3a8b"))
         Button(
             enabled = !busy && latValue != null && lonValue != null && latError == null && lonError == null && zoomError == null,
             onClick = {

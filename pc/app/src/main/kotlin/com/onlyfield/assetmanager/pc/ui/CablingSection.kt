@@ -1,6 +1,7 @@
 package com.onlyfield.assetmanager.pc.ui
 
 import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.core.i18n.Messages
 import com.onlyfield.assetmanager.pc.LocalMessages
 
@@ -167,8 +168,10 @@ private fun MappingsTab(project: Project, index: ProjectIndex, onProjectUpdated:
             width = 640.dp
         ) {
             saveError()?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            PortPicker(i18n.text("text.87af12314823"), index, form.portAId, { form = form.copy(portAId = it) }, noneLabel = null, error = errors["portAId"])
-            PortPicker(i18n.text("text.dcc43f317d0c"), index, form.portBId, { form = form.copy(portBId = it) }, noneLabel = i18n.text("text.f56b9cfaeb27"), error = errors["portBId"])
+            FormRow {
+                PortPicker(i18n.text("text.87af12314823"), index, form.portAId, { form = form.copy(portAId = it) }, formCell(), noneLabel = null, error = errors["portAId"])
+                PortPicker(i18n.text("text.dcc43f317d0c"), index, form.portBId, { form = form.copy(portBId = it) }, formCell(), noneLabel = i18n.text("text.f56b9cfaeb27"), error = errors["portBId"])
+            }
             LabeledCheckbox(form.isUnknownPassage, { form = form.copy(isUnknownPassage = it) }, i18n.text("text.a4e483155a37"))
         }
     }

@@ -1588,3 +1588,25 @@ Note per la prossima sessione:
 - Osservazioni non corrette, da valutare con l'utente: nell'aggiunta oggetto su finestre larghe il campo nome occupa tutta la larghezza del dialogo; il disegno dell'apparato dentro il riquadro Porte ripete simbolo e tipo già presenti nell'intestazione del pannello.
 - RES-13/19/23/24 invariati; nessuna pulizia storica ritentata. Rese di controllo in `pc/app/build/reports/visual-configurator/` (`map-view-*.png`, `dialog-*.png`), locali e non versionate.
 
+## UX-09: schermate di piattaforma — 11 ottobre 2026 (terza sessione)
+
+Rilette una per una le schermate Android Rete/Alimentazione, Cablaggio, Media e Home e le sezioni Windows Inventario, Rete, Alimentazione/Badge, Cablaggio, Rack, Progetto, Planimetrie/Media e Modelli. Gli elenchi usavano già `ItemCard`; corretti i punti che non rispettavano i criteri.
+
+- **Campi affiancati**: `theme.FormRow` espone `FormRowScope.formCell(min)` (200 dp, 120–160 dp per numeri e coordinate), così le schermate non toccano l'API sperimentale di `FlowRow`. Applicato agli editor VLAN, subnet, interfacce, WAN/VPN, campi extra, alimentazioni, PoE, badge, permutazioni, allegati, credenziali e mappa su entrambe le piattaforme; su Windows sostituisce le righe a pesi fissi e riguarda anche sede, area e configurazioni.
+- **Riquadri**: Home Android e panoramica Progetto di Windows hanno un `SectionCard` per gruppo con righe `ListRow` (la barra laterale di Windows resta un elenco). Su Windows fusione («Usa dal duplicato», «Trasferisci») e modifica multipla raggruppano le caselle in riquadri; nella sezione Rack l'elenco usa `ItemCard` e «Apparati nel rack» è un riquadro con righe.
+- **Dialoghi**: password di esportazione, sblocco del progetto e import protetto su Android passano da `AlertDialog` a `ContentDialog` (`FormDialog` con etichetta di annullamento configurabile). Restano `AlertDialog` conferme, esito dell'import, conflitti di fusione e attesa.
+- **Testi**: nuova chiave `merge.transfer` al posto di «Trasferisci:» scritto nel codice; rimossa l'orfana `text.ba17b5a14990`; `text.4b100c535572` senza due punti finali (it/en/es).
+
+Verifica: `.\gradlew.bat :shared:core:test :pc:app:test :mobile:app:testDebugUnitTest :mobile:app:compileDebugAndroidTestKotlin --no-parallel --max-workers=1` riuscita: core 136, pc 306, mobile 143 prove, zero fallimenti, errori o saltate. Nessuna prova o resa nuova: la resa visiva delle schermate cambiate non è stata verificata né su telefono né nell'EXE (aggiunta a RES-19 e RES-23). UX-09 rimosso dal tracker.
+
+### Handoff — 11 ottobre 2026 (terza sessione)
+
+Cambio sessione richiesto dall'utente: commit e push su `main` di UX-09, documentazione e tracker. `:shared:exchange:test` rieseguita prima del commit: 116 prove, zero fallimenti; con le prove sopra la suite JVM resta a 701 prove (core 136, exchange 116, pc 306, mobile 143) e `:mobile:app:compileDebugAndroidTestKotlin` riesce. Nessuna prova aggiunta o rimossa.
+
+Note per la prossima sessione:
+
+- Nessun task di codice aperto nel tracker. Restano RES-13, RES-19, RES-23 (collaudi manuali) e RES-24 (pulizia respinta, non ritentare).
+- Il moto g86 ha ancora l'APK debug e la Demo Comune della seconda sessione: prima di collaudare UX-09 (RES-19) serve reinstallare l'APK con `adb install -r`, dopo conferma dell'utente. EXE mai avviato con GFX-06, UX-07, UX-08 e UX-09 (RES-23).
+- Le prove strumentate Android sono solo compilate: sblocco progetto, import protetto e password di esportazione ora sono `FormDialog` (pulsante pieno, «Annulla» invariato) e vanno riprovati sul dispositivo.
+- Osservazioni della seconda sessione ancora da valutare con l'utente (campo nome nell'aggiunta oggetto su finestre larghe; disegno dell'apparato nel riquadro Porte): invariate.
+- `.agents/skills/onlyfield-maintenance/SKILL.md` è comparso non tracciato durante la sessione, non creato dall'assistente: lasciato fuori dal commit, da decidere con l'utente.

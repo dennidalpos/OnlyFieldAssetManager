@@ -3,7 +3,6 @@ package com.onlyfield.assetmanager.configurator.map
 import com.onlyfield.assetmanager.configurator.theme.AppSpacing
 import com.onlyfield.assetmanager.configurator.theme.ContentDialog
 import com.onlyfield.assetmanager.configurator.theme.FormRow
-import com.onlyfield.assetmanager.configurator.theme.formCell
 import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import androidx.compose.foundation.layout.*
