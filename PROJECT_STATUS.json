@@ -1,10 +1,107 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-11",
-  "currentPhase": "Revisione UI/UX adattiva completata; restano i collaudi manuali e hardware esplicitamente tracciati.",
+  "currentPhase": "Audit residui post revisione UI/UX: 6 nuovi rilievi aperti e 4 residui operativi; priorità alla protezione delle bozze.",
   "activeTask": null,
-  "nextSession": "Handoff UI/UX dell’11 ottobre su main: ripartire dai residui RES-13/19/23/24 e da docs/ui-ux-audit-2026-10-11.md. Verifiche concluse: 34 test desktop, 3 localizzazione, 5 prove native Android e build riuscita. Restano TalkBack, rotazione fisica, tablet e gli altri scenari espliciti dei residui. Preservare build/reports/ux-20261011 (evidenze e backup locali non versionati); non ripetere pulizie respinte. Commit e push autorizzati dall’utente per il cambio sessione.",
-  "remainingTasks": [],
+  "nextSession": "Handoff audit residui dell’11 ottobre su main: iniziare da AUD-65 (bozza persa nascondendo moduli), poi AUD-66/67/68. Dettagli e criteri in docs/repo-residuals-2026-10-11.md; probe/XML locali in build/reports/repo-residuals-20261011. AUD-69/70 seguono per localizzazione e documentazione. Preservare RES-13/19/23/24, report e backup; non ripetere pulizie respinte. Commit e push autorizzati dall’utente per il cambio sessione.",
+  "remainingTasks": [
+    {
+      "id": "AUD-65",
+      "title": "Proteggere la bozza quando si nascondono i moduli opzionali",
+      "status": "OPEN",
+      "priority": "P1",
+      "evidenceLevel": "REPRODUCED",
+      "description": "Windows: Nascondi i moduli non usati cambia showSecondary direttamente. Con Configurazioni vuote e una nuova configurazione modificata, la scheda viene rimossa e la bozza scompare senza conferma. Riprodotto su DesktopApp; Badge usa lo stesso percorso di rimozione, da coprire nella correzione.",
+      "closureCriteria": "Applicare il guard delle modifiche prima del cambio visibilità. Verificare Continua a modificare/Scarta su Configurazioni e Badge, finestra larga/stretta; nessuna perdita o salvataggio implicito.",
+      "references": [
+        "docs/repo-residuals-2026-10-11.md",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopApp.kt:174",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/NetworkLogicalSection.kt:43",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/PowerBadgeSection.kt:41"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-66",
+      "title": "Completare la conservazione dello stato di consultazione",
+      "status": "OPEN",
+      "priority": "P2",
+      "evidenceLevel": "REPRODUCED",
+      "description": "Riprodotto Windows: ricerca VLAN persa passando a Subnet e tornando. Il SaveableStateHolder copre AppSection, non le sottoschede condizionali. Da codice restano query Modelli e scheda Allegati Windows in remember semplice. La promessa di conservazione degli elenchi è quindi parziale.",
+      "closureCriteria": "Preservare ricerca, scheda e scroll nel perimetro approvato, con isolamento tra progetti e ripristino coerente dopo cancellazioni; prove di andata/ritorno fra sottoschede e sezioni, senza conservare editor dismessi.",
+      "references": [
+        "docs/repo-residuals-2026-10-11.md",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopApp.kt:283",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/NetworkLogicalSection.kt:45",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/DeviceModelsSection.kt:29",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/FloorplanMediaSection.kt:50"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-67",
+      "title": "Conservare le opzioni Documenti Android durante la navigazione",
+      "status": "OPEN",
+      "priority": "P2",
+      "evidenceLevel": "CODE_CONFIRMED",
+      "description": "Formato, autore, titolo, selezione sezioni e opzioni Documenti usano remember. Passando a un’altra area e tornando vengono reinizializzati: il SaveableStateProvider esterno non conserva remember semplice. La prova nativa precedente verificava il footer con tastiera, non questo percorso.",
+      "closureCriteria": "Conservare la bozza delle opzioni per progetto durante la sessione o proteggere esplicitamente lo scarto; verificare andata/ritorno e cambio progetto. Non ripristinare conferme di contenuti riservati/rivedibili contro un insieme di allegati cambiato.",
+      "references": [
+        "docs/repo-residuals-2026-10-11.md",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/DocumentsScreen.kt:33",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/AppRoot.kt:83"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-68",
+      "title": "Segnalare la base di fusione Android assente o illeggibile",
+      "status": "OPEN",
+      "priority": "P2",
+      "evidenceLevel": "CODE_CONFIRMED",
+      "description": "ProjectStore.loadBase converte qualsiasi errore di decodifica in null; startMerge usa il risultato senza segnalare la perdita della base. Windows mostra merge.baseUnavailable o errore di lettura. Il merger resta conservativo e richiede conflitti per differenze: non è dimostrata perdita automatica di dati.",
+      "closureCriteria": "Distinguere assenza e corruzione, rendere visibile il passaggio alla revisione completa e non cancellare la base illeggibile per sola lettura. Provare base valida/assente/corrotta, annullamento e riprova; conservare la politica di fusione confermata.",
+      "references": [
+        "docs/repo-residuals-2026-10-11.md",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/data/repository/ProjectStore.kt:330",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/ProjectViewModel.kt:635",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/DesktopAppState.kt:645"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-69",
+      "title": "Localizzare l’autore predefinito dei documenti Android",
+      "status": "OPEN",
+      "priority": "P3",
+      "evidenceLevel": "CODE_CONFIRMED",
+      "description": "DocumentsScreen.filter usa il letterale italiano Tecnico quando autore è vuoto; Windows usa la chiave localizzata text.2bf644bed677. PDF e Markdown Android ricevono quindi il fallback italiano anche in inglese/spagnolo.",
+      "closureCriteria": "Usare la chiave esistente e verificare autore vuoto it/en/es e testo autore esplicito invariato nei documenti.",
+      "references": [
+        "docs/repo-residuals-2026-10-11.md",
+        "mobile/app/src/main/java/com/onlyfield/assetmanager/ui/screens/DocumentsScreen.kt:44",
+        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/dialogs/ProjectDialogs.kt:278"
+      ],
+      "dependsOn": []
+    },
+    {
+      "id": "AUD-70",
+      "title": "Allineare workflow e perimetri delle verifiche allo stato corrente",
+      "status": "OPEN",
+      "priority": "P3",
+      "evidenceLevel": "CODE_CONFIRMED",
+      "description": "docs/07-workflows.md apre descrivendo AUD-46 e AUD-49 come ancora difettosi ma più avanti ne documenta la correzione. RES-19 mescola AppRoot indicata genericamente come aperta con prove già concluse. Le prove dell’11 ottobre non coprono wizard con tastiera, reset tra progetti o scroll; la chiusura UX-08 va letta nel perimetro effettivamente verificato.",
+      "closureCriteria": "Rimuovere affermazioni correnti contraddittorie preservando lo storico; distinguere scenari verificati e pendenti. Integrare prove mirate wizard/tastiera, scroll e isolamento progetto nella verifica della remediation, senza dichiarare tablet/rotazione/TalkBack dai test simulati.",
+      "references": [
+        "docs/repo-residuals-2026-10-11.md",
+        "docs/07-workflows.md:5",
+        "docs/07-workflows.md:141",
+        "docs/ui-ux-audit-2026-10-11.md",
+        "PROJECT_STATUS.json"
+      ],
+      "dependsOn": []
+    }
+  ],
   "residuals": [
     {
       "id": "RES-13",
