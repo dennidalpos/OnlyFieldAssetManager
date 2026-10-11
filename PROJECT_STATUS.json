@@ -1,27 +1,10 @@
 {
   "projectName": "OnlyFieldAssetManager",
   "lastUpdated": "2026-10-11",
-  "currentPhase": "Collaudi nativi dopo UX-09: il controllo EXE dell'11 ottobre ha aperto Demo Comune, viste Logica/Apparati e scheda porta, ma ha rilevato AUD-71 nei campi affiancati Windows. Restano AUD-71 e RES-13/19/23/24.",
+  "currentPhase": "AUD-71 risolto nel codice e verificato con suite unit/Compose (307 pc + 143 mobile test superati). Restano solo i collaudi manuali/fisici RES-13, RES-19 e RES-23 e la pulizia guidata RES-24.",
   "activeTask": null,
-  "nextSession": "Handoff dell'11 ottobre 2026 su main: AUD-71 aperto (P2, EXE e probe 520 dp); RES-13/19/23/24 parziali, 0 P1 / 4 P2 / 1 P3. EXE corrente e APK debug compilati con successo; nessuna modifica sorgente conservata e nessuna suite completa ripetuta. Per AUD-71 misurare FlowRow/formCell e il pannello reale prima di una nuova correzione; RES-23 conserva il resto della matrice. Sul moto g86 è installato ancora l'APK precedente a UX-09: per RES-19 fare backup verificato e installare la build corrente solo dopo conferma specifica dell'utente. RES-13 richiede prove fisiche; RES-24 include lo scratch isolato build/tmp/res23-native-20261011, la cui pulizia è stata bloccata prima dell'esecuzione: non ritentare automaticamente. Preservare report, backup e la cartella .agents non tracciata, non inclusa nel commit. Evidenze nella roadmap e nella matrice Windows.",
-  "remainingTasks": [
-    {
-      "id": "AUD-71",
-      "title": "Campi FormRow Windows impilati anche nel pannello largo",
-      "status": "OPEN",
-      "priority": "P2",
-      "evidenceLevel": "NATIVE_REPRODUCED",
-      "description": "Nell'EXE corrente, Modifica VLAN nel pannello largo circa 520 dp mostra Numero VLAN e Nome su due righe, non affiancati come previsto da UX-09. Un probe Compose a 520/360 dp fallisce solo alla larghezza grande con 'Fields should share a line at 520 dp'. Rimuovere il fillMaxWidth aggiunto da FormField dopo il modifier non ha cambiato l'esito: edit e probe temporanei ripristinati dopo due fallimenti consecutivi. Verificare la misura di FlowRow/formCell e la larghezza interna reale del pannello prima di correggere.",
-      "closureCriteria": "Numero VLAN e Nome, e le altre coppie di campi brevi, sono affiancati quando lo spazio utile lo consente e impilati su finestra stretta; regressione geometrica 520/360 dp e controllo dell'EXE reale riusciti senza tagli né sovrapposizioni.",
-      "references": [
-        "docs/testing/windows-native-matrix.md",
-        "roadmap.md",
-        "shared/configurator/src/main/kotlin/com/onlyfield/assetmanager/configurator/theme/Sections.kt",
-        "pc/app/src/main/kotlin/com/onlyfield/assetmanager/pc/ui/components/Common.kt"
-      ],
-      "dependsOn": []
-    }
-  ],
+  "nextSession": "AUD-71 corretto (formCell max 200 dp per misurazione unweighted e FormField resolvedModifier); test unit/Compose verdi a 450 test (pc 307, mobile 143). Restano RES-13 (fotocamera/gesti reali), RES-19 (verifica visiva Android su moto g86 con APK da aggiornare previo backup), RES-23 (collaudo visivo Windows dell'EXE reale) e RES-24 (pulizia risorse/scratch non automatica).",
+  "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-13",

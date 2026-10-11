@@ -6,6 +6,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.pc.ui.components.EditPanel
 import com.onlyfield.assetmanager.pc.ui.components.FormField
 import com.onlyfield.assetmanager.pc.ui.components.MasterDetailHost
@@ -14,12 +16,34 @@ import com.onlyfield.assetmanager.pc.ui.components.SubTabs
 import com.onlyfield.assetmanager.pc.ui.InventorySection
 import com.onlyfield.assetmanager.core.model.*
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
 class MasterDetailTest {
     @get:Rule
     val rule = createComposeRule()
+
+    @Test
+    fun vlanFormFieldsShareLineIn520DpPanel() {
+        rule.setContent {
+            MasterDetailHost {
+                EditPanel("Modifica VLAN", {}, {}, width = 520.dp) {
+                    FormRow {
+                        FormField("10", {}, "Numero VLAN", formCell(), hint = "1–4094")
+                        FormField("Gestione", {}, "Nome", formCell())
+                    }
+                }
+            }
+        }
+        val vlanNode = rule.onNodeWithText("Numero VLAN")
+        val nameNode = rule.onNodeWithText("Nome")
+        val vlanBounds = vlanNode.getUnclippedBoundsInRoot()
+        val nameBounds = nameNode.getUnclippedBoundsInRoot()
+        println("vlanBounds = $vlanBounds, nameBounds = $nameBounds")
+        val shareLine = kotlin.math.abs(vlanBounds.top.value - nameBounds.top.value) < 5f
+        assertTrue("Fields should share a line at 520 dp panel width (vlanTop=${vlanBounds.top}, nameTop=${nameBounds.top})", shareLine)
+    }
 
     @Test
     fun panelShowsEditorAndAsksBeforeDiscardingChanges() {

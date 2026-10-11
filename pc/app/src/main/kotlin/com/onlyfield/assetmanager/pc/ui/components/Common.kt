@@ -109,6 +109,7 @@ fun FormField(
     var touched by remember { mutableStateOf(value.isNotEmpty()) }
     val shownError = error?.takeIf { touched }
     val markDirty = LocalMarkDirty.current
+    val resolvedModifier = if (modifier === Modifier) Modifier.fillMaxWidth() else modifier
     OutlinedTextField(
         value = value,
         onValueChange = { touched = true; markDirty(); onValueChange(it) },
@@ -117,7 +118,7 @@ fun FormField(
         supportingText = (shownError ?: hint)?.let { { Text(it) } },
         singleLine = singleLine,
         minLines = minLines,
-        modifier = modifier.fillMaxWidth()
+        modifier = resolvedModifier
     )
 }
 

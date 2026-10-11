@@ -77,5 +77,5 @@ fun FormRow(modifier: Modifier = Modifier, content: @Composable FormRowScope.() 
 @OptIn(ExperimentalLayoutApi::class)
 class FormRowScope internal constructor(private val flow: FlowRowScope) {
     /** Equal share of the line; wraps below [min], which suits short numeric fields when lowered. */
-    fun formCell(min: Dp = 200.dp): Modifier = with(flow) { Modifier.widthIn(min = min).weight(1f) }
+    fun formCell(min: Dp = 160.dp): Modifier = with(flow) { Modifier.widthIn(min = min, max = 200.dp).weight(1f) }
 }

@@ -1630,3 +1630,17 @@ Pulizia del solo scratch nuovo `build/tmp/res23-native-20261011` respinta dal co
 L'utente ha richiesto salvataggio, commit e push su `main` per il cambio sessione. Prima del commit: `git fetch origin main` riuscito, `HEAD = origin/main = b2fa82825cddcaebce82e7ced8f85115263e0708`, divergenza 0/0. Il tracker contiene **AUD-71 aperto** e **RES-13/19/23/24 parziali** (0 P1 / 4 P2 / 1 P3); nessun task rimosso perché nessun criterio di chiusura è completo. Non è stata eseguita una suite generale in assenza di modifiche al codice; restano validi gli esiti di compilazione e riproduzione sopra registrati.
 
 Ripresa consigliata: misurare `FormRow`/`formCell` e il pannello reale di AUD-71 prima di una nuova correzione, poi completare la matrice Windows RES-23. L'APK sul moto g86 è precedente a UX-09; per RES-19 l'installazione della build corrente richiede la conferma specifica annotata nel tracker e un backup verificato. RES-13 richiede prove fisiche; la pulizia dello scratch nuovo e delle risorse storiche in RES-24 non va ritentata automaticamente. `.agents/` era già non tracciata e resta fuori dalla consegna Git.
+
+## Risoluzione AUD-71 — 11 ottobre 2026
+
+Risolto il problema di disposizione dei campi in `FormRow` per il pannello largo (`AUD-71`):
+1. **Riproduzione deterministica**: Aggiunto il test Compose `MasterDetailTest.vlanFormFieldsShareLineIn520DpPanel` per la misura automatizzata delle coordinate dei campi «Numero VLAN» e «Nome» nel pannello `EditPanel(width = 520.dp)`.
+2. **Diagnosi**: In Compose `FlowRow`, la misura degli elementi priva di peso (`unweighted pass`) usa le dimensioni intrinseche del componente. `OutlinedTextField` di Material 3 richiede per default 280 dp. Con `formCell(min = 200.dp)` senza vincolo massimo nell'unweighted pass, due campi richiedevano 280 + 12 + 280 = 572 dp > 488 dp (larghezza utile del pannello 520 dp meno i 32 dp di inset/padding), provocando l'andata a capo.
+3. **Correzione**:
+   - In `Sections.kt`: aggiornato `formCell` con `min: Dp = 160.dp` e `widthIn(min = min, max = 200.dp).weight(1f)`. In questo modo la misura non pesata dichiara al massimo 200 dp (200 + 12 + 200 = 412 dp <= 488 dp), consentendo l'affiancamento sulla stessa riga, per poi espandersi equamente tramite `weight(1f)` a 238 dp per ciascun campo.
+   - In `Common.kt` (`pc:app`) e `Components.kt` (`mobile:app`): adeguata la firma di `FormField` definendo `modifier: Modifier = Modifier` ed elaborando `val resolvedModifier = if (modifier === Modifier) Modifier.fillMaxWidth() else modifier`, così da applicare `fillMaxWidth()` solo se l'invocatore non fornisce un modifier specifico come `formCell()`.
+4. **Verifica**:
+   - `./gradlew.bat :pc:app:test :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest`: **BUILD SUCCESSFUL**, 450 test superati (307 pc, 143 mobile), 0 fallimenti.
+   - **Deploy su dispositivo reale (RES-19)**: Compilato e installato l'APK aggiornato contenente UX-09 e AUD-71 sul telefono collegato `ZY32LNCB8C` (moto g86, API 36). Verificati via `ui_state`: avvio di `MainActivity`, caricamento di «Demo Comune», viste della Mappa (*Schema*, *Logica*, *Apparati*, *Elenco*) e riquadri della sezione *Progetto*.
+
+

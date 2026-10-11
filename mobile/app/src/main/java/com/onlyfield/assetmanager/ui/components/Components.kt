@@ -263,6 +263,7 @@ fun FormField(
     var touched by remember { mutableStateOf(value.isNotEmpty()) }
     val shownError = error?.takeIf { touched }
     val markDirty = LocalMarkDirty.current
+    val resolvedModifier = if (modifier === Modifier) Modifier.fillMaxWidth() else modifier
     OutlinedTextField(
         value = value,
         onValueChange = { touched = true; markDirty(); onValueChange(it) },
@@ -279,7 +280,7 @@ fun FormField(
                 FieldKind.TEXT -> KeyboardType.Text
             }
         ),
-        modifier = modifier.fillMaxWidth()
+        modifier = resolvedModifier
     )
 }
 
