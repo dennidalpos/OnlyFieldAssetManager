@@ -71,7 +71,7 @@ Stato al 5 ottobre 2026: EVO-01…EVO-10 completati; evidenze in [roadmap.md](ro
 
 ## Stato
 
-Secondo audit del 9 ottobre completato: **AUD-52–64 verificati e rimossi dal tracker**. Restano **4 residui, 0 P1 / 3 P2 / 1 P3** (RES-13/19/23/24), con i vincoli dei collaudi nativi e delle pulizie preservati. Evidenze nel [report corrente](docs/repo-residuals-2026-10-09.md) e nella [roadmap](roadmap.md).
+Secondo audit del 9 ottobre completato: **AUD-52–64 verificati e rimossi dal tracker**. Il controllo EXE dell'11 ottobre ha aperto **AUD-71** per i campi Windows che restano impilati nel pannello largo. Restano **5 attività, 0 P1 / 4 P2 / 1 P3** (AUD-71 e RES-13/19/23/24), con i vincoli dei collaudi nativi e delle pulizie preservati. Evidenze nel [report del 9 ottobre](docs/repo-residuals-2026-10-09.md), nella [matrice Windows](docs/testing/windows-native-matrix.md) e nella [roadmap](roadmap.md).
 
 Le funzionalità previste sono implementate; l’audit ha rilevato difetti e flussi da completare nei confini di persistenza, scambio e media. Lo stato aperto è mantenuto esclusivamente in [PROJECT_STATUS.json](PROJECT_STATUS.json); lo storico verificabile è in [roadmap.md](roadmap.md).
 

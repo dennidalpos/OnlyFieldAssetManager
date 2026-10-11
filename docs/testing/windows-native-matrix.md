@@ -1,6 +1,6 @@
 # Matrice nativa Windows · RES-23
 
-Aggiornata il 9 ottobre 2026. Il [tracker](../../PROJECT_STATUS.json) contiene solo il lavoro aperto; la [roadmap](../../roadmap.md) conserva gli esiti per singolo task.
+Aggiornata l'11 ottobre 2026. Il [tracker](../../PROJECT_STATUS.json) contiene solo il lavoro aperto; la [roadmap](../../roadmap.md) conserva gli esiti per singolo task.
 
 ## Perimetro verificato
 
@@ -28,9 +28,12 @@ Il guasto usa un handle di lettura sul solo pacchetto sintetico con `FileShare.R
 
 ## Lavoro ancora aperto
 
+Controllo dell'11 ottobre sull'EXE compilato dal commit `b2fa828` in `build/tmp/res23-native-20261011`, con profilo locale inizialmente vuoto: importata la fixture Demo Comune (0 errori strutturali / 11 avvisi documentali), aperti schema sedi, Logica, Apparati, scheda SW-COM-CORE/P1 e panoramica Progetto a riquadri. L'editor Modifica VLAN mostra Numero VLAN e Nome su due righe nel pannello largo: difetto **AUD-71**. La prova geometrica Compose a 520/360 dp ha riprodotto il difetto solo a 520 dp; la modifica tentata a `FormField` non lo ha risolto, quindi è stata ripristinata. Questi esiti restringono RES-23 ma non verificano varianti, salvataggi, fusione o stampa. EXE chiuso, fixture limitata allo scratch; nessun dato personale usato.
+
 | Priorità | Casistica | Prossima verifica ed evidenza richiesta |
 | --- | --- | --- |
 | P2 | Varianti editor AUD-46 | Ripetere creazione/modifica/guasto/riprova/undo su temi, dimensioni e testo ingrandito previsti; pannelli/dialoghi e percorso completo del focus. Progetto protetto con intervento utente. |
+| P2 | Campi affiancati UX-09 / AUD-71 | Correggere la misura effettiva di `FormRow` nel pannello Windows: due campi a 520 dp, impilati a 360 dp; verifica geometrica e nell'EXE. |
 | P2 | Rete e cablaggio completi | Ambiti sede/apparato, IP/CIDR/VLAN interfaccia, WAN/VPN con apparati, cavi con estremità e mezzi diversi, permutazioni a due porte e patch panel fronte/retro. |
 | P2 | Altri moduli completi | Configurazioni con allegati, campi extra con altri target/tipi/classificazioni, sorgenti UPS/PDU, PoE con potenza/budget/override hardware, badge con altri target/derivati e resa documentale. |
 | P2 | Operazioni lunghe | Matrice EXE mouse/tastiera/focus e blocco input durante tutti i salvataggi ancora non verificati. Conservare esiti nativi precedenti della roadmap. |
@@ -43,3 +46,5 @@ Queste verifiche restano in RES-23. La matrice base conclusa non chiude il resid
 ## Risorse conservate
 
 Nessuna pulizia storica respinta ritentata. Il runtime già tracciato in RES-24 conserva 1058 file; inventario aggiornato con dimensioni/SHA-256 in `build/reports/res23-network-native-20261009/cleanup-preserved-inventory.json`. Il vecchio inventario resta disponibile. Prima di eventuale rimozione manuale/consentita riverificare quello aggiornato; preservare entrambi i report, tutti i pacchetti e i backup.
+
+Lo scratch isolato dell'11 ottobre `build/tmp/res23-native-20261011` è distinto dal runtime storico: 466 file, 263.966.871 byte, inclusi 10 file della sola demo sintetica nella `data/`; EXE chiuso e nessun processo relativo attivo. Rimozione bloccata prima dell'esecuzione dal controllo automatico; RES-24 la conserva per pulizia manuale/consentita dopo nuovo inventario. La fixture sorgente in `fixtures/demo/` e i report non sono parte del target.
