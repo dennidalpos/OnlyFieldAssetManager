@@ -1,23 +1,26 @@
 # Build e rilascio
 
-## Build locale
+## Versioni e prerequisiti
 
-L’assemblaggio portable esclude `data/**` dalla sorgente e conserva `data/**` nella destinazione. Un runtime già usato non introduce progetti, media o preferenze nella distribuzione. Anche lo ZIP esclude i dati. Regressione ripetibile: `powershell -NoProfile -File tools/testing/portable-data.ps1`, con runtime sintetico contaminato e destinazione popolata; verifica hash, inventario e ZIP usando le definizioni dei task di produzione. AUD-45 corretto e verificato il 9 ottobre 2026; [semantica Gradle Sync](https://docs.gradle.org/current/dsl/org.gradle.api.tasks.Sync.html) consultata nella stessa data.
+Le versioni delle dipendenze sono in [libs.versions.toml](../gradle/libs.versions.toml); la versione app è nei due `build.gradle.kts`. Il codice Kotlin/JVM usa target 17; il packaging Windows richiede un toolchain JDK 21 con `jpackage`. L'app Android dichiara `minSdk=34`, `targetSdk=35`, `compileSdk=37`.
+
+## Pacchetti
+
+Da PowerShell nella radice:
 
 ```powershell
+.\gradlew.bat :mobile:app:assembleDebug
 .\gradlew.bat :pc:app:packagePortable
 ```
 
-Il task crea `dist/OnlyFieldAssetManager/OnlyFieldAssetManager.exe` e lo ZIP portable. La directory `data/` resta accanto all'eseguibile e non deve essere inclusa nel pacchetto.
+Il task Windows crea la cartella `dist/OnlyFieldAssetManager/` e uno ZIP portable. `data/` rimane accanto all'EXE per l'uso locale e non deve entrare nello ZIP. `createDistributable` rifiuta un runtime sorgente già contenente `data/`; conservare i dati prima di rigenerare. `prepare-release.ps1` richiede una destinazione vuota. Non usare un profilo reale per prove di packaging.
 
 ## CI
 
-`.github/workflows/release.yml` si avvia manualmente o su tag `v*`. Verifica test JVM/Compose, genera APK debug e ZIP portable, esegue `prepare-release.ps1` e calcola SHA-256. L'avvio manuale carica artefatti; un tag pubblica la release.
+[release.yml](../.github/workflows/release.yml) gira manualmente oppure su tag `v*`: verifica le suite JVM/Compose, compila APK debug e ZIP portable, prepara gli artefatti e i checksum SHA-256. Solo il tag attiva il job di pubblicazione GitHub. Una build locale non pubblica nulla.
 
-La pubblicazione reale su tag è verificata dalla [release v1.0.1](https://github.com/dennidalpos/OnlyFieldAssetManager/releases/tag/v1.0.1): [run 37238450362](https://github.com/dennidalpos/OnlyFieldAssetManager/actions/runs/37238450362) completata con esito `success`, APK debug, ZIP portable e `SHA256SUMS` presenti. Stato ricontrollato tramite GitHub CLI il 5 ottobre 2026; RES-01 già chiuso. Non creare tag o release per la sola verifica della documentazione. Le modifiche successive alla release richiedono una nuova pubblicazione esplicita.
+La release v1.0.1 è uno storico, non la qualifica automatica del checkout corrente. Vedi [verifica](05-testing-and-benchmarks.md) e [matrice Windows](testing/windows-native-matrix.md).
 
-## Risorse di test Windows — AUD-22
+## Fonti
 
-processTestResources copia la sola fixtures/v1_sample_project.json nel classpath test. Il JAR principale non include la fixture; distribuzione e comando portable invariati. Le prove non dipendono dalla directory corrente. [Gradle ProcessResources](https://docs.gradle.org/current/dsl/org.gradle.language.jvm.tasks.ProcessResources.html), consultato il 6 ottobre 2026.
-
-La rigenerazione createDistributable rifiuta un runtime sorgente contenente data/ prima di rimuoverlo. Conservare e spostare quei dati prima di rigenerare; usare l’EXE in dist per le sessioni applicative. Il controllo non cancella o sposta dati automaticamente.
+[Gradle Sync](https://docs.gradle.org/current/dsl/org.gradle.api.tasks.Sync.html), [Compose Desktop native distributions](https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-native-distribution.html).

@@ -1,16 +1,16 @@
 {
   "projectName": "OnlyFieldAssetManager",
-  "lastUpdated": "2026-10-11",
-  "currentPhase": "Pulizia risorse RES-24 completata con successo l'11 ottobre 2026. Risolto AUD-71 e verificato con suite unit/Compose (451 test superati). Aggiunta suite FieldValidatorsTest e test HierarchyIndex. Pacchetto demo fixtures/demo/onlyfield-demo.ofam rigenerato e verificato con 19 test demo verdi. Restano esclusivamente i collaudi manuali/fisici RES-13, RES-19 e RES-23.",
+  "lastUpdated": "2026-10-13",
+  "currentPhase": "Revisione documentale conclusa. Nessun task di codice aperto; restano tre collaudi P2 parziali: RES-13, RES-19 e RES-23. Il manuale PDF storico resta per blocco del controllo automatico sulla rimozione.",
   "activeTask": null,
-  "nextSession": "Test unit/Compose verdi a 451 test (pc 307, mobile/shared 144) + 19 test demo verdi. Pulizia RES-24 completata. Restano RES-13 (fotocamera/gesti reali), RES-19 (verifica visiva Android su moto g86) e RES-23 (collaudo visivo Windows dell'EXE reale).",
+  "nextSession": "Partire da README.md e roadmap.md. Priorità autonoma: RES-23 sull'EXE Windows con profilo sintetico isolato, senza sovrascrivere dist/**/data. RES-19 e RES-13 richiedono dispositivo Android e prove fisiche; adb non era nel PATH il 13 ottobre. Consultare docs/testing/windows-native-matrix.md e docs/testing/hardware-checklist.md. Il PDF storico resta nel repository: rimozione respinta dal controllo automatico (blocked by policy). Non chiudere i residui con soli test JVM/Compose.",
   "remainingTasks": [],
   "residuals": [
     {
       "id": "RES-13",
       "title": "Collaudo hardware manuale",
       "status": "PARTIAL",
-      "description": "Restano scatti reali con fotocamera integrata (FOTO-01–04, serie, annullamento/permesso negato, rotazione e scambio cifrato), scansione QR/barcode tramite fotocamera (QR-01–03), gesti multitouch (TOUCH-01–02) e recupero dopo arresto forzato/perdita improvvisa di alimentazione durante scrittura. Scatti reali rinviati dall’utente; lettori USB e scanner esterni esclusi definitivamente. Prove di recupero già concluse nella roadmap; nessun collaudo improvviso dedotto dal riavvio normale.",
+      "description": "Fotocamera integrata: foto e serie, QR/barcode, gesti multitouch. Restano arresto forzato e perdita improvvisa di alimentazione durante scrittura su SQLCipher/Keystore isolati. Riavvio normale già verificato; lettori USB e scanner esterni esclusi dal collaudo.",
       "closureCriteria": "Completare la checklist della fotocamera integrata e dei gesti con evidenze reali. Verificare recupero isolato SQLCipher/Keystore dopo arresto forzato e interruzione improvvisa, distinguendoli dal riavvio normale già verificato. Nessun collaudo di lettori USB/scanner esterni richiesto.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
@@ -24,17 +24,14 @@
       "id": "RES-19",
       "title": "Verifica visiva UI/UX Android",
       "status": "PARTIAL",
-      "description": "Completare UX-01–06 su Android: 360/412 dp, chiaro/scuro, testo 1,0/1,3, tastiera aperta, rotazione reale, TalkBack audio/focus e tablet fisici. Restano editor/persistenza negli scenari non coperti l’11 ottobre, configuratore con trascinamento/ridimensionamento/tratte posteriori, zoom a due dita, moncone/Vai a/passanti/ponti radio, collegamenti logici, percorso/topologia/Altri moduli e Demo Comune densa. Verificare messaggi/riprova asincroni, pannello occupato sopra i form, import con molti avvisi, password/recupero, fusione/rifiuto per ciclo e ripristino con contesto assente/cambiato/collisioni o ID esterni. AUD-46: creazione/modifica nativa di VLAN, subnet, interfacce, WAN/VPN, configurazioni, campi extra, cavi, permutazioni, alimentazioni, PoE e badge con guasto/riprova/undo. AUD-48: messaggi/riprova cartografia e progetto invariato al download fallito in AppRoot. AUD-47: dialogo spooler, cambio attributi interattivo e annullamento durante anteprima/stampa; callback dello spooler e stampante fisica ancora da collaudare. I PDF reali e le prove isolate già concluse sono nella roadmap e non chiudono questa matrice. AUD-53/54/63/64: includere wizard protetto, rinomina con errore/riprova e rifiuti per riferimenti di rete nella matrice nativa; verifiche Room/comandi già registrate. Telefono dichiarato non disponibile il 9 ottobre: rotazione fisica della bozza RES19 Rotation Draft ancora non eseguita; TalkBack dichiarato non disponibile. Preparazione e backup del 9 ottobre documentati nella roadmap, evidenze in build/reports/res19-guided-20261009. Revisione dell’11 ottobre: AppRoot/navigazione, filtri/ricerca, salvataggio editor e footer Documenti con tastiera verificati su moto g86 API 36 con dati isolati; matrice progetti/inventario/mappa a densità simulate e configuratore denso superata. Non ripetere questi perimetri senza nuove modifiche; rotazione fisica, TalkBack, tablet e scenari restanti sono ancora aperti. Dall’evoluzione grafica dell’11 ottobre: verificare su telefono la nuova apertura della Mappa (MapHome: schema sedi, topologia di sede, selettore Schema/Logica/Elenco, vista logica, editor Gestione/fornitore con suggerimenti, contorno degli apparati di terzi, ritorno Indietro con una o più sedi) e il ritorno a Documenti con opzioni conservate (AUD-67); wizard con tastiera, scroll e isolamento fra progetti restano da provare (AUD-70). Dalla seconda sessione dell'11 ottobre: verificare su telefono la barra delle viste ai tre livelli (icone sotto 600 dp, Indietro che torna alla planimetria), la vista Apparati con scheda porta e i modali a schermo intero con tastiera aperta (ricerca, aggiunta oggetto, selettore opzioni, scelta planimetria). Riscontro dell'11 ottobre sul moto g86 con la demo rigenerata: schema sedi con barra viste e vista Apparati (prospetto rack) visualizzati senza arresti; il resto della matrice resta aperto. Da UX-09 (terza sessione dell'11 ottobre): verificare su telefono Home Progetto a riquadri, campi affiancati o impilati negli editor Rete, Alimentazione, Cablaggio e Media a 360/412 dp e su schermo largo, e i dialoghi a schermo intero di password di esportazione, sblocco e import protetto con tastiera aperta; l'APK installato non contiene ancora queste modifiche.",
-      "closureCriteria": "Checklist UX-01–UX-06 su Android compilata con API, dimensioni, scala testo, tema ed evidenze; nessun controllo tagliato e campi/errori raggiungibili.",
+      "description": "Matrice Android UX-01–06 e flussi successivi ancora parziali: navigazione Mappa/Apparati/Documenti, editor e wizard, tastiera, temi, testo ingrandito, rotazione fisica, TalkBack audio/focus e tablet. Esiti parziali e casi precisi nella checklist; APK installato e disponibilità del telefono vanno ricontrollati prima della prova.",
+      "closureCriteria": "Completare la checklist Android RES-19 e i flussi residui con evidenze native, indicando API, dimensioni, scala testo e tema. Verificare separatamente rotazione fisica, TalkBack e tablet quando disponibili.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
       "references": [
         "docs/testing/hardware-checklist.md",
         "roadmap.md",
-        "docs/ui-ux-audit-2026-10-08.md",
-        "docs/ui-restyling-2026-10-09.md",
-        "docs/repo-residuals-2026-10-09.md",
-        "docs/ui-ux-audit-2026-10-11.md"
+        "docs/history/verification-2026-10.md"
       ],
       "dependsOn": []
     },
@@ -42,33 +39,14 @@
       "id": "RES-23",
       "title": "Collaudo visivo Windows delle operazioni in background",
       "status": "PARTIAL",
-      "description": "Restano i casi della tabella aperta in docs/testing/windows-native-matrix.md: varianti native di tema/dimensione/testo/pannello-dialogo/focus e progetto protetto degli editor AUD-46; rete/cablaggio completi e varianti dei moduli; matrice mouse/tastiera/focus e blocco input nei salvataggi lunghi. Protezione: wizard protetto dopo errore, password errata/riprova, guasto cambio password, focus dopo recupero bloccato/riprova, con interazione utente senza acquisire segreti (disponibilità chiesta, senza risposta). Fusione con testo ingrandito e trasferimento porte/configurazioni/alimentazioni/campi extra; ripristino rifiutato per ciclo e riprova; rifiuti VLAN/sedi/apparati/fusione (AUD-63/64). Messaggio nativo di sfondo PDF illeggibile (AUD-60), errore reale del motore di stampa e stampa fisica. Esiti nativi conclusi nella matrice/roadmap: esclusi dal lavoro aperto solo nei perimetri verificati. Le prove Compose non chiudono questi collaudi. Nell'EXE corrente l'11 ottobre: Demo Comune importata in profilo isolato (0 errori/11 avvisi), schema sedi, vista Logica, vista Apparati con scheda porta e panoramica Progetto a riquadri visualizzati. La verifica dell'editor VLAN ha rilevato AUD-71; restano le altre viste, editor, varianti, fusione e stampa della matrice.",
-      "closureCriteria": "Verifiche manuali Windows registrate; pannello leggibile, nessuna modifica durante il salvataggio, dialoghi e stampa annullabili senza perdita dei dati.",
+      "description": "Matrice EXE reale ancora parziale: varianti layout/focus e campi AUD-71, editor rete/cablaggio/moduli completi, salvataggi lunghi, progetto protetto/recupero, fusione/rifiuti, PDF/spooler e stampa fisica. I casi base di 11 editor sono già verificati; dettagli nella matrice Windows.",
+      "closureCriteria": "Completare la matrice Windows RES-23 con evidenze sull'EXE reale: layout/focus, blocco degli edit durante il salvataggio, recupero, fusione, dialoghi e stampa senza perdita di dati.",
       "priority": "P2",
       "evidenceLevel": "PARTIAL_VERIFICATION",
       "references": [
-        "docs/05-testing-and-benchmarks.md",
-        "roadmap.md",
-        "docs/ui-ux-audit-2026-10-08.md",
-        "docs/ui-restyling-2026-10-09.md",
-        "docs/repo-residuals-2026-10-09.md",
         "docs/testing/windows-native-matrix.md",
-        "docs/ui-ux-audit-2026-10-11.md"
-      ],
-      "dependsOn": []
-    },
-    {
-      "id": "RES-24",
-      "title": "Pulizia finale delle risorse di collaudo",
-      "status": "COMPLETED",
-      "description": "Pulizia eseguita l'11 ottobre 2026 su richiesta dell'utente. Eliminate tutte le directory temporanee e gli scratch in build/tmp/ (res23-native-20261011, res23-native-20261009, aud44-native-20261008, aud44-20261008, res23-20261007, repo-audit-20261009-data/network/portable, remediation_docs.py e __pycache__), gli helper Python in build/ (*.py) e le directory storiche dismesse in build/ (import-benchmark, native-window-app, native-window-exports, wix311, task-verification). Preservati integralmente build/reports, build/release, build/phone-backup e fixtures/demo/onlyfield-demo.ofam.",
-      "closureCriteria": "Rimozione completata l'11 ottobre 2026. Rimosse tutte le risorse sintetiche temporanee e gli scratch di collaudo. Preservati tutti i report di audit e test, i backup del telefono e il pacchetto demo sorgente.",
-      "priority": "P3",
-      "evidenceLevel": "FULL_VERIFICATION",
-      "references": [
-        "docs/05-testing-and-benchmarks.md",
         "roadmap.md",
-        "docs/repo-residuals-2026-10-09.md"
+        "docs/history/verification-2026-10.md"
       ],
       "dependsOn": []
     }

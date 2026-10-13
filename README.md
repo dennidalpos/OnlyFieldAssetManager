@@ -1,30 +1,28 @@
 # OnlyFieldAssetManager
 
-Editor offline per censire e documentare infrastrutture di rete e telecomunicazioni.
+Editor per censire reti, apparati, cablaggi e sedi. I progetti restano locali; lo scambio fra Android 14+ e Windows 11 x64 avviene manualmente con pacchetti `.ofam` v1. Solo il download esplicito di una cartografia richiede rete.
 
-## Piattaforme
+## Per iniziare
 
-- **Android 14+** (`:mobile:app`): Compose, Room/SQLCipher, fotocamera, scansione e stampa.
-- **Windows 11 x64** (`:pc:app`): Compose Desktop portable; dati in `data/` accanto all'eseguibile.
-- **Moduli Condivisi**: `:shared:core` (dominio e regole), `:shared:exchange` (scambio `.ofam` e documenti) e `shared/configurator` (UI Compose).
+- [Guida Android](docs/guide/android.md) e [guida Windows](docs/guide/windows.md).
+- [Scambio e documenti](docs/guide/exchange-and-documents.md); [demo e verifiche](docs/testing/demo.md).
+- [Decisioni di prodotto](plan.md), [stato aperto](PROJECT_STATUS.json) e [verifiche registrate](roadmap.md).
 
-## Documentazione di Dominio
+## Documentazione tecnica
 
-- [01 - Architettura](docs/01-architecture.md)
-- [02 - Dominio e Contratto `.ofam`](docs/02-domain-data-contract.md)
-- [03 - Esportazione e Documenti](docs/03-export-and-documents.md)
-- [04 - Storage Desktop e Interoperabilità](docs/04-desktop-storage-interop.md)
-- [05 - Esecuzione Test e Pacchetto Demo](docs/05-testing-and-benchmarks.md)
-- [06 - Build e Rilascio](docs/06-release-and-delivery.md)
-- [07 - Flussi Utente e Interfaccia](docs/07-workflows.md)
-- [08 - Mappa Visiva e Planimetrie](docs/08-floor-map.md)
-- [09 - Localizzazione (i18n)](docs/09-localization.md)
-- [10 - Configuratore Oggetti e Porte](docs/10-object-configurator.md)
+| Ambito | Documento |
+| --- | --- |
+| Moduli e confini | [Architettura](docs/01-architecture.md) |
+| Dati, validazione, `.ofam` | [Dominio e contratto](docs/02-domain-data-contract.md) |
+| PDF, XLSX, Markdown, filtri | [Documenti](docs/03-export-and-documents.md) |
+| Persistenza e recupero | [Storage e interoperabilità](docs/04-desktop-storage-interop.md) |
+| Test e demo | [Verifica](docs/05-testing-and-benchmarks.md) |
+| Distribuzione | [Build e rilascio](docs/06-release-and-delivery.md) |
+| Operazioni applicative | [Flussi](docs/07-workflows.md) |
+| Scene e planimetrie | [Mappa](docs/08-floor-map.md) |
+| Lingue | [Localizzazione](docs/09-localization.md) |
+| Oggetti e porte | [Configuratore](docs/10-object-configurator.md) |
 
-## Matrici di Collaudo e Stato
+Le [matrici Android](docs/testing/hardware-checklist.md) e [Windows](docs/testing/windows-native-matrix.md) distinguono le prove native ancora aperte dai controlli automatici. Il [materiale grafico](assets/README.md) è separato dalle istruzioni d'uso.
 
-- [Checklist Hardware Android](docs/testing/hardware-checklist.md)
-- [Matrice Nativi Windows](docs/testing/windows-native-matrix.md)
-- [Decisioni e Limiti Prodotto](plan.md)
-- [Storico Completamenti ed Evidenze](roadmap.md)
-- [Stato Attuale e Task Aperti](PROJECT_STATUS.json)
+Il PDF `OnlyFieldAssetManager_Manuale_Utente.pdf` è una versione storica; per i flussi correnti usare le guide Android, Windows e scambio qui sopra.
