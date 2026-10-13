@@ -5,6 +5,9 @@ import com.onlyfield.assetmanager.configurator.theme.FormRow
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.configurator.theme.BrandMark
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
+import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.pc.LocalMessages
 
 import androidx.compose.foundation.layout.*
@@ -16,6 +19,8 @@ import com.onlyfield.assetmanager.core.display.sitesForDisplay
 import com.onlyfield.assetmanager.core.display.sortedForDisplay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.core.model.Area
 import com.onlyfield.assetmanager.core.model.Site
@@ -49,24 +54,91 @@ fun ProjectSection(state: DesktopAppState) {
 private fun WelcomeCard(state: DesktopAppState) {
     val i18n = LocalMessages.current
 
-    Card(modifier = Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-        Column(modifier = Modifier.padding(24.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            BrandMark(64.dp)
-            Text(i18n.text("text.f9f3bd8a9b95"), style = MaterialTheme.typography.headlineSmall)
-            state.storedProjects.maxByOrNull { it.lastModifiedEpochMs }?.let { last ->
-                Button(onClick = { state.openStored(last.file) }, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
-                    Text(i18n.text("text.d5555c9b8e0b", last.name), style = MaterialTheme.typography.titleMedium)
+    ElevatedCard(
+        modifier = Modifier.fillMaxWidth(),
+        colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                BrandMark(56.dp)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = i18n.text("text.f9f3bd8a9b95"),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                    Text(
+                        text = i18n.text("text.792c143202b5") + i18n.text("text.dc52919dadd4"),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                    )
                 }
             }
-            Text(
-                i18n.text("text.792c143202b5") +
-                    i18n.text("text.dc52919dadd4"),
-                style = MaterialTheme.typography.bodyMedium
-            )
+
+            state.storedProjects.maxByOrNull { it.lastModifiedEpochMs }?.let { last ->
+                Surface(
+                    shape = MaterialTheme.shapes.medium,
+                    color = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = i18n.text("text.3d46bfbe7868"),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            Text(
+                                text = i18n.text("text.c95c16b49c20", formatDate(last.lastModifiedEpochMs)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Text(
+                            text = last.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Button(
+                            onClick = { state.openStored(last.file) },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) {
+                            Text(
+                                text = i18n.text("text.d5555c9b8e0b", last.name),
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                val big = Modifier.weight(1f).heightIn(min = 52.dp)
-                Button(onClick = { state.newProject() }, modifier = big) { Text(i18n.text("text.7559294aebf8")) }
-                OutlinedButton(onClick = state::pickAndImport, modifier = big) { Text(i18n.text("text.107b5c74d18f")) }
+                val big = Modifier.weight(1f).heightIn(min = 48.dp)
+                Button(onClick = { state.newProject() }, modifier = big) {
+                    Text(i18n.text("text.7559294aebf8"), style = MaterialTheme.typography.titleMedium)
+                }
+                OutlinedButton(onClick = state::pickAndImport, modifier = big) {
+                    Text(i18n.text("text.107b5c74d18f"), style = MaterialTheme.typography.titleMedium)
+                }
             }
         }
     }

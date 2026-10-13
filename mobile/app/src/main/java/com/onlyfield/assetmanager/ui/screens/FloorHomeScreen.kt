@@ -96,7 +96,7 @@ fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
             } else newPlanId = a.id
         }
     }
-    AppScaffold(project.name, subtitle = if (area == null) site?.name else null, onBack = ::back, snackbarHost = snackbar, busy = vm.busy, showTopBar = area == null,
+    AppScaffold(project.name, subtitle = if (area == null) site?.name else null, onBack = ::back, snackbarHost = snackbar, showTopBar = area == null,
         actions = { if (area == null) IconButton(onClick = { searching = true }) { Icon(androidx.compose.material.icons.Icons.Default.Search, i18n.text("search.action")) } }) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().padding(if (area == null) 16.dp else 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (area == null) {

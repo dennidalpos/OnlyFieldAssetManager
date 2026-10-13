@@ -1643,4 +1643,44 @@ Risolto il problema di disposizione dei campi in `FormRow` per il pannello largo
    - `./gradlew.bat :pc:app:test :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest`: **BUILD SUCCESSFUL**, 450 test superati (307 pc, 143 mobile), 0 fallimenti.
    - **Deploy su dispositivo reale (RES-19)**: Compilato e installato l'APK aggiornato contenente UX-09 e AUD-71 sul telefono collegato `ZY32LNCB8C` (moto g86, API 36). Verificati via `ui_state`: avvio di `MainActivity`, caricamento di «Demo Comune», viste della Mappa (*Schema*, *Logica*, *Apparati*, *Elenco*) e riquadri della sezione *Progetto*.
 
+## Analisi Copertura e Aggiunta Test — 11 ottobre 2026
 
+1. **Analisi della Copertura**:
+   - Analizzate le suite di test esistenti su tutti i moduli (`:shared:core`, `:shared:exchange`, `:pc:app`, `:mobile:app`).
+   - Rilevata copertura da integrare per le funzioni di validazione dei form (`FieldValidators.kt`) e per le query sull'indice della gerarchia degli oggetti (`HierarchyIndex` in `ObjectContainment.kt`).
+2. **Nuovi Test Aggiunti**:
+   - `FieldValidatorsTest.kt` (`shared/core/src/test/java/com/onlyfield/assetmanager/core/forms/FieldValidatorsTest.kt`): test unitari dedicati per validazione di stringhe obbligatorie, interi e decimali (virgola/punto, min/max), IPv4, prefissi CIDR (0..32 e out-of-bounds) e indirizzi MAC (separati da due punti, trattini o punti).
+   - `ObjectHierarchyTest.kt`: aggiunto il test `hierarchyIndexLookups` per `HierarchyIndex` (`ancestors`, `root`, `areaId`, `descendants`).
+3. **Verifica Finale**:
+   - `./gradlew.bat :pc:app:test :shared:core:test :shared:exchange:test :mobile:app:testDebugUnitTest`: **BUILD SUCCESSFUL in 14s**, **451 test superati** (307 pc, 144 mobile/shared), 0 errori, 0 fallimenti.
+
+## Rigenerazione Pacchetto Demo — 11 ottobre 2026
+
+1. **Rigenerazione**:
+   - Eseguito il task Gradle `:shared:exchange:demoPackage` con `--no-parallel --max-workers=1`.
+   - Aggiornato il pacchetto `fixtures/demo/onlyfield-demo.ofam` contenente il progetto di prova *Demo Comune* (4 sedi, 356 apparati, 7 rack, 1001 cavi, 14 modelli e allegati sintetici).
+2. **Verifica Mirata**:
+   - Eseguito `./gradlew.bat :shared:exchange:test --tests '*Demo*' --no-parallel --max-workers=1`: **19 test di verifica del demo superati con successo** (0 fallimenti, 0 skipped).
+
+## Pulizia Finale Risorse RES-24 — 11 ottobre 2026
+
+1. **Esecuzione**:
+   - Su esplicita richiesta dell'utente ("fallo tu"), eseguita la rimozione controllata delle risorse temporanee e degli scratch in `build/tmp/` (`res23-native-20261011`, `res23-native-20261009`, `aud44-native-20261008`, `aud44-20261008`, `res23-20261007`, `repo-audit-20261009-data/network/portable`, `remediation_docs.py` e `__pycache__`).
+   - Rimossi gli helper Python monouso in `build/` (`*.py`) e le directory storiche dismesse (`import-benchmark`, `native-window-app`, `native-window-exports`, `wix311`, `task-verification`).
+2. **Preservazione**:
+   - Mantenuti intatti tutti i report in `build/reports/`, le release in `build/release/`, i backup del telefono in `build/phone-backup/` e la fixture sorgente `fixtures/demo/onlyfield-demo.ofam`.
+3. **Esito**:
+   - **RES-24 COMPLETATO** e rimosso dai residui aperti in `PROJECT_STATUS.json`.
+
+### Handoff — 11 ottobre 2026 (quarta sessione)
+
+Cambio sessione ed esecuzione salva lavoro/commit/push su ramo `main`:
+- **Completamenti della sessione**:
+  1. Risoluzione `AUD-71` (`FormRow` / layout dei campi a 520 dp) in `Sections.kt`, `Components.kt` e `Common.kt`.
+  2. Implementazione della suite unitaria `FieldValidatorsTest.kt` e integrazione di `hierarchyIndexLookups` in `ObjectHierarchyTest.kt`.
+  3. Esecuzione e verifica della suite unit/Compose con **451 test superati** (307 pc, 144 mobile/shared).
+  4. Rigenerazione del pacchetto demo `fixtures/demo/onlyfield-demo.ofam` e verifica con **19 test demo verdi**.
+  5. Esecuzione e verifica della pulizia finale delle risorse di collaudo (**RES-24 COMPLETATO**).
+- **Stato del Tracker**:
+  - `AUD-71` e `RES-24` chiusi e registrati in `PROJECT_STATUS.json`.
+  - Restano esclusivamente i collaudi manuali/fisici **RES-13** (fotocamera/gesti reali), **RES-19** (verifica visiva Android su moto g86) e **RES-23** (collaudo visivo Windows dell'EXE reale).

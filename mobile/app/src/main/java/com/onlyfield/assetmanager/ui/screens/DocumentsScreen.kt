@@ -61,7 +61,7 @@ fun DocumentsScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHo
     val labels = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { it?.let { u -> vm.exportLabels(context.contentResolver, u) } }
     val md = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { it?.let { u -> vm.exportMarkdown(context.contentResolver, u, filter()) } }
 
-    AppScaffold(i18n.text("text.f7ac8562de3a"), onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
+    AppScaffold(i18n.text("text.f7ac8562de3a"), onBack = { vm.back() }, snackbarHost = snackbar,
         bottomBar = { ActionFooter {
             Button(
                 modifier = Modifier.fillMaxWidth(),

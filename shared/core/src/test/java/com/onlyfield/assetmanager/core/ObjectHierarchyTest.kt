@@ -62,4 +62,13 @@ class ObjectHierarchyTest {
         assertEquals(boxRef, ObjectHierarchy.parent(withoutRack, swRef))
         assertEquals(rackRef, ObjectHierarchy.root(ProjectEdits.restoreFromTrash(withoutRack, rackTrash!!), swRef))
     }
+
+    @Test fun hierarchyIndexLookups() {
+        val p = ObjectHierarchy.assign(initial, swRef, boxRef)
+        val index = HierarchyIndex(p)
+        assertEquals(listOf(boxRef, rackRef), index.ancestors(swRef))
+        assertEquals(rackRef, index.root(swRef))
+        assertEquals(area.id, index.areaId(swRef))
+        assertTrue(index.descendants(rackRef).containsAll(listOf(boxRef, swRef)))
+    }
 }

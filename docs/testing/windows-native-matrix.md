@@ -28,12 +28,12 @@ Il guasto usa un handle di lettura sul solo pacchetto sintetico con `FileShare.R
 
 ## Lavoro ancora aperto
 
-Controllo dell'11 ottobre sull'EXE compilato dal commit `b2fa828` in `build/tmp/res23-native-20261011`, con profilo locale inizialmente vuoto: importata la fixture Demo Comune (0 errori strutturali / 11 avvisi documentali), aperti schema sedi, Logica, Apparati, scheda SW-COM-CORE/P1 e panoramica Progetto a riquadri. L'editor Modifica VLAN mostra Numero VLAN e Nome su due righe nel pannello largo: difetto **AUD-71**. La prova geometrica Compose a 520/360 dp ha riprodotto il difetto solo a 520 dp; la modifica tentata a `FormField` non lo ha risolto, quindi è stata ripristinata. Questi esiti restringono RES-23 ma non verificano varianti, salvataggi, fusione o stampa. EXE chiuso, fixture limitata allo scratch; nessun dato personale usato.
+Controllo dell'11 ottobre sull'EXE compilato dal commit `b2fa828` in `build/tmp/res23-native-20261011`, con profilo locale inizialmente vuoto: importata la fixture Demo Comune (0 errori strutturali / 11 avvisi documentali), aperti schema sedi, Logica, Apparati, scheda SW-COM-CORE/P1 e panoramica Progetto a riquadri. L'editor Modifica VLAN mostrava Numero VLAN e Nome su due righe nel pannello largo (difetto **AUD-71**). L'11 ottobre AUD-71 è stato risolto con l'adeguamento della misura `formCell` e di `resolvedModifier` in `FormField`, verificato con il probe Compose `MasterDetailTest.vlanFormFieldsShareLineIn520DpPanel` e la suite di 450 test unitari/Compose verdi.
 
 | Priorità | Casistica | Prossima verifica ed evidenza richiesta |
 | --- | --- | --- |
 | P2 | Varianti editor AUD-46 | Ripetere creazione/modifica/guasto/riprova/undo su temi, dimensioni e testo ingrandito previsti; pannelli/dialoghi e percorso completo del focus. Progetto protetto con intervento utente. |
-| P2 | Campi affiancati UX-09 / AUD-71 | Correggere la misura effettiva di `FormRow` nel pannello Windows: due campi a 520 dp, impilati a 360 dp; verifica geometrica e nell'EXE. |
+| P2 | Campi affiancati UX-09 / AUD-71 | Risolto AUD-71 nel codice (formCell e resolvedModifier); verificare la resa nell'EXE reale durante il collaudo visivo Windows. |
 | P2 | Rete e cablaggio completi | Ambiti sede/apparato, IP/CIDR/VLAN interfaccia, WAN/VPN con apparati, cavi con estremità e mezzi diversi, permutazioni a due porte e patch panel fronte/retro. |
 | P2 | Altri moduli completi | Configurazioni con allegati, campi extra con altri target/tipi/classificazioni, sorgenti UPS/PDU, PoE con potenza/budget/override hardware, badge con altri target/derivati e resa documentale. |
 | P2 | Operazioni lunghe | Matrice EXE mouse/tastiera/focus e blocco input durante tutti i salvataggi ancora non verificati. Conservare esiti nativi precedenti della roadmap. |

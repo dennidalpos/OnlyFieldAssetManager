@@ -33,7 +33,6 @@ fun NewSiteScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
         subtitle = i18n.text("text.fdda08f5952a", w.stepNumber, w.stepCount, w.step.localizedTitle(i18n)),
         onBack = { vm.back() },
         snackbarHost = snackbar,
-        busy = vm.busy,
         bottomBar = {
             ActionFooter {
                 if (!w.isFirst) OutlinedButton(onClick = { vm.back() }) { Text(i18n.text("text.80426885bb74")) }

@@ -44,7 +44,7 @@ fun AttachmentsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackbar
     var mapping by remember { mutableStateOf(false) }
 
     AppScaffold(
-        i18n.text("text.92a776eacf2a"), onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
+        i18n.text("text.92a776eacf2a"), onBack = { vm.back() }, snackbarHost = snackbar,
         actions = { TextButton(onClick = { mapping = true }) { Text(i18n.text("text.ba321e5c3cea")) } },
         floatingActionButton = {
             ExtendedFloatingActionButton(onClick = { picker.launch(arrayOf("image/*", "application/pdf", "*/*")) },

@@ -4,6 +4,8 @@ import com.onlyfield.assetmanager.configurator.theme.Button
 import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
 import com.onlyfield.assetmanager.configurator.theme.TextButton
 import com.onlyfield.assetmanager.configurator.theme.BrandMark
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
+import com.onlyfield.assetmanager.configurator.theme.AppSpacing
 import com.onlyfield.assetmanager.configurator.SymbolIcons
 import com.onlyfield.assetmanager.ui.LocalMessages
 
@@ -21,7 +23,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.onlyfield.assetmanager.data.local.ProjectEntity
 import com.onlyfield.assetmanager.ui.ProjectViewModel
@@ -46,7 +50,6 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
         subtitle = i18n.text("text.3d46bfbe7868"),
         onBack = null,
         snackbarHost = snackbar,
-        busy = vm.busy,
         actions = { LanguagePicker(vm) },
         floatingActionButton = {
             if (projects.isNotEmpty()) {
@@ -63,29 +66,124 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
             )
         } else LazyColumn(
             modifier = Modifier.padding(padding),
-            contentPadding = PaddingValues(16.dp, 8.dp, 16.dp, 96.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            contentPadding = PaddingValues(16.dp, 12.dp, 16.dp, 96.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Projects are ordered by last change: the first one is where the user left off.
             item(key = "continue") {
                 val last = projects.first()
-                Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
-                    Row(Modifier.fillMaxWidth().padding(16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        BrandMark()
-                        Button(onClick = { open(last) }, modifier = Modifier.weight(1f).heightIn(min = 56.dp)) {
-                            Text(i18n.text("text.d5555c9b8e0b", last.name), style = MaterialTheme.typography.titleMedium)
+                ElevatedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                BrandMark(40.dp)
+                                Text(
+                                    text = i18n.text("text.3d46bfbe7868"),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                            }
+                            if (last.isPasswordProtected) {
+                                Surface(
+                                    shape = MaterialTheme.shapes.extraSmall,
+                                    color = MaterialTheme.colorScheme.surfaceTint.copy(alpha = 0.15f)
+                                ) {
+                                    Text(
+                                        text = i18n.text("text.a73763f25907"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                        }
+
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = last.name,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (!last.description.isNullOrBlank()) {
+                                Text(
+                                    text = last.description,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Text(
+                                text = i18n.text("text.c95c16b49c20", formatDateTime(last.updatedEpochMs)),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            )
+                        }
+
+                        Button(
+                            onClick = { open(last) },
+                            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                        ) {
+                            Text(
+                                text = i18n.text("text.d5555c9b8e0b", last.name),
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
                     }
                 }
             }
-            item(key = "import") {
-                OutlinedButton(onClick = { importLauncher.launch(arrayOf("*/*")) }, modifier = Modifier.fillMaxWidth()) {
-                    Text(i18n.text("text.a53503bbd801"))
+
+            item(key = "quick_actions") {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = vm::startNewSite,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(i18n.text("text.ac667fe865c9"), style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                    OutlinedButton(
+                        onClick = { importLauncher.launch(arrayOf("*/*")) },
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp)
+                    ) {
+                        Icon(SymbolIcons.map, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(i18n.text("text.a53503bbd801"), style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
                 }
             }
+
             item(key = "header") {
-                Text(i18n.text("text.8102b2c0ceb4"), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp))
+                Text(
+                    text = i18n.text("text.8102b2c0ceb4"),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 2.dp)
+                )
             }
+
             items(projects, key = { it.id }) { p ->
                 ItemCard(
                     title = p.name,
@@ -136,22 +234,44 @@ fun ProjectsScreen(vm: ProjectViewModel, snackbar: SnackbarHostState) {
 private fun StartActions(onNewSite: () -> Unit, onImport: () -> Unit, modifier: Modifier = Modifier) {
     val i18n = LocalMessages.current
 
-    Column(
-        modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically)
+    Box(
+        modifier = modifier.fillMaxSize().padding(16.dp),
+        contentAlignment = Alignment.Center
     ) {
-        BrandMark(72.dp)
-        Text(i18n.text("text.adb53755cdc3"), style = MaterialTheme.typography.headlineMedium)
-        Text(
-            i18n.text("text.55f623cd4bf4"),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Button(onClick = onNewSite, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
-            Text(i18n.text("text.7559294aebf8"), style = MaterialTheme.typography.titleMedium)
-        }
-        OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().heightIn(min = 64.dp)) {
-            Text(i18n.text("text.b93f2228bcd7"), style = MaterialTheme.typography.titleMedium)
+        Card(
+            modifier = Modifier.widthIn(max = 560.dp).fillMaxWidth(),
+            shape = MaterialTheme.shapes.large,
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow)
+        ) {
+            Column(
+                modifier = Modifier.padding(24.dp).verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                BrandMark(64.dp)
+                Text(
+                    text = i18n.text("text.adb53755cdc3"),
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = i18n.text("text.55f623cd4bf4"),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(4.dp))
+                Button(onClick = onNewSite, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(i18n.text("text.7559294aebf8"), style = MaterialTheme.typography.titleMedium)
+                }
+                OutlinedButton(onClick = onImport, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) {
+                    Icon(SymbolIcons.map, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(i18n.text("text.b93f2228bcd7"), style = MaterialTheme.typography.titleMedium)
+                }
+            }
         }
     }
 }
+

@@ -59,7 +59,6 @@ fun ProjectToolsScreen(vm: ProjectViewModel, project: Project, snackbar: Snackba
         subtitle = if (project.isPasswordProtected) i18n.text("text.8c42691cd614") else i18n.text("text.b1f6bb96d793"),
         onBack = null,
         snackbarHost = snackbar,
-        busy = vm.busy,
         actions = { LanguagePicker(vm) }
     ) { padding ->
         // Everything the bottom bar does not reach, one card per group, with project actions last.

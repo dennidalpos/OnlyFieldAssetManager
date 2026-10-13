@@ -193,7 +193,7 @@ fun RackDetailScreen(vm: ProjectViewModel, project: Project, rackId: String, sna
     }
 
     AppScaffold(
-        rack.name, onBack = { vm.back() }, snackbarHost = snackbar, busy = vm.busy,
+        rack.name, onBack = { vm.back() }, snackbarHost = snackbar,
         // Height plus only what is recorded: floor and attachments when present.
         subtitle = listOfNotNull("${rack.heightU} U", rack.areaId?.let { index.areaName(it, "") }?.ifBlank { null },
             index.attachmentsOf(rack.id).size.takeIf { it > 0 }?.let { i18n.text("config.attachmentsCount", it) }).joinToString(" · "),

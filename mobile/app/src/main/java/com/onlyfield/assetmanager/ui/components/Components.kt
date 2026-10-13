@@ -75,7 +75,6 @@ fun AppScaffold(
     subtitle: String? = null,
     actions: @Composable RowScope.() -> Unit = {},
     floatingActionButton: @Composable () -> Unit = {},
-    busy: String? = null,
     bottomBar: @Composable () -> Unit = {},
     showTopBar: Boolean = true,
     content: @Composable (PaddingValues) -> Unit,
@@ -99,7 +98,6 @@ fun AppScaffold(
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.surface)
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                if (busy != null) LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
             }
         },
         snackbarHost = { SnackbarHost(snackbarHost) },
