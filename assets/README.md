@@ -4,6 +4,8 @@ Questa cartella contiene immagini promozionali e screenshot conservati nel repos
 
 | Percorso | Uso previsto |
 | --- | --- |
+| `social/*.png` | Asset carosello social correnti (cover + 5 catture Compose live dal dataset demo) |
+| `social/SOCIAL_POST_COPY.md` | Testi pronti per la pubblicazione su LinkedIn, Instagram, Facebook ed X |
 | `screenshots/android_*.png` | Catture Android storiche |
 | `screenshots/windows_*.png` | Catture Windows storiche |
 | `linkedin_services/502x282/*.png` | Varianti grafiche per schede servizio |
