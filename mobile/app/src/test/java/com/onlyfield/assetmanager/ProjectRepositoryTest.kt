@@ -258,19 +258,18 @@ class ProjectRepositoryTest {
     }
 
     @Test
-    fun legacySha256PasswordIsUpgradedOnUnlock() = runBlocking {
+    fun weakPbkdf2PasswordIsUpgradedOnUnlock() = runBlocking {
         val projId = UUID.randomUUID().toString()
-        repository.saveProject(Project(id = projId, name = "Legacy", createdEpochMs = 1L, updatedEpochMs = 1L))
-        // Legacy SHA-256 of "password".
-        val legacy = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+        repository.saveProject(Project(id = projId, name = "Weak", createdEpochMs = 1L, updatedEpochMs = 1L))
+        val weak = com.onlyfield.assetmanager.exchange.PasswordHasher.hash("password", iterations = 1_000)
         val dao = db.projectDao()
-        dao.updateProject(dao.getProjectById(projId)!!.copy(isPasswordProtected = true, passwordHash = legacy))
+        dao.updateProject(dao.getProjectById(projId)!!.copy(isPasswordProtected = true, passwordHash = weak))
 
         assertFalse(repository.verifyProjectPassword(projId, "wrong"))
-        assertEquals(legacy, dao.getProjectById(projId)!!.passwordHash)
+        assertEquals(weak, dao.getProjectById(projId)!!.passwordHash)
         assertTrue(repository.verifyProjectPassword(projId, "password"))
         val upgraded = dao.getProjectById(projId)!!.passwordHash!!
-        assertTrue(upgraded.startsWith("pbkdf2-sha256$"))
+        assertFalse(com.onlyfield.assetmanager.exchange.PasswordHasher.needsRehash(upgraded))
         assertTrue(repository.verifyProjectPassword(projId, "password"))
     }
 

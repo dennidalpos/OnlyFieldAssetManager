@@ -22,6 +22,7 @@ import java.nio.channels.FileChannel
 import java.nio.channels.FileLock
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
+import java.nio.file.StandardOpenOption
 
 internal class LocalPasswordRequired : IllegalStateException()
 internal data class LocalProjectState(val trash: List<TrashItem>, val media: Map<String, ByteArray>, val project: Project? = null) : AutoCloseable {
@@ -140,6 +141,9 @@ class DesktopStorageManager(
         val temp = Files.createTempFile(target.parentFile.toPath(), target.name, ".tmp").toFile()
         try {
             temp.outputStream().buffered().use { PackageSerializer.exportPackageToStream(it, project, media, password, i18n = i18n) }
+            // The ZIP stream closes its target, so flush through a fresh channel.
+            FileChannel.open(temp.toPath(), StandardOpenOption.WRITE).use { it.force(true) }
+            PackageSerializer.verifyChecksums(temp, i18n)
             return temp
         } catch (e: Exception) { Files.deleteIfExists(temp.toPath()); throw e }
     }

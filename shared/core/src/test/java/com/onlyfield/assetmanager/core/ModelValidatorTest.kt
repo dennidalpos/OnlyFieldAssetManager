@@ -123,6 +123,15 @@ class ModelValidatorTest {
     }
 
     @Test
+    fun nonCanonicalUuidsAreRejected() {
+        // UUID.fromString accepts both; storage paths need the canonical text.
+        for (id in listOf("ABCDEF00-0000-4000-8000-000000000001", "1-1-1-1-1")) {
+            val result = ModelValidator.validateProject(Project(id = id, name = "Bad Project", createdEpochMs = 1000L, updatedEpochMs = 1000L))
+            assertTrue(id, result.issues.any { it.code == "INVALID_PROJECT_UUID" && it.severity == ValidationSeverity.STRUCTURAL_ERROR })
+        }
+    }
+
+    @Test
     fun testDuplicateIpInSameSiteGeneratesWarning() {
         val siteId = UUID.randomUUID().toString()
         val floorId = UUID.randomUUID().toString()

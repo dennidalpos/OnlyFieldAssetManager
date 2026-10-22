@@ -27,6 +27,12 @@ Queste prove non verificano rotazione fisica, TalkBack, fotocamera, tablet, stam
 
 Il [registro storico consolidato](docs/history/verification-2026-10.md) distingue i principali esiti nativi e i report locali. Il commit precedente alla riorganizzazione, `6ef0e6436185cd408bfcd4345813c85f157f27b6`, conserva il diario completo (`git show 6ef0e6436185cd408bfcd4345813c85f157f27b6:roadmap.md`). Non usarlo come stato corrente.
 
+## Irrobustimento `.ofam` — 16 ottobre 2026
+
+Export protetto con PBKDF2 a 600.000 iterazioni (raccomandazione [OWASP](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)); l'import usa il valore del manifest e rifiuta pacchetti protetti senza iterazioni. Checksum obbligatorio per payload e allegati, UUID solo in forma canonica minuscola, export Windows con scrittura forzata su disco e riverifica dei checksum prima della sostituzione, rimosso il verificatore SHA-256 senza salt. Costo misurato con JDK 25 su questo PC: circa 0,45 s per derivazione contro 0,14 s a 100.000; un salvataggio Windows protetto ne esegue più di una. Tempo su Android non misurato.
+
+Full checks (`:shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest`) riusciti: 144 core, 120 exchange, 308 Desktop, 143 mobile, nessun errore. Nessuna prova nativa sull'EXE o sul dispositivo.
+
 ## Collaudi ancora aperti
 
 | ID | Perimetro |
@@ -43,6 +49,15 @@ Confrontati documenti, tracker, build Gradle e percorsi applicativi. Corretti Ro
 
 Controlli statici della revisione: parser JSON riuscito con tre ID residui univoci; 23 file Markdown e 91 collegamenti locali validi; nessun BOM; ricerca dei nomi dei documenti ritirati senza link residui; `git diff --check` riuscito. Questi controlli verificano la documentazione, non il comportamento runtime.
 
-## Handoff — 13 ottobre 2026
+## Handoff — 22 ottobre 2026
 
-La documentazione riorganizzata è pronta per il cambio sessione. Avviare dalla [README](README.md) e dal [tracker](PROJECT_STATUS.json). Come primo lavoro autonomo, completare i casi fattibili di RES-23 sull'EXE Windows in un profilo sintetico isolato, conservando `dist/**/data`. RES-19 e RES-13 richiedono accesso al dispositivo e prove fisiche; `adb` non era nel PATH al controllo del 13 ottobre. Il manuale PDF storico rimane perché la rimozione è stata respinta dal controllo automatico (`blocked by policy`). I tre collaudi restano parziali.
+Eseguito audit dell'intero repository: verificati codice reale, contratti dati, vincoli di sicurezza, documentazione (24 file Markdown senza link rotti, 1973 chiavi i18n perfettamente allineate in it/en/es) e suite di test.
+
+Evidenze verificate in questa sessione:
+- **Full checks** (`:shared:core:test :shared:exchange:test :pc:app:test :mobile:app:testDebugUnitTest`): tutti i test dei quattro moduli superati con esito verde (144 core, 120 exchange, 308 Desktop, 143 mobile).
+- **Suite Demo** (`:shared:exchange:test --tests '*Demo*' --no-parallel --max-workers=1`): superata con esito verde.
+- **Script di verifica**: `tools/testing/portable-data.ps1` superato (isolamento dati confermato); `tools/testing/markdown-content.ps1` superato (struttura e contenuti letterali preservati per it/en/es).
+- **Packaging e build native**: `:mobile:app:assembleDebug` (APK generato), `:mobile:app:assembleDebugAndroidTest` (APK test generato), `:pc:app:packagePortable` (ZIP runtime portable x64) e `.github/scripts/prepare-release.ps1` eseguiti con esito positivo (`Prepared 2 packages with SHA-256 checksums`).
+- **Tracker**: registrato CLP-01 (P3) per la rimozione dei warning compilatore da asserzioni `!!` non necessarie in UI e test; integrato DEP-03 (P3) per il disallineamento plugin Compose e dipendenze orfane; confermati DEP-01 (P1), DEP-02 (P2), AUD-72 (P3) e i collaudi fisici aperti RES-13, RES-19 e RES-23 (P2).
+
+Prossima sessione: avviare da DEP-01 (allineamento dipendenze Compose/AndroidX) seguito da DEP-02; RES-23 su EXE reale Windows isolato. RES-19 e RES-13 richiedono accesso a dispositivo Android fisico.

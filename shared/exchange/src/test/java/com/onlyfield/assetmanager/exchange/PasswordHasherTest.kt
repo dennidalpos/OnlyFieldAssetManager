@@ -18,12 +18,10 @@ class PasswordHasherTest {
     }
 
     @Test
-    fun acceptsLegacySha256AndRejectsMalformed() {
-        // SHA-256("password")
-        val legacy = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
-        assertTrue(PasswordHasher.verify("password", legacy))
-        assertFalse(PasswordHasher.verify("wrong", legacy))
-        assertTrue(PasswordHasher.needsRehash(legacy))
+    fun rejectsUnsaltedDigestsAndMalformed() {
+        // SHA-256("password"): unsalted digests are no longer a valid verifier.
+        val unsalted = "5e884898da28047151d0e56f8dc6292773603d0d6aabbdd62a11ef721d1542d8"
+        assertFalse(PasswordHasher.verify("password", unsalted))
         assertFalse(PasswordHasher.verify("password", "pbkdf2-sha256\$1000\$zz\$00"))
     }
 }

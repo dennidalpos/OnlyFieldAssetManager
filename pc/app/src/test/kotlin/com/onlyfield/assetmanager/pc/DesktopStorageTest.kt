@@ -187,6 +187,20 @@ class DesktopStorageTest {
     }
 
     @Test
+    fun failedExportKeepsPreviousFileAndLeavesNoTemp() {
+        val folder = tempFolder.newFolder("export")
+        val target = File(folder, "out.ofam")
+        val project = Project(name = "Export", createdEpochMs = 0, updatedEpochMs = 0)
+        storageManager.exportPackageToFile(project, target)
+        PackageSerializer.verifyChecksums(target)
+        val before = target.readBytes()
+        val invalid = project.copy(cables = listOf(com.onlyfield.assetmanager.core.model.Cable(lengthValue = Double.NaN)))
+        assertThrows(IllegalArgumentException::class.java) { storageManager.exportPackageToFile(invalid, target) }
+        assertArrayEquals(before, target.readBytes())
+        assertEquals(listOf("out.ofam"), folder.list()!!.toList())
+    }
+
+    @Test
     fun testCorruptedPackageImportHandling() {
         val emptyFile = File(tempFolder.root, "empty.ofam").apply { writeBytes(ByteArray(0)) }
         val emptyRes = storageManager.importPackageFromFile(emptyFile)

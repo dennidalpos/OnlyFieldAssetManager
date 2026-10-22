@@ -53,6 +53,24 @@ object PackageSerializer {
         }
     }
 
+    /** Re-reads a written archive: every entry but the manifest must match its checksum. */
+    fun verifyChecksums(file: File, i18n: Messages = Messages()) {
+        val manifest = readManifest(file, i18n)
+        ZipFile(file).use { zip ->
+            val names = zip.entries().asSequence().filterNot { it.isDirectory }.map { it.name }.toList()
+            check(names.toSet() - PackageManifest.MANIFEST_FILE_NAME == manifest.checksums.keys) { i18n.text("text.0e2a1010ee48") }
+            for (name in manifest.checksums.keys) {
+                val digest = MessageDigest.getInstance("SHA-256")
+                zip.getInputStream(zip.getEntry(name)).use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    var read = input.read(buffer)
+                    while (read >= 0) { digest.update(buffer, 0, read); read = input.read(buffer) }
+                }
+                check(digest.digest().toHex() == manifest.checksums[name]) { i18n.text("text.0e2a1010ee48") }
+            }
+        }
+    }
+
     fun calculateSha256(data: ByteArray): String {
         val digest = MessageDigest.getInstance("SHA-256")
         val hash = digest.digest(data)
@@ -363,8 +381,8 @@ object PackageSerializer {
             return rejection("ENTRY_SIZE_LIMIT_EXCEEDED")
         }
         if (manifest.isEncrypted) {
-            val iterations = manifest.kdfIterations ?: PackageManifest.DEFAULT_KDF_ITERATIONS
-            if (iterations !in 1..PackageImportLimits.MAX_KDF_ITERATIONS) return rejection("INVALID_KDF_PARAMETERS")
+            val iterations = manifest.kdfIterations
+            if (iterations == null || iterations !in 1..PackageImportLimits.MAX_KDF_ITERATIONS) return rejection("INVALID_KDF_PARAMETERS")
             fun hex(value: String?, length: Int) = value?.length == length && value.all { it.digitToIntOrNull(16) != null }
             if (!hex(manifest.kdfSaltHex, 32) || !hex(manifest.cipherIvHex, 24)) {
                 return PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
@@ -389,8 +407,7 @@ object PackageSerializer {
 
             // Verify SHA-256 Checksum of project.json.enc
             val actualEncChecksum = calculateSha256(projectEncBytes)
-            val expectedEncChecksum = manifest.checksums[PackageManifest.PROJECT_ENC_FILE_NAME]
-            if ((expectedEncChecksum != null) && (expectedEncChecksum != actualEncChecksum)) {
+            if (manifest.checksums[PackageManifest.PROJECT_ENC_FILE_NAME] != actualEncChecksum) {
                 issues.add(
                     ValidationIssue(
                         code = "PROJECT_CHECKSUM_MISMATCH",
@@ -414,7 +431,7 @@ object PackageSerializer {
 
             val saltHex = manifest.kdfSaltHex
             val ivHex = manifest.cipherIvHex
-            val iterations = manifest.kdfIterations ?: PackageManifest.DEFAULT_KDF_ITERATIONS
+            val iterations = checkNotNull(manifest.kdfIterations)
 
             if ((saltHex == null) || (ivHex == null)) {
                 issues.add(
@@ -454,8 +471,7 @@ object PackageSerializer {
 
             // Verify SHA-256 Checksum of project.json
             val actualProjectChecksum = calculateSha256(projectPlainBytes)
-            val expectedProjectChecksum = manifest.checksums[PackageManifest.PROJECT_FILE_NAME]
-            if ((expectedProjectChecksum != null) && (expectedProjectChecksum != actualProjectChecksum)) {
+            if (manifest.checksums[PackageManifest.PROJECT_FILE_NAME] != actualProjectChecksum) {
                 issues.add(
                     ValidationIssue(
                         code = "PROJECT_CHECKSUM_MISMATCH",
@@ -467,20 +483,17 @@ object PackageSerializer {
             projectBytes = projectPlainBytes
         }
 
+        // Every exported entry carries a checksum; a missing one is a mismatch.
         for (attPath in attachments.keys) {
-            val expectedChecksum = manifest.checksums[attPath]
-            if (expectedChecksum != null) {
-                val actualChecksum = attachments.checksum(attPath)
-                if (actualChecksum != expectedChecksum) {
-                    issues.add(
-                        ValidationIssue(
-                            code = "ATTACHMENT_CHECKSUM_MISMATCH",
-                            message = i18n.text("text.493d07378487", attPath),
-                            severity = ValidationSeverity.STRUCTURAL_ERROR,
-                            targetEntityId = attPath
-                        )
+            if (manifest.checksums[attPath] != attachments.checksum(attPath)) {
+                issues.add(
+                    ValidationIssue(
+                        code = "ATTACHMENT_CHECKSUM_MISMATCH",
+                        message = i18n.text("text.493d07378487", attPath),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR,
+                        targetEntityId = attPath
                     )
-                }
+                )
             }
         }
 

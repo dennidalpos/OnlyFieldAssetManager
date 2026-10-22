@@ -71,6 +71,49 @@ class PackageMetadataTest {
             reject(zip(conflict), "INCONSISTENT_PACKAGE_PROTECTION", password)
         }
     }
+    @Test fun missingChecksumsAreRejected() {
+        for (password in listOf(null, "dummy-password")) {
+            val payload = if (password == null) "project.json" else "project.json.enc"
+            for ((name, code) in listOf(payload to "PROJECT_CHECKSUM_MISMATCH", "attachments/staged.bin" to "ATTACHMENT_CHECKSUM_MISMATCH")) {
+                val entries = entries(archive(password))
+                val manifest = json.decodeFromString(PackageManifest.serializer(), entries.getValue("manifest.json").toString(Charsets.UTF_8))
+                entries["manifest.json"] = json.encodeToString(PackageManifest.serializer(), manifest.copy(checksums = manifest.checksums - name)).toByteArray()
+                reject(zip(entries), code, password)
+            }
+        }
+    }
+    @Test fun protectedPackageWithoutKdfIterationsIsRejected() {
+        val entries = entries(archive("dummy-password"))
+        val manifest = json.decodeFromString(PackageManifest.serializer(), entries.getValue("manifest.json").toString(Charsets.UTF_8))
+        assertEquals(PackageManifest.DEFAULT_KDF_ITERATIONS, manifest.kdfIterations)
+        entries["manifest.json"] = json.encodeToString(PackageManifest.serializer(), manifest.copy(kdfIterations = null)).toByteArray()
+        reject(zip(entries), "INVALID_KDF_PARAMETERS", "dummy-password")
+    }
+    @Test fun protectedPackageKeepsItsOwnKdfIterations() {
+        val salt = ByteArray(16) { 1 }
+        val iv = ByteArray(12) { 2 }
+        val payload = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding").run {
+            init(javax.crypto.Cipher.ENCRYPT_MODE, PackageSerializer.deriveKey("dummy-password", salt, 100_000), javax.crypto.spec.GCMParameterSpec(128, iv))
+            doFinal(json.encodeToString(Project.serializer(), project.copy(isPasswordProtected = true)).toByteArray())
+        }
+        val manifest = PackageManifest(exportId = "e", exportedEpochMs = 0, projectId = project.id, projectName = project.name, isEncrypted = true,
+            kdfSaltHex = "01".repeat(16), kdfIterations = 100_000, cipherIvHex = "02".repeat(12),
+            checksums = mapOf("project.json.enc" to PackageSerializer.calculateSha256(payload)))
+        val bytes = zip(mapOf("manifest.json" to json.encodeToString(PackageManifest.serializer(), manifest).toByteArray(), "project.json.enc" to payload))
+        val result = PackageSerializer.importPackage(bytes, "dummy-password")
+        assertTrue(result.validationResult.issues.toString(), result.validationResult.isValid)
+        result.pkg!!.use { assertEquals(project.id, it.project.id) }
+    }
+    @Test fun writtenArchiveChecksumsAreVerified() {
+        for (password in listOf(null, "dummy-password")) {
+            val valid = folder.newFile().apply { writeBytes(archive(password)) }
+            PackageSerializer.verifyChecksums(valid)
+            val tampered = entries(valid.readBytes()).also { it["attachments/staged.bin"] = byteArrayOf(9) }
+            assertThrows(IllegalStateException::class.java) { PackageSerializer.verifyChecksums(folder.newFile().apply { writeBytes(zip(tampered)) }) }
+            val extra = entries(valid.readBytes()).also { it["attachments/unlisted.bin"] = byteArrayOf(1) }
+            assertThrows(IllegalStateException::class.java) { PackageSerializer.verifyChecksums(folder.newFile().apply { writeBytes(zip(extra)) }) }
+        }
+    }
     @Test fun plainAndProtectedValidPackagesStillOpen() {
         for (password in listOf(null, "dummy-password")) {
             val result = PackageSerializer.importPackage(archive(password), password)

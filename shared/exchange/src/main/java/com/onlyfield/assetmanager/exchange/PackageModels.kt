@@ -24,7 +24,8 @@ data class PackageManifest(
         const val PROJECT_FILE_NAME = "project.json"
         const val PROJECT_ENC_FILE_NAME = "project.json.enc"
         const val ATTACHMENTS_DIR = "attachments/"
-        const val DEFAULT_KDF_ITERATIONS = 100000
+        /** OWASP PBKDF2-HMAC-SHA256 recommendation; readers use the manifest value. */
+        const val DEFAULT_KDF_ITERATIONS = 600_000
     }
 }
 

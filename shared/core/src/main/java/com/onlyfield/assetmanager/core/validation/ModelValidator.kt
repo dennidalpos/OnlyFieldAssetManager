@@ -1049,10 +1049,10 @@ object ModelValidator {
 
     private fun String?.isNull_or_blank(): Boolean = this == null || this.trim().isEmpty()
 
+    /** Canonical lowercase form only: storage paths compare IDs as text. */
     private fun checkUuid(code: String, uuidStr: String, message: String, issues: MutableList<ValidationIssue>) {
-        try {
-            UUID.fromString(uuidStr)
-        } catch (_: IllegalArgumentException) {
+        val canonical = try { UUID.fromString(uuidStr).toString() == uuidStr } catch (_: IllegalArgumentException) { false }
+        if (!canonical) {
             issues.add(
                 ValidationIssue(
                     code = code,

@@ -17,17 +17,13 @@ object PasswordHasher {
         return "$PREFIX$$iterations$${salt.toHex()}$${derive(password, salt, iterations).toHex()}"
     }
 
-    /** Also accepts legacy SHA-256 digests. */
     fun verify(password: String, stored: String): Boolean {
         val parts = stored.split('$')
-        if ((parts.size == 4) && (parts[0] == PREFIX)) {
-            val iterations = parts[1].toIntOrNull() ?: return false
-            return runCatching {
-                MessageDigest.isEqual(derive(password, parts[2].hexToBytes(), iterations), parts[3].hexToBytes())
-            }.getOrDefault(false)
-        }
-        val legacy = MessageDigest.getInstance("SHA-256").digest(password.toByteArray(Charsets.UTF_8))
-        return MessageDigest.isEqual(legacy.toHex().toByteArray(), stored.lowercase().toByteArray())
+        if ((parts.size != 4) || (parts[0] != PREFIX)) return false
+        val iterations = parts[1].toIntOrNull() ?: return false
+        return runCatching {
+            MessageDigest.isEqual(derive(password, parts[2].hexToBytes(), iterations), parts[3].hexToBytes())
+        }.getOrDefault(false)
     }
 
     /** True when a hash needs updating. */

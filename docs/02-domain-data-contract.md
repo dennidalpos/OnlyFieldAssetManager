@@ -10,7 +10,7 @@ Un progetto contiene sedi (`Site`), piani (`Area`), apparati/porte, rack, cavi, 
 
 ## Pacchetto
 
-`.ofam` **v1** è uno ZIP con manifest, progetto JSON e allegati. Il progetto può essere cifrato con PBKDF2-HMAC-SHA256 e AES-256-GCM; anche gli allegati sono protetti. `PackageSerializer` ignora campi JSON sconosciuti ma rifiuta versioni non supportate, entry duplicate e metadati incoerenti. `ProjectPackage` è `AutoCloseable` e i payload grandi vengono elaborati progressivamente.
+`.ofam` **v1** è uno ZIP con manifest, progetto JSON e allegati. Il progetto può essere cifrato con PBKDF2-HMAC-SHA256 e AES-256-GCM; anche gli allegati sono protetti. `PackageSerializer` ignora campi JSON sconosciuti ma rifiuta versioni non supportate, entry duplicate e metadati incoerenti. Ogni entry diversa dal manifest deve avere un checksum SHA-256 corrispondente: un checksum assente equivale a uno errato. I pacchetti protetti dichiarano le iterazioni nel manifest; l'export ne usa 600.000. Gli ID devono essere UUID nella forma canonica minuscola. L'export Windows forza la scrittura su disco e riverifica i checksum prima di sostituire il file di destinazione. `ProjectPackage` è `AutoCloseable` e i payload grandi vengono elaborati progressivamente.
 
 | Limite | Valore |
 | --- | ---: |
@@ -18,6 +18,7 @@ Un progetto contiene sedi (`Site`), piani (`Area`), apparati/porte, rack, cavi, 
 | File in chiaro | 32 MiB |
 | Totale decompresso | 512 MiB |
 | Entry ZIP, directory comprese | 10.000 |
+| Iterazioni PBKDF2 in export | 600.000 |
 | Iterazioni PBKDF2 massime | 1.000.000 |
 
 L'export Android protetto usa un budget preventivo prudenziale: vicino al limite ZIP può rifiutare dati che entrerebbero nel pacchetto effettivo. È una decisione di prodotto, non un collaudo esatto del confine.
