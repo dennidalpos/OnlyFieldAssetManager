@@ -16,7 +16,7 @@
 
 Il cestino locale trattiene oggetti e media necessari al ripristino. Il ripristino rifiuta contesti originali mancanti, ID occupati, collocazioni incompatibili o cicli di alimentazione senza ricollocare automaticamente l'oggetto. La fusione può trasferire credenziali, configurazioni, alimentazioni e campi extra secondo le quattro opzioni esplicite; ciò che non viene trasferito resta nel cestino.
 
-Le prove di interruzione del processo e di riavvio normale sono registrate nello [storico](../roadmap.md). Arresto forzato/perdita di alimentazione durante scrittura e focus del recupero nativo restano in [RES-13/19/23](../PROJECT_STATUS.json).
+Le prove di interruzione del processo e di riavvio normale sono registrate nello [storico](../roadmap.md). Arresto forzato/perdita di alimentazione durante scrittura e focus del recupero nativo restano in RES-13/19/23 (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`).
 
 ## Fonti
 

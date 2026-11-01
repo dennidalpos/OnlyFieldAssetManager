@@ -12,4 +12,4 @@ Questa cartella contiene immagini promozionali e screenshot conservati nel repos
 | `poster.png` | Poster |
 | `linkedin_logo_400x400.png`, `linkedin_banner_1128x191.png` | Logo e banner |
 
-Prima di pubblicare: confrontare lo screenshot con la build reale, verificare dimensioni e requisiti direttamente sulla piattaforma di destinazione, controllare diritti/attribuzioni e rimuovere dati di prova o personali visibili. Lo schema sedi nell'app è un diagramma di relazioni, non una mappa geografica. Le funzionalità e i limiti correnti sono nel [README del progetto](../README.md) e nel [tracker](../PROJECT_STATUS.json).
+Prima di pubblicare: confrontare lo screenshot con la build reale, verificare dimensioni e requisiti direttamente sulla piattaforma di destinazione, controllare diritti/attribuzioni e rimuovere dati di prova o personali visibili. Lo schema sedi nell'app è un diagramma di relazioni, non una mappa geografica. Le funzionalità e i limiti correnti sono nel [README del progetto](../README.md) e nel tracker SecondBrain (`02-areas/products/OnlyFieldAssetManager/tracker.json`).

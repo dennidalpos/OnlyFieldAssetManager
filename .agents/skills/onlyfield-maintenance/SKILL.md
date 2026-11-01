@@ -11,14 +11,14 @@ Use this skill with the repository's `AGENTS.md`; it supplies the project-specif
 
 Before changing repository state, read the applicable sections of:
 
-- `PROJECT_STATUS.json` for active work and residuals;
+- `02-areas/products/OnlyFieldAssetManager/tracker.json (nel dossier SecondBrain)` for active work and residuals;
 - `plan.md` for accepted product decisions and open questions;
 - `roadmap.md` for completed work and exact verification evidence;
 - the relevant document under `docs/` and nearby production and test callers.
 
 Treat tracker counts, handoffs, installed builds, and manual-test results as historical until confirmed in those current files. Do not treat an observation marked "da valutare con l'utente" as an approved change. Avoid reopening completed tracker work or rerunning deferred native tests unless the request or a code change makes it relevant.
 
-For a multi-step task, state the intended scope and verification before editing. Keep implementation, tracker updates, and evidence aligned: remove a completed item from `PROJECT_STATUS.json`, record the outcome and actual commands in `roadmap.md`, and update the affected Italian domain documentation when behavior or workflow changes. Keep code and identifiers in English.
+For a multi-step task, state the intended scope and verification before editing. Keep implementation, tracker updates, and evidence aligned: remove a completed item from `02-areas/products/OnlyFieldAssetManager/tracker.json (nel dossier SecondBrain)`, record the outcome and actual commands in `roadmap.md`, and update the affected Italian domain documentation when behavior or workflow changes. Keep code and identifiers in English.
 
 ## Preserve the architecture
 

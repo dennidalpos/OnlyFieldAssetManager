@@ -6,7 +6,7 @@ Editor per censire reti, apparati, cablaggi e sedi. I progetti restano locali; l
 
 - [Guida Android](docs/guide/android.md) e [guida Windows](docs/guide/windows.md).
 - [Scambio e documenti](docs/guide/exchange-and-documents.md); [demo e verifiche](docs/testing/demo.md).
-- [Decisioni di prodotto](plan.md), [stato aperto](PROJECT_STATUS.json) e [verifiche registrate](roadmap.md).
+- [Decisioni di prodotto](plan.md), stato aperto (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`) e [verifiche registrate](roadmap.md).
 
 ## Documentazione tecnica
 
@@ -26,3 +26,7 @@ Editor per censire reti, apparati, cablaggi e sedi. I progetti restano locali; l
 Le [matrici Android](docs/testing/hardware-checklist.md) e [Windows](docs/testing/windows-native-matrix.md) distinguono le prove native ancora aperte dai controlli automatici. Il [materiale grafico](assets/README.md) è separato dalle istruzioni d'uso.
 
 Il PDF `OnlyFieldAssetManager_Manuale_Utente.pdf` è una versione storica; per i flussi correnti usare le guide Android, Windows e scambio qui sopra.
+
+## Licenza
+
+Software proprietario, tutti i diritti riservati (vedi [LICENSE](LICENSE)). Le dipendenze di terze parti mantengono le proprie licenze.

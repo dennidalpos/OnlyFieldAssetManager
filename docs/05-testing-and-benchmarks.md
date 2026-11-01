@@ -1,6 +1,6 @@
 # Verifica
 
-Per lo stato aperto usare [PROJECT_STATUS.json](../PROJECT_STATUS.json). Le prove automatiche non chiudono i collaudi di fotocamera, rotazione fisica, TalkBack, tablet, EXE e stampa reali.
+Per lo stato aperto usare 02-areas/products/OnlyFieldAssetManager/tracker.json (nel dossier SecondBrain) (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`). Le prove automatiche non chiudono i collaudi di fotocamera, rotazione fisica, TalkBack, tablet, EXE e stampa reali.
 
 ## Comandi nativi
 

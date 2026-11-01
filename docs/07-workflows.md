@@ -20,4 +20,4 @@ Foto e allegati hanno un target esplicito (progetto, piano, rack, apparato, cavo
 
 La mappa mostra la scheda rapida di apparati, porte e collegamenti; le modifiche del layout delle porte restano in bozza finché non si salva. La cartografia viene scaricata solo su richiesta. I documenti applicano filtri di ambito e classificazione; vedi [mappa](08-floor-map.md), [configuratore](10-object-configurator.md) e [documenti](03-export-and-documents.md).
 
-I dettagli di piattaforma sono nelle guide [Android](guide/android.md) e [Windows](guide/windows.md); i collaudi nativi ancora aperti sono nel [tracker](../PROJECT_STATUS.json).
+I dettagli di piattaforma sono nelle guide [Android](guide/android.md) e [Windows](guide/windows.md); i collaudi nativi ancora aperti sono nel tracker (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`).

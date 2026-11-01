@@ -1,5 +1,8 @@
 # Decisioni di prodotto
 
+
+Contenuto datato trasferito nel dossier SecondBrain: `02-areas/products/OnlyFieldAssetManager/history/imported/plan.md`. Originale e SHA-256 nel rapporto di migrazione; questa voce conserva i riferimenti esistenti e non autorizza nuovi interventi.
+
 ## Obiettivo e confini
 
 OnlyFieldAssetManager serve a un tecnico o integratore per censire progetti con più sedi, apparati, rack, cablaggi, rete logica, alimentazione e documenti. Il rilievo può essere fatto su Android e rifinito su Windows. I progetti restano locali; lo scambio `.ofam` è manuale. Non sono previsti server, sincronizzazione automatica, scoperta LLDP/SNMP, mappa geografica delle sedi o import da fogli/strumenti esterni.
@@ -15,7 +18,3 @@ OnlyFieldAssetManager serve a un tecnico o integratore per censire progetti con 
 - `STRUCTURAL_ERROR` blocca import/salvataggio; `DOCUMENTARY_WARNING` non lo blocca. Import, fusione, media e recupero devono preservare la copia precedente quando falliscono. La fusione a tre vie richiede scelte esplicite per i conflitti.
 - Limiti: ZIP 256 MiB, file 32 MiB, espanso 512 MiB, 10.000 entry, PBKDF2 massimo 1.000.000 iterazioni. Il budget Android protetto è prudenziale e può rifiutare contenuto vicino a 256 MiB anche se lo ZIP finale entrerebbe nel limite.
 - I collaudi hardware richiesti usano la fotocamera integrata; lettori USB e scanner esterni sono esclusi dalla verifica. Gli scatti reali erano stati rinviati dall'utente.
-
-## Stato e riferimenti
-
-Le funzionalità previste risultano implementate nei sorgenti; la chiusura dei collaudi nativi resta distinta. Il [tracker](PROJECT_STATUS.json) contiene i soli residui aperti RES-13, RES-19 e RES-23 (tutti P2). RES-24 e AUD-71 risultano completati nell'[ultimo handoff](roadmap.md). Per comportamento corrente consultare [dominio](docs/02-domain-data-contract.md), [flussi](docs/07-workflows.md), [mappa](docs/08-floor-map.md) e [verifica](docs/05-testing-and-benchmarks.md).

@@ -1,6 +1,6 @@
 # Collaudo EXE Windows — RES-23
 
-Usare un profilo e un progetto sintetici isolati; non rigenerare sopra `data/` personale. Registrare build, dimensione finestra, tema, scala testo, input/focus, screenshot ed esito. Criteri completi nel [tracker](../../PROJECT_STATUS.json).
+Usare un profilo e un progetto sintetici isolati; non rigenerare sopra `data/` personale. Registrare build, dimensione finestra, tema, scala testo, input/focus, screenshot ed esito. Criteri completi nel tracker (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`).
 
 ## Già verificato, con perimetro limitato
 
