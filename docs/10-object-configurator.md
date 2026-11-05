@@ -1,23 +1,21 @@
-# Configuratore di apparati e porte
+# Device and port configurator
 
-La UI condivisa in `shared/configurator` compone i form dei due sistemi; il dominio resta in `core.forms` e `core.model.ConnectionGraph`.
+[Retained Italian source](10-object-configurator.it.md)
 
-## Aggiunta e modifica
+Shared Compose sources in shared/configurator implement both platform forms. Domain logic remains in core.forms and core.model.ConnectionGraph.
 
-L'inserimento segue tipo → preset/modello e disegno → dati essenziali → conferma. Nome e sede sono i minimi dell'apparato; dettagli avanzati possono restare chiusi. La modifica parte dal record corrente e usa `copy()` per conservare campi non esposti. Hardware, modelli e preset non cambiano gli ID delle porte già collegate.
+## Add and edit
 
-Il layout grafico delle porte ha fronte/retro, gruppi e ordine visuale indipendente dall'ordine tecnico. `HardwareSpec.portLayouts` e `portPoeOverrides` sono nel JSON hardware; spostare una porta nel disegno non deve cambiare cavi o ID. Dimensioni/profondità già salvate restano nel modello anche se non esposte dai form correnti.
+Insertion follows type → preset/template and drawing → essential data → confirmation. Device name and site are required; advanced details may remain collapsed. Editing starts from the current record and uses copy to preserve unexposed fields. Hardware/templates/presets must not change IDs of already connected ports.
 
-## Scheda rapida
+Port diagrams support front/rear faces, groups and visual order independent of technical order. HardwareSpec.portLayouts and portPoeOverrides are stored in hardware JSON. Moving a drawn port does not change cable identities. Saved dimensions/depth remain in the model even when absent from the current form.
 
-Una porta può mostrare collegamento, percorso fisico/logico, PoE e rilievo. Le azioni esplicite permettono Collega, Inserisci passaggio, Foto e Scollega; i passanti associano fronte e retro senza inventare una tratta ambigua. Layout e supporto PoE sono bozze con Salva; collegamenti e foto hanno il proprio commit. La foto può avere target PORT o CABLE.
+## Quick card and layout
 
-I form testuali restano entro 640 dp; disegni e liste tecniche usano lo spazio disponibile. Sui telefoni i dialoghi di lavoro diventano a schermo intero, con azioni accessibili con tastiera aperta. Le prove di hardware/UX reali sono nelle matrici [Android](testing/hardware-checklist.md) e [Windows](testing/windows-native-matrix.md).
+A port can show connectivity, physical/logical route, PoE and survey state. Explicit actions connect, insert pass-through, photograph and disconnect. Pass-throughs pair front and rear without inventing an ambiguous route. Layout and PoE changes are drafts with Save; links/photos have their own commits. Photo target can be PORT or CABLE.
 
-## Gestione di terzi
+Text forms stay within 640 dp; drawings/technical lists use available space. Phone work dialogs become full screen with keyboard-accessible actions. Real hardware/UX checks are separate [Android](testing/hardware-checklist.md)/[Windows](testing/windows-native-matrix.md) work.
 
-`Device.management` indica se l'apparato è gestito dal tecnico, dal fornitore, dal cliente o da un soggetto sconosciuto. Nome, contatto e riferimento contratto del fornitore sono facoltativi. Tornare a “Gestito dal tecnico” nasconde tali dettagli dalle viste/export senza cancellarli dal record.
+## Third-party management
 
-## Fonti
-
-[Layout adattivi Compose](https://developer.android.com/develop/ui/compose/layouts/adaptive), [stato Compose](https://developer.android.com/develop/ui/compose/state-saving).
+Device.management distinguishes technician, provider, customer and unknown management. Provider name/contact/contract are optional. Returning to technician-managed hides those details in views/exports without erasing the stored record.

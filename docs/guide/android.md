@@ -1,21 +1,21 @@
-# Uso su Android
+# Android user guide
 
-Android 14+ conserva i progetti in Room/SQLCipher. Prima di installare una versione con schema Room diverso, esportare in `.ofam` i progetti da conservare: il fallback configurato ricrea il database quando manca una migrazione.
+[Retained Italian source](android.it.md)
 
-## Censire un progetto
+Android 14+ stores projects in Room/SQLCipher. Export projects to .ofam before installing a build with a different schema: missing migrations currently trigger database recreation.
 
-1. Aprire o creare un progetto dalla sezione Progetto; aggiungere una sede e, se serve, un piano.
-2. In Inventario aggiungere apparati e rack. Per un apparato indicare nome e sede; piano e collocazione possono essere completati in seguito.
-3. Aprire Mappa: al livello progetto si parte dallo schema sedi, alla sede dalla topologia e al piano dalla planimetria. La barra delle viste espone anche Logica, Apparati ed Elenco dove applicabili.
-4. Selezionare un apparato o una porta per aprire configuratore e scheda rapida. Registrare cavi, permutazioni e foto sul destinatario corretto.
-5. In Progetto usare Documenti per PDF, XLSX o Markdown; usare lo scambio `.ofam` per trasferire una copia a Windows.
+## Survey a project
 
-I dati sono locali. Il download della cartografia è un'azione esplicita che usa la rete; la planimetria e i dati già salvati restano consultabili offline. Le foto, la scansione e i gesti su hardware reale hanno ancora i collaudi indicati nella [checklist](../testing/hardware-checklist.md).
+1. Open/create a project; add a site and an optional floor.
+2. Add devices/racks in Inventory. Device name/site are required; floor/placement can be completed later.
+3. Open Map. Project level starts with connected sites, site level with topology, floor level with a floor plan. Logical, Devices and List are available where appropriate.
+4. Select devices/ports for the configurator and quick card. Record cables, patching and photos on the correct target.
+5. Use Project → Documents for PDF/XLSX/Markdown, and .ofam exchange to transfer a copy to Windows.
 
-## Errori e recupero
+Data is local. Explicit map download uses the network; saved plans/data remain available offline. Camera/scanning/physical gestures still require the [hardware checklist](../testing/hardware-checklist.md).
 
-- Un errore strutturale blocca salvataggio o import; un avviso documentale permette di proseguire dopo la revisione.
-- In caso di salvataggio fallito, correggere l'errore e riprovare dalla bozza ancora aperta. Non interpretare la chiusura di un dialogo come conferma del commit.
-- Per sostituzione o fusione, confrontare prima la copia ricevuta e scegliere i conflitti. La fusione a tre vie non risolve da sola modifiche concorrenti.
+## Errors and recovery
 
-Dettagli: [flussi](../07-workflows.md), [contratto dei dati](../02-domain-data-contract.md) e [scambio](exchange-and-documents.md).
+Structural errors block saving/import. Documentary warnings permit proceeding after review. A failed save leaves the draft available; closing a dialog alone is not confirmation of a committed save.
+
+Before replacement/merge, compare copies and choose conflicts. Three-way merge cannot independently decide concurrent edits. See [workflows](../07-workflows.md), [data contract](../02-domain-data-contract.md) and [exchange](exchange-and-documents.md).

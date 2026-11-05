@@ -1,26 +1,24 @@
-# Build e rilascio
+# Build and release
 
-## Versioni e prerequisiti
+[Retained Italian source](06-release-and-delivery.it.md)
 
-Le versioni delle dipendenze sono in [libs.versions.toml](../gradle/libs.versions.toml); la versione app è nei due `build.gradle.kts`. Il codice Kotlin/JVM usa target 17; il packaging Windows richiede un toolchain JDK 21 con `jpackage`. L'app Android dichiara `minSdk=34`, `targetSdk=35`, `compileSdk=37`.
+## Prerequisites
 
-## Pacchetti
+Dependency versions are in [libs.versions.toml](../gradle/libs.versions.toml). App versions are in the two application build files. Kotlin/JVM targets Java 17; Windows packaging resolves a JDK 21 toolchain with jpackage. Android currently declares minSdk 34, targetSdk 35 and compileSdk 37.
 
-Da PowerShell nella radice:
+gradle.properties pins org.gradle.java.home to a workstation-specific Android Studio JBR path. Override or configure it for your own machine. Do not copy another developer's path into a guide or infer that the directory exists everywhere.
 
-```powershell
+## Packages
+
+~~~powershell
 .\gradlew.bat :mobile:app:assembleDebug
 .\gradlew.bat :pc:app:packagePortable
-```
+~~~
 
-Il task Windows crea la cartella `dist/OnlyFieldAssetManager/` e uno ZIP portable. `data/` rimane accanto all'EXE per l'uso locale e non deve entrare nello ZIP. `createDistributable` rifiuta un runtime sorgente già contenente `data/`; conservare i dati prima di rigenerare. `prepare-release.ps1` richiede una destinazione vuota. Non usare un profilo reale per prove di packaging.
+The desktop task creates dist/OnlyFieldAssetManager and a portable ZIP. Local data belongs beside the EXE and must not enter the ZIP. createDistributable refuses a source runtime already containing data; preserve and move that data before an explicitly authorized rebuild. prepare-release.ps1 requires an empty destination. Never use a personal profile for packaging experiments.
 
-## CI
+## Workflow and publication
 
-[release.yml](../.github/workflows/release.yml) gira manualmente oppure su tag `v*`: verifica le suite JVM/Compose, compila APK debug e ZIP portable, prepara gli artefatti e i checksum SHA-256. Solo il tag attiva il job di pubblicazione GitHub. Una build locale non pubblica nulla.
+[release.yml](../.github/workflows/release.yml) is manual/tag-triggered. Its declared steps run JVM/Compose suites, build debug APK/portable ZIP and prepare SHA-256 checksums. Only the tag-triggered publishing job creates a GitHub release. Workflow presence does not prove GitHub Actions are enabled or that a run succeeded; inspect the current repository settings/run separately.
 
-La release v1.0.1 è uno storico, non la qualifica automatica del checkout corrente. Vedi [verifica](05-testing-and-benchmarks.md) e [matrice Windows](testing/windows-native-matrix.md).
-
-## Fonti
-
-[Gradle Sync](https://docs.gradle.org/current/dsl/org.gradle.api.tasks.Sync.html), [Compose Desktop native distributions](https://www.jetbrains.com/help/kotlin-multiplatform-dev/compose-native-distribution.html).
+A local build does not publish. A previous v1.0.1 release is historical evidence, not qualification of the current checkout. Keep build, native verification and publication outcomes distinct. See [verification](05-testing-and-benchmarks.md) and [Windows matrix](testing/windows-native-matrix.md).

@@ -1,23 +1,25 @@
-# Flussi applicativi
+# Application workflows
 
-## Creazione, navigazione e modifica
+[Retained Italian source](07-workflows.it.md)
 
-Il wizard crea progetto, sede e piano; la password locale è facoltativa. La navigazione principale condivisa ha quattro aree: Mappa, Inventario (Dispositivi e Rack), Cablaggio e Progetto. Rete, Alimentazione, Modelli, Allegati, Documenti, Credenziali e Cestino restano destinazioni raggiungibili nei gruppi pertinenti. Credenziali, Configurazioni e Badge vuoti sono raccolti in “Altri moduli”; i dati non vengono rimossi dal progetto.
+## Create, navigate and edit
 
-Le modifiche partono da una bozza. Uscita o cambio contesto con dati modificati richiedono conferma; un salvataggio fallito lascia la bozza e l'errore per la riprova. Android usa editor a pagina intera; Windows affianca elenco e pannello quando c'è spazio. Le operazioni lunghe espongono lo stato occupato prima di accettare nuovi input.
+The wizard creates a project, site and floor, with an optional local password. Main navigation offers Map, Inventory (Devices/Racks), Cabling and Project. Network, Power, Templates, Attachments, Documents, Credentials and Trash remain available in their relevant groups. Empty optional Credentials, Configurations and Badges appear in “Altri moduli”; this does not delete project data.
 
-## Import e fusione
+Edits start from drafts. Leaving or changing context with unsaved changes requires confirmation. A failed save retains the draft and visible error for retry. Android uses full-screen editors; Windows places lists and details side by side when space permits. Long operations expose busy state before accepting further edits.
 
-- Il pacchetto ricevuto viene validato e confrontato con la copia locale dello stesso ID, anche se non è aperta. `STRUCTURAL_ERROR` blocca; gli avvisi documentali sono mostrati prima della conferma.
-- La sostituzione richiede conferma. Annullare conserva la copia precedente. Su Android la sostituzione segue la protezione del pacchetto ricevuto; la fusione mantiene la protezione locale.
-- La fusione a tre vie usa la base dell'ultimo scambio e chiede una scelta per i conflitti. Una base assente o illeggibile è segnalata e non viene riscritta dalla sola lettura.
-- Il ripristino dal cestino richiede sede, piano, contenitori, porte e ID originali ancora disponibili. Un rifiuto conserva la voce e permette correzione/riprova.
-- Per rimuovere sedi, apparati o VLAN referenziati da ambiti di rete, eliminare prima esplicitamente quei riferimenti: nessun retarget automatico.
+## Import, merge and restore
 
-## Media, mappe e documenti
+- Validate and compare a received package with the same-ID local project, even when it is closed. Structural errors block; documentary warnings appear before confirmation.
+- Replacement requires confirmation. Cancel preserves the previous copy. Android replacement follows received-package protection; merge keeps local protection.
+- Three-way merge uses the last-exchange base and asks for each conflict choice. An absent/unreadable base is reported and is not rewritten by inspection alone.
+- Trash restoration needs original site/floor/containers/ports/IDs to remain available. Rejection preserves the item for correction/retry.
+- Remove explicit network references before deleting referenced sites, devices or VLANs; no automatic retargeting occurs.
 
-Foto e allegati hanno un target esplicito (progetto, piano, rack, apparato, cavo o porta); i file oltre 32 MiB sono rifiutati prima del commit. Su Android una serie foto riparte solo dopo un salvataggio riuscito. I media del cestino restano locali e non entrano nel pacchetto scambiato.
+## Media, maps and documents
 
-La mappa mostra la scheda rapida di apparati, porte e collegamenti; le modifiche del layout delle porte restano in bozza finché non si salva. La cartografia viene scaricata solo su richiesta. I documenti applicano filtri di ambito e classificazione; vedi [mappa](08-floor-map.md), [configuratore](10-object-configurator.md) e [documenti](03-export-and-documents.md).
+Photos/attachments have explicit project/floor/rack/device/cable/port targets. Files over 32 MiB are rejected before commit. Android photo series continues only after successful saving. Trash media remains local and is excluded from exchange.
 
-I dettagli di piattaforma sono nelle guide [Android](guide/android.md) e [Windows](guide/windows.md); i collaudi nativi ancora aperti sono nel tracker (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`).
+Map quick cards expose devices, ports and links. Port layout changes remain drafts until Save. Map downloads are explicit. Document exports apply scope/classification filters.
+
+See [maps](08-floor-map.md), [configurator](10-object-configurator.md), [documents](03-export-and-documents.md) and platform guides [Android](guide/android.md)/[Windows](guide/windows.md). Native checks still open remain in the tracker and matrices.

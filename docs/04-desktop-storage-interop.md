@@ -1,23 +1,25 @@
-# Persistenza, protezione e recupero
+# Storage, protection and recovery
+
+[Retained Italian source](04-desktop-storage-interop.it.md)
 
 ## Android
 
-`EncryptedDatabase.open` apre Room **v3** tramite SQLCipher; la chiave del database è avvolta da Android Keystore. `ProjectStore` usa transazioni per letture coerenti e comandi; controlla il proprietario degli ID prima di cancellare o sostituire record. Un cambio di schema senza migrazione configurata ricrea le tabelle: esportare prima i progetti da conservare.
+EncryptedDatabase.open opens Room v3 using SQLCipher. The database key is wrapped by Android Keystore. ProjectStore uses transactions for coherent reads/commands and checks ID ownership before deletion or replacement.
+
+A schema change without a configured migration recreates tables. Export projects before a schema-changing installation. Keep this limit distinct from verified recovery of the current schema.
 
 ## Windows
 
-`DesktopStorageManager` conserva progetti e preferenze sotto `data/` accanto all'EXE. La working copy, la base dell'ultimo scambio, il cestino e i media vengono salvati con operazioni reversibili; un file `.lock` evita l'uso concorrente della stessa copia. I media di un progetto protetto restano cifrati anche nello staging locale. “Esporta e apri” crea invece una copia in chiaro nella destinazione scelta dall'utente.
+DesktopStorageManager stores projects/preferences under `data/` beside the executable. Working copy, exchange base, trash and media use reversible saves. A .lock file prevents concurrent use of the same copy. Protected-project media stays encrypted in local staging. “Export and open” creates a plaintext copy at the user's selected destination.
 
-`DesktopIo` esegue il lavoro sul worker; il pannello occupato blocca modifiche concorrenti. Un save fallito mantiene la bozza per la riprova e non diventa un undo riuscito.
+DesktopIo performs work on its worker. Busy state blocks concurrent edits. A failed save retains the draft for retry; it is not a successful undo.
 
-## Recupero
+## Recovery and trash
 
-`FileRecovery` conserva journal, staging e backup cifrati. Prima del commit ripristina i file precedenti; dopo il commit completa i file nuovi e ritenta la pulizia. Un recupero non verificabile blocca il progetto e conserva le evidenze per una nuova prova; su Windows un progetto protetto richiede la password locale. Android confronta l'esito dei file con la transazione Room e usa una chiave di recupero distinta, avvolta dal Keystore.
+FileRecovery retains journals, encrypted staging and backups. Before commit it restores previous files; after commit it completes new files and retries cleanup. Unverifiable recovery blocks the project and preserves evidence. Windows can require the local project password; Android reconciles file state with the Room transaction using a distinct Keystore-wrapped recovery key.
 
-Il cestino locale trattiene oggetti e media necessari al ripristino. Il ripristino rifiuta contesti originali mancanti, ID occupati, collocazioni incompatibili o cicli di alimentazione senza ricollocare automaticamente l'oggetto. La fusione può trasferire credenziali, configurazioni, alimentazioni e campi extra secondo le quattro opzioni esplicite; ciò che non viene trasferito resta nel cestino.
+Local trash retains objects/media required for restoration. Restore rejects missing original contexts, occupied IDs, incompatible placement and power cycles without relocating objects automatically. Merge exposes four explicit transfer choices for associated credentials/configuration/power/extra fields; untransferred content stays in trash.
 
-Le prove di interruzione del processo e di riavvio normale sono registrate nello [storico](../roadmap.md). Arresto forzato/perdita di alimentazione durante scrittura e focus del recupero nativo restano in RES-13/19/23 (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`).
+Process interruption and normal reboot records are historical evidence in [roadmap](../roadmap.md). Forced shutdown/power loss during writes and native recovery focus remain separate qualification work: RES-13, RES-19 and RES-23. Do not delete recovery records or package over personal data to obtain a clean build.
 
-## Fonti
-
-[Android Keystore](https://developer.android.com/privacy-and-security/keystore), [Room: migrazioni](https://developer.android.com/training/data-storage/room/migrating-db-versions), [SQLite: commit atomico](https://www.sqlite.org/atomiccommit.html), [Java FileChannel.force](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/nio/channels/FileChannel.html#force(boolean)).
+See [Windows guide](guide/windows.md), [Android guide](guide/android.md) and [verification](05-testing-and-benchmarks.md).

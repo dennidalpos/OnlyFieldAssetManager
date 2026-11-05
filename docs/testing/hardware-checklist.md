@@ -1,22 +1,24 @@
-# Collaudi Android — RES-13 e RES-19
+# Android hardware qualification — RES-13 and RES-19
 
-Usare un progetto di prova senza credenziali reali. Registrare dispositivo, API, versione APK, scala testo, tema, dimensioni e risultato; “non eseguito” non equivale a superato. Lavoro aperto e criteri di chiusura nel tracker (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`).
+[Retained Italian source](hardware-checklist.it.md)
 
-## RES-13 — hardware e recupero
+Use synthetic projects without real credentials. Record device, API, APK revision, text scale, theme, dimensions and outcome. Not executed is not passed. Full acceptance belongs to the declared tracker.
 
-| Caso | Prova richiesta |
+## RES-13 — hardware and recovery
+
+| Area | Required checks |
 | --- | --- |
-| FOTO-01–04 | Scatto e riapertura offline, annullamento/permesso negato, serie, rotazione, export/import cifrato, foto di porta e cavo con target corretto. |
-| QR-01–03 | QR e barcode con fotocamera integrata; codice ignoto/multiplo, luce bassa, permesso negato e uscita. |
-| TOUCH-01–02 | Pinch/panoramica e selezione/trascinamento con salvataggio e riapertura. |
-| Recupero | Arresto forzato e interruzione improvvisa durante scrittura su SQLCipher/Keystore isolati, conservando backup e dati utente. |
+| Photos | Capture/reopen offline, cancel/denied permission, series, rotation, encrypted export/import and correct port/cable targets |
+| QR/barcode | Integrated camera, unknown/multiple codes, low light, denied permission and leaving the flow |
+| Touch | Pinch/pan, selection/drag, save/reopen |
+| Recovery | Forced process/power interruption during writing using isolated SQLCipher/Keystore data; retain backups |
 
-Lettori USB e scanner esterni sono esclusi dal collaudo per decisione dell'utente. Il riavvio fisico normale con journal pendenti è già stato verificato l'8 ottobre 2026; non sostituisce l'interruzione durante la scrittura. Le prove di fotocamera con sorgente sintetica non verificano gli scatti reali, rinviati dall'utente.
+External USB readers/scanners are outside the requested qualification. Normal physical reboot with pending journals was recorded on 8 October 2026; it does not replace interruption during a write. Synthetic camera input does not qualify real photographs.
 
-## RES-19 — UI sul dispositivo
+## RES-19 — native UI
 
-Riprendere gli scenari UX-01–06 a 360/412 dp, chiaro/scuro, testo 1,0/1,3, tastiera aperta e rotazione reale. Controllare campi/errori raggiungibili, conferme di scarto, ricerca modello/porte, bersagli e annunci TalkBack. Includere tablet fisico quando disponibile.
+Exercise UX-01–06 at 360/412 dp, light/dark, text 1.0/1.3, keyboard open and real rotation. Check reachable errors/fields, discard confirmation, template/port search, targets, TalkBack announcements/focus and a physical tablet where available.
 
-Verificare inoltre: livelli della Mappa e ritorno Indietro; vista Apparati/scheda porta; configuratore denso; riquadri Home Progetto e form Rete/Alimentazione/Cablaggio/Media; dialoghi a schermo intero; Documenti dopo navigazione; wizard protetto; salvataggi asincroni, import con avvisi, fusione/rifiuti e recupero. Usare i dettagli del tracker (SecondBrain: `02-areas/products/OnlyFieldAssetManager/tracker.json`) per non saltare casi.
+Include Map levels/back navigation, Devices/port cards, dense configurator, project home, Network/Power/Cabling/Media forms, full-screen dialogs, Documents after navigation, protected wizard, asynchronous saves, warned imports, merge/rejections and recovery.
 
-Esiti parziali precedenti: su moto g86 API 36 sono stati visualizzati schema sedi e vista Apparati della demo; prove Compose a densità simulate e alcune schermate AppRoot sono riuscite. Rotazione fisica, audio/focus TalkBack, tablet e i flussi sopra non risultano completi. Non dedurre il loro esito dalle suite JVM. Fonte operativa: [Android accessibility testing](https://developer.android.com/guide/topics/ui/accessibility/testing), [ADB](https://developer.android.com/tools/adb).
+Earlier moto g86 API 36 observations covered sites and Devices views. Simulated Compose density and selected AppRoot checks are bounded evidence. Physical rotation, TalkBack audio/focus, tablet and the complete workflows remain incomplete. Do not infer these results from JVM tests.

@@ -1,15 +1,16 @@
-# Asset grafici
+# Graphics and screenshots
 
-Questa cartella contiene immagini promozionali e screenshot conservati nel repository. La presenza di un file non certifica che rappresenti la build corrente né che sia già conforme ai requisiti di una piattaforma esterna.
+[Retained Italian source](README.it.md)
 
-| Percorso | Uso previsto |
+This folder contains retained promotional images and screenshots. File presence does not prove that an image represents the current build or meets an external platform's current requirements.
+
+| Path | Intended use |
 | --- | --- |
-| `social/*.png` | Asset carosello social correnti (cover + 5 catture Compose live dal dataset demo) |
-| `social/SOCIAL_POST_COPY.md` | Testi pronti per la pubblicazione su LinkedIn, Instagram, Facebook ed X |
-| `screenshots/android_*.png` | Catture Android storiche |
-| `screenshots/windows_*.png` | Catture Windows storiche |
-| `linkedin_services/502x282/*.png` | Varianti grafiche per schede servizio |
-| `poster.png` | Poster |
-| `linkedin_logo_400x400.png`, `linkedin_banner_1128x191.png` | Logo e banner |
+| social/*.png | Cover and five live Compose demo captures |
+| social/SOCIAL_POST_COPY.md | Prepared social copy; publication is separate |
+| screenshots/android_*.png, windows_*.png | Historical application captures |
+| linkedin_services/502x282/*.png | Service-card variants |
+| poster.png | Poster |
+| linkedin_logo_400x400.png, linkedin_banner_1128x191.png | Logo/banner |
 
-Prima di pubblicare: confrontare lo screenshot con la build reale, verificare dimensioni e requisiti direttamente sulla piattaforma di destinazione, controllare diritti/attribuzioni e rimuovere dati di prova o personali visibili. Lo schema sedi nell'app è un diagramma di relazioni, non una mappa geografica. Le funzionalità e i limiti correnti sono nel [README del progetto](../README.md) e nel tracker SecondBrain (`02-areas/products/OnlyFieldAssetManager/tracker.json`).
+Before publication compare images with the actual build, check destination dimensions/requirements and rights/attribution, and review visible personal/test data. The sites diagram represents relationships, not geography. See [README](../README.md) and current qualification matrices.

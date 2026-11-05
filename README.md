@@ -18,7 +18,7 @@ Field survey editor for networks, devices, cabling and sites. Projects stay on t
 | --- | --- | --- |
 | Android 14+ | `mobile/app` | `minSdk` 34, `targetSdk` 35 |
 | Windows 11 x64 | `pc/app` | Compose Desktop, portable ZIP |
-| Shared | `shared/core`, `shared/exchange`, `shared/configurator` | Domain model, `.ofam` exchange, configurator |
+| Shared | `shared/core`, `shared/exchange`; shared configurator sources | Domain model, `.ofam` exchange, configurator (compiled into both apps, not a separate module) |
 
 ## Build
 
@@ -33,7 +33,7 @@ Requirements: JDK 17 for the Kotlin code, a JDK 21 toolchain with `jpackage` for
 
 ## Documentation
 
-Guides and technical documents are written in Italian.
+Current operational guides are in English. Adjacent `.it.md` files preserve the Italian sources; dated verification and benchmark records remain historical originals.
 
 - User guides: [Android](docs/guide/android.md), [Windows](docs/guide/windows.md), [exchange and documents](docs/guide/exchange-and-documents.md), [demo and checks](docs/testing/demo.md).
 - Product decisions: [plan.md](plan.md); recorded verifications: [roadmap.md](roadmap.md).

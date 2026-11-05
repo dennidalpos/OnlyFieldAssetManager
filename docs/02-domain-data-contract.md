@@ -1,36 +1,36 @@
-# Dominio e contratto `.ofam`
+# Domain and .ofam data contract
 
-## Modello e validazione
+[Retained Italian source](02-domain-data-contract.it.md)
 
-Un progetto contiene sedi (`Site`), piani (`Area`), apparati/porte, rack, cavi, passaggi, rete logica, alimentazioni, media, modelli, campi extra e badge. La gerarchia è **progetto → sede → piano**; il piano dell'apparato è facoltativo e la sua assenza produce un avviso documentale. Stato operativo e stato del rilievo sono distinti.
+## Model and validation
 
-`ConnectionGraph` segue cavi e passaggi di porte; la topologia logica usa VLAN, subnet, interfacce e WAN/VPN. I riferimenti di rete impediscono la cancellazione o fusione che li lascerebbe pendenti; occorre rimuoverli esplicitamente. Il controllo delle alimentazioni considera tutti gli archi e rifiuta i cicli.
+Projects contain sites, floors (Area), devices/ports, racks, cables, pass-throughs, logical networks, power connections, media, templates, extra fields and badges. The hierarchy is project → site → floor. A device's floor is optional; its absence is a documentary warning. Operational and survey states are separate.
 
-`ModelValidator` produce `STRUCTURAL_ERROR` (blocca import/salvataggio) oppure `DOCUMENTARY_WARNING` (consente il salvataggio). Numeri non finiti, ID estranei o ZIP incoerenti sono rifiutati; allegati mancanti e rilievi incompleti restano avvisi quando il catalogo è valido.
+ConnectionGraph follows cables and port pass-throughs. Logical topology uses VLANs, subnets, interfaces and WAN/VPN links. Referenced network entities cannot be deleted or merged into dangling references: remove those references explicitly. Power validation considers every edge and rejects cycles.
 
-## Pacchetto
+ModelValidator emits STRUCTURAL_ERROR (blocks import/save) or DOCUMENTARY_WARNING (allows saving after review). Non-finite numbers, foreign IDs and inconsistent ZIP data are rejected. Missing attachments and incomplete surveys can remain warnings if the catalog is valid.
 
-`.ofam` **v1** è uno ZIP con manifest, progetto JSON e allegati. Il progetto può essere cifrato con PBKDF2-HMAC-SHA256 e AES-256-GCM; anche gli allegati sono protetti. `PackageSerializer` ignora campi JSON sconosciuti ma rifiuta versioni non supportate, entry duplicate e metadati incoerenti. Ogni entry diversa dal manifest deve avere un checksum SHA-256 corrispondente: un checksum assente equivale a uno errato. I pacchetti protetti dichiarano le iterazioni nel manifest; l'export ne usa 600.000. Gli ID devono essere UUID nella forma canonica minuscola. L'export Windows forza la scrittura su disco e riverifica i checksum prima di sostituire il file di destinazione. `ProjectPackage` è `AutoCloseable` e i payload grandi vengono elaborati progressivamente.
+## Package format and limits
 
-| Limite | Valore |
+`.ofam` v1 is a ZIP containing manifest, project JSON and attachments. Password protection uses PBKDF2-HMAC-SHA256 and AES-256-GCM for the project and attachments. PackageSerializer ignores unknown JSON fields but rejects unsupported versions, duplicate entries and inconsistent metadata. Each non-manifest entry needs its matching SHA-256; a missing checksum is invalid.
+
+| Limit | Value |
 | --- | ---: |
-| ZIP | 256 MiB |
-| File in chiaro | 32 MiB |
-| Totale decompresso | 512 MiB |
-| Entry ZIP, directory comprese | 10.000 |
-| Iterazioni PBKDF2 in export | 600.000 |
-| Iterazioni PBKDF2 massime | 1.000.000 |
+| ZIP size | 256 MiB |
+| Unencrypted individual file | 32 MiB |
+| Expanded total | 512 MiB |
+| ZIP entries, including directories | 10,000 |
+| PBKDF2 export iterations | 600,000 |
+| Maximum accepted PBKDF2 iterations | 1,000,000 |
 
-L'export Android protetto usa un budget preventivo prudenziale: vicino al limite ZIP può rifiutare dati che entrerebbero nel pacchetto effettivo. È una decisione di prodotto, non un collaudo esatto del confine.
+IDs must be canonical lowercase UUIDs. Windows export forces the write and verifies checksums before replacing its destination. ProjectPackage is AutoCloseable; close it after use. Large payloads are processed progressively. Android's conservative protected-export preflight can reject content near the ZIP limit even if the final archive might fit.
 
-## Scambio, fusione e compatibilità
+## Exchange and compatibility
 
-La base dell'ultimo scambio permette il confronto a tre vie. Le modifiche concorrenti richiedono una scelta esplicita; una base assente/illeggibile viene segnalata. Import e fusione non rimappano ID di un altro progetto. Il cestino e i media recuperabili solo localmente non vengono inviati nel pacchetto.
+The last-exchange base enables three-way comparison. Concurrent edits need explicit conflict choices. Missing/unreadable bases are reported. Import/merge does not remap IDs belonging to another project. The local trash and locally recoverable media are excluded from exchange packages.
 
-`Device.management` registra Gestito dal tecnico, Fornitore, Cliente o Sconosciuto; contatto e riferimento contratto sono facoltativi. Il dato è nel JSON `.ofam` v1 e nelle colonne Android Room **v3**. `HardwareSpec.portLayouts` e `portPoeOverrides` restano nel JSON hardware senza nuove tabelle. Le versioni precedenti possono ignorare e perdere questi campi quando risalvano.
+Device.management records technician/provider/customer/unknown ownership; provider contact and contract are optional. It is stored in v1 package JSON and Room v3 columns. HardwareSpec.portLayouts and portPoeOverrides remain in hardware JSON. Older applications can ignore and lose unknown fields when saving: do not assume round-trip preservation across versions.
 
-Lo schema Android corrente è Room **v3**. `EncryptedDatabase.open` usa il fallback distruttivo se manca una migrazione; esportare i progetti da conservare prima di installare una versione con schema diverso. Vedi [storage](04-desktop-storage-interop.md) e [guida allo scambio](guide/exchange-and-documents.md).
+Android currently uses Room v3 with a destructive fallback when a migration is missing. Export projects before installing a build with another schema. This is a current limitation, not a recommendation to erase data.
 
-## Fonti
-
-[Room: migrazioni e fallback distruttivo](https://developer.android.com/training/data-storage/room/migrating-db-versions), [OWASP: limiti di upload](https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html), [OWASP: password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html). Valori e compatibilità dell'app sono verificati in `PackageImportLimits`, `PackageSerializer`, `Models`, `ModelValidator` e `AppDatabase`.
+Source contracts: PackageImportLimits, PackageSerializer, Models, ModelValidator and AppDatabase. See [storage](04-desktop-storage-interop.md) and [exchange guide](guide/exchange-and-documents.md).

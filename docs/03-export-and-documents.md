@@ -1,22 +1,24 @@
-# Documenti ed export
+# Documents and export
 
-`shared:exchange` genera XLSX, Markdown ed etichette QR. Android genera PDF tramite `PdfExportManager` e stampa con il framework Android; Windows usa `PdfReportWriter`/PDFBox e la stampa nativa. Entrambe le app escludono le credenziali dai documenti.
+[Retained Italian source](03-export-and-documents.it.md)
 
-## Selezione e contenuto
+shared:exchange generates XLSX, Markdown and QR labels. Android uses PdfExportManager and its printing framework; Windows uses PdfReportWriter/PDFBox and native printing. Credentials are excluded from these documents.
 
-`DocumentSelection` applica sede, piano, categoria e classificazione a inventario, rete, alimentazione, allegati e disegni. Un contenuto riservato richiede inclusione esplicita. Gli estremi esterni indispensabili a spiegare un percorso possono comparire come contesto, senza esportare altri record non scelti.
+## Selection and content
 
-- **XLSX:** inventario, porte/cablaggio, rete, alimentazioni, note e percorsi completi. Il testo utente resta testo e non diventa formula.
-- **Markdown:** riepilogo testuale con escaping di caratteri Markdown/HTML; i dati originali non cambiano.
-- **PDF Android:** inventario, rack, porte/cablaggio, rete, alimentazione/badge, note e catalogo allegati, paginati. Planimetrie, percorsi e topologia disegnati sono opzioni del PDF Windows.
-- **PDF Windows:** sezioni selezionabili con planimetrie, rack fronte/retro, percorsi e topologia. Uno sfondo richiesto ma illeggibile causa errore visibile.
+DocumentSelection applies site, floor, category and classification filters to inventory, network, power, attachments and drawings. Restricted content requires explicit inclusion. Necessary external endpoints can appear as context explaining a selected route, without exporting unrelated records.
 
-Il rilievo assente è presentato come “Da verificare”; note e avvisi documentali seguono i filtri. La lingua viene acquisita all'avvio della generazione; nomi e note dell'utente restano invariati.
+| Format | Content and limits |
+| --- | --- |
+| XLSX | Inventory, ports/cabling, network, power, notes and full routes. User text stays text rather than becoming a formula. |
+| Markdown | Text report with Markdown/HTML escaping; source data remains unchanged. |
+| Android PDF | Paginated inventory, racks, ports/cabling, network, power/badges, notes and attachment catalog. |
+| Windows PDF | Selectable sections including floor plans, front/rear rack views, routes and topology. Requested unreadable backgrounds cause a visible error. |
 
-## Verifica
+Missing survey data is labeled “Da verificare”. Notes/warnings follow selection filters. The generation operation captures the selected language; user names and notes are not translated.
 
-I test di export controllano filtri, caratteri speciali, paginazione e contenuti. Dialoghi di stampa, spooler e stampante fisica restano collaudi [Android](testing/hardware-checklist.md) e [Windows](testing/windows-native-matrix.md). Vedi [guida allo scambio](guide/exchange-and-documents.md).
+## Verification
 
-## Fonti
+Export tests cover filters, special characters, pagination and content. They do not verify printer dialogs, the spooler or a physical printer. Review the final PDF when it contains plans or attachments.
 
-[Android PdfDocument](https://developer.android.com/reference/android/graphics/pdf/PdfDocument), [PDFBox 3](https://pdfbox.apache.org/3.0/getting-started.html), [OpenXML ST_Xstring](https://learn.microsoft.com/en-us/openspecs/office_standards/ms-oi29500/d34ae755-c53f-4a44-a363-c6dd3ee018a4).
+See [exchange and documents](guide/exchange-and-documents.md), [Android hardware checks](testing/hardware-checklist.md) and [Windows matrix](testing/windows-native-matrix.md).
