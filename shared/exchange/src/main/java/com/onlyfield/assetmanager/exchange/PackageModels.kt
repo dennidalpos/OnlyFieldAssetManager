@@ -1,0 +1,50 @@
+package com.onlyfield.assetmanager.exchange
+
+import com.onlyfield.assetmanager.core.model.Project
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class PackageManifest(
+    val formatVersion: String = CURRENT_FORMAT_VERSION,
+    val exportId: String,
+    val exportedEpochMs: Long,
+    val projectId: String,
+    val projectName: String,
+    val isEncrypted: Boolean = false,
+    val kdfSaltHex: String? = null,
+    val kdfIterations: Int? = null,
+    val cipherIvHex: String? = null,
+    val checksums: Map<String, String> = emptyMap(), // relativePath -> SHA-256 Hex
+    /** When true every attachment entry is stored as IV (12 bytes) + AES-256-GCM ciphertext. */
+    val attachmentsEncrypted: Boolean = false,
+) {
+    companion object {
+        const val CURRENT_FORMAT_VERSION = "1"
+        const val MANIFEST_FILE_NAME = "manifest.json"
+        const val PROJECT_FILE_NAME = "project.json"
+        const val PROJECT_ENC_FILE_NAME = "project.json.enc"
+        const val ATTACHMENTS_DIR = "attachments/"
+        /** OWASP PBKDF2-HMAC-SHA256 recommendation; readers use the manifest value. */
+        const val DEFAULT_KDF_ITERATIONS = 600_000
+    }
+}
+
+data class ProjectPackage(
+    val manifest: PackageManifest,
+    val project: Project,
+    val attachments: Map<String, ByteArray> = emptyMap(), // relativePath -> bytes
+) : AutoCloseable {
+    fun payloadSize(path: String): Long = (attachments as? PackagePayloads)?.byteSize(path)
+        ?: attachments.getValue(path).size.toLong()
+
+    fun payloadChecksum(path: String): String = (attachments as? PackagePayloads)?.checksum(path)
+        ?: PackageSerializer.calculateSha256(attachments.getValue(path))
+
+    fun writePayload(path: String, output: java.io.OutputStream) {
+        val staged = attachments as? PackagePayloads
+        if (staged != null) staged.writeTo(path, output) else output.write(attachments.getValue(path))
+    }
+
+    /** Release encrypted import staging after consumption or cancellation. */
+    override fun close() { (attachments as? AutoCloseable)?.close() }
+}

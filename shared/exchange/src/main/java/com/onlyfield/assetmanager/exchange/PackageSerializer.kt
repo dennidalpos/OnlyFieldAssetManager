@@ -1,0 +1,579 @@
+package com.onlyfield.assetmanager.exchange
+
+import com.onlyfield.assetmanager.core.i18n.Messages
+
+import com.onlyfield.assetmanager.core.model.Project
+import com.onlyfield.assetmanager.core.validation.ModelValidator
+import com.onlyfield.assetmanager.core.validation.ValidationIssue
+import com.onlyfield.assetmanager.core.validation.ValidationResult
+import com.onlyfield.assetmanager.core.validation.ValidationSeverity
+import kotlinx.serialization.json.Json
+import java.io.ByteArrayInputStream
+import java.io.ByteArrayOutputStream
+import java.io.InputStream
+import java.io.IOException
+import java.io.File
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.UUID
+import java.util.zip.ZipEntry
+import java.util.zip.ZipInputStream
+import java.util.zip.ZipOutputStream
+import java.util.zip.ZipFile
+import javax.crypto.Cipher
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
+
+data class PackageImportResult(
+    val pkg: ProjectPackage?,
+    val validationResult: ValidationResult,
+)
+
+object PackageSerializer {
+
+    val jsonConfig = Json {
+        prettyPrint = true
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+    }
+
+    /** Metadata only; opening a project still requires full validation. */
+    fun readManifest(file: File, i18n: Messages = Messages()): PackageManifest {
+        val limits = PackageImportLimits()
+        require(file.length() <= limits.archiveBytes) { i18n.text("package.importLimit") }
+        return ZipFile(file).use { zip ->
+            val entry = zip.getEntry(PackageManifest.MANIFEST_FILE_NAME) ?: throw IOException(i18n.text("text.11fb368e9db2"))
+            val bytes = zip.getInputStream(entry).use { it.readNBytes(limits.fileBytes.toInt() + 1) }
+            require(bytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }
+            jsonConfig.decodeFromString(PackageManifest.serializer(), bytes.toString(Charsets.UTF_8)).also {
+                require(it.formatVersion == PackageManifest.CURRENT_FORMAT_VERSION) { i18n.text("text.4b03253f0751", it.formatVersion) }
+            }
+        }
+    }
+
+    /** Re-reads a written archive: every entry but the manifest must match its checksum. */
+    fun verifyChecksums(file: File, i18n: Messages = Messages()) {
+        val manifest = readManifest(file, i18n)
+        ZipFile(file).use { zip ->
+            val names = zip.entries().asSequence().filterNot { it.isDirectory }.map { it.name }.toList()
+            check(names.toSet() - PackageManifest.MANIFEST_FILE_NAME == manifest.checksums.keys) { i18n.text("text.0e2a1010ee48") }
+            for (name in manifest.checksums.keys) {
+                val digest = MessageDigest.getInstance("SHA-256")
+                zip.getInputStream(zip.getEntry(name)).use { input ->
+                    val buffer = ByteArray(64 * 1024)
+                    var read = input.read(buffer)
+                    while (read >= 0) { digest.update(buffer, 0, read); read = input.read(buffer) }
+                }
+                check(digest.digest().toHex() == manifest.checksums[name]) { i18n.text("text.0e2a1010ee48") }
+            }
+        }
+    }
+
+    fun calculateSha256(data: ByteArray): String {
+        val digest = MessageDigest.getInstance("SHA-256")
+        val hash = digest.digest(data)
+        return hash.joinToString("") { "%02x".format(it) }
+    }
+
+    internal fun deriveKey(
+        password: String,
+        salt: ByteArray,
+        iterations: Int = PackageManifest.DEFAULT_KDF_ITERATIONS,
+    ): SecretKeySpec {
+        val factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256")
+        val spec = PBEKeySpec(password.toCharArray(), salt, iterations, 256)
+        return try { SecretKeySpec(factory.generateSecret(spec).encoded, "AES") }
+        finally { spec.clearPassword() }
+    }
+
+    private fun encryptAesGcm(plainTextBytes: ByteArray, key: SecretKeySpec, iv: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val gcmSpec = GCMParameterSpec(128, iv)
+        cipher.init(Cipher.ENCRYPT_MODE, key, gcmSpec)
+        return cipher.doFinal(plainTextBytes)
+    }
+
+    private fun decryptAesGcm(cipherTextBytes: ByteArray, key: SecretKeySpec, iv: ByteArray): ByteArray {
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        val gcmSpec = GCMParameterSpec(128, iv)
+        cipher.init(Cipher.DECRYPT_MODE, key, gcmSpec)
+        return cipher.doFinal(cipherTextBytes)
+    }
+
+    private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }
+
+    private fun String.hexToBytes(): ByteArray {
+        check((length % 2) == 0)
+        return chunked(2).map { it.toInt(16).toByte() }.toByteArray()
+    }
+
+    fun exportPackage(
+        project: Project,
+        attachments: Map<String, ByteArray> = emptyMap(),
+        password: String? = null,
+        exportedEpochMs: Long = System.currentTimeMillis(),
+        i18n: Messages = Messages()): ByteArray = ByteArrayOutputStream().also {
+        exportPackageToStream(it, project, attachments, password, exportedEpochMs, i18n)
+    }.toByteArray()
+
+    fun exportPackageToStream(
+        outputStream: java.io.OutputStream,
+        project: Project,
+        attachments: Map<String, ByteArray> = emptyMap(),
+        password: String? = null,
+        exportedEpochMs: Long = System.currentTimeMillis(),
+        i18n: Messages = Messages(),
+    ) {
+        ModelValidator.requireFiniteNumbers(project, i18n)
+        val projectJsonBytes = jsonConfig.encodeToString(Project.serializer(), project).toByteArray(Charsets.UTF_8)
+        val limits = PackageImportLimits()
+        require(projectJsonBytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }
+        require(attachments.size + 2 <= limits.entries) { i18n.text("package.importLimit") }
+
+        val isEncrypted = !password.isNullOrBlank() || project.isPasswordProtected
+        val effectivePassword = password?.takeIf { it.isNotBlank() }
+
+        if (isEncrypted && (effectivePassword == null)) {
+            throw IllegalArgumentException(i18n.text("text.dbc116845925"))
+        }
+
+        val checksumsMap = mutableMapOf<String, String>()
+
+        var kdfSaltHex: String? = null
+        var kdfIterations: Int? = null
+        var cipherIvHex: String? = null
+        val payloadBytes: ByteArray
+        val payloadEntryName: String
+        var key: SecretKeySpec? = null
+        val random = SecureRandom()
+
+        if (isEncrypted && (effectivePassword != null)) {
+            val salt = ByteArray(16).also { random.nextBytes(it) }
+            val iv = ByteArray(12).also { random.nextBytes(it) }
+            val iterations = PackageManifest.DEFAULT_KDF_ITERATIONS
+
+            key = deriveKey(effectivePassword, salt, iterations)
+            payloadBytes = encryptAesGcm(projectJsonBytes, key, iv)
+            payloadEntryName = PackageManifest.PROJECT_ENC_FILE_NAME
+
+            kdfSaltHex = salt.toHex()
+            kdfIterations = iterations
+            cipherIvHex = iv.toHex()
+
+            checksumsMap[PackageManifest.PROJECT_ENC_FILE_NAME] = calculateSha256(payloadBytes)
+        } else {
+            payloadBytes = projectJsonBytes
+            payloadEntryName = PackageManifest.PROJECT_FILE_NAME
+            checksumsMap[PackageManifest.PROJECT_FILE_NAME] = calculateSha256(payloadBytes)
+        }
+
+        // Attachments of a protected project are encrypted with the same key (one random IV per file).
+        PackagePayloads().use { processedAttachments ->
+            for ((path, bytes) in attachments) {
+                require(bytes.size <= limits.fileBytes) { i18n.text("package.importLimit") }
+                val normalizedPath = if (path.startsWith(PackageManifest.ATTACHMENTS_DIR)) path else "${PackageManifest.ATTACHMENTS_DIR}$path"
+                val stored = key?.let { k ->
+                    val iv = ByteArray(12).also { random.nextBytes(it) }
+                    iv + encryptAesGcm(bytes, k, iv)
+                } ?: bytes
+                checksumsMap[normalizedPath] = calculateSha256(stored)
+                processedAttachments.write(normalizedPath) { it.write(stored) }
+            }
+
+            val manifest = PackageManifest(
+                formatVersion = PackageManifest.CURRENT_FORMAT_VERSION,
+                exportId = UUID.randomUUID().toString(),
+                exportedEpochMs = exportedEpochMs,
+                projectId = project.id,
+                projectName = project.name,
+                isEncrypted = isEncrypted,
+                kdfSaltHex = kdfSaltHex,
+                kdfIterations = kdfIterations,
+                cipherIvHex = cipherIvHex,
+                checksums = checksumsMap,
+                attachmentsEncrypted = key != null && processedAttachments.isNotEmpty(),
+            )
+
+            val manifestJsonBytes = jsonConfig.encodeToString(PackageManifest.serializer(), manifest).toByteArray(Charsets.UTF_8)
+            require(manifestJsonBytes.size <= limits.fileBytes &&
+                manifestJsonBytes.size.toLong() + payloadBytes.size + processedAttachments.keys.sumOf(processedAttachments::byteSize) <= limits.expandedBytes) { i18n.text("package.importLimit") }
+
+            val boundedOutput = object : java.io.FilterOutputStream(outputStream) {
+                var count = 0L
+                override fun write(value: Int) { require(++count <= limits.archiveBytes) { i18n.text("package.importLimit") }; out.write(value) }
+                override fun write(bytes: ByteArray, offset: Int, length: Int) {
+                    count += length
+                    require(count <= limits.archiveBytes) { i18n.text("package.importLimit") }
+                    out.write(bytes, offset, length)
+                }
+            }
+            ZipOutputStream(boundedOutput).use { zos ->
+                // Write manifest
+                zos.putNextEntry(ZipEntry(PackageManifest.MANIFEST_FILE_NAME))
+                zos.write(manifestJsonBytes)
+                zos.closeEntry()
+
+                // Write project JSON (or project.json.enc)
+                zos.putNextEntry(ZipEntry(payloadEntryName))
+                zos.write(payloadBytes)
+                zos.closeEntry()
+
+                // Write attachments
+                for (path in processedAttachments.keys) {
+                    zos.putNextEntry(ZipEntry(path))
+                    processedAttachments.writeTo(path, zos)
+                    zos.closeEntry()
+                }
+            }
+        }
+    }
+
+    fun importPackage(zipBytes: ByteArray, password: String? = null, i18n: Messages = Messages()): PackageImportResult {
+        val issues = mutableListOf<ValidationIssue>()
+
+        if (zipBytes.isEmpty()) {
+            issues.add(
+                ValidationIssue(
+                    code = "EMPTY_PACKAGE",
+                    message = i18n.text("text.0bbc9274b92f"),
+                    severity = ValidationSeverity.STRUCTURAL_ERROR,
+                )
+            )
+            return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        return importPackage(ByteArrayInputStream(zipBytes), password, i18n)
+    }
+
+    fun importPackage(inputStream: InputStream, password: String? = null, i18n: Messages = Messages(), stagingDirectory: File? = null): PackageImportResult =
+        importPackage(inputStream, password, i18n, PackageImportLimits(), stagingDirectory)
+
+    internal fun importPackage(inputStream: InputStream, password: String?, i18n: Messages, limits: PackageImportLimits, stagingDirectory: File? = null): PackageImportResult {
+        val attachments = PackagePayloads(stagingDirectory)
+        var transferred = false
+        try {
+            val result = readPackage(inputStream, password, i18n, limits, attachments)
+            transferred = result.pkg != null
+            return result
+        } finally {
+            if (!transferred) attachments.close()
+        }
+    }
+
+    private fun readPackage(inputStream: InputStream, password: String?, i18n: Messages, limits: PackageImportLimits, attachments: PackagePayloads): PackageImportResult {
+        val issues = mutableListOf<ValidationIssue>()
+        fun rejection(code: String) = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = code, message = i18n.text("package.importLimit"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
+        fun invalidZip() = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = "INVALID_ZIP_ARCHIVE", message = i18n.text("text.0e2a1010ee48"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
+        fun inconsistent(code: String) = PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = code, message = i18n.text("text.0e2a1010ee48"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
+        var manifestBytes: ByteArray? = null
+        var projectPlainBytes: ByteArray? = null
+        var projectEncBytes: ByteArray? = null
+
+        val counted = PackageInput(inputStream, limits.archiveBytes)
+        try {
+            ZipInputStream(counted).use { zis ->
+                var entryCount = 0
+                var expandedBytes = 0L
+                val buffer = ByteArray(8192)
+                val entryNames = mutableSetOf<String>()
+                var entry = zis.nextEntry
+                while (entry != null) {
+                    if (++entryCount > limits.entries) throw PackageLimitExceeded("PACKAGE_ENTRY_LIMIT_EXCEEDED")
+                    val current = entry
+                    if (!entryNames.add(current.name)) return inconsistent("DUPLICATE_PACKAGE_ENTRY")
+                    fun readEntry(output: java.io.OutputStream) {
+                        var entryBytes = 0L
+                        var read = zis.read(buffer)
+                        while (read != -1) {
+                            if (Thread.currentThread().isInterrupted) throw java.io.InterruptedIOException("Import cancelled")
+                            entryBytes += read
+                            expandedBytes += read
+                            if (entryBytes > limits.fileBytes + PackageImportLimits.GCM_OVERHEAD) throw PackageLimitExceeded("ENTRY_SIZE_LIMIT_EXCEEDED")
+                            if (expandedBytes > limits.expandedBytes) throw PackageLimitExceeded("PACKAGE_CONTENT_LIMIT_EXCEEDED")
+                            if (!current.isDirectory) output.write(buffer, 0, read)
+                            read = zis.read(buffer)
+                        }
+                    }
+                    when (current.name) {
+                        PackageManifest.MANIFEST_FILE_NAME, PackageManifest.PROJECT_FILE_NAME, PackageManifest.PROJECT_ENC_FILE_NAME -> {
+                            val output = ByteArrayOutputStream()
+                            readEntry(output)
+                            if (!current.isDirectory) when (current.name) {
+                                PackageManifest.MANIFEST_FILE_NAME -> manifestBytes = output.toByteArray()
+                                PackageManifest.PROJECT_FILE_NAME -> projectPlainBytes = output.toByteArray()
+                                else -> projectEncBytes = output.toByteArray()
+                            }
+                        }
+                        else -> if (current.isDirectory) readEntry(java.io.OutputStream.nullOutputStream())
+                            else attachments.write(current.name, ::readEntry)
+                    }
+                    entry = zis.nextEntry
+                }
+                // Count the central directory and trailing input too.
+                while (counted.read(buffer) != -1) { }
+            }
+        } catch (e: PackageLimitExceeded) {
+            return rejection(e.code)
+        } catch (e: java.io.InterruptedIOException) {
+            throw e
+        } catch (_: IOException) {
+            return invalidZip()
+        } catch (_: IllegalArgumentException) {
+            return invalidZip()
+        }
+        if (counted.bytesRead == 0L) return PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+            code = "EMPTY_PACKAGE", message = i18n.text("text.0bbc9274b92f"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+        ))))
+
+        if (manifestBytes == null) {
+            issues.add(
+                ValidationIssue(
+                    code = "MISSING_MANIFEST",
+                    message = i18n.text("text.11fb368e9db2"),
+                    severity = ValidationSeverity.STRUCTURAL_ERROR
+                )
+            )
+            return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        val manifest = try {
+            jsonConfig.decodeFromString(PackageManifest.serializer(), String(manifestBytes, Charsets.UTF_8))
+        } catch (e: Exception) {
+            issues.add(
+                ValidationIssue(
+                    code = "INVALID_MANIFEST_JSON",
+                    message = i18n.text("text.107d3cd740b8"),
+                    severity = ValidationSeverity.STRUCTURAL_ERROR
+                )
+            )
+            return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        if (manifest.formatVersion != PackageManifest.CURRENT_FORMAT_VERSION) {
+            issues += ValidationIssue(
+                code = "UNSUPPORTED_FORMAT_VERSION",
+                message = i18n.text("text.4b03253f0751", manifest.formatVersion),
+                severity = ValidationSeverity.STRUCTURAL_ERROR,
+            )
+            return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        if ((manifest.attachmentsEncrypted && !manifest.isEncrypted) ||
+            (manifest.isEncrypted && projectPlainBytes != null) ||
+            (!manifest.isEncrypted && projectEncBytes != null) ||
+            (!manifest.isEncrypted && (manifest.kdfSaltHex != null || manifest.kdfIterations != null || manifest.cipherIvHex != null))) {
+            return inconsistent("INCONSISTENT_PACKAGE_PROTECTION")
+        }
+
+        val rawLimit = limits.fileBytes
+        if (manifestBytes.size.toLong() > rawLimit ||
+            (projectPlainBytes?.size?.toLong() ?: 0) > rawLimit ||
+            (projectEncBytes?.size?.toLong() ?: 0) > rawLimit + 16 ||
+            attachments.keys.any { attachments.byteSize(it) > rawLimit + if (manifest.attachmentsEncrypted) PackageImportLimits.GCM_OVERHEAD else 0 }) {
+            return rejection("ENTRY_SIZE_LIMIT_EXCEEDED")
+        }
+        if (manifest.isEncrypted) {
+            val iterations = manifest.kdfIterations
+            if (iterations == null || iterations !in 1..PackageImportLimits.MAX_KDF_ITERATIONS) return rejection("INVALID_KDF_PARAMETERS")
+            fun hex(value: String?, length: Int) = value?.length == length && value.all { it.digitToIntOrNull(16) != null }
+            if (!hex(manifest.kdfSaltHex, 32) || !hex(manifest.cipherIvHex, 24)) {
+                return PackageImportResult(null, ValidationResult(listOf(ValidationIssue(
+                    code = "CORRUPTED_ENCRYPTION_METADATA", message = i18n.text("text.0c97f01205a3"), severity = ValidationSeverity.STRUCTURAL_ERROR,
+                ))))
+            }
+        }
+
+        val projectBytes: ByteArray
+        var key: SecretKeySpec? = null
+        if (manifest.isEncrypted) {
+            if (projectEncBytes == null) {
+                issues.add(
+                    ValidationIssue(
+                        code = "MISSING_ENCRYPTED_PROJECT_DATA",
+                        message = i18n.text("text.c834a8f16c8a"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+                return PackageImportResult(null, ValidationResult(issues))
+            }
+
+            // Verify SHA-256 Checksum of project.json.enc
+            val actualEncChecksum = calculateSha256(projectEncBytes)
+            if (manifest.checksums[PackageManifest.PROJECT_ENC_FILE_NAME] != actualEncChecksum) {
+                issues.add(
+                    ValidationIssue(
+                        code = "PROJECT_CHECKSUM_MISMATCH",
+                        message = i18n.text("text.19eba5b8423a"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+                return PackageImportResult(null, ValidationResult(issues))
+            }
+
+            if (password.isNullOrBlank()) {
+                issues.add(
+                    ValidationIssue(
+                        code = "PASSWORD_REQUIRED",
+                        message = i18n.text("text.197673fc7e3e"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+                return PackageImportResult(null, ValidationResult(issues))
+            }
+
+            val saltHex = manifest.kdfSaltHex
+            val ivHex = manifest.cipherIvHex
+            val iterations = checkNotNull(manifest.kdfIterations)
+
+            if ((saltHex == null) || (ivHex == null)) {
+                issues.add(
+                    ValidationIssue(
+                        code = "CORRUPTED_ENCRYPTION_METADATA",
+                        message = i18n.text("text.0c97f01205a3"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+                return PackageImportResult(null, ValidationResult(issues))
+            }
+
+            try {
+                key = deriveKey(password, saltHex.hexToBytes(), iterations)
+                projectBytes = decryptAesGcm(projectEncBytes, key, ivHex.hexToBytes())
+            } catch (_: Exception) {
+                issues.add(
+                    ValidationIssue(
+                        code = "INVALID_PACKAGE_PASSWORD",
+                        message = i18n.text("text.259f77784344"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+                return PackageImportResult(null, ValidationResult(issues))
+            }
+        } else {
+            if (projectPlainBytes == null) {
+                issues.add(
+                    ValidationIssue(
+                        code = "MISSING_PROJECT_DATA",
+                        message = i18n.text("text.6dfcf95f5441"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+                return PackageImportResult(null, ValidationResult(issues))
+            }
+
+            // Verify SHA-256 Checksum of project.json
+            val actualProjectChecksum = calculateSha256(projectPlainBytes)
+            if (manifest.checksums[PackageManifest.PROJECT_FILE_NAME] != actualProjectChecksum) {
+                issues.add(
+                    ValidationIssue(
+                        code = "PROJECT_CHECKSUM_MISMATCH",
+                        message = i18n.text("text.19eba5b8423a"),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR
+                    )
+                )
+            }
+            projectBytes = projectPlainBytes
+        }
+
+        // Every exported entry carries a checksum; a missing one is a mismatch.
+        for (attPath in attachments.keys) {
+            if (manifest.checksums[attPath] != attachments.checksum(attPath)) {
+                issues.add(
+                    ValidationIssue(
+                        code = "ATTACHMENT_CHECKSUM_MISMATCH",
+                        message = i18n.text("text.493d07378487", attPath),
+                        severity = ValidationSeverity.STRUCTURAL_ERROR,
+                        targetEntityId = attPath
+                    )
+                )
+            }
+        }
+
+        if (manifest.attachmentsEncrypted && key != null) {
+            for (attPath in attachments.keys.toList()) {
+                try {
+                    attachments.decryptPackageEntry(attPath, key)
+                } catch (_: java.security.GeneralSecurityException) {
+                    attachments.remove(attPath)
+                    issues.add(
+                        ValidationIssue(
+                            code = "ATTACHMENT_DECRYPTION_FAILED",
+                            message = i18n.text("text.b4f4848b3f66", attPath),
+                            severity = ValidationSeverity.DOCUMENTARY_WARNING,
+                            targetEntityId = attPath
+                        )
+                    )
+                    continue
+                } catch (_: IllegalArgumentException) {
+                    attachments.remove(attPath)
+                    issues += ValidationIssue(code = "ATTACHMENT_DECRYPTION_FAILED",
+                        message = i18n.text("text.b4f4848b3f66", attPath),
+                        severity = ValidationSeverity.DOCUMENTARY_WARNING, targetEntityId = attPath)
+                }
+            }
+        }
+
+        val project = try {
+            com.onlyfield.assetmanager.core.model.ObjectHierarchy.normalize(jsonConfig.decodeFromString(Project.serializer(), String(projectBytes, Charsets.UTF_8)))
+        } catch (e: Exception) {
+            issues.add(
+                ValidationIssue(
+                    code = "INVALID_PROJECT_JSON",
+                    message = i18n.text("text.b64ca3d69e3a"),
+                    severity = ValidationSeverity.STRUCTURAL_ERROR
+                )
+            )
+            return PackageImportResult(null, ValidationResult(issues))
+        }
+
+        if (manifest.projectId != project.id) return inconsistent("PACKAGE_PROJECT_ID_MISMATCH")
+        if (project.isPasswordProtected && !manifest.isEncrypted) return inconsistent("INCONSISTENT_PACKAGE_PROTECTION")
+
+        val imported = ProjectPackage(manifest, project, attachments)
+        val missingPaths = mutableSetOf<String>()
+        for (attachment in project.attachments) {
+            if (AttachmentFiles.pathIn(imported, attachment) != null) continue
+            missingPaths += AttachmentFiles.entryName(attachment)
+            missingPaths += attachment.relativePath
+            missingPaths += "${PackageManifest.ATTACHMENTS_DIR}${attachment.relativePath.removePrefix("/")}"
+            issues += ValidationIssue(
+                code = "MISSING_ATTACHMENT_PAYLOAD",
+                message = i18n.text("package.missingAttachment", attachment.name),
+                severity = ValidationSeverity.DOCUMENTARY_WARNING,
+                targetEntityId = attachment.id,
+            )
+        }
+        for (path in manifest.checksums.keys) {
+            if (path == PackageManifest.PROJECT_FILE_NAME || path == PackageManifest.PROJECT_ENC_FILE_NAME) continue
+            if (path !in attachments && path !in missingPaths) {
+                issues += ValidationIssue(
+                    code = "MISSING_PACKAGE_ENTRY",
+                    message = i18n.text("package.missingAttachment", path),
+                    severity = ValidationSeverity.DOCUMENTARY_WARNING,
+                    targetEntityId = path,
+                )
+            }
+        }
+
+        // Validate model constraints and relationships
+        val modelValidation = ModelValidator.validateProject(project, i18n = i18n)
+        issues.addAll(modelValidation.issues)
+
+        val finalValidation = ValidationResult(issues)
+        val pkg = if (finalValidation.isValid) {
+            imported
+        } else {
+            null
+        }
+
+        return PackageImportResult(pkg, finalValidation)
+    }
+}

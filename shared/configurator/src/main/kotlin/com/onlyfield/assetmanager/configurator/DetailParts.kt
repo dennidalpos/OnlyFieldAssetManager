@@ -1,0 +1,152 @@
+package com.onlyfield.assetmanager.configurator
+
+import com.onlyfield.assetmanager.configurator.theme.Button
+import com.onlyfield.assetmanager.configurator.theme.OutlinedButton
+import com.onlyfield.assetmanager.configurator.theme.TextButton
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.*
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.configurator.map.MapStyle
+import com.onlyfield.assetmanager.core.display.ObjectSummary
+import com.onlyfield.assetmanager.core.i18n.Messages
+import com.onlyfield.assetmanager.core.model.Glyph
+
+/** Type colour with the drawn icon (or the code for custom types); the same badge on map, lists and editors. */
+@Composable
+fun GlyphBadge(glyph: Glyph, size: Dp = 40.dp) {
+    val icon = ObjectIcon.of(glyph)
+    Box(Modifier.size(size).background(MapStyle.glyph(glyph), RoundedCornerShape(size / 8)), contentAlignment = Alignment.Center) {
+        if (icon != null) Canvas(Modifier.fillMaxSize().padding(size / 8).semantics { contentDescription = glyph.code }) {
+            drawObjectIcon(icon, Offset.Zero, this.size.minDimension, Color.White)
+        } else Text(glyph.code, color = Color.White, fontWeight = FontWeight.Bold, maxLines = 1,
+            style = if (size >= 36.dp) MaterialTheme.typography.labelLarge else MaterialTheme.typography.labelSmall)
+    }
+}
+
+/** Accessible icon action with the shared touch target. */
+@Composable
+fun SymbolButton(icon: androidx.compose.ui.graphics.vector.ImageVector, description: String, onClick: () -> Unit) {
+    IconButton(onClick = onClick, modifier = Modifier.sizeIn(minWidth = 48.dp, minHeight = 48.dp)) {
+        Icon(icon, contentDescription = description)
+    }
+}
+
+/** Object identity: badge, name and one subtitle line, with an optional overline and close button. */
+@Composable
+fun PaneHeader(glyph: Glyph?, title: String, subtitle: String?, i18n: Messages, overline: String? = null, onClose: (() -> Unit)? = null) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        glyph?.let { GlyphBadge(it) }
+        Column(Modifier.weight(1f)) {
+            overline?.let { Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary) }
+            Text(title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.semantics { heading() })
+            subtitle?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+        }
+        onClose?.let { SymbolButton(SymbolIcons.close, i18n.text("ux.close"), it) }
+    }
+}
+
+/** Section heading with an optional count and trailing actions. */
+@Composable
+fun SectionTitle(title: String, count: Int? = null, modifier: Modifier = Modifier, trailing: @Composable RowScope.() -> Unit = {}) {
+    Row(modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 32.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(if (count != null) "$title ($count)" else title, style = MaterialTheme.typography.titleSmall,
+            modifier = Modifier.weight(1f).semantics { heading() })
+        trailing()
+    }
+}
+
+/** Label/value rows with the values in one column; each row is read as one "label: value" item. */
+@Composable
+fun FactRows(facts: List<ObjectSummary.Fact>) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        facts.forEach { fact ->
+            Row(Modifier.fillMaxWidth().semantics(mergeDescendants = true) {}, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(fact.label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(120.dp).alignByBaseline())
+                Text(fact.value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f).alignByBaseline(), maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+class PaneAction(val label: String, val onClick: () -> Unit)
+
+/** Confirmed removal: [label] on the button and the confirm action. */
+class DeleteRequest(val label: String, val title: String, val message: String, val onConfirm: () -> Unit)
+
+/** Filled primary action and photo, outlined secondaries, an overflow menu with confirmed removal. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun ActionRow(i18n: Messages, primary: PaneAction?, secondary: List<PaneAction> = emptyList(), overflow: List<PaneAction> = emptyList(), delete: DeleteRequest? = null,
+              photo: PaneAction? = null) {
+    var asking by remember { mutableStateOf(false) }
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        primary?.let { Button(onClick = it.onClick) { Text(it.label) } }
+        photo?.let { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
+        secondary.forEach { OutlinedButton(onClick = it.onClick) { Text(it.label) } }
+        OverflowActions(i18n, overflow + listOfNotNull(delete?.let { PaneAction(it.label) { asking = true } }), i18n.text("visual.moreActions"), destructiveLabel = delete?.label)
+    }
+    if (asking && delete != null) AlertDialog(onDismissRequest = { asking = false }, title = { Text(delete.title) }, text = { Text(delete.message) },
+        confirmButton = { TextButton(onClick = { asking = false; delete.onConfirm() }, colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text(delete.label) } },
+        dismissButton = { TextButton(onClick = { asking = false }) { Text(i18n.text("text.18c9d912a210")) } })
+}
+
+/** Removal shares the secondary-action menu and confirmation. */
+@Composable
+fun DeleteAction(request: DeleteRequest, i18n: Messages) {
+    ActionRow(i18n, primary = null, delete = request)
+}
+
+/** "⋮" button with a menu of [actions]; nothing when empty. */
+@Composable
+fun OverflowActions(i18n: Messages, actions: List<PaneAction>, label: String? = null, destructiveLabel: String? = null) {
+    if (actions.isNotEmpty()) Box {
+        var open by remember { mutableStateOf(false) }
+        if (label == null) SymbolButton(SymbolIcons.more, i18n.text("ux.more")) { open = true }
+        else TextButton(onClick = { open = true }, colors = ButtonDefaults.textButtonColors(containerColor = if (open) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)) { Text(label) }
+        DropdownMenu(open, { open = false }) {
+            actions.forEach { action -> DropdownMenuItem(text = { Text(action.label, color = if (action.label == destructiveLabel) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface) }, onClick = { open = false; action.onClick() }) }
+        }
+    }
+}
+
+/**
+ * Read-only field that opens a menu: same outline and floating label as text fields.
+ * Screen readers get one button, "label: value".
+ */
+@Composable
+fun SelectField(label: String, value: String, modifier: Modifier = Modifier, error: String? = null, enabled: Boolean = true, expanded: Boolean = false, onOpen: () -> Unit) {
+    val scheme = MaterialTheme.colorScheme
+    val colors = if (!enabled) OutlinedTextFieldDefaults.colors() else OutlinedTextFieldDefaults.colors(
+        disabledTextColor = scheme.onSurface,
+        disabledContainerColor = if (expanded) scheme.secondaryContainer else scheme.surface,
+        disabledBorderColor = if (error != null) scheme.error else scheme.outline,
+        disabledLabelColor = if (error != null) scheme.error else scheme.onSurfaceVariant,
+        disabledTrailingIconColor = scheme.onSurfaceVariant,
+        disabledSupportingTextColor = scheme.error,
+    )
+    Box(modifier.fillMaxWidth()
+        .clickable(enabled = enabled, role = Role.Button, onClickLabel = label) { onOpen() }
+        .clearAndSetSemantics {
+            contentDescription = "$label: $value"
+            role = Role.Button
+            error?.let { this.error(it) }
+            if (enabled) onClick(label) { onOpen(); true } else disabled()
+        }) {
+        OutlinedTextField(value, {}, enabled = false, readOnly = true, singleLine = true, label = { Text(label) },
+            trailingIcon = { Icon(if (expanded) SymbolIcons.collapse else SymbolIcons.expand, null) }, isError = error != null, supportingText = error?.let { { Text(it) } },
+            colors = colors, modifier = Modifier.fillMaxWidth())
+    }
+}

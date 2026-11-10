@@ -1,0 +1,110 @@
+{
+  "id": "11111111-1111-1111-1111-111111111111",
+  "name": "Progetto Campione Infrastruttura v1",
+  "description": "Fixture sintetica con due sedi, nomi/IP ripetuti in ambiti diversi e piano facoltativo",
+  "createdEpochMs": 1770000000000,
+  "updatedEpochMs": 1770000000000,
+  "sites": [
+    {
+      "id": "22222222-2222-2222-2222-222222222222",
+      "name": "Direzione Generale - Palazzo A",
+      "code": "HQ",
+      "address": "Via Roma 100, Milano",
+      "areas": [
+        {
+          "id": "44444444-4444-4444-4444-444444444444",
+          "name": "Data Center Piano Interrato",
+          "floor": "-1",
+          "description": "Sala CED Principale"
+        }
+      ],
+      "devices": [
+        {
+          "id": "55555555-5555-5555-5555-555555555551",
+          "technicalName": "sw-access-01",
+          "physicalLabel": "SW-HQ-RACK-01",
+          "alias": "Switch Accesso HQ 1",
+          "ipAddress": "10.10.1.5",
+          "macAddress": "00:11:22:33:44:55",
+          "areaId": "44444444-4444-4444-4444-444444444444",
+          "ports": [
+            {
+              "id": "66666666-6666-6666-6666-666666666661",
+              "deviceId": "55555555-5555-5555-5555-555555555551",
+              "name": "gi0/1",
+              "label": "Uplink a Core",
+              "endpointStatus": "CONNECTED",
+              "observation": {
+                "source": "Rilievo Tecnico Campo",
+                "timestampEpochMs": 1770000000000,
+                "status": "VERIFIED",
+                "notes": "Cavo cat6a etichettato correttamente"
+              }
+            }
+          ],
+          "observation": {
+            "source": "Rilievo Tecnico Campo",
+            "timestampEpochMs": 1770000000000,
+            "status": "VERIFIED"
+          }
+        },
+        {
+          "id": "55555555-5555-5555-5555-555555555552",
+          "technicalName": "sw-core-01",
+          "physicalLabel": "SW-CORE-HQ",
+          "ipAddress": "10.10.1.5",
+          "areaId": "44444444-4444-4444-4444-444444444444",
+          "ports": [
+            {
+              "id": "66666666-6666-6666-6666-666666666662",
+              "deviceId": "55555555-5555-5555-5555-555555555552",
+              "name": "te0/0/1",
+              "label": "Downlink a Access-01",
+              "endpointStatus": "CONNECTED"
+            },
+            {
+              "id": "66666666-6666-6666-6666-666666666663",
+              "deviceId": "55555555-5555-5555-5555-555555555552",
+              "name": "te0/0/2",
+              "label": "Porta staccata in attesa di verifica",
+              "endpointStatus": "DETACHED_TO_VERIFY"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "77777777-7777-7777-7777-777777777777",
+      "name": "Filiale Nord",
+      "code": "NORD",
+      "areas": [],
+      "devices": [
+        {
+          "id": "88888888-8888-8888-8888-888888888881",
+          "technicalName": "sw-access-01",
+          "physicalLabel": "SW-NORD-01",
+          "alias": "Switch Filiale Nord (stesso nome di HQ ma BU diversa)",
+          "ipAddress": "10.10.1.5",
+          "areaId": null,
+          "ports": [],
+          "observation": {
+            "source": "Importazione Iniziale",
+            "timestampEpochMs": 1770000000000,
+            "status": "TO_VERIFY",
+            "notes": "Posizione fisica e rack non ancora rilevati"
+          }
+        }
+      ]
+    }
+  ],
+  "cables": [
+    {
+      "id": "99999999-9999-9999-9999-999999999991",
+      "codeOrLabel": "UPL-01",
+      "portAId": "66666666-6666-6666-6666-666666666661",
+      "portBId": "66666666-6666-6666-6666-666666666662",
+      "medium": "ETHERNET_COPPER",
+      "color": "Blu"
+    }
+  ]
+}

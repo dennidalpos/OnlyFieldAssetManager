@@ -1,0 +1,145 @@
+package com.onlyfield.assetmanager.configurator.map
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.drawscope.Stroke
+import com.onlyfield.assetmanager.core.display.toDisplayString
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.configurator.theme.SectionCard
+import com.onlyfield.assetmanager.core.display.ProjectIndex
+import com.onlyfield.assetmanager.core.display.displayName
+import com.onlyfield.assetmanager.core.display.sitesForDisplay
+import com.onlyfield.assetmanager.core.display.sortedForDisplay
+import com.onlyfield.assetmanager.core.forms.PhysicalTopology
+import com.onlyfield.assetmanager.core.forms.Topology
+import com.onlyfield.assetmanager.core.i18n.Messages
+import com.onlyfield.assetmanager.core.model.*
+
+private val NodeWidth = 132.dp
+private val NodeHeight = 48.dp
+private val ColumnGap = 12.dp
+private val RowGap = 44.dp
+
+/**
+ * Physical topology of the active devices (passives collapsed into the links).
+ * Rows follow the available width, so only vertical scrolling is ever needed; a tap opens the device.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TopologyView(project: Project, i18n: Messages, siteId: String?, areaId: String?, onOpen: (Device) -> Unit, modifier: Modifier = Modifier,
+                 filters: @Composable FlowRowScope.() -> Unit = {}) {
+    var endpoints by rememberSaveable { mutableStateOf(false) }
+    BoxWithConstraints(modifier.fillMaxWidth()) {
+        val width = maxWidth
+        val perRow = ((width + ColumnGap) / (NodeWidth + ColumnGap)).toInt().coerceAtLeast(1)
+        val topology = remember(project, siteId, areaId, perRow, endpoints) { PhysicalTopology.build(project, siteId, areaId, perRow, foldEndpoints = !endpoints) }
+        Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Filters and counts in one box; they wrap instead of scrolling sideways.
+            SectionCard(null) {
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    filters()
+                    Row(Modifier.toggleable(endpoints, role = Role.Switch) { endpoints = it }.heightIn(min = 48.dp), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Switch(endpoints, null); Text(i18n.text("topology.endpoints"))
+                    }
+                }
+                Text(i18n.text("topology.summary", topology.nodes.count { !it.outside } + topology.folded.values.sumOf { it.size }, topology.links.size, topology.stubs.values.sum()),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            if (topology.nodes.isEmpty()) Text(i18n.text("topology.empty"), Modifier.padding(top = 8.dp))
+            else TopologyCanvas(project, topology, i18n, width, onOpen)
+        }
+    }
+}
+
+@Composable
+private fun TopologyCanvas(project: Project, topology: Topology, i18n: Messages, width: Dp, onOpen: (Device) -> Unit) {
+    val index = remember(project) { ProjectIndex(project) }
+    val rowStep = NodeHeight + RowGap
+    val height = rowStep * topology.rowSizes.size
+    // Node centres: each row is centred in the available width.
+    val centres = topology.nodes.associate { n ->
+        val count = topology.rowSizes[n.row]
+        val left = (width - (NodeWidth * count + ColumnGap * (count - 1))) / 2
+        n.device.id to DpOffset(left + (NodeWidth + ColumnGap) * n.column + NodeWidth / 2, rowStep * n.row + NodeHeight / 2)
+    }
+    val line = MaterialTheme.colorScheme.outline
+    val outline = MaterialTheme.colorScheme.onSurface
+    val radio = MaterialTheme.colorScheme.tertiary
+    Box(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(top = 8.dp)) {
+        Box(Modifier.width(width).height(height)) {
+            Canvas(Modifier.matchParentSize()) {
+                topology.links.forEach { link ->
+                    val a = centres[link.a] ?: return@forEach
+                    val b = centres[link.b] ?: return@forEach
+                    val wireless = CableMedium.RADIO in link.media
+                    // Between rows the wire leaves the bottom edge and enters the top edge, so it never crosses its own nodes.
+                    val (top, bottom) = if (a.y <= b.y) a to b else b to a
+                    val half = if (top.y == bottom.y) 0.dp else NodeHeight / 2
+                    drawLine(if (wireless) radio else line, Offset(top.x.toPx(), (top.y + half).toPx()), Offset(bottom.x.toPx(), (bottom.y - half).toPx()),
+                        strokeWidth = (1 + minOf(link.paths, 4)).dp.toPx(),
+                        pathEffect = if (wireless) PathEffect.dashPathEffect(floatArrayOf(12f, 8f)) else null)
+                }
+            }
+            topology.nodes.forEach { node ->
+                val c = centres.getValue(node.device.id)
+                val stubs = topology.stubs[node.device.id] ?: 0
+                val endpointsHere = topology.folded[node.device.id]?.size ?: 0
+                val links = topology.links.count { it.a == node.device.id || it.b == node.device.id }
+                val faded = node.outside || node.device.operationalStatus == OperationalStatus.OFF || node.device.operationalStatus == OperationalStatus.DECOMMISSIONED
+                val place = listOfNotNull(index.siteOf(node.device.id)?.code ?: index.siteOf(node.device.id)?.name, node.areaId?.let(index::areaName)).joinToString(" · ")
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = MapStyle.glyph(ObjectGlyph.of(project, node.device)),
+                    contentColor = androidx.compose.ui.graphics.Color.White,
+                    tonalElevation = 1.dp,
+                    modifier = Modifier.offset(c.x - NodeWidth / 2, c.y - NodeHeight / 2).size(NodeWidth, NodeHeight).alpha(if (faded) .5f else 1f)
+                        // Not managed by the technician: dashed outline, as on the floor plan.
+                        .then(if (node.device.thirdParty) Modifier.drawWithContent {
+                            drawContent()
+                            drawRoundRect(outline, style = Stroke(2.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 6f))), cornerRadius = CornerRadius(8.dp.toPx()))
+                        } else Modifier)
+                        .clickable(role = Role.Button) { onOpen(node.device) }
+                        .semantics(mergeDescendants = true) {
+                            contentDescription = listOfNotNull(node.device.technicalName, place.ifBlank { null },
+                                node.device.takeIf { it.thirdParty }?.let { d -> listOfNotNull(d.management.toDisplayString(i18n), d.supplierName).joinToString(" ") }, i18n.plural("topology.links", links),
+                                endpointsHere.takeIf { it > 0 }?.let { i18n.plural("topology.folded", it) }, stubs.takeIf { it > 0 }?.let { i18n.plural("topology.stubs", it) }).joinToString(", ")
+                        },
+                ) {
+                    Column(Modifier.padding(horizontal = 6.dp, vertical = 4.dp), verticalArrangement = Arrangement.Center) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            com.onlyfield.assetmanager.configurator.GlyphBadge(ObjectGlyph.of(project, node.device), 22.dp)
+                            Text(node.device.technicalName, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Text(listOfNotNull(endpointsHere.takeIf { it > 0 }?.let { "+$it" }, place.ifBlank { null }, stubs.takeIf { it > 0 }?.let { "⋯$it" }).joinToString(" · "),
+                            style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+    }
+}
+
+private data class DpOffset(val x: Dp, val y: Dp)

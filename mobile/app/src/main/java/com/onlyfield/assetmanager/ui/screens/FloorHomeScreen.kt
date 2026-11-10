@@ -1,0 +1,164 @@
+package com.onlyfield.assetmanager.ui.screens
+
+import com.onlyfield.assetmanager.ui.LocalMessages
+
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import com.onlyfield.assetmanager.core.model.*
+import com.onlyfield.assetmanager.core.forms.MapObjectDraft
+import com.onlyfield.assetmanager.configurator.ConfiguratorPage
+import com.onlyfield.assetmanager.configurator.map.*
+import com.onlyfield.assetmanager.core.forms.QuickAdd
+import com.onlyfield.assetmanager.core.edit.ProjectEdits
+import com.onlyfield.assetmanager.ui.*
+import com.onlyfield.assetmanager.ui.components.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.withContext
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun FloorHomeScreen(vm: ProjectViewModel, project: Project, snackbar: SnackbarHostState) {
+    val i18n = LocalMessages.current
+
+    val context = LocalContext.current
+    val selectedSite = project.sites.find { it.id == vm.selectedSiteId }
+    // A single site is opened directly: its drawing is the project's first screen.
+    val site = selectedSite ?: project.sites.singleOrNull()
+    val area = site?.let { it.areas.find { it.id == vm.selectedAreaId } }
+    val manySites = project.sites.size > 1
+    // New structure being named: true for a site, false for a floor of [site].
+    var addingSite by remember { mutableStateOf<Boolean?>(null) }
+    var adding by remember { mutableStateOf<Pair<ObjectRef?, MapPoint?>?>(null) }
+    var editor by remember { mutableStateOf<MapObjectDraft?>(null) }
+    // Object to select after "Go to"; cleared when the user picks a floor by hand.
+    var focus by remember { mutableStateOf<ObjectRef?>(null) }
+    var editorPage by remember { mutableStateOf(ConfiguratorPage.ESSENTIALS) }
+    var selectingPlan by remember { mutableStateOf(false) }
+    var newPlanId by remember { mutableStateOf<String?>(null) }
+    var scanning by remember { mutableStateOf(false) }
+    var searching by remember { mutableStateOf(false) }
+    var image by remember { mutableStateOf<ImageBitmap?>(null) }
+    var imageError by remember { mutableStateOf<String?>(null) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    fun save(message: String, onSaved: () -> Unit, transform: (Project) -> Project) {
+        saveError = null
+        vm.edit(message, { error ->
+            if (scope.isActive) {
+                saveError = error
+                if (error == null) onSaved()
+            }
+        }, transform)
+    }
+    val attachment = project.attachments.find { it.id == area?.floorplanAttachmentId }
+    fun openHit(hit: com.onlyfield.assetmanager.core.display.SearchHit) {
+        searching = false
+        vm.recentSearch = withRecent(vm.recentSearch, hit.id)
+        val target = hit.areaId
+        if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = searchEditDraft(project, hit) }
+        else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = hit.focus }
+    }
+    fun openDevice(d: Device) {
+        val target = ObjectMap.areaId(project, d)
+        if (target == null) { editorPage = ConfiguratorPage.ESSENTIALS; editor = MapObjectDraft.forDevice(project, d) }
+        else { vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ObjectRef(PlacementTargetType.DEVICE, d.id) }
+    }
+    // Port card of the device drawings above the floor level.
+    val portActions = com.onlyfield.assetmanager.configurator.PortQuickActions(update = vm::editMap, photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current, openDevice = ::openDevice,
+        details = { port -> editorPage = ConfiguratorPage.PORTS; editor = MapObjectDraft.forDevice(project, project.sites.flatMap { it.devices }.find { it.id == port.deviceId }).copy(focusPortId = port.id) })
+    fun back() { when { area != null && vm.mapUiState.floor(project, area.id).let { it.expanded && !it.wideDetails } -> vm.mapUiState.floor(project, area.id).expanded = false
+        // Another view of the floor goes back to its plan first.
+        area != null && vm.mapUiState.floor(project, area.id).view != MapView.DIAGRAM -> vm.mapUiState.floor(project, area.id).view = MapView.DIAGRAM; area != null -> vm.selectedAreaId = null; selectedSite != null && manySites -> vm.selectedSiteId = null; else -> vm.back() } }
+    BackHandler(enabled = area != null || (selectedSite != null && manySites)) { back() }
+    LaunchedEffect(attachment?.id, area?.floorplanPageIndex) {
+        image = null; imageError = null
+        if (attachment != null) {
+            try {
+                image = withContext(Dispatchers.IO) { PlanMedia.image(vm.attachmentFile(attachment) ?: error(i18n.text("text.b514c5e8cde0")), attachment.fileType == AttachmentType.PDF, area?.floorplanPageIndex ?: 0, i18n = i18n) }
+            } catch (e: Exception) { if (e is kotlinx.coroutines.CancellationException) throw e; imageError = i18n.text("text.04e6695ec9e8", e.message) }
+        }
+    }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null && area != null) vm.importFloorplan(context, uri, area.id) { a ->
+            if (a.fileType == AttachmentType.IMAGE) {
+                newPlanId = a.id
+                save(i18n.text("text.fcd1cc58f46b"), { selectingPlan = false; newPlanId = null }) { ProjectEdits.setAreaFloorplan(it, area.id, a.id) }
+            } else newPlanId = a.id
+        }
+    }
+    AppScaffold(project.name, subtitle = if (area == null) site?.name else null, onBack = ::back, snackbarHost = snackbar, showTopBar = area == null,
+        actions = { if (area == null) IconButton(onClick = { searching = true }) { Icon(androidx.compose.material.icons.Icons.Default.Search, i18n.text("search.action")) } }) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize().padding(if (area == null) 16.dp else 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (area == null) {
+                MapHome(project, i18n, site, vm.mapUiState,
+                    onSite = { vm.selectedSiteId = it.id; vm.selectedAreaId = null },
+                    onFloor = { focus = null; vm.selectedAreaId = it.id },
+                    onDevice = ::openDevice,
+                    onAddSite = { if (vm.busy == null) { saveError = null; addingSite = true } },
+                    onAddFloor = { if (vm.busy == null) { saveError = null; addingSite = false } },
+                    modifier = Modifier.weight(1f), portActions = portActions)
+            } else {
+                imageError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                MapWorkspace(project, area.id, image, i18n, MapActions(
+                    update = vm::editMap,
+                    goTo = { target, ref -> vm.selectedSiteId = ObjectMap.floorSite(project, target); vm.selectedAreaId = target; focus = ref },
+                    edit = { draft, page -> editorPage = page; editor = draft },
+                    add = { parent, point -> if (vm.busy == null) { saveError = null; adding = parent to point } },
+                    trash = { ref -> vm.moveToTrash(if (ref.type == PlacementTargetType.RACK) "RACK" else "DEVICE", ref.id, ObjectHierarchy.name(project, ref, i18n)) },
+                    photo = com.onlyfield.assetmanager.configurator.LocalPhotoAction.current,
+                ), Modifier.weight(1f), tools = listOf(
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.scan")) { scanning = true },
+                    com.onlyfield.assetmanager.configurator.PaneAction(i18n.text("map.choosePlan")) { if (vm.busy == null) { saveError = null; selectingPlan = true } },
+                ), state = vm.mapUiState.floor(project, area.id), focus = focus, onFocusHandled = { focus = null },
+                onSearch = { searching = true }, onLeaveFloor = { vm.selectedAreaId = null }, media = { ref ->
+                    val target = if (ref.type == PlacementTargetType.RACK) AttachmentTargetType.RACK else AttachmentTargetType.DEVICE
+                    // Thumbnails wrap so the pane never scrolls sideways.
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        project.attachments.filter { it.targetId == ref.id && it.targetType == target }.forEach { a ->
+                            Column(Modifier.width(120.dp)) {
+                                MediaThumbnail(vm.attachmentFile(a), a.fileType == AttachmentType.PDF)
+                                Text(a.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            }
+                        }
+                    }
+                })
+            }
+        }
+    }
+    if (searching) GlobalSearchDialog(project, i18n, vm.recentSearch, ::openHit) { searching = false }
+    addingSite?.let { requested ->
+        val newSite = requested || site == null
+        var name by remember { mutableStateOf("") }
+        EditScreen(if (newSite) i18n.text("text.5beecc355a96") else i18n.text("text.91e5e6cad9c8", site!!.name), { if (vm.busy == null) addingSite = null }, {
+            save(i18n.text("text.ad31ce615e92"), { addingSite = null }) { if (newSite) ProjectEdits.addSite(it, name.trim()) else ProjectEdits.addArea(it, site!!.id, Area(name = name.trim())) }
+        }, confirmEnabled = name.isNotBlank() && vm.busy == null) {
+            FormField(name, { name = it }, i18n.text("text.2e245546ff59"))
+            saveError?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+        }
+    }
+    adding?.let { (parent, point) -> if (area != null) MapObjectPicker(project, i18n, area.id, parent, point, onClose = { if (vm.busy == null) adding = null },
+        onAdd = { draft -> if (vm.busy == null) save(i18n.text("quick.added", QuickAdd.name(draft)), { adding = null }) { draft.apply(it, i18n) } },
+        onEdit = { draft -> if (vm.busy == null) { adding = null; editorPage = ConfiguratorPage.ESSENTIALS; editor = draft } }, error = saveError) }
+    editor?.let { draft -> key(draft.id) { FloorObjectEditor(vm, project, draft, editorPage) { editor = null } } }
+    if (selectingPlan && area != null) PlanChooser(project, area, newPlanId, vm::attachmentFile, { picker.launch(arrayOf("image/*", "application/pdf")) }, { id, page, pages ->
+        if (vm.busy == null) save(i18n.text("text.fcd1cc58f46b"), { selectingPlan = false; newPlanId = null }) { ProjectEdits.setAreaFloorplan(it, area.id, id, page, pages) }
+    }, { if (vm.busy == null) { selectingPlan = false; newPlanId = null } }, error = saveError)
+    if (scanning) BarcodeScanner(onCode = { code ->
+        scanning = false
+        val unknown = vm.openScannedCode(code)
+        if (unknown != null && area != null) {
+            val draft = MapObjectDraft(type = ObjectCatalog.builtins.first(), siteId = site.id, areaId = area.id)
+            editor = draft.copy(device = draft.device.copy(serialNumber = unknown))
+        }
+    }, onClose = { scanning = false })
+}
